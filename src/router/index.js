@@ -66,7 +66,7 @@ export const constantRoutes = [
     children: [
       {
         path: '/index',
-        component: () => import('@/views/index'),
+        component: () => import('@/views/huirong/index/index'),
         name: 'Index',
         meta: { title: '首页', icon: 'index', affix: true, titleKey: 'menu.home' }
       }
@@ -99,5 +99,4 @@ const router = createRouter({
     }
   }
 })
-
 export default router

@@ -63,3 +63,13 @@ export default {
     return useTagsViewStore().updateVisitedView(obj);
   }
 }
+
+// 导出关闭指定tab页签
+export function closePage(obj) {
+  if (obj === undefined) {
+    return useTagsViewStore().delView(router.currentRoute.value).then(({ lastPath }) => {
+      return router.push(lastPath || '/index');
+    });
+  }
+  return useTagsViewStore().delView(obj);
+}

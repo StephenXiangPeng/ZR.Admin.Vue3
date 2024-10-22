@@ -124,6 +124,7 @@ export default {
     })
     // 接收聊天数据
     connection.on('receiveChat', (data) => {
+      alert(json.stringify(data));
       const title = `来自${data.userName}的消息通知`
       useSocketStore().setChat(data)
 
@@ -132,7 +133,7 @@ export default {
           title: title,
           message: data.message,
           type: 'success',
-          duration: 3000
+          duration: 100000
         })
       }
       webNotify({ title: title, body: data.message })

@@ -9,15 +9,12 @@
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="登录状态" clearable>
-          <el-option v-for="dict in statusOptions" :key="dict.dictValue" :label="dict.dictLabel" :value="dict.dictValue" />
+          <el-option v-for="dict in statusOptions" :key="dict.dictValue" :label="dict.dictLabel"
+            :value="dict.dictValue" />
         </el-select>
       </el-form-item>
       <el-form-item label="登录时间">
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          range-separator="-"
-          start-placeholder="开始日期"
+        <el-date-picker v-model="dateRange" type="daterange" range-separator="-" start-placeholder="开始日期"
           end-placeholder="结束日期"></el-date-picker>
       </el-form-item>
       <el-form-item>
@@ -28,15 +25,16 @@
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
-        <el-button type="danger" plain icon="delete" :disabled="multiple" @click="handleDelete" v-hasPermi="['monitor:logininfor:remove']"
-          >删除</el-button
-        >
+        <el-button type="danger" plain icon="delete" :disabled="multiple" @click="handleDelete"
+          v-hasPermi="['monitor:logininfor:remove']">删除</el-button>
       </el-col>
       <el-col :span="1.5">
-        <el-button type="danger" plain icon="delete" @click="handleClean" v-hasPermi="['monitor:logininfor:remove']">清空</el-button>
+        <el-button type="danger" plain icon="delete" @click="handleClean"
+          v-hasPermi="['monitor:logininfor:remove']">清空</el-button>
       </el-col>
       <el-col :span="1.5">
-        <el-button type="warning" plain icon="download" @click="handleExport" v-hasPermi="['system:logininfor:export']">导出</el-button>
+        <el-button type="warning" plain icon="download" @click="handleExport"
+          v-hasPermi="['system:logininfor:export']">导出</el-button>
       </el-col>
       <right-toolbar :showSearch="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
@@ -72,7 +70,8 @@
       </el-table-column>
     </el-table>
 
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize"
+      @pagination="getList" />
   </div>
 </template>
 

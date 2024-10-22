@@ -1,6 +1,7 @@
 <template>
   <div class="navbar" :class="appStore.device">
-    <hamburger id="hamburger-container" :is-active="appStore.sidebar.opened" class="hamburger-container" @toggleClick="toggleSideBar" />
+    <hamburger id="hamburger-container" :is-active="appStore.sidebar.opened" class="hamburger-container"
+      @toggleClick="toggleSideBar" />
     <template v-if="appStore.device == 'desktop'">
       <breadcrumb id="breadcrumb-container" class="breadcrumb-container" v-if="!settingsStore.topNav" />
       <top-nav id="topmenu-container" class="topmenu-container" v-if="settingsStore.topNav" />
@@ -9,31 +10,33 @@
     <div class="right-menu">
       <header-search id="header-search" class="right-menu-item" />
       <template v-if="appStore.device == 'desktop'">
-        <zr-git title="源码地址" class="right-menu-item" />
-        <zr-doc title="文档地址" class="right-menu-item" />
+        <!-- <zr-git title="源码地址" class="right-menu-item" />
+        <zr-doc title="文档地址" class="right-menu-item" /> -->
         <screenfull title="全屏" class="right-menu-item" />
       </template>
-      <size-select title="布局大小" class="right-menu-item" />
-      <LangSelect title="语言设置" class="right-menu-item" />
+      <!-- <size-select title="布局大小" class="right-menu-item" />
+      <LangSelect title="语言设置" class="right-menu-item" /> -->
       <Notice title="通知" class="right-menu-item" />
 
       <el-dropdown @command="handleCommand" class="right-menu-item avatar-container" trigger="hover">
         <span class="avatar-wrapper">
           <el-avatar :size="25" shape="circle" class="user-avatar" :src="userStore.avatar" />
           <span class="name">{{ userStore.name }}</span>
-          <el-icon><ArrowDown /></el-icon>
+          <el-icon>
+            <ArrowDown />
+          </el-icon>
         </span>
         <template #dropdown>
           <el-dropdown-menu>
-            <router-link to="/user/profile">
+            <!-- <router-link to="/user/profile">
               <el-dropdown-item>{{ $t('layout.personalCenter') }}</el-dropdown-item>
-            </router-link>
+            </router-link> -->
             <el-dropdown-item command="setLayout">
               <span>{{ $t('layout.layoutSetting') }}</span>
             </el-dropdown-item>
-            <el-dropdown-item command="copyToken" v-if="dev">
+            <!-- <el-dropdown-item command="copyToken" v-if="dev">
               <span>复制token</span>
-            </el-dropdown-item>
+            </el-dropdown-item> -->
             <el-dropdown-item divided command="logout">
               <span>{{ $t('layout.logOut') }}</span>
             </el-dropdown-item>
@@ -108,7 +111,7 @@ function logout() {
         location.href = import.meta.env.VITE_APP_ROUTER_PREFIX + 'index'
       })
     })
-    .catch(() => {})
+    .catch(() => { })
 }
 
 const emits = defineEmits(['setLayout'])
@@ -121,10 +124,12 @@ function setLayout() {
 .el-menu {
   // display: inline-table;
   border-bottom: none;
+
   .el-menu-item {
     vertical-align: center;
   }
 }
+
 .navbar {
   height: var(--base-header-height);
   line-height: var(--base-header-height);
@@ -149,6 +154,7 @@ function setLayout() {
   .breadcrumb-container {
     float: left;
   }
+
   .topmenu-container {
     position: absolute;
     left: 50px;
@@ -178,6 +184,7 @@ function setLayout() {
       .avatar-wrapper {
         display: flex;
         align-items: center;
+
         .user-avatar {
           cursor: pointer;
           width: 30px;
@@ -186,9 +193,11 @@ function setLayout() {
           vertical-align: middle;
           margin-right: 5px;
         }
+
         .name {
           font-size: 12px;
         }
+
         i {
           cursor: pointer;
           margin-left: 10px;

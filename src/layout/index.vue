@@ -1,14 +1,8 @@
 <template>
   <el-container :class="classObj" class="app-layout" :style="{ '--current-color': theme }">
     <!-- 移动端打开菜单遮罩 -->
-    <el-drawer
-      v-if="device === 'mobile'"
-      :size="220"
-      v-model="menuDrawer"
-      :with-header="false"
-      modal-class="sidebar-mobile"
-      direction="ltr"
-      @close="close">
+    <el-drawer v-if="device === 'mobile'" :size="220" v-model="menuDrawer" :with-header="false"
+      modal-class="sidebar-mobile" direction="ltr" @close="close">
       <sidebar />
     </el-drawer>
     <sidebar v-else-if="!sidebar.hide" />
@@ -23,6 +17,7 @@
           <transition name="fade-transform" mode="out-in" v-if="!dev">
             <keep-alive :include="cachedViews">
               <component v-if="!route.meta.link" :is="Component" :key="route.path" />
+
             </keep-alive>
           </transition>
           <keep-alive :include="cachedViews" v-else>
@@ -138,6 +133,7 @@ function close() {
 .mobile .fixed-header {
   width: 100%;
 }
+
 .app-main {
   /* 50= navbar  50  */
   // min-height: calc(100vh - 50px);
@@ -146,10 +142,12 @@ function close() {
   height: 100%;
   overflow-x: hidden;
 }
+
 .sidebar-mobile {
   .el-drawer__body {
     padding: 0;
   }
+
   @media screen and (max-width: 700px) {
     .el-drawer {
       width: var(--base-sidebar-width) !important;
@@ -161,6 +159,7 @@ function close() {
   --el-header-padding: 0 0px !important;
   // --el-header-height: 50px !important;
 }
+
 .el-footer {
   --el-footer-height: var(--base-footer-height);
   line-height: var(--base-footer-height);
@@ -170,7 +169,9 @@ function close() {
   border-top: 1px solid #e7eaec;
   letter-spacing: 0.1rem;
 }
+
 .hasTagsView {
+
   // .app-main {
   //   min-height: calc(100vh - 84px - var(--base-footer-height));
   // }

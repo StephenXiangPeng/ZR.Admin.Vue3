@@ -1,11 +1,7 @@
 <template>
   <el-form class="mt10" ref="formRef" :model="form" label-width="110px" :rules="rules">
-    <el-form-item
-      v-for="(domain, index) in form.toEmails"
-      :prop="'toEmails.' + index + '.value'"
-      :label="'收件邮箱' + (index === 0 ? '' : index)"
-      :key="domain.key"
-      :rules="[
+    <el-form-item v-for="(domain, index) in form.toEmails" :prop="'toEmails.' + index + '.value'"
+      :label="'收件邮箱' + (index === 0 ? '' : index)" :key="domain.key" :rules="[
         { required: true, message: '邮箱不能为空', trigger: 'blur' },
         { message: '请输入正确的邮箱地址', trigger: ['blur', 'change'], type: 'email' }
       ]">

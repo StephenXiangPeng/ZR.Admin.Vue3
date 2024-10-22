@@ -26,7 +26,9 @@ service.interceptors.request.use(
       //将token放到请求头发送给服务器,将tokenkey放在请求头中
       config.headers['Authorization'] = 'Bearer ' + getToken()
       config.headers['userid'] = useUserStore().userId
-      config.headers['userName'] = useUserStore().userName
+      //config.headers['userName'] = useUserStore().userName
+      // 对 userName 进行编码
+      config.headers['userName'] = encodeURIComponent(useUserStore().userName);
     }
     const method = config?.method || 'get'
     const header = config?.headers['Content-Type'] ?? ''
@@ -219,5 +221,6 @@ export async function downFile(url, params, config) {
       downloadLoadingInstance.close()
     })
 }
+
 
 export default service

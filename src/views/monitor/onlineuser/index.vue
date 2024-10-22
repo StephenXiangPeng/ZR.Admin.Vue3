@@ -2,7 +2,8 @@
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" :inline="true">
       <el-form-item>
-        <el-button plain type="primary" @click="onLockAll()" icon="lock" v-hasPermi="['monitor:online:forceLogout']">全部强退</el-button>
+        <el-button plain type="primary" @click="onLockAll()" icon="lock"
+          v-hasPermi="['monitor:online:forceLogout']">全部强退</el-button>
       </el-form-item>
       <el-form-item>
         <el-radio-group v-model="viewSwitch">
@@ -17,7 +18,8 @@
     <!-- <el-row :gutter="10" class="mb8">
       <el-col :span="2"> </el-col>
     </el-row> -->
-    <el-table :data="onlineUsers" v-loading="loading" ref="tableRef" border highlight-current-row v-if="viewSwitch == 1">
+    <el-table :data="onlineUsers" v-loading="loading" ref="tableRef" border highlight-current-row
+      v-if="viewSwitch == 1">
       <el-table-column label="No" type="index" width="50" align="center">
         <template #default="scope">
           <span>{{ (queryParams.pageNum - 1) * queryParams.pageSize + scope.$index + 1 }}</span>
@@ -36,8 +38,9 @@
       </el-table-column>
       <el-table-column label="操作" align="center" width="160">
         <template #default="scope">
-          <el-button text @click="onChat(scope.row)" icon="bell" v-hasRole="['admin']">通知</el-button>
-          <el-button text @click="onLock(scope.row)" icon="lock" v-hasPermi="['monitor:online:forceLogout']">强退</el-button>
+          <el-button text @click="onChat(scope.row)" icon="bell" v-hasRole="['admin']">通知111</el-button>
+          <el-button text @click="onLock(scope.row)" icon="lock"
+            v-hasPermi="['monitor:online:forceLogout']">强退</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -55,14 +58,16 @@
           <el-text truncated>{{ item.browser }}</el-text>
           <div>
             <el-button text @click="onChat(item)" icon="bell" title="通知" v-hasRole="['admin']"></el-button>
-            <el-button text @click="onLock(item)" icon="lock" title="强退" v-hasPermi="['monitor:online:forceLogout']"></el-button>
+            <el-button text @click="onLock(item)" icon="lock" title="强退"
+              v-hasPermi="['monitor:online:forceLogout']"></el-button>
           </div>
         </el-card>
       </el-col>
 
       <el-empty v-show="total == 0" description="no data" />
     </el-row>
-    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize"
+      @pagination="getList" />
   </div>
 </template>
 
@@ -103,6 +108,7 @@ function getList() {
 getList()
 
 function onChat(item) {
+  console.log(JSON.stringify(item));
   proxy
     .$prompt('请输入通知内容', '', {
       confirmButtonText: '发送',
@@ -111,11 +117,12 @@ function onChat(item) {
       inputErrorMessage: '消息内容不能为空'
     })
     .then(({ value }) => {
+      console.log(item.connnectionId, item.userid, value)
       proxy.signalr.SR.invoke('sendMessage', item.connnectionId, item.userid, value).catch(function (err) {
         console.error(err.toString())
       })
     })
-    .catch(() => {})
+    .catch(() => { })
 }
 function onLock(row) {
   proxy

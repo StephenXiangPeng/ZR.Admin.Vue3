@@ -4,7 +4,7 @@
     <div class="login">
       <h3 class="title">{{ defaultSettings.title }}</h3>
 
-      <LangSelect title="多语言设置" class="langSet" />
+      <!-- <LangSelect title="多语言设置" class="langSet" /> -->
 
       <div style="padding: 0 25px 5px 25px">
         <el-tabs v-model="loginType" @tab-click="handleLoginType">
@@ -23,14 +23,16 @@
           </el-input>
         </el-form-item>
         <el-form-item prop="password">
-          <el-input v-model="loginForm.password" type="password" auto-complete="off" :placeholder="$t('login.password')" @keyup.enter="handleLogin">
+          <el-input v-model="loginForm.password" type="password" auto-complete="off" :placeholder="$t('login.password')"
+            @keyup.enter="handleLogin">
             <template #prefix>
               <svg-icon name="password" class="input-icon" />
             </template>
           </el-input>
         </el-form-item>
         <el-form-item prop="code" v-if="captchaOnOff != 'off'">
-          <el-input v-model="loginForm.code" auto-complete="off" :placeholder="$t('login.captcha')" style="width: 63%" @keyup.enter="handleLogin">
+          <el-input v-model="loginForm.code" auto-complete="off" :placeholder="$t('login.captcha')" style="width: 63%"
+            @keyup.enter="handleLogin">
             <template #prefix>
               <svg-icon name="validCode" class="input-icon" />
             </template>
@@ -41,7 +43,8 @@
         </el-form-item>
 
         <el-form-item style="width: 100%" :style="{ 'margin-top': captchaOnOff == 'off' ? '40px' : '' }">
-          <el-button :loading="loading" size="default" round type="primary" style="width: 100%" @click.prevent="handleLogin">
+          <el-button :loading="loading" size="default" round type="primary" style="width: 100%"
+            @click.prevent="handleLogin">
             <span v-if="!loading">{{ $t('login.btnLogin') }}</span>
             <span v-else>登 录 中...</span>
           </el-button>
@@ -256,6 +259,7 @@ getCookie()
 
 <style lang="scss" scoped>
 @import '@/assets/styles/login.scss';
+
 .forget-pwd {
   color: #ccc;
   margin-left: 10px;
@@ -263,6 +267,7 @@ getCookie()
   border-left: 1px solid;
   padding-left: 10px;
 }
+
 .qrCode {
   width: 160px;
   height: 160px;

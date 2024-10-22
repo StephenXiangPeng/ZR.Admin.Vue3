@@ -23,7 +23,7 @@ const useUserStore = defineStore('user', {
     },
     // 登录
     login(userInfo) {
-      const username = userInfo.username.trim()
+      const username = encodeURIComponent(userInfo.username.trim())
       const password = md5(userInfo.password).toString()
       const code = userInfo.code
       const uuid = userInfo.uuid

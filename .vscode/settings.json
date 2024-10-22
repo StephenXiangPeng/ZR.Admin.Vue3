@@ -5,9 +5,13 @@
   "editor.formatOnPaste": true,
   "editor.formatOnType": true,
   // 配置eslint适用于vue代码
-  "eslint.validate": ["javascript", "typescript", "vue"],
+  "eslint.validate": [
+    "javascript",
+    "typescript",
+    "vue"
+  ],
   "[vue]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "Vue.volar"
   },
   "[scss]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -25,8 +29,8 @@
   "editor.formatOnSave": true,
   // 保存时自动启用 eslint --fix 自动修复
   "editor.codeActionsOnSave": {
-    "source.fixAll": true,
-    "eslint.autoFixOnSave": true
+    "source.fixAll": "explicit",
+    "eslint.autoFixOnSave": "explicit"
   },
   "eslint.options": {
     "overrideConfig": {
@@ -47,13 +51,32 @@
     }
   },
   "i18n-ally.displayLanguage": "zh-cn",
-  "i18n-ally.enabledParsers": ["json", "js"],
-  "i18n-ally.localesPaths": ["src/i18n/lang", "src/i18n/pages/login", "src/i18n/pages/menu"],
+  "i18n-ally.enabledParsers": [
+    "json",
+    "js"
+  ],
+  "i18n-ally.localesPaths": [
+    "src/i18n/lang",
+    "src/i18n/pages/login",
+    "src/i18n/pages/menu"
+  ],
   "i18n-ally.extract.parsers.html": {
-    "attributes": ["text", "title", "alt", "placeholder", "label", "aria-label"],
-    "ignoredTags": ["script", "style"],
+    "attributes": [
+      "text",
+      "title",
+      "alt",
+      "placeholder",
+      "label",
+      "aria-label"
+    ],
+    "ignoredTags": [
+      "script",
+      "style"
+    ],
     "vBind": true,
     "inlineText": true
   },
-  "i18n-ally.keystyle": "nested"
+  "i18n-ally.keystyle": "nested",
+  "github.copilot.chat.localeOverride": "zh-TW",
+  "github.copilot.editor.enableCodeActions": true
 }
