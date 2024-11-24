@@ -570,6 +570,8 @@ proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
 	})
+	//获取客户基本信息列表
+	GetCustomeInfoList(currentPage.value, pageSize.value);
 })
 
 //线索导入窗体
@@ -1230,8 +1232,7 @@ const handlePageChange = async (newPage) => {
 	const end = pageSize.value;
 	const newData = await GetCustomeInfoList(start, end);  // Assume fetchData is a function that fetches data from the server
 };
-//获取客户基本信息列表
-GetCustomeInfoList(currentPage.value, pageSize.value);
+
 
 
 

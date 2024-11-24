@@ -159,6 +159,15 @@
 				</el-row>
 				<el-row>
 					<el-col :span="8">
+						<el-form-item label="所属供应商" prop="Supplier">
+							<el-select v-model="Productform.Supplier" :disabled="isDisabled" placeholder="选择供应商"
+								style="width: 300px;">
+								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
 						<el-form-item label="库存数量">
 							<el-input v-model="Productform.stockQuantity" disabled placeholder=""
 								style="width: 300px;" />
@@ -170,6 +179,8 @@
 								style=" width: 300px;" />
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="最近推荐">
 							<el-select v-model="Productform.recentRecommendation" placeholder="" disabled
@@ -177,8 +188,6 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="最近寄样">
 							<el-select v-model="Productform.recentSampleShipment" placeholder="" disabled
@@ -193,12 +202,16 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="最近成交日期">
 							<el-date-picker v-model="Productform.recentTransactionDate" type="date" disabled
 								placeholder="" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="16">
 						<el-form-item label="产品照片：">
 							<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList"
@@ -1020,11 +1033,13 @@ const state = reactive({
 		// 选项列表(动态字典将会从后台获取数据)
 		hr_packing: [],
 		hr_calculate_unit: [],
-		hr_inspectionmark: []
+		hr_inspectionmark: [],
+		sql_supplier_info: []
 	}
 })
 const { optionss } = toRefs(state)
-var dictParams = [{ dictType: 'hr_packing' }, { dictType: 'hr_calculate_unit' }, { dictType: 'hr_inspectionmark' }]
+var dictParams = [{ dictType: 'hr_packing' }, { dictType: 'hr_calculate_unit' },
+{ dictType: 'hr_inspectionmark' }, { dictType: 'sql_supplier_info' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -1178,6 +1193,7 @@ interface Productform {
 	recentTransactionDate: string;
 	ProductPhoto: string;
 	PackingMethod: string;
+	Supplier: string;
 	//产品属性
 	productLength: string;
 	productwidth: string;
@@ -1217,6 +1233,7 @@ const Productform = reactive<Productform>({
 	recentTransactionDate: '',
 	ProductPhoto: '',
 	PackingMethod: '',
+	Supplier: '',
 	//产品属性
 	productLength: '',
 	productwidth: '',
@@ -1244,7 +1261,8 @@ const ProductformRules = reactive<FormRules<Productform>>({
 	chineseDeclarationProductName: [{ required: true, message: '请输入中文申报品名', trigger: ['blur', 'change'] }],
 	englishDeclarationProductName: [{ required: true, message: '请输入英文申报品名', trigger: ['blur', 'change'] }],
 	inspectionMark: [{ required: true, message: '请选择检验标志', trigger: ['blur', 'change'] }],
-	PackingMethod: [{ required: true, message: '请选择包装方式', trigger: ['blur', 'change'] }]
+	PackingMethod: [{ required: true, message: '请选择包装方式', trigger: ['blur', 'change'] }],
+	Supplier: [{ required: true, message: '请选择供应商', trigger: ['blur', 'change'] }]
 })
 
 const createSubProductItem = () => ({
@@ -1331,6 +1349,7 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 					ProductPhotoPath: '',
 					PackingMethod: Productform.PackingMethod,
 					Remark: '',
+					SupplierID: Productform.Supplier,
 					subProductItems: []
 				};
 				// 上传主产品图片
@@ -1570,6 +1589,7 @@ const OpenProductInfoDetailDialog = (row) => {
 	showEditBtn.value = true;
 	isDisabled.value = true;
 	showAddSubProductButton.value = false;  // 隐藏添加子产品按钮
+	Productform.Supplier = state.optionss.sql_supplier_info.find((dict) => dict.dictValue === row.supplierId.toString())?.dictValue;
 	Productform.productCode = row.productCode;
 	Productform.productBarcode = row.productBarcode;
 	Productform.chineseProductName = row.chineseProductName;
@@ -1710,6 +1730,7 @@ const EditSaveProductinfomation = async () => {
 			OuterBoxGrossWeight: Productform.outerboxgrossweight,
 			PackingMethod: Productform.PackingMethod,
 			Remark: '',
+			SupplierID: Productform.Supplier,
 			subProductItems: []
 		};
 

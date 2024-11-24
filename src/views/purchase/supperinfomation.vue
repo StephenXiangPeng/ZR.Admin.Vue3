@@ -96,11 +96,8 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="所在城市">
-							<el-select v-model="Addsupperinfoform.city" placeholder="请选择所在城市" style="width: 300px"
-								:disabled="isEditable">
-								<el-option v-for="dict in optionss.hr_china_city" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
+							<el-input v-model="Addsupperinfoform.city" placeholder="请输入所在城市" style="width: 300px"
+								:disabled="isEditable" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -111,7 +108,7 @@
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="邮政编码">
 							<el-input v-model="Addsupperinfoform.postalCode" placeholder="请输入邮政编码"
 								:disabled="isEditable" style="width: 300px" />
@@ -132,30 +129,26 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="信用等级">
-							<el-input v-model="Addsupperinfoform.creditLevel" placeholder="请输入信用等级"
-								:disabled="isEditable" style="width: 300px" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="合作等级">
-							<el-select v-model="Addsupperinfoform.cooperationLevel" filterable placeholder="选择合作等级"
-								:disabled="isEditable" style="width: 300px;">
+							<el-select v-model="Addsupperinfoform.creditLevel" filterable placeholder="自动计算信用等级"
+								disabled style="width: 300px;">
 								<el-option v-for="dict in optionss.hr_supplier_level" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
-						<el-form-item label="能否开票">
-							<el-checkbox v-model="Addsupperinfoform.canInvoice" :disabled="isEditable" />
-						</el-form-item>
-					</el-col>
 				</el-row>
 				<el-row>
+					<el-col :span="8">
+						<el-form-item label="合作等级">
+							<el-select v-model="Addsupperinfoform.cooperationLevel" filterable placeholder="自动计算合作等级"
+								disabled style="width: 300px;">
+								<el-option v-for="dict in optionss.hr_supplier_level" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue" />
+							</el-select>
+						</el-form-item>
+					</el-col>
 					<el-col :span="8">
 						<el-form-item label="结算方式">
 							<el-select v-model="Addsupperinfoform.paymentMethod" placeholder="请选择结算方式"
@@ -166,12 +159,20 @@
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
+						<el-form-item label="公司税号">
+							<el-input v-model="Addsupperinfoform.taxNumber" placeholder="请输入公司税号" :disabled="isEditable"
+								style="width: 300px" />
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<el-row>
+					<el-col :span="8" v-if="false">
 						<el-form-item label="开户银行">
 							<el-input v-model="Addsupperinfoform.bankName" placeholder="请输入开户银行" style="width: 300px"
 								:disabled="isEditable" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="银行账号">
 							<el-input v-model="Addsupperinfoform.bankAccount" placeholder="请输入银行账号"
 								:disabled="isEditable" style="width: 300px" />
@@ -180,12 +181,6 @@
 				</el-row>
 				<el-row>
 					<el-col :span="8">
-						<el-form-item label="公司税号">
-							<el-input v-model="Addsupperinfoform.taxNumber" placeholder="请输入公司税号" :disabled="isEditable"
-								style="width: 300px" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
 						<el-form-item label="开发时间">
 							<el-date-picker v-model="Addsupperinfoform.developmentDate" type="date"
 								:disabled="isEditable" placeholder="请选择开发时间" style="width: 300px" />
@@ -193,8 +188,13 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="最近成交日期">
-							<el-date-picker v-model="Addsupperinfoform.lastTransaction" type="date"
-								:disabled="isEditable" placeholder="请选择最近成交日期" style="width: 300px" />
+							<el-date-picker v-model="Addsupperinfoform.lastTransaction" disabled type="date"
+								placeholder="自动获取" style="width: 300px" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="能否开票">
+							<el-checkbox v-model="Addsupperinfoform.canInvoice" :disabled="isEditable" />
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -233,9 +233,9 @@
 				</el-row>
 			</el-form>
 			<el-tabs v-model="activeTab" class="demo-tabs">
-				<el-button class="mt-4" type="primary" @click="handleAddContactRow"
-					style="margin-bottom: 10px;">添加联系人</el-button>
 				<el-tab-pane label="联系人" name="contacttabpane">
+					<el-button class="mt-4" type="primary" @click="handleAddContactRow" :disabled="isEditable"
+						style="margin-bottom: 10px;">添加联系人</el-button>
 					<el-table :data="supperinfoContactsTableData" style="width: 100%">
 						<el-table-column label="联系人姓名">
 							<template #default="{ row }">
@@ -250,8 +250,8 @@
 						<el-table-column label="联系人性别">
 							<template #default="{ row }">
 								<el-select v-model="row.gender" placeholder="联系人性别" :disabled="isEditable">
-									<el-option label="男" value="男" />
-									<el-option label="女" value="女" />
+									<el-option label="男" value="0" />
+									<el-option label="女" value="1" />
 								</el-select>
 							</template>
 						</el-table-column>
@@ -286,15 +286,105 @@
 									@click="handleDeleteContactRow(scope.$index)">删除</el-button>
 							</template>
 						</el-table-column>
+					</el-table>
+				</el-tab-pane>
+				<el-tab-pane label="银行账号" name="second">
+					<el-button class="mt-4" type="primary" @click="handleAddBankRow" :disabled="isEditable"
+						style="margin-bottom: 10px;">添加银行账号</el-button>
+					<el-table :data="supperinfoBankAccountInfoTableData" style="width: 100%">
+						<el-table-column label="开户名称">
+							<template #default="{ row }">
+								<el-input v-model="row.bank_account_name" placeholder="输入开户名称" :disabled="isEditable" />
+							</template>
+						</el-table-column>
+						<el-table-column label="开户银行">
+							<template #default="{ row }">
+								<el-input v-model="row.bank" placeholder="输入开户银行" :disabled="isEditable" />
+							</template>
+						</el-table-column>
+						<el-table-column label="银行账号">
+							<template #default="{ row }">
+								<el-input v-model="row.bank_account_number" placeholder="输入银行账号"
+									:disabled="isEditable" />
+							</template>
+						</el-table-column>
+						<el-table-column label="银行地址">
+							<template #default="{ row }">
+								<el-input v-model="row.bank_address" placeholder="输入银行地址" :disabled="isEditable" />
+							</template>
+						</el-table-column>
+						<el-table-column label="备注">
+							<template #default="{ row }">
+								<el-input v-model="row.remark" placeholder="输入备注" :disabled="isEditable" />
+							</template>
+						</el-table-column>
+						<el-table-column label="操作" width="100">
+							<template #default="scope">
+								<el-button type="text" size="small" :disabled="isEditable"
+									@click="handleDeleteBankAccountRow(scope.$index)">删除</el-button>
+							</template>
+						</el-table-column>
+					</el-table>
+				</el-tab-pane>
+				<el-tab-pane label="产品清单" name="ProductList">
+					<el-table :data="supperinfoProductTableData" style="width: 100%">
+						<el-table-column prop="ProductCode" label="产品编号" width="150"></el-table-column>
+						<el-table-column prop="ChineseName" label="中文品名" width="300"></el-table-column>
+						<el-table-column prop="ChineseSpecifications" label="中文规格" width="300"></el-table-column>
+						<el-table-column prop="Unit" label="计量单位" width="150"></el-table-column>
+						<el-table-column prop="lastTransaction" label="最近成交" width="200"></el-table-column>
+						<el-table-column prop="packagingMethod" label="包装方式" width="150" v-if="false"></el-table-column>
+					</el-table>
+				</el-tab-pane>
+				<el-tab-pane label="报价历史" name="quotationHistory">
+					<el-table :data="supperinfoQuotationHistoryData" style="width: 100%">
+						<el-table-column prop="inquiryDate" label="询价日期" width="120"></el-table-column>
+						<el-table-column prop="productCode" label="产品编号" width="120"></el-table-column>
+						<el-table-column prop="chineseName" label="中文品名" width="200"></el-table-column>
+						<el-table-column prop="chineseSpecifications" label="中文规格" width="300"></el-table-column>
+						<el-table-column prop="packagingMethod" label="包装方式" width="120"></el-table-column>
+						<el-table-column prop="purchasePrice" label="采购价格" width="100"></el-table-column>
+						<el-table-column prop="unit" label="计量单位" width="100"></el-table-column>
+						<el-table-column prop="quotationQuantity" label="报价数量" width="100"></el-table-column>
+					</el-table>
+				</el-tab-pane>
+				<el-tab-pane label="采购历史" name="purchaseHistory">
+					<el-table :data="supperinfoPurchaseHistoryData" style="width: 100%">
+						<el-table-column prop="contractNo" label="采购合同" width="150"></el-table-column>
+						<el-table-column prop="contractStatus" label="合同状态" width="150"></el-table-column>
+						<el-table-column prop="totalValue" label="货值合计" width="150"></el-table-column>
+						<el-table-column prop="totalBoxes" label="箱数合计" width="150"></el-table-column>
+						<el-table-column prop="totalVolume" label="体积合计" width="150"></el-table-column>
+						<el-table-column prop="totalGrossWeight" label="毛重合计" width="150"></el-table-column>
+					</el-table>
+				</el-tab-pane>
+				<el-tab-pane label="寄样历史" name="sendSampleHistory">
+					<el-table :data="supperinfoSendSampleData" style="width: 100%">
+						<el-table-column prop="sendDate" label="寄样日期" width="150"></el-table-column>
+						<el-table-column prop="contact" label="联系人" width="150"></el-table-column>
+						<el-table-column prop="remarks" label="备注"></el-table-column>
 					</el-table></el-tab-pane>
-				<el-tab-pane label="开户银行" name="second">开户银行</el-tab-pane>
-				<el-tab-pane label="报价历史" name="third">报价历史</el-tab-pane>
-				<el-tab-pane label="采购历史" name="fourth">采购历史</el-tab-pane>
-				<el-tab-pane label="寄样历史" name="fifth">寄样历史</el-tab-pane>
-				<el-tab-pane label="收样历史" name="sixth">收样历史</el-tab-pane>
-				<el-tab-pane label="出货历史" name="seventh">出货历史</el-tab-pane>
-				<el-tab-pane label="客诉历史" name="eighth">客诉历史</el-tab-pane>
-				<el-tab-pane label="往来邮件" name="ninth">往来邮件</el-tab-pane>
+				<el-tab-pane label="收样历史" name="receiveSampleHistory">
+					<el-table :data="supperinfoReceiveSampleData" style="width: 100%">
+						<el-table-column prop="receiveDate" label="收样日期" width="150"></el-table-column>
+						<el-table-column prop="contact" label="联系人" width="150"></el-table-column>
+						<el-table-column prop="remarks" label="备注"></el-table-column>
+					</el-table></el-tab-pane>
+				<el-tab-pane label="客诉历史" name="complaintHistory">
+					<el-table :data="supperinfoComplaintHistoryData" style="width: 100%">
+						<el-table-column prop="purchaseContract" label="采购合同" width="120"></el-table-column>
+						<el-table-column prop="productCode" label="产品编号" width="120"></el-table-column>
+						<el-table-column prop="chineseName" label="中文品名" width="120"></el-table-column>
+						<el-table-column prop="chineseSpecifications" label="中文规格" width="120"></el-table-column>
+						<el-table-column prop="shippingQuantity" label="出货数量" width="100"></el-table-column>
+						<el-table-column prop="unit" label="计量单位" width="100"></el-table-column>
+						<el-table-column prop="claimAmount" label="索赔金额" width="100"></el-table-column>
+						<el-table-column prop="actualCompensation" label="实赔金额" width="100"></el-table-column>
+						<el-table-column prop="salesContract" label="销售合同" width="120"></el-table-column>
+						<el-table-column prop="shippingDate" label="出运日期" width="120"></el-table-column>
+						<el-table-column prop="customerShortName" label="客户简称" width="120"></el-table-column>
+					</el-table></el-tab-pane>
+				<el-tab-pane label="往来邮件" name="emailHistory"></el-tab-pane>
 			</el-tabs>
 			<template #footer>
 				<span class="dialog-footer">
@@ -318,6 +408,224 @@ import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
 import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 import { get } from 'sortablejs';
+import qs from 'qs';
+
+const supperinfoBankAccountInfoTableData = ref([]) //银行账号
+const supperinfoProductTableData = ref([]) //产品清单
+const supperinfoQuotationHistoryData = ref([]) //报价历史
+const supperinfoPurchaseHistoryData = ref([]) //采购历史
+const supperinfoSendSampleData = ref([]) //寄样历史
+const supperinfoReceiveSampleData = ref([]) //收样历史	
+const supperinfoComplaintHistoryData = ref([]) //客诉历史
+const currentSupplierProductIds = ref<number[]>([]);// 存储当前供应商所有产品ID的数组
+
+// 获取供应商产品列表
+const getSupplierProductList = (supplierId: number) => {
+	return request({
+		url: 'ProductInformation/GetProductListBySupplierID/GetProductList',
+		method: 'get',
+		params: { SupplierID: supplierId }
+	})
+}
+
+// 获取报价历史的方法，支持多个产品ID
+const loadProductInquiryHistory = async (productIds: number[]) => {
+	try {
+		const response = await request({
+			url: 'Inquiry/GetInquiryProductHistoryListByProductIDs/GetInquiryProductHistoryList',
+			method: 'GET',
+			params: {
+				productIDs: productIds
+			},
+			paramsSerializer: (params) => {
+				return qs.stringify(params, { arrayFormat: 'repeat' });
+			}
+		});
+		if (response.code === 200) {
+			// 使用产品列表数据创建查找映射
+			const productInfoMap = supperinfoProductTableData.value.reduce((map, product) => {
+				map[product.ProductCode] = {
+					chineseName: product.ChineseName,
+					unit: product.Unit,
+					specifications: product.ChineseSpecifications
+				};
+				return map;
+			}, {});
+
+			// 映射报价历史数据，并包含产品相关信息
+			supperinfoQuotationHistoryData.value = response.data.map(item => {
+				const productInfo = productInfoMap[item.productNumber] || {
+					chineseName: '',
+					unit: '',
+					specifications: ''
+				};
+				const date = item.date ? new Date(item.date) : null;
+				const formattedDate = date ?
+					`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` :
+					'';
+				return {
+					inquiryDate: formattedDate,
+					productCode: item.productNumber,
+					chineseName: productInfo.chineseName,
+					chineseSpecifications: productInfo.specifications || item.productSpecifications, // 优先使用产品列表中的规格
+					packagingMethod: item.smallPackagingMethod,
+					purchasePrice: item.price,
+					unit: productInfo.unit || item.unit, // 优先使用产品列表中的单位
+					quotationQuantity: item.quoteQuantity
+				};
+			});
+		} else {
+			ElMessage.error(response.msg || '获取报价历史失败');
+		}
+	} catch (error) {
+		console.error('获取报价历史失败:', error);
+		ElMessage.error('获取报价历史失败，请稍后重试');
+	}
+};
+
+// 获取供应商产品列表
+const loadSupplierProductList = async (supplierId: number) => {
+	try {
+		const response = await getSupplierProductList(supplierId);
+		if (response.code === 200) {
+			// 清空产品ID数组
+			currentSupplierProductIds.value = [];
+			// 处理产品列表数据
+			supperinfoProductTableData.value = response.data.map(item => {
+				// 收集产品ID
+				if (item.id) {
+					currentSupplierProductIds.value.push(item.id);
+				}
+				return {
+					id: item.id,
+					ProductCode: item.productCode,
+					ChineseName: item.chineseProductName,
+					ChineseSpecifications: item.chineseSpecification,
+					Unit: state.optionss.hr_calculate_unit.find(
+						unit => unit.dictValue === item.unitOfMeasurement.toString()
+					)?.dictLabel || '',
+					lastTransaction: item.recentTransactionDate,
+					packagingMethod: item.packingMethod
+				};
+			});
+			// 如果有产品ID，则获取所有产品的报价历史
+			if (currentSupplierProductIds.value.length > 0) {
+				await loadProductInquiryHistory(currentSupplierProductIds.value);
+			} else {
+				// 清空报价历史数据
+				supperinfoQuotationHistoryData.value = [];
+			}
+
+		} else {
+			ElMessage.error('获取供应商产品列表失败');
+		}
+	} catch (error) {
+		console.error('获取供应商产品列表出错：', error);
+		ElMessage.error('获取供应商产品列表失败');
+	}
+};
+
+//#region 银行账号相关的方法
+// 添加银行账号
+const handleAddBankRow = () => {
+	const newRow = {
+		supplier_id: SelctedSupplierId.value,
+		bank_account_name: '',
+		bank: '',
+		bank_account_number: '',
+		bank_address: '',
+		remark: ''
+	};
+	supperinfoBankAccountInfoTableData.value.push(newRow);
+}
+
+// 删除银行账号
+const handleDeleteBankAccountRow = (index) => {
+	ElMessageBox.confirm('确定要删除该银行账号吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		const row = supperinfoBankAccountInfoTableData.value[index];
+		if (row.id) {
+			// 如果有ID，说明是已存在的记录，调用删除接口
+			request({
+				url: 'Supplierinfo/DeleteSupplierBankAccount/DelBankAccount',
+				method: 'POST',
+				data: row
+			}).then(response => {
+				if (response.code === 200) {
+					ElMessage.success(response.msg);
+					supperinfoBankAccountInfoTableData.value.splice(index, 1);
+				} else {
+					ElMessage.error(response.msg);
+				}
+			});
+		} else {
+			// 如果没有ID，说明是新添加的记录，直接从数组中删除
+			supperinfoBankAccountInfoTableData.value.splice(index, 1);
+		}
+	});
+}
+
+// 保存银行账号信息
+const saveBankAccountInfo = () => {
+	const promises = supperinfoBankAccountInfoTableData.value.map(row => {
+		if (row.id) {
+			// 更新已存在的记录
+			return request({
+				url: 'Supplierinfo/EditBankAccount/EditBankAccount',
+				method: 'POST',
+				data: row
+			});
+		} else {
+			// 添加新记录
+			return request({
+				url: 'Supplierinfo/AddSupplierBankAccount/AddBankAccount',
+				method: 'POST',
+				data: row
+			});
+		}
+	});
+
+	Promise.all(promises)
+		.then(responses => {
+			const hasError = responses.some(response => response.code !== 200);
+			if (!hasError) {
+				ElMessage.success('银行账号信息保存成功！');
+				loadBankAccountList(); // 重新加载列表
+			} else {
+				ElMessage.error('部分银行账号信息保存失败，请重试！');
+			}
+		})
+		.catch(error => {
+			console.error('保存银行账号信息出错：', error);
+			ElMessage.error('保存银行账号信息失败！');
+		});
+}
+
+// 加载银行账号列表
+const loadBankAccountList = () => {
+	request({
+		url: 'Supplierinfo/GetSupplierBankAccountList/GetBankAccountList',
+		method: 'GET',
+		params: {
+			supplierId: SelctedSupplierId.value
+		}
+	}).then(response => {
+		if (response.code === 200) {
+			supperinfoBankAccountInfoTableData.value = response.data;
+		} else {
+			ElMessage.error('获取银行账号列表失败！');
+		}
+	}).catch(error => {
+		console.error('获取银行账号列表出错：', error);
+		ElMessage.error('获取银行账号列表失败！');
+	});
+}
+//#endregion	
+
+
 
 const activeTab = ref('contacttabpane')
 const isEditBtnVisible = ref(false)
@@ -493,10 +801,10 @@ const SaveSupperinfo = () => {
 		SupplierRequest.IsDelete = '0'
 		SupplierRequest.contactInfoItems = supperinfoContactsTableData.value
 		supperinfoContactsTableData.value.forEach((element) => {
-			if (element.gender == '男') {
-				element.gender = '1'
+			if (element.gender == '0') {
+				element.gender = '男'
 			} else {
-				element.gender = '0'
+				element.gender = '女'
 			}
 		})
 		//上传供应商图片
@@ -526,6 +834,9 @@ const SaveSupperinfo = () => {
 			SupplierRequest.FactoryImageUrl = Addsupperinfoform.factoryImageURL;
 			request.post('Supplierinfo/AddSupplierinfo/Add', SupplierRequest).then(response => {
 				if (response != null) {
+					saveBankAccountInfo();// 保存银行账号信息
+					loadBankAccountList();// 加载银行账号列表
+					isEditable.value = true;
 					ElMessage({
 						message: response.msg,
 						type: 'success'
@@ -540,7 +851,6 @@ const SaveSupperinfo = () => {
 		}).catch(error => {
 			console.error('上传供应商图片出错！😔错误内容：', error);
 		});
-		AddSupperDialog.value = false
 	}).catch(() => {
 		ElMessage({
 			type: 'info',
@@ -684,6 +994,9 @@ const isEditable = ref(false);
 const SelctedSupplierId = ref('')
 //查看供应商详情
 const checkSupplierDetails = (row) => {
+
+	loadSupplierProductList(row.id)// 加载供应商产品列表
+	loadBankAccountList();// 加载银行账号列表
 	isEditBtnVisible.value = true;
 	isEditSaveBtnVisible.value = false;
 	isSavebtnVisible.value = false;
@@ -732,6 +1045,9 @@ const checkSupplierDetails = (row) => {
 	}).then(response => {
 		if (response.data.length > 0) {
 			supperinfoContactsTableData.value = response.data;
+			supperinfoContactsTableData.value.forEach((element) => {
+				element.gender = state.optionss.hr_gender.find(option => option.dictValue === element.gender)?.dictValue || '';
+			})
 		} else {
 			supperinfoContactsTableData.value = [];
 		}
@@ -800,7 +1116,12 @@ const EditSaveSupperinfo = () => {
 			SupplierRequest.FactoryImageUrl = filelistUrlStr.value;
 			request.post('Supplierinfo/EditSupplierinfo/Edit', SupplierRequest).then(response => {
 				if (response != null) {
-					AddSupperDialog.value = false;
+					saveBankAccountInfo();// 保存银行账号信息
+					loadBankAccountList();// 加载银行账号列表
+					isEditable.value = true;
+					// 更新按钮状态
+					isEditBtnVisible.value = true;        // 显示编辑按钮
+					isEditSaveBtnVisible.value = false;   // 隐藏编辑保存按钮
 					GetSupplierInfoList(SupplierInfoTableDatacurrentPage.value, SupplierInfoTableDatapageSize.value);
 				} else {
 					console.error('编辑供应商信息出错');
@@ -821,6 +1142,8 @@ const EditSaveSupperinfo = () => {
 }
 
 const Closeaddsupperdialog = () => {
+	supperinfoProductTableData.value = [] // 关闭对话框时清空供应商产品数据
+	supperinfoBankAccountInfoTableData.value = [];// 关闭对话框时清空银行账号数据
 	Addsupperinfoform.supplierId = '';
 	Addsupperinfoform.shortName = '';
 	Addsupperinfoform.fullName = '';

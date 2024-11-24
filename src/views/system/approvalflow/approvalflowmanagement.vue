@@ -62,12 +62,22 @@
 				<el-row v-show="IsSaleOrderShow">
 					<el-col :span="12">
 						<el-form-item label="美元/欧元">
+							<el-select v-model="ApprovalProcessForm.CustomFields1operators" filterable
+								placeholder="选择运算符" style="width: 60px;">
+								<el-option v-for="dict in optionss.hr_operators" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue" />
+							</el-select>
 							<el-input v-model="ApprovalProcessForm.CustomFields1" style="width: 250px;"
 								placeholder="请输入美元/欧元金额"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="12">
 						<el-form-item label="人民币">
+							<el-select v-model="ApprovalProcessForm.CustomFields2operators" filterable
+								placeholder="选择运算符" style="width: 60px;">
+								<el-option v-for="dict in optionss.hr_operators" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue" />
+							</el-select>
 							<el-input v-model="ApprovalProcessForm.CustomFields2" style="width: 250px;"
 								placeholder="请输入人民币金额">
 							</el-input>
@@ -136,11 +146,12 @@ const state = reactive({
 	optionss: {
 		// 选项列表(动态字典将会从后台获取数据)
 		hr_approval_document_type: [],
-		sql_hr_allrole: []
+		sql_hr_allrole: [],
+		hr_operators: []
 	}
 })
 const { optionss } = toRefs(state)
-var dictParams = [{ dictType: 'hr_approval_document_type' }, { dictType: 'sql_hr_allrole' }]
+var dictParams = [{ dictType: 'hr_approval_document_type' }, { dictType: 'sql_hr_allrole' }, { dictType: 'hr_operators' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -205,6 +216,9 @@ const ApprovalProcessForm = reactive({
 	DocumentType: '',
 	TriggerCondition: '',
 	Remark: '',
+	CustomFields1operators: null,
+	CustomFields2operators: null,
+	CustomFields3operators: null,
 	CustomFields1: '',
 	CustomFields2: '',
 	CustomFields3: '',
@@ -283,6 +297,9 @@ const editProcess = (row) => {
 			ApprovalProcessForm.CustomFields1 = response.data.process.customFields1;
 			ApprovalProcessForm.CustomFields2 = response.data.process.customFields2;
 			ApprovalProcessForm.CustomFields3 = response.data.process.customFields3;
+			ApprovalProcessForm.CustomFields1operators = state.optionss.hr_operators.find(item => item.dictValue == response.data.process.customFields1Operators).dictValue;
+			ApprovalProcessForm.CustomFields2operators = state.optionss.hr_operators.find(item => item.dictValue == response.data.process.customFields2Operators).dictValue;
+			ApprovalProcessForm.CustomFields3operators = state.optionss.hr_operators.find(item => item.dictValue == response.data.process.customFields3Operators).dictValue;
 			if (response.data.process.documentType == '1') {
 				IsSaleOrderShow.value = true;
 			} else {
@@ -290,6 +307,8 @@ const editProcess = (row) => {
 			}
 			response.data.stageList.forEach(element => {
 				const newRow = {
+					processID: response.data.process.processID,
+					StageID: element.stageID,
 					StageName: element.stageName,
 					ApproverRoleID: state.optionss.sql_hr_allrole.find(item => item.dictValue == element.approverRoleID).dictValue,
 					Profitmargin: element.profitmargin,

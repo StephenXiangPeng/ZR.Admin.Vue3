@@ -32,9 +32,10 @@
 				<el-table-column prop="subject" label="询价主题"></el-table-column>
 				<el-table-column prop="inquirer" label="询价人"></el-table-column>
 				<el-table-column prop="shippingDestination" label="送货目的地"></el-table-column>
-				<el-table-column fixed="right" prop="operate" label="操作" :width="80">
+				<el-table-column fixed="right" prop="operate" label="操作" :width="200">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small" @click="ChcekDetails(scope.row)">查看详情</el-button>
+						<el-button link type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -83,6 +84,11 @@
 				<el-button class="mt-4" type="primary" @click="onAddInquiryProductItem" style="margin-bottom: 10px;"
 					:disabled="isEditable">空白新增</el-button>
 				<el-table :data="inquryProductTableData" height="450" stripe>
+					<el-table-column prop="productId" label="产品ID" width="150" align="center" v-if="false">
+						<template #default="{ row }">
+							<el-input v-model="row.productId" :disabled="isEditable" />
+						</template>
+					</el-table-column>
 					<el-table-column prop="date" label="日期" width="150" align="center" />
 					<el-table-column prop="productimage" label="询价产品图片" width="150" align="center">
 						<template #default="scope">
@@ -151,6 +157,11 @@
 					<el-table-column prop="taxincluded" label="含税+/-" width="120" align="center">
 						<template #default="{ row }">
 							<el-input v-model="row.taxincluded" :disabled="isEditable" />
+						</template>
+					</el-table-column>
+					<el-table-column prop="QuoteQuantity" label="报价数量" width="120" align="center">
+						<template #default="{ row }">
+							<el-input v-model="row.QuoteQuantity" :disabled="isEditable" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="price" label="价格" width="120" align="center">
@@ -226,8 +237,8 @@
 					</el-table-column>
 					<el-table-column fixed="right" label="操作" min-width="120">
 						<template #default="scope">
-							<el-button link type="primary" size="small" @click.prevent="deleteRow(scope.$index)"
-								:disabled="isEditable">
+							<el-button type="danger" size="small"
+								@click.prevent="deleteProduct(scope.row, scope.$index)" :disabled="isEditable">
 								删除
 							</el-button>
 						</template>
@@ -250,8 +261,15 @@
 							<el-table-column prop="fileName" label="文件名"></el-table-column>
 							<el-table-column label="操作">
 								<template #default="scope">
-									<el-button @click="handleDownload(scope.row)" type="text"
-										size="small">下载</el-button>
+									<el-button link type="primary" size="small" @click="handleDownload(scope.row)"
+										:disabled="isEditable">
+										下载
+									</el-button>
+									<el-button link type="danger" size="small"
+										@click="deleteDocument(scope.row, scope.$index)" :disabled="isEditable">
+										<!-- 注意这里改为在查看模式下才能删除 -->
+										删除
+									</el-button>
 								</template>
 							</el-table-column>
 						</el-table>
@@ -404,6 +422,7 @@ const handleRowDblClick = (row) => {
 		return;
 	} else {
 		inquryProductTableData.value.push({
+			productId: row.id,
 			date: dayjs().format('YYYY-MM-DD'),
 			productimage: '',
 			productsupplementarydocuments: '',
@@ -416,19 +435,20 @@ const handleRowDblClick = (row) => {
 			custommade: 0,
 			priceterms: '',
 			taxincluded: '',
+			QuoteQuantity: 0,
 			price: 0,
-			productlength: 0,
-			productwidth: 0,
-			productheight: 0,
-			productweight: 0,
-			mediumpackaging: 0,
-			outerbox: 0,
-			middlebagorouterbox: 0,
-			outerboxlength: 0,
-			outerboxwidth: 0,
-			outerboxheight: 0,
-			outerboxvolume: 0,
-			outerboxgrossweight: 0
+			productlength: row.productLength ?? 0,
+			productwidth: row.productWidth ?? 0,
+			productheight: row.productHeight ?? 0,
+			productweight: row.productWeight ?? 0,
+			mediumpackaging: row.mediumPackagingVolume ?? 0,
+			outerbox: row.outerBoxPackingQuantity ?? 0,
+			middlebagorouterbox: row.middlebagorouterbox ?? 0,
+			outerboxlength: row.outerBoxLength ?? 0,
+			outerboxwidth: row.outerBoxWidth ?? 0,
+			outerboxheight: row.outerBoxHeight ?? 0,
+			outerboxvolume: row.outerBoxVolume ?? 0,
+			outerboxgrossweight: row.outerBoxGrossWeight ?? 0
 		});
 		SearchProcutDialog.value = false;
 	}
@@ -500,6 +520,7 @@ const onAddInquiryProductItem = () => {
 		custommade: 0,
 		priceterms: '',
 		taxincluded: '',
+		QuoteQuantity: 0,
 		price: 0,
 		productlength: 0,
 		productwidth: 0,
@@ -514,10 +535,6 @@ const onAddInquiryProductItem = () => {
 		outerboxvolume: 0,
 		outerboxgrossweight: 0
 	})
-}
-const deleteRow = (index: number) => {
-	if (isEditable.value) return; // 如果不可编辑，直接返回
-	inquryProductTableData.value.splice(index, 1)
 }
 const selectedImages = ref([]); // 存储用户选择的图片文件
 const previewImage = ref(''); // 存储要预览的图片
@@ -709,6 +726,27 @@ const uploadFileToAliyun = async (file) => {
 var UploadResponse = ref(null);
 // 保存询价单
 const uploadFilesAndSaveInquiry = async () => {
+	// 添加询价主题和询价人员的验证
+	if (!NewprudctInquityDetailsform.Subject?.trim()) {
+		ElMessage.error('请填写询价主题');
+		return;
+	}
+	if (!NewprudctInquityDetailsform.Inquirer) {
+		ElMessage.error('请选择询价人员');
+		return;
+	}
+	// 添加价格条款和含税校验
+	const invalidProduct = inquryProductTableData.value.find(product =>
+		!product.priceterms || !product.taxincluded
+	);
+	if (invalidProduct) {
+		if (!invalidProduct.priceterms) {
+			ElMessage.error('请为所有产品选择价格条款');
+		} else if (!invalidProduct.taxincluded) {
+			ElMessage.error('请为所有产品填写含税信息');
+		}
+		return;
+	}
 	ElMessageBox.confirm('确定保存该询价单吗？', '提示', {
 		confirmButtonText: '确定',
 		cancelButtonText: '取消',
@@ -843,7 +881,9 @@ const ChcekDetails = (row) => {
 		if (response.code === 200 && response.data) {
 			if (response.data.products && response.data.products.length > 0) {
 				inquryProductTableData.value = response.data.products.map(item => ({
+					id: item.id,
 					date: item.date,
+					productId: item.productID,
 					productimage: item.productImage,
 					productnumber: item.productNumber,
 					productspecifications: item.productSpecifications,
@@ -852,9 +892,10 @@ const ChcekDetails = (row) => {
 					moq: item.moq,
 					negotiateprice: item.negotiateprice,
 					custommade: item.customMade,
-					priceterms: item.priceTerms,
+					priceterms: state.optionss.hr_pricing_term.find(option => option.dictValue === item.priceTerms.toString()).dictValue,
 					taxincluded: item.taxIncluded,
 					price: item.price,
+					QuoteQuantity: item.quoteQuantity,
 					productlength: item.productLength,
 					productwidth: item.productWidth,
 					productheight: item.productHeight,
@@ -938,10 +979,6 @@ const CloseInquiryDialog = () => {
 	isShowUpload.value = true
 }
 
-const handleDeleteExistingFile = (index: number) => {
-	existingDocuments.value.splice(index, 1)
-}
-
 const handleDeleteNewFile = (index: number) => {
 	inquryProductDocumentTableData.value.splice(index, 1)
 	uploadfileList.value.splice(index, 1)
@@ -951,11 +988,41 @@ const originalProductData = ref([]);
 const originalDocumentData = ref([]);
 const EditSaveInquiry = async () => {
 	try {
-		await ElMessageBox.confirm('确定编辑该询价单吗？', '提示', {
-			confirmButtonText: '确定',
-			cancelButtonText: '取消',
-			type: 'warning'
-		});
+		// 添加询价主题和询价人员的验证
+		if (!NewprudctInquityDetailsform.Subject?.trim()) {
+			ElMessage.error('请填写询价主题');
+			return;
+		}
+		if (!NewprudctInquityDetailsform.Inquirer) {
+			ElMessage.error('请选择询价人员');
+			return;
+		}
+		// 添加价格条款和含税校验
+		const invalidProduct = inquryProductTableData.value.find(product =>
+			!product.priceterms || !product.taxincluded
+		);
+		if (invalidProduct) {
+			if (!invalidProduct.priceterms) {
+				ElMessage.error('请为所有产品选择价格条款');
+			} else if (!invalidProduct.taxincluded) {
+				ElMessage.error('请为所有产品填写含税信息');
+			}
+			return;
+		}
+		try {
+			await ElMessageBox.confirm('确定编辑该询价单吗？', '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning'
+			});
+		} catch (err) {
+			// 用户点击取消按钮
+			ElMessage({
+				type: 'info',
+				message: '已取消保存'
+			});
+			return; // 直接返回，不执行后续操作
+		}
 
 		// 准备要发送到服务器的数据
 		const dataToSend = {
@@ -977,6 +1044,7 @@ const EditSaveInquiry = async () => {
 			// 添加到要发送的数据中
 			dataToSend.InquiryProducts.push({
 				ID: product.id || 0, // 如果是新产品，ID 为 0
+				ProductID: product.productId,
 				Date: product.date,
 				ProductImage: product.productimage,
 				ProductNumber: product.productnumber,
@@ -988,6 +1056,7 @@ const EditSaveInquiry = async () => {
 				CustomMade: product.custommade,
 				PriceTerms: product.priceterms,
 				TaxIncluded: product.taxincluded,
+				QuoteQuantity: product.QuoteQuantity,
 				Price: product.price,
 				ProductLength: product.productlength,
 				ProductWidth: product.productwidth,
@@ -1100,4 +1169,223 @@ const ResetSearch = () => {
 	GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
 }
 
+const handleDelete = (row) => {
+	ElMessageBox.confirm('确定要删除该询价单吗？此操作不可恢复！', '警告', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'Inquiry/DeleteInquiry/DeleteInquiry',
+			method: 'GET',
+			params: {
+				Id: row.id
+			}
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage({
+					type: 'success',
+					message: response.msg
+				});
+				// 刷新列表
+				GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
+			} else {
+				ElMessage.error(response.msg || '删除失败');
+			}
+		}).catch(error => {
+			console.error('删除询价单失败:', error);
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage({
+			type: 'info',
+			message: '已取消删除'
+		});
+	});
+};
+
+const deleteProduct = async (row, index) => {
+	try {
+		await ElMessageBox.confirm('确定要删除该产品吗？此操作不可恢复！', '警告', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 如果产品没有 ID，说明是新添加的，直接从本地数组中删除
+		if (!row.id) {
+			inquryProductTableData.value.splice(index, 1);
+			ElMessage({
+				type: 'success',
+				message: '删除成功'
+			});
+			return;
+		}
+
+		// 如果有 ID，则调用后端接口删除
+		const response = await request({
+			url: 'Inquiry/DeleteInquiryProducts/DeleteInquiryProducts',
+			method: 'GET',
+			params: {
+				Id: row.id
+			}
+		});
+
+		if (response.code === 200) {
+			ElMessage({
+				type: 'success',
+				message: response.msg
+			});
+			// 只重新加载产品列表
+			await loadProductList(EditInquiryID.value);
+		} else {
+			throw new Error(response.msg || '删除失败');
+		}
+	} catch (error) {
+		if (error === 'cancel' || error.message === 'cancel') {
+			// 用户取消删除时的提示
+			ElMessage({
+				type: 'info',
+				message: '已取消删除'
+			});
+		} else {
+			// 其他错误的提示
+			console.error('删除产品失败:', error);
+			ElMessage.error(error.message || '删除失败，请稍后重试');
+		}
+	}
+};
+
+const deleteDocument = async (row, index) => {
+	try {
+		await ElMessageBox.confirm('确定要删除该附件吗？此操作不可恢复！', '警告', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 如果附件没有 ID，说明是新上传的，直接从本地数组中删除
+		if (!row.id) {
+			inquiryDocumentList.value.splice(index, 1);
+			// 同时从上传文件列表中删除
+			uploadfileList.value.splice(index, 1);
+			ElMessage({
+				type: 'success',
+				message: '删除成功'
+			});
+			return;
+		}
+
+		// 如果有 ID，则调用后端接口删除
+		const response = await request({
+			url: 'Inquiry/DeleteInquirySupplementaryDocuments/DeleteInquirySupplementaryDocuments',
+			method: 'GET',
+			params: {
+				Id: row.id
+			}
+		});
+
+		if (response.code === 200) {
+			ElMessage({
+				type: 'success',
+				message: response.msg
+			});
+			// 只重新加载附件列表
+			await loadDocumentList(EditInquiryID.value);
+		} else {
+			throw new Error(response.msg || '删除失败');
+		}
+	} catch (error) {
+		if (error === 'cancel' || error.message === 'cancel') {
+			// 用户取消删除时的提示
+			ElMessage({
+				type: 'info',
+				message: '已取消删除'
+			});
+		} else {
+			// 其他错误的提示
+			console.error('删除附件失败:', error);
+			ElMessage.error(error.message || '删除失败，请稍后重试');
+		}
+	}
+};
+
+// 添加两个新的方法来分别加载产品列表和附件列表
+const loadProductList = async (inquiryId) => {
+	try {
+		const response = await request({
+			url: 'Inquiry/GetInquiryProductsAndDocuments/GetInquiryProductsAndDocuments',
+			method: 'GET',
+			params: {
+				InqueryID: inquiryId
+			}
+		});
+
+		if (response.code === 200 && response.data) {
+			if (response.data.products && response.data.products.length > 0) {
+				inquryProductTableData.value = response.data.products.map(item => ({
+					id: item.id,
+					date: item.date,
+					productid: item.productID,
+					productimage: item.productImage,
+					productnumber: item.productNumber,
+					productspecifications: item.productSpecifications,
+					mainmaterials: item.mainMaterials,
+					smallpackagingmethod: item.smallPackagingMethod,
+					moq: item.moq,
+					negotiateprice: item.negotiateprice,
+					custommade: item.customMade,
+					priceterms: state.optionss.hr_pricing_term.find(option => option.dictValue === item.priceTerms.toString())?.dictLabel,
+					taxincluded: item.taxIncluded,
+					price: item.price,
+					QuoteQuantity: item.quoteQuantity,
+					productlength: item.productLength,
+					productwidth: item.productWidth,
+					productheight: item.productHeight,
+					productweight: item.productWeight,
+					mediumpackaging: item.mediumPackaging,
+					outerbox: item.outerBox,
+					middlebagorouterbox: item.middleBagOrOuterBox,
+					outerboxlength: item.outerBoxLength,
+					outerboxwidth: item.outerBoxWidth,
+					outerboxheight: item.outerBoxHeight,
+					outerboxvolume: item.outerBoxVolume,
+					outerboxgrossweight: item.outerBoxGrossWeight
+				}));
+			} else {
+				inquryProductTableData.value = [];
+			}
+		}
+	} catch (error) {
+		console.error('加载产品列表失败:', error);
+		ElMessage.error('加载产品列表失败');
+	}
+};
+
+const loadDocumentList = async (inquiryId) => {
+	try {
+		const response = await request({
+			url: 'Inquiry/GetInquiryProductsAndDocuments/GetInquiryProductsAndDocuments',
+			method: 'GET',
+			params: {
+				InqueryID: inquiryId
+			}
+		});
+
+		if (response.code === 200 && response.data) {
+			if (response.data.documents && response.data.documents.length > 0) {
+				inquiryDocumentList.value = response.data.documents.map(item => ({
+					id: item.id,
+					fileName: item.fileName,
+					documentUrl: item.documentUrl
+				}));
+			} else {
+				inquiryDocumentList.value = [];
+			}
+		}
+	} catch (error) {
+		console.error('加载附件列表失败:', error);
+		ElMessage.error('加载附件列表失败');
+	}
+};
 </script>

@@ -66,56 +66,24 @@
 					<el-col :span="8">
 						<el-form-item label="合同状态">
 							<el-select v-model="Addcontractofpurchaseform.contractStatus" placeholder="请选择合同状态"
-								style="width: 300px">
+								style="width: 300px" disabled>
 								<el-option v-for="dict in optionss.hr_contract_status" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="厂商编号">
-							<el-select v-model="Addcontractofpurchaseform.vendorCode" placeholder="请选择厂商编号"
-								style="width: 300px" @change="GetSupplierInfo">
-								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
+						<el-form-item label="交货日期">
+							<el-date-picker v-model="Addcontractofpurchaseform.deliveryDate" type="date" disabled
+								style="width: 300px"></el-date-picker>
 						</el-form-item>
 					</el-col>
 				</el-row>
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="厂商简称">
-							<el-input v-model="Addcontractofpurchaseform.vendorAbbreviation" style="width: 300px"
-								disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="销售合同">
-							<el-select v-model="Addcontractofpurchaseform.salesContract" placeholder="请选择销售合同"
-								style="width: 300px">
-								<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="客户合同">
-							<el-input v-model="Addcontractofpurchaseform.customerContract" disabled
+							<el-input v-model="Addcontractofpurchaseform.vendorAbbreviation"
 								style="width: 300px"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="客户简称">
-							<el-input v-model="Addcontractofpurchaseform.customerAbbreviation" disabled
-								style="width: 300px"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="交货日期">
-							<el-date-picker v-model="Addcontractofpurchaseform.deliveryDate" type="date" disabled
-								style="width: 300px"></el-date-picker>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -127,14 +95,14 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="已付定金">
 							<el-input v-model="Addcontractofpurchaseform.deposit" disabled
 								style="width: 300px"></el-input>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="销售员">
 							<el-select v-model="Addcontractofpurchaseform.salesperson" disabled style="width: 300px">
@@ -152,6 +120,14 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
+					<el-col :span="8">
+						<el-form-item label="价格条款">
+							<el-select v-model="Addcontractofpurchaseform.priceTerms" disabled style="width: 300px">
+								<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
 				</el-row>
 				<el-row>
 					<el-col :span="8">
@@ -160,12 +136,36 @@
 								style="width: 300px"></el-input>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row v-if="false">
 					<el-col :span="8">
-						<el-form-item label="价格条款">
-							<el-select v-model="Addcontractofpurchaseform.priceTerms" disabled style="width: 300px">
-								<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
+						<el-form-item label="客户简称">
+							<el-input v-model="Addcontractofpurchaseform.customerAbbreviation" disabled
+								style="width: 300px"></el-input>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="厂商编号">
+							<el-select v-model="Addcontractofpurchaseform.vendorCode" placeholder="请选择厂商编号"
+								style="width: 300px" @change="GetSupplierInfo">
+								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="销售合同">
+							<el-select v-model="Addcontractofpurchaseform.salesContract" placeholder="请选择销售合同"
+								style="width: 300px">
+								<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="客户合同">
+							<el-input v-model="Addcontractofpurchaseform.customerContract" disabled
+								style="width: 300px"></el-input>
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -620,7 +620,7 @@ const contractsTableDatahandlePageChange = async (newPage) => {
 function GetContractList(start, end) {
 	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
 		request({
-			url: 'Contracts/GetContractsList/GetList',
+			url: 'Contracts/GetNoDepositContractList/GetList',
 			method: 'GET',
 			params: {
 				PageNum: start,
@@ -628,7 +628,18 @@ function GetContractList(start, end) {
 			}
 		}).then(response => {
 			if (response.data.result.length > 0) {
-				shoppinglisttableData.value = response.data.result;
+				shoppinglisttableData.value = [];
+				response.data.result.forEach(element => {
+					shoppinglisttableData.value.push({
+						id: element.id,
+						contractNumber: element.contractNumber,
+						customerAbbreviation: state.optionss.sql_hr_customer.find(item => item.dictValue == element.customerId.toString()).dictLabel,
+						contractDate: formatDate(element.contractDate),
+						effectiveDate: formatDate(element.effectiveDate),
+						deliveryDate: formatDate(element.deliveryDate),
+						salesperson: state.optionss.sql_hr_sale.find(item => item.dictValue == element.salesperson.toString()).dictLabel
+					});
+				});
 				contractsTableDatatotalItems.value = response.data.totalNum;
 				resolve(response.data.data);
 			} else {
@@ -644,6 +655,15 @@ function GetContractList(start, end) {
 			reject(error);  // Reject the promise if an error occurs
 		});
 	});
+}
+// 添加日期格式化函数
+const formatDate = (dateString) => {
+	if (!dateString) return '';
+	const date = new Date(dateString);
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
 }
 watch(() => Addcontractofpurchaseform.value.salesContract, (newValue, oldValue) => {
 	// 这里的代码会在 salesContract 的值改变时执行
