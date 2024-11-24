@@ -4,7 +4,7 @@
     <div class="login">
       <h3 class="title">{{ defaultSettings.title }}</h3>
 
-      <LangSelect title="多语言设置" class="langSet" />
+      <!-- <LangSelect title="多语言设置" class="langSet" /> -->
 
       <div style="padding: 0 25px 5px 25px">
         <el-tabs v-model="loginType" @tab-click="handleLoginType">
@@ -53,13 +53,13 @@
           </el-button>
         </el-form-item>
 
-        <div style="display: flex; justify-content: space-between; align-items: center">
+        <!-- <div style="display: flex; justify-content: space-between; align-items: center">
           <el-checkbox v-model="loginForm.rememberMe">{{ $t('login.rememberMe') }}</el-checkbox>
           <span style="font-size: 12px">
             <router-link class="link-type" :to="'/register'">{{ $t('login.register') }}</router-link>
             <span @click="handleForgetPwd()" class="forget-pwd">{{ $t('login.forgotPwd') }}</span>
           </span>
-        </div>
+        </div> -->
       </el-form>
       <div class="qr-wrap login-form" v-show="loginType == 3">
         <div class="login-scan-container">

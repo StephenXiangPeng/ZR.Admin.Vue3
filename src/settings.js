@@ -55,7 +55,7 @@ export default {
   /**
    * 版权信息
    */
-  copyright: 'Copyright ©2023 <a target="_black" href="http://www.izhaorui.cn">ZRAdmin.NET</a> All Rights Reserved.',
+  copyright: 'Copyright ©2023 <a target="_black" >惠扬特包有限公司</a> All Rights Reserved.',
   /**
    * 是否显示底部栏
    */
@@ -67,11 +67,11 @@ export default {
   /**
    * 水印文案
    */
-  watermarkText: 'ZRAdmin.NET',
+  watermarkText: '惠扬特包',
   /**
    * 是否显示其他登录
    */
-  showOtherLogin: true,
+  showOtherLogin: false,
   /**
    * 默认大小
    */
@@ -87,11 +87,11 @@ export default {
   /**
    * 是否显示QR登录
    */
-  showQrLogin: true,
+  showQrLogin: false,
   /**
    * 是否显示手机号登录
    */
-  showPhoneLogin: true,
+  showPhoneLogin: false,
   /**
    * 标签页持久化
    */
