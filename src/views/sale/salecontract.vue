@@ -717,6 +717,19 @@
 							</el-table-column>
 						</el-table>
 					</el-tab-pane>
+					<el-tab-pane label="已收费用详情" name="ReceivedExpenseDetailsTab">
+						<el-table :data="ReceivedExpenseDetailsTableData" style="width: 100%; " height="280">
+							<el-table-column prop="receiptNumber" label="收款单号" width="150"></el-table-column>
+							<el-table-column prop="fundsType" label="收款类型" width="150"></el-table-column>
+							<el-table-column prop="receiptDate" label="收汇日期" width="150"
+								:formatter="(row, column, cellValue) => formatDate(cellValue)"></el-table-column>
+							<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
+							<el-table-column prop="foreignCurrency" label="外销币种" width="150"></el-table-column>
+							<el-table-column prop="exchangeRate" label="汇率" width="150"></el-table-column>
+							<el-table-column prop="amount" label="金额" width="150"></el-table-column>
+							<el-table-column prop="bank" label="收汇银行" width="150"></el-table-column>
+						</el-table>
+					</el-tab-pane>
 				</el-tabs>
 				<span style="font-size: 20px; font-weight: bold;">合计信息</span>
 				<el-divider></el-divider>
@@ -883,6 +896,44 @@ import { get } from 'sortablejs';
 import useUserStore from "@/store/modules/user";
 import { Row } from 'element-plus/es/components/table-v2/src/components';
 
+// 添加此函数来获取已收费用明细
+const getReceivedExpenseDetails = (contractId) => {
+	request({
+		url: 'CustomerCollections/GetCustomerCollectionsByContractID/GetList',
+		method: 'GET',
+		params: {
+			ContractID: contractId
+		}
+	}).then(response => {
+		if (response.data) {
+			ReceivedExpenseDetailsTableData.value = response.data.map(item => ({
+				receiptNumber: item.receiptNumber,    // 收据编号
+				receiptDate: item.receiptDate,        // 收据日期
+				ourCompany: state.optionss.hr_ourcompany.find(x => x.dictValue === item.ourCompany?.toString())?.dictLabel || '',  // 我方公司
+				foreignCurrency: state.optionss.hr_export_currency.find(x => x.dictValue === item.foreignCurrency?.toString())?.dictLabel || '',  // 外币
+				exchangeRate: item.exchangeRate,       // 汇率
+				amount: item.amount,                   // 金额
+				bank: state.optionss.hr_bank.find(x => x.dictValue === item.bank?.toString())?.dictLabel || '',  // 开户行
+				fundsType: state.optionss.funds_type.find(x => x.dictValue === item.fundsType?.toString())?.dictLabel || ''  // 收款类型
+			}));
+		} else {
+			ReceivedExpenseDetailsTableData.value = [];
+		}
+	}).catch(error => {
+		console.error('获取已收费用明细失败:', error);
+		ReceivedExpenseDetailsTableData.value = [];
+	});
+}
+const ReceivedExpenseDetailsTableData = ref([]);
+// 添加格式化日期函数
+const formatDate = (dateString) => {
+	if (!dateString) return '';
+	const date = new Date(dateString);
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+};
 
 //提交审核
 const SubmitForReview = () => {
@@ -1507,7 +1558,9 @@ const state = reactive({
 		sql_hr_customer_contactperson: [],
 		sql_hr_all_quotationnum: [],
 		sql_product: [],
-		sql_product_name: []
+		sql_product_name: [],
+		hr_bank: [],
+		funds_type: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -1524,7 +1577,8 @@ var dictParams = [
 	{ dictType: 'hr_outerbox_unit' }, { dictType: 'sql_product_name' },
 	{ dictType: 'sql_hr_customer_contactperson' }, { dictType: 'sql_hr_all_quotationnum' },
 	{ dictType: 'sql_product' }, { dictType: 'sql_product_name' },
-	{ dictType: 'sql_hr_customer_abbreviation' }, { dictType: 'hr_yes_no' }
+	{ dictType: 'sql_hr_customer_abbreviation' }, { dictType: 'hr_yes_no' },
+	{ dictType: 'hr_bank' }, { dictType: 'funds_type' }
 ]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
@@ -2293,9 +2347,11 @@ const checkContractsDetails = (row) => {
 				CustomerRelaterExoensesTableData.value = [];
 				CustomerRelaterExoensesTableData.value = response.data.contractExpenses;
 				CustomerRelaterExoensesTableData.value.forEach(item => {
+					item.currency = state.optionss['hr_export_currency'].find(x => x.dictValue === item.currency?.toString())?.dictValue || '';
 					item.amount = item.expense * item.exchangeRate;
 				});
 			}
+			getReceivedExpenseDetails(row.id);
 		}).catch(error => {
 			console.error(error);
 			reject(error);

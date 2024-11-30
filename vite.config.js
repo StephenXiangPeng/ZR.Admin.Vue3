@@ -59,6 +59,10 @@ export default defineConfig(({ mode, command }) => {
           target: env.VITE_APP_API_HOST,
           ws: true,
           rewrite: (path) => path.replace(/^\/msgHub/, '')
+        },
+        '/CustomerCollection': {
+          target: env.VITE_APP_API_HOST,
+          changeOrigin: true
         }
       }
     }

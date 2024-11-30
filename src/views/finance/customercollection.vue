@@ -4,7 +4,7 @@
 			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
 		</div>
 		<el-divider></el-divider>
-		<el-button type="primary" @click="addcustomercollectiondialog = true">新增客户收款</el-button>
+		<el-button type="primary" @click="openAddCustomerCollection">新增客户收款</el-button>
 		<div style="margin-top: 30px;">
 			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
 		</div>
@@ -36,7 +36,8 @@
 		<el-divider> </el-divider>
 		<el-table :data="customercollectiontableData">
 			<el-table-column prop="receiptNumber" label="收款单号" width="150"></el-table-column>
-			<el-table-column prop="receiptDate" label="收汇日期" width="150"></el-table-column>
+			<el-table-column prop="receiptDate" label="收汇日期" width="150"
+				:formatter="(row, column, cellValue) => formatDate(cellValue)"></el-table-column>
 			<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
 			<el-table-column prop="foreignCurrency" label="外销币种" width="150"></el-table-column>
 			<el-table-column prop="exchangeRate" label="汇率" width="150"></el-table-column>
@@ -46,6 +47,9 @@
 				<template v-slot:default="scope">
 					<el-button link type="primary" size="small"
 						@click=CheckCustomerCollectionDetails(scope.row)>查看详情</el-button>
+					<el-button link type="danger" size="small" @click="handleDelete(scope.row)">
+						删除
+					</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -59,8 +63,8 @@
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="收款单号">
-							<el-input v-model="addcustomercollectionform.receiptNumber" placeholder="请输入收款单号"
-								style="width: 300px"></el-input>
+							<el-input v-model="addcustomercollectionform.receiptNumber" placeholder="自动生成"
+								style="width: 300px" disabled></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -168,12 +172,97 @@ import request from '@/utils/request';
 import { get } from 'sortablejs';
 import { el } from 'element-plus/es/locale';
 
+// 添加格式化日期函数
+const formatDate = (dateString) => {
+	if (!dateString) return '';
+	const date = new Date(dateString);
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+};
+
+// 添加删除方法
+const handleDelete = (row) => {
+	ElMessageBox.confirm(
+		'确定要删除该收款单据吗？此操作不可恢复！',
+		'警告',
+		{
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning',
+		}
+	)
+		.then(async () => {
+			try {
+				const response = await request({
+					url: `CustomerCollections/DelCustomerCollections/DelCustomerCollections`,
+					method: 'get',
+					params: {
+						id: row.id
+					}
+				});
+
+				if (response.code === 200) {
+					ElMessage({
+						type: 'success',
+						message: response.msg,
+					});
+					// 重新加载列表数据
+					GetCustomerCollectionsList(currentPage.value, pageSize.value);
+				} else {
+					ElMessage({
+						type: 'error',
+						message: response.msg || '删除失败',
+					});
+				}
+			} catch (error) {
+				console.error('删除收款单据时出错:', error);
+				ElMessage({
+					type: 'error',
+					message: '删除收款单据时发生错误',
+				});
+			}
+		})
+		.catch(() => {
+			ElMessage({
+				type: 'info',
+				message: '已取消删除',
+			});
+		});
+};
+
+// 添加新方法
+const openAddCustomerCollection = () => {
+	addcustomercollectiondialog.value = true;
+	addcustomercollectionform.value.receiptDate = new Date().toLocaleDateString();
+	getNewReceiptNumber();
+};
+// 添加获取新收款单号的函数
+const getNewReceiptNumber = async () => {
+	try {
+		const response = await request.get('CustomerCollections/GetReceiptNewNumber/GetReceiptNewNumber');
+		if (response.code === 200) {
+			addcustomercollectionform.value.receiptNumber = response.data;
+		} else {
+			ElMessage.error('获取收款单号失败');
+		}
+	} catch (error) {
+		console.error('获取收款单号出错:', error);
+		ElMessage.error('获取收款单号出错');
+	}
+};
+
 //搜索条件
 const SearchReceiptNumber = ref('')
 const SearchBank = ref('')
 const SearchReceiptDateStart = ref('')
 const SearchReceiptDateEnd = ref('')
-
+interface CustomUploadFile extends UploadUserFile {
+	isChanged?: boolean;
+}
+// Then update the fileList ref type
+const fileList = ref<CustomUploadFile[]>([]);
 const isEdit = ref(false);
 const isSaveBtnShow = ref(true);
 const isEditSaveBtnShow = ref(false);
@@ -211,7 +300,6 @@ fetchDataAndExecute();
 
 const filelistUrlStr = ref('')
 const UploadUrl = 'Common/UploadFile'	// 上传图片地址
-const fileList = ref<UploadUserFile[]>([]);
 const uploadedFiles = ref([]);  // 用于存储已上传的文件
 const dialogImageUrl = ref('')
 const dialogVisible = ref(false)
@@ -324,88 +412,72 @@ const customerCollectionsRequest = reactive({
 })
 
 //保存收款单据
-const SaveCustomerCollection = () => {
-	ElMessageBox.confirm('确定保存该收款单据吗？', '提示', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'warning',
-	}).then(() => {
-		customerCollectionsRequest.ReceiptNumber = addcustomercollectionform.value.receiptNumber
-		customerCollectionsRequest.ReceiptDate = addcustomercollectionform.value.receiptDate
-		customerCollectionsRequest.OurCompany = addcustomercollectionform.value.ourCompany
-		customerCollectionsRequest.ForeignCurrency = addcustomercollectionform.value.foreignCurrency
-		customerCollectionsRequest.ExchangeRate = addcustomercollectionform.value.exchangeRate
-		customerCollectionsRequest.Amount = addcustomercollectionform.value.amount
-		customerCollectionsRequest.Bank = addcustomercollectionform.value.bank
-		//上传收款单据图片
-		const uploadPromises = fileList.value.filter(file => file.isChanged).map(file => {
-			const formData = new FormData();
-			formData.append('FileName', file.name);
-			formData.append('FileDir', 'CustomerCollection/CustomerCollectionPhoto');
-			formData.append('FileNameType', '1');
-			formData.append('File', file.raw);
-			formData.append('storeType', '1');
-			// 返回上传文件的 Promise
-			return request.postForm(UploadUrl, formData);
+const SaveCustomerCollection = async () => {
+	try {
+		const result = await ElMessageBox.confirm('确定保存该收款单据吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning',
 		});
-		Promise.all(uploadPromises).then(responses => {
-			responses.forEach((response, index) => {
-				if (response.code == 200 && response.data.url != null) {
-					if (filelistUrlStr.value != '') {
-						filelistUrlStr.value += ',' + response.data.url;
-					} else {
-						filelistUrlStr.value += (index > 0 ? ',' : '') + response.data.url;
+		// 准备基础数据
+		customerCollectionsRequest.ReceiptNumber = addcustomercollectionform.value.receiptNumber;
+		customerCollectionsRequest.ReceiptDate = addcustomercollectionform.value.receiptDate;
+		customerCollectionsRequest.OurCompany = addcustomercollectionform.value.ourCompany;
+		customerCollectionsRequest.ForeignCurrency = addcustomercollectionform.value.foreignCurrency;
+		customerCollectionsRequest.ExchangeRate = addcustomercollectionform.value.exchangeRate;
+		customerCollectionsRequest.Amount = addcustomercollectionform.value.amount;
+		customerCollectionsRequest.Bank = addcustomercollectionform.value.bank;
+		// 上传图片
+		let receiptImageUrls = [];
+		if (Array.isArray(fileList.value) && fileList.value.length > 0) {
+			receiptImageUrls = await Promise.all(fileList.value
+				.filter(file => file.isChanged)
+				.map(async (file) => {
+					const response = await uploadReceiptPhoto(file);
+					if (response.code === 200 && response.data.url) {
+						return response.data.url;
 					}
-				} else {
-					ElMessage({
-						message: "上传收款单据图片出错！😔",
-						type: 'error'
-					})
-				}
-			});
-			customerCollectionsRequest.ReceiptImageUrl = filelistUrlStr.value
-			if (!isEdit.value) {
-				request.post('CustomerCollections/AddCustomerCollections/Add', customerCollectionsRequest).then(response => {
-					if (response != null) {
-						ElMessage({
-							message: response.msg,
-							type: 'success'
-						})
-						Closeaddcustomercollectiondialog();
-						GetCustomerCollectionsList(currentPage.value, pageSize.value);
-					} else {
-						console.error('保存收款单据出错');
-					}
-				}).catch(error => {
-					console.error('保存收款单据出错！😔错误内容：', error);
-				})
-			} else {
-				customerCollectionsRequest.Id = EditID.value;
-				request.post('CustomerCollections/EditCustomerCollections/Edit', customerCollectionsRequest).then(response => {
-					if (response != null) {
-						ElMessage({
-							message: response.msg,
-							type: 'success'
-						})
-						Closeaddcustomercollectiondialog();
-						GetCustomerCollectionsList(currentPage.value, pageSize.value);
-					} else {
-						console.error('编辑收款单据出错');
-					}
-				}).catch(error => {
-					console.error('编辑收款单据出错！😔错误内容：', error);
-				})
-			}
-		}).catch(() => {
+					throw new Error('上传图片失败');
+				}));
+		}
+		// 合并现有的和新上传的图片URL
+		if (filelistUrlStr.value) {
+			const existingUrls = filelistUrlStr.value.split(',');
+			receiptImageUrls = [...existingUrls, ...receiptImageUrls];
+		}
+		customerCollectionsRequest.ReceiptImageUrl = receiptImageUrls.join(',');
+		// 保存数据
+		const response = await request.post(
+			!isEdit.value
+				? 'CustomerCollections/AddCustomerCollections/Add'
+				: 'CustomerCollections/EditCustomerCollections/Edit',
+			isEdit.value ? { ...customerCollectionsRequest, Id: EditID.value } : customerCollectionsRequest
+		);
+		if (response != null) {
 			ElMessage({
-				type: 'info',
-				message: '已取消保存',
+				message: response.msg,
+				type: 'success'
 			});
-		}).catch(error => {
-			console.error('上传收款单据图片出错！😔错误内容：', error);
-		});
-	});
-}
+			Closeaddcustomercollectiondialog();
+			GetCustomerCollectionsList(currentPage.value, pageSize.value);
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('保存收款单据出错！😔错误内容：', error);
+			ElMessage.error('保存收款单据失败');
+		}
+	}
+};
+// 辅助函数：上传收款单据图片
+const uploadReceiptPhoto = async (file) => {
+	const formData = new FormData();
+	formData.append('FileName', file.name || '未命名文件');
+	formData.append('FileDir', 'CustomerCollection/CustomerCollectionPhoto');
+	formData.append('FileNameType', '1');
+	formData.append('File', file.raw || file);
+	formData.append('storeType', '1');
+	return await request.postForm(UploadUrl, formData);
+};
 
 const clearAll = () => {
 	addcustomercollectionform.value.receiptNumber = ''
@@ -479,29 +551,38 @@ const CheckCustomerCollectionDetails = (row) => {
 	isSaveBtnShow.value = false;
 	isEditSaveBtnShow.value = true;
 	EditID.value = row.id;
-	addcustomercollectionform.value.receiptNumber = row.receiptNumber
-	addcustomercollectionform.value.receiptDate = row.receiptDate
+
+	// 基本信息赋值
+	addcustomercollectionform.value.receiptNumber = row.receiptNumber;
+	addcustomercollectionform.value.receiptDate = row.receiptDate;
 	addcustomercollectionform.value.ourCompany = state.optionss.hr_ourcompany.find((dict) => dict.dictLabel === row.ourCompany)?.dictValue;
 	addcustomercollectionform.value.foreignCurrency = state.optionss.hr_export_currency.find((dict) => dict.dictLabel === row.foreignCurrency)?.dictValue;
-	addcustomercollectionform.value.exchangeRate = row.exchangeRate
-	addcustomercollectionform.value.amount = row.amount
+	addcustomercollectionform.value.exchangeRate = row.exchangeRate;
+	addcustomercollectionform.value.amount = row.amount;
 	addcustomercollectionform.value.bank = state.optionss.hr_bank.find((dict) => dict.dictLabel === row.bank)?.dictValue;
-	addcustomercollectionform.value.attachment = row.attachment
-	addcustomercollectiondialog.value = true
-	if (row.receiptImageUrl != null && row.receiptImageUrl != '') {
-		row.receiptImageUrl.split(',').forEach((url, index) => {
-			if (!fileList.value.some(item => item.url === url)) {
-				let name = url.split('/').pop();
-				fileList.value.push({
-					name: name,
-					url: url,
-					isChanged: false
-				});
-				filelistUrlStr.value += (index > 0 ? ',' : '') + url;
-			}
-		});
+
+	// 清空现有图片列表
+	fileList.value = [];
+	filelistUrlStr.value = '';
+
+	// 处理图片显示，添加完整的 URL 路径
+	if (row.receiptImageUrl) {
+		const imageUrls = row.receiptImageUrl.split(',');
+		fileList.value = imageUrls.map((url, index) => ({
+			name: `Image ${index + 1}`,
+			url: url,
+			isChanged: false,
+			uid: Date.now() + index
+		}));
+
+		filelistUrlStr.value = row.receiptImageUrl;
 	}
-	uploadedFiles.value = fileList.value;
+
+	// 更新已上传文件列表
+	uploadedFiles.value = [...fileList.value];
+
+	// 打开对话框
+	addcustomercollectiondialog.value = true;
 }
 
 const Closeaddcustomercollectiondialog = () => {

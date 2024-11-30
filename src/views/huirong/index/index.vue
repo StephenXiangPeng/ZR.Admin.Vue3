@@ -151,24 +151,44 @@
     <!-- 财务任务 -->
     <span style="font-size: 20px; font-weight: bold; margin-top: 30px;">&nbsp;&nbsp;财务任务</span>
     <el-divider></el-divider>
-    <el-table :data="tableData">
-      <el-table-column fixed prop="date" label="收款单号" style="width: 12%;" />
-      <el-table-column prop="name" label="收款日期" style="width: 12%;" />
-      <el-table-column prop="state" label="我方公司" style="width: 12%;" />
-      <el-table-column prop="state" label="外销币种" style="width: 12%;" />
-      <el-table-column prop="state" label="汇率" style="width: 12%;" />
-      <el-table-column prop="state" label="金额" style="width: 12%;" />
-      <el-table-column prop="state" label="收汇银行" style="width: 12%;" />
-      <el-table-column prop="state" label="附件图片" style="width: 12%;" />
-      <el-table-column fixed="right" label="Operations" style="width: 12%;">
-        <template #default>
-          <el-button link type="primary" size="small" @click="handleClick">Detail</el-button>
-          <el-button link type="primary" size="small">Edit</el-button>
+    <!--财务任务列表 -->
+    <el-table :data="FinancialTasksTableData" style="width: 100%">
+      <!-- 其他列... -->
+      <el-table-column prop="id" label="ID" v-if="false" />
+      <el-table-column prop="receiptNumber" label="收款单号" />
+      <el-table-column prop="receiptDate" label="收汇日期" />
+      <el-table-column prop="ourCompany" label="我方公司" />
+      <el-table-column prop="foreignCurrency" label="外销币种" />
+      <el-table-column prop="exchangeRate" label="汇率" />
+      <el-table-column prop="amount" label="金额" />
+      <el-table-column prop="bank" label="收汇银行" />
+      <el-table-column label="收款凭证" width="120">
+        <template #default="{ row }">
+          <el-image v-if="row.receiptImageUrl" style="width: 50px; height: 50px; cursor: pointer"
+            :src="row.receiptImageUrl" :preview-src-list="[row.receiptImageUrl]" preview-teleported fit="cover"
+            :initial-index="0" hide-on-click-modal>
+            <template #error>
+              <div class="image-error">
+                <el-icon>
+                  <Picture />
+                </el-icon>
+              </div>
+            </template>
+          </el-image>
+          <span v-else>无图片</span>
         </template>
       </el-table-column>
+      <el-table-column fixed="right" label="操作" style="width: 25%;">
+        <template #default="{ row }">
+          <el-button link type="primary" size="small" @click="handleClaim(row)">领取</el-button>
+        </template>
+      </el-table-column>
+      <!-- 其他列... -->
     </el-table>
-    <el-pagination background layout="prev, pager, next" :total="1000" style="margin-top: 5px;" />
-
+    <!-- 分页组件 -->
+    <el-pagination v-model:current-page="FinancialTasksTableCurrentPage" v-model:page-size="FinancialTasksTablePageSize"
+      :total="FinancialTasksTableTotalItems" @current-change="FinancialTasksTableshandlePageChange"
+      layout="total, prev, pager, next" />
 
 
     <div style="margin-top: 30px;"></div>
@@ -1301,6 +1321,34 @@
         </span>
       </template>
     </el-dialog>
+    <!-- 领取收款单对话框 -->
+    <el-dialog v-model="claimDialogVisible" title="领取收款单" width="500px" :close-on-click-modal="false">
+      <el-form ref="claimFormRef" :model="claimForm" :rules="claimRules" label-width="100px">
+        <el-form-item label="合同号" prop="contractsID">
+          <el-select v-model="claimForm.contractsID" placeholder="请选择合同号" style="width: 100%" filterable>
+            <el-option v-for="item in state.optionss.sql_sale_contracts" :key="item.dictValue" :label="item.dictLabel"
+              :value="item.dictValue" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="款项类型" prop="fundsType">
+          <el-select v-model="claimForm.fundsType" placeholder="请选择款项类型" style="width: 100%">
+            <el-option v-for="dict in state.optionss.funds_type" :key="dict.dictValue" :label="dict.dictLabel"
+              :value="dict.dictValue" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="claimForm.remark" type="textarea" :rows="3" placeholder="请输入备注信息" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="claimDialogVisible = false">取 消</el-button>
+          <el-button type="primary" @click="submitClaim">确 定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -1311,7 +1359,144 @@ import request from '@/utils/request';
 import dayjs from 'dayjs';
 import useUserStore from '@/store/modules/user'
 import useSocketStore from '@/store/modules/socket'
+// 时间插件
+import duration from 'dayjs/plugin/duration'
+import { number } from 'echarts';
+import SalesContractdialog from '@/views/components/SalesContractdialog.vue';
+import { Picture } from '@element-plus/icons-vue'
 
+
+// #region 财务收款单相关
+// 对话框显示控制
+const claimDialogVisible = ref(false)
+const claimFormRef = ref(null)
+
+// 表单数据
+const claimForm = reactive({
+  id: '', // 收款单ID
+  contractsID: '', // 合同号
+  fundsType: '', // 款项类型
+  remark: '' // 备注
+})
+
+// 表单验证规则
+const claimRules = {
+  contractsID: [
+    { required: true, message: '请选择合同号', trigger: 'change' }
+  ],
+  fundsType: [
+    { required: true, message: '请选择款项类型', trigger: 'change' }
+  ]
+}
+
+// 打开领取对话框
+const handleClaim = (row) => {
+  claimForm.id = row.id
+  claimDialogVisible.value = true
+}
+
+// 提交领取
+const submitClaim = () => {
+  claimFormRef.value?.validate(async (valid) => {
+    if (valid) {
+      try {
+        const response = await request({
+          url: 'CustomerCollections/AssigningCustomerCollections/Assigning',
+          method: 'post',
+          data: {
+            id: claimForm.id,
+            ContractsID: claimForm.contractsID,
+            FundsType: claimForm.fundsType,
+            Remark: claimForm.remark
+          }
+        })
+
+        if (response.code === 200) {
+          ElMessage.success('领取成功')
+          claimDialogVisible.value = false
+          // 重新加载列表
+          getFinancialTasksList(
+            FinancialTasksTableCurrentPage.value,
+            FinancialTasksTablePageSize.value
+          )
+        } else {
+          ElMessage.error(response.msg || '领取失败')
+        }
+      } catch (error) {
+        console.error('领取失败:', error)
+        ElMessage.error('领取失败')
+      }
+    }
+  })
+}
+
+// 对话框关闭时重置表单
+const resetClaimForm = () => {
+  claimForm.contractId = ''
+  claimForm.fundsType = ''
+  claimForm.remark = ''
+  claimFormRef.value?.resetFields()
+}
+
+// 监听对话框关闭
+watch(claimDialogVisible, (val) => {
+  if (!val) {
+    resetClaimForm()
+  }
+})
+
+
+//分页组件
+const FinancialTasksTableTotalItems = ref(0);
+const FinancialTasksTableCurrentPage = ref(1);
+const FinancialTasksTablePageSize = ref(10);
+//收款单据表格
+const FinancialTasksTableData = ref([])
+// 分页变化处理函数
+const FinancialTasksTableshandlePageChange = (newPage) => {
+  getFinancialTasksList(newPage, FinancialTasksTablePageSize.value);
+};
+// 日期格式化函数
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// 获取财务任务列表
+const getFinancialTasksList = (start, end) => {
+  request({
+    url: 'CustomerCollections/GetUnassignedCustomerCollectionsList/GetList',
+    method: 'GET',
+    params: {
+      PageNum: start,
+      PageSize: end
+    }
+  }).then(response => {
+    if (response.data.result.length > 0) {
+      FinancialTasksTableData.value = response.data.result;
+      FinancialTasksTableData.value.forEach(item => {
+        item.receiptDate = formatDate(item.receiptDate);
+        item.ourCompany = state.optionss.hr_ourcompany.find(dict => dict.dictValue === item.ourCompany)?.dictLabel;
+        item.foreignCurrency = state.optionss.hr_export_currency.find(dict => dict.dictValue === item.foreignCurrency)?.dictLabel;
+        item.bank = state.optionss.hr_bank.find(dict => dict.dictValue === item.bank)?.dictLabel;
+      });
+
+      // 更新分页信息
+      FinancialTasksTableTotalItems.value = response.data.totalNum;
+      FinancialTasksTableCurrentPage.value = response.data.pageIndex;
+      FinancialTasksTablePageSize.value = response.data.pageSize;
+    }
+  }).catch(error => {
+    console.error('获取列表数据失败:', error);
+    ElMessage.error('获取列表数据失败');
+  });
+};
+
+// #endregion
 
 //销售合同产品表格
 const productData = ref([]);
@@ -1457,10 +1642,7 @@ const contractform = reactive({
   volume: null              // 体积
 });
 
-// 时间插件
-import duration from 'dayjs/plugin/duration'
-import { number } from 'echarts';
-import SalesContractdialog from '@/views/components/SalesContractdialog.vue';
+
 dayjs.extend(duration)
 dayjs.locale('zh-cn')
 
@@ -1711,7 +1893,10 @@ const state = reactive({
     sql_hr_customer: [],
     sql_hr_customer_abbreviation: [],
     sql_hr_customer_contactperson: [],
-    hr_yes_no: []
+    hr_yes_no: [],
+    hr_bank: [],
+    funds_type: [],
+    sql_sale_contracts: []
   }
 })
 const { optionss } = toRefs(state)
@@ -1738,13 +1923,17 @@ var dictParams = [
   { dictType: 'hr_settlement_way' },
   { dictType: 'hr_pricing_term' },
   { dictType: 'hr_nation' },
-  { dictType: 'sql_hr_sale' }
+  { dictType: 'sql_hr_sale' },
+  { dictType: 'hr_bank' },
+  { dictType: 'sql_sale_contracts' },
+  { dictType: 'funds_type' }
 ]
 proxy.getDicts(dictParams).then((response) => {
   response.data.forEach((element) => {
     state.optionss[element.dictType] = element.list
   })
   getPendingCount();
+  getFinancialTasksList(1, 10);
 })
 
 const getPendingCount = () => {
@@ -1975,6 +2164,47 @@ const tableData = [
 
 
 <style lang="scss" scoped>
+//财务任务 图片预览样式开始
+.image-error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  height: 50px;
+  background: #f5f7fa;
+  color: #909399;
+}
+
+/* 自定义预览图片的样式 */
+:deep(.el-image-viewer__wrapper) {
+  .el-image-viewer__close {
+    color: #fff;
+  }
+
+  .el-image-viewer__actions {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .el-image-viewer__prev,
+  .el-image-viewer__next {
+    color: #fff;
+  }
+}
+
+/* 图片容器hover效果 */
+.el-image {
+  transition: transform 0.3s;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+//财务任务 图片预览样式结束
+
+
+
 .home {
   .home-card-more {
     float: right;

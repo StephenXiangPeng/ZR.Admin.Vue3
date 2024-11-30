@@ -6,19 +6,27 @@
 		<el-divider></el-divider>
 		<el-button type="primary" @click="OpenAddcontractofpurchasedialog">新增采购合同</el-button>
 		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;采购计划</span>
+			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;采购需求</span>
 		</div>
 		<el-divider> </el-divider>
-		<el-table :data="shoppinglisttableData" style="width: 100%">
+		<el-table :data="shoppinglisttableData" style="width: 100%" :span-method="mergeCells">
 			<el-table-column prop="contractNumber" label="销售合同号" width="150"></el-table-column>
-			<el-table-column prop="customerAbbreviation" label="客户简称" width="150"></el-table-column>
-			<el-table-column prop="contractDate" label="合同日期" width="150"></el-table-column>
-			<el-table-column prop="effectiveDate" label="生效日期" width="150"></el-table-column>
-			<el-table-column prop="deliveryDate" label="交货日期" width="150"></el-table-column>
+			<el-table-column prop="contractId" label="销售合同ID" width="150" v-if="false"></el-table-column>
+			<el-table-column prop="productId" label="产品ID" width="150" v-if="false"></el-table-column>
+			<el-table-column prop="productName" label="产品名称" width="150"></el-table-column>
+			<el-table-column prop="quantity" label="数量" width="150"></el-table-column>
+			<el-table-column prop="unitPrice" label="采购单价" width="150"></el-table-column>
+			<el-table-column prop="totalPrice" label="采购总价" width="150"></el-table-column>
 			<el-table-column prop="salesperson" label="销售员" width="150"></el-table-column>
-			<el-table-column fixed="right" label="操作" width="100">
+			<!-- 操作 -->
+			<el-table-column label="操作" width="150">
 				<template #default="scope">
-					<el-button type="text" size="small" @click="GenerateContractPurchase(scope.row)">生成采购合同</el-button>
+					<!-- 合并的“生成采购合同”按钮 -->
+					<div v-if="isFirstRow(scope.row)">
+						<el-button type="primary" size="small" @click="GenerateContractPurchase(scope.row)">
+							生成采购合同
+						</el-button>
+					</div>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -82,8 +90,11 @@
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="厂商简称">
-							<el-input v-model="Addcontractofpurchaseform.vendorAbbreviation"
-								style="width: 300px"></el-input>
+							<el-select v-model="Addcontractofpurchaseform.vendorCode" placeholder="请选择供应商" filterable
+								style="width: 300px" @change="GetSupplierInfo">
+								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -113,7 +124,7 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="采购员">
-							<el-select v-model="Addcontractofpurchaseform.purchaser" placeholder="请选择采购员"
+							<el-select disabled v-model="Addcontractofpurchaseform.purchaser" placeholder="请选择采购员"
 								style="width: 300px">
 								<el-option v-for="dict in optionss.sql_hr_purchase" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
@@ -178,10 +189,28 @@
 						<el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
 						<el-table-column prop="englishName" label="英文品名" width="150"></el-table-column>
 						<el-table-column prop="chineseSpec" label="中文规格" width="150"></el-table-column>
-						<el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
 						<el-table-column prop="unit" label="计量单位" width="150"></el-table-column>
-						<el-table-column prop="purchaseUnitPrice" label="采购单价" width="150"></el-table-column>
-						<el-table-column prop="purchaseTotalPrice" label="采购总价" width="150"></el-table-column>
+						<!-- 其他列保持不变 -->
+						<el-table-column prop="contractQuantity" label="合同数量" width="150">
+							<template #default="scope">
+								<el-input v-model="scope.row.contractQuantity" type="number" size="small"
+									@change="handleQuantityChange(scope.row)" placeholder="请输入数量">
+								</el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="purchaseUnitPrice" label="采购单价" width="150">
+							<template #default="scope">
+								<el-input v-model="scope.row.purchaseUnitPrice" type="number" size="small"
+									@change="handlePriceChange(scope.row)" placeholder="请输入单价">
+								</el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="purchaseTotalPrice" label="采购总价" width="150">
+							<template #default="scope">
+								<span>{{ scope.row.purchaseTotalPrice }}</span>
+							</template>
+						</el-table-column>
+						<!-- 其他列保持不变 -->
 						<el-table-column prop="deliveryDate" label="交货日期" width="150"></el-table-column>
 						<el-table-column prop="productionLeadTime" label="生产交期" width="150"></el-table-column>
 						<el-table-column prop="packaging" label="包装方式" width="150"></el-table-column>
@@ -327,6 +356,48 @@ import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from
 import request from '@/utils/request';
 import { get } from 'sortablejs';
 import { el } from 'element-plus/es/locale';
+import useUserStore from "@/store/modules/user";
+
+
+// 处理数量变化
+const handleQuantityChange = (row) => {
+	// 确保输入的是数字
+	row.contractQuantity = parseFloat(row.contractQuantity) || 0;
+	// 计算总价
+	calculateTotalPrice(row);
+}
+
+// 处理单价变化
+const handlePriceChange = (row) => {
+	// 确保输入的是数字
+	row.purchaseUnitPrice = parseFloat(row.purchaseUnitPrice) || 0;
+	// 计算总价
+	calculateTotalPrice(row);
+}
+
+// 计算总价
+const calculateTotalPrice = (row) => {
+	row.purchaseTotalPrice = (row.contractQuantity * row.purchaseUnitPrice).toFixed(2);
+	// 更新合计信息
+	updateTotalValues();
+}
+
+// 更新合计信息
+const updateTotalValues = () => {
+	let totalValue = 0;
+	let totalQuantity = 0;
+
+	productinfotableData.value.forEach(item => {
+		totalValue += parseFloat(item.purchaseTotalPrice) || 0;
+		totalQuantity += parseFloat(item.contractQuantity) || 0;
+	});
+
+	// 更新合计表单
+	Totalvalueofgoodsform.value.totalValue = totalValue.toFixed(2);
+	Totalvalueofgoodsform.value.totalQuantity = totalQuantity.toString();
+}
+
+var userId = useUserStore().userId;
 
 const isSaveBtnShow = ref(true);
 
@@ -380,7 +451,7 @@ async function fetchDataAndExecute() {
 		response.data.forEach((element) => {
 			state.optionss[element.dictType] = element.list;
 		});
-		await GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);;  // 现在可以安全执行
+		await ProcurementRequirements(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);  // 现在可以安全执行
 		await GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
 	} catch (error) {
 		console.error('Failed to fetch data:', error);
@@ -451,7 +522,6 @@ const GetSaleContactInfo = () => {
 				Addcontractofpurchaseform.value.deliveryDate = response.data.contract.deliveryDate;
 				Addcontractofpurchaseform.value.purchaseCurrency = response.data.contract.foreignCurrency.toString();
 				Addcontractofpurchaseform.value.salesperson = response.data.contract.salesperson.toString();
-				Addcontractofpurchaseform.value.deposit = response.data.contract.receivedDeposit;
 				Addcontractofpurchaseform.value.priceTerms = response.data.contract.priceTerms.toString();
 				productinfotableData.value = response.data.contractProducts;//产品资料
 				CustomerRelaterExoensesTableData.value = response.data.contractExpenses;//厂家相关费用
@@ -531,60 +601,164 @@ const contractofpurchaseRequest = reactive({
 	PurchaseContractVendorExpenses: []
 });
 
-const SavePurchaseContract = () => {
-	ElMessageBox.confirm('确定保存采购合同信息吗?', '提示', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'warning'
-	}).then(() => {
-		contractofpurchaseRequest.PurchaseContractNumber = Addcontractofpurchaseform.value.purchaseContract;
-		contractofpurchaseRequest.ContractStatus = Addcontractofpurchaseform.value.contractStatus;
-		contractofpurchaseRequest.VendorCode = Addcontractofpurchaseform.value.vendorCode;
-		contractofpurchaseRequest.VendorAbbreviation = Addcontractofpurchaseform.value.vendorAbbreviation;
-		contractofpurchaseRequest.SalesContract = Addcontractofpurchaseform.value.salesContract;
-		contractofpurchaseRequest.CustomerContract = Addcontractofpurchaseform.value.customerContract;
-		contractofpurchaseRequest.CustomerAbbreviation = Addcontractofpurchaseform.value.customerAbbreviation;
-		contractofpurchaseRequest.DeliveryDate = Addcontractofpurchaseform.value.deliveryDate;
-		contractofpurchaseRequest.PurchaseCurrency = Addcontractofpurchaseform.value.purchaseCurrency;
-		contractofpurchaseRequest.Deposit = Addcontractofpurchaseform.value.deposit;
-		contractofpurchaseRequest.Salesperson = Addcontractofpurchaseform.value.salesperson;
-		contractofpurchaseRequest.Purchaser = Addcontractofpurchaseform.value.purchaser;
-		contractofpurchaseRequest.PaymentDays = Addcontractofpurchaseform.value.paymentDays;
-		contractofpurchaseRequest.PriceTerms = Addcontractofpurchaseform.value.priceTerms;
-		contractofpurchaseRequest.TotalGoodsValue = Totalvalueofgoodsform.value.totalValue;
-		contractofpurchaseRequest.TotalQuantity = Totalvalueofgoodsform.value.totalQuantity;
-		contractofpurchaseRequest.TotalBoxes = Totalvalueofgoodsform.value.totalBoxCount;
-		contractofpurchaseRequest.TotalGrossWeight = Totalvalueofgoodsform.value.totalGrossWeight;
-		contractofpurchaseRequest.TotalNetWeight = Totalvalueofgoodsform.value.totalNetWeight;
-		contractofpurchaseRequest.TotalVolume = Totalvalueofgoodsform.value.totalVolume;
-		contractofpurchaseRequest.AppliedPayment = Totalvalueofgoodsform.value.appliedPayment;
-		contractofpurchaseRequest.AvailablePayment = Totalvalueofgoodsform.value.availablePayment;
-		contractofpurchaseRequest.PaidAmount = Totalvalueofgoodsform.value.paidAmount;
-		contractofpurchaseRequest.UnpaidAmount = Totalvalueofgoodsform.value.unpaidAmount;
-		contractofpurchaseRequest.Remark = '';
-		contractofpurchaseRequest.PurchaseContractProducts = productinfotableData.value;
-		contractofpurchaseRequest.PurchaseContractVendorExpenses = CustomerRelaterExoensesTableData.value;
-		request.post('PurchaseContracts/AddPurchaseContracts/Add', contractofpurchaseRequest).then(response => {
-			if (response != null) {
+//验证采购合同明细是否有变动信息
+const VerifyPurchaseContractDetails = (contractId, productinfotableData) => {
+	return new Promise((resolve, reject) => {
+		request({
+			url: 'Contracts/GetContractDetailsById/GetContractDetails',
+			method: 'GET',
+			params: {
+				contractId: contractId
+			}
+		}).then(response => {
+			if (response.code === 200) {
+				const contractProducts = response.data.contractProducts;
+				// 找出单价不一致的产品
+				const discrepancies = productinfotableData.filter(product => {
+					const matchingContractProduct = contractProducts.find(
+						contractProduct => contractProduct.productCode === product.productCode
+					);
+					return (
+						matchingContractProduct &&
+						matchingContractProduct.purchaseUnitPrice !== product.purchaseUnitPrice
+					);
+				});
+				if (discrepancies.length > 0) {
+					// 存在不一致条目，返回不一致的数据
+					resolve({
+						hasDiscrepancies: true,
+						discrepancies
+					});
+				} else {
+					// 所有单价一致
+					resolve({
+						hasDiscrepancies: false,
+						discrepancies: []
+					});
+				}
+			} else {
 				ElMessage({
-					message: '采购合同添加成功！',
-					type: 'success'
-				})
+					message: '校验销售合同出错,未找到对应的销售合同信息',
+					type: 'error'
+				});
+				reject(new Error('未找到对应的销售合同信息'));
+			}
+		})
+			.catch(error => {
+				console.error(error);
+				ElMessage({
+					message: '校验销售合同出错，请稍后重试',
+					type: 'error'
+				});
+				reject(error);
+			});
+	});
+};
+
+const SavePurchaseContract = () => {
+	// 验证采购合同明细是否有变动信息
+	VerifyPurchaseContractDetails(Addcontractofpurchaseform.value.salesContract, productinfotableData.value)
+		.then(result => {
+			const message = result.hasDiscrepancies
+				? "部分产品的采购单价已发生变动，是否提交变动并通知销售人员进行确认？"
+				: "确认保存采购合同信息吗？";
+
+			ElMessageBox.confirm(message, "提示", {
+				confirmButtonText: "确定",
+				cancelButtonText: "取消",
+				type: "warning",
+			}).then(() => {
+				if (result.hasDiscrepancies) {
+					// 如果有价格变动，调用更新价格接口
+					const editRequest = {
+						contractId: parseInt(Addcontractofpurchaseform.value.salesContract),
+						contractProductItems: productinfotableData.value.map(item => ({
+							id: item.id,
+							productId: item.productId,
+							purchaseUnitPrice: parseFloat(item.purchaseUnitPrice),
+							purchaseTotalPrice: parseFloat(item.purchaseTotalPrice),
+							isPriceChanged: 1
+						}))
+					};
+					// 先更新价格
+					request.post("contracts/ContractPurchasePriceChanges/UpdatePrice", editRequest)
+						.then(response => {
+							if (response.code === 200) {
+								// 价格更新成功后，继续保存采购合同
+								submitPurchaseContract();
+							} else {
+								ElMessage.error('更新采购单价失败');
+							}
+						})
+						.catch(error => {
+							console.error('更新采购单价失败:', error);
+							ElMessage.error('更新采购单价失败，请重试');
+						});
+				} else {
+					// 如果没有价格变动，直接保存采购合同
+					submitPurchaseContract();
+				}
+			}).catch(() => {
+				ElMessage({
+					type: "info",
+					message: "已取消保存采购合同",
+				});
+			});
+		})
+		.catch(error => {
+			console.error('验证采购合同失败:', error);
+			ElMessage.error('验证采购合同失败，请重试');
+		});
+};
+
+// 提交采购合同的具体逻辑
+const submitPurchaseContract = () => {
+	// 构建采购合同请求数据
+	contractofpurchaseRequest.PurchaseContractNumber = Addcontractofpurchaseform.value.purchaseContract;
+	contractofpurchaseRequest.ContractStatus = Addcontractofpurchaseform.value.contractStatus;
+	contractofpurchaseRequest.VendorCode = Addcontractofpurchaseform.value.vendorCode;
+	contractofpurchaseRequest.VendorAbbreviation = Addcontractofpurchaseform.value.vendorAbbreviation;
+	contractofpurchaseRequest.SalesContract = Addcontractofpurchaseform.value.salesContract;
+	contractofpurchaseRequest.CustomerContract = Addcontractofpurchaseform.value.customerContract;
+	contractofpurchaseRequest.CustomerAbbreviation = Addcontractofpurchaseform.value.customerAbbreviation;
+	contractofpurchaseRequest.DeliveryDate = Addcontractofpurchaseform.value.deliveryDate;
+	contractofpurchaseRequest.PurchaseCurrency = Addcontractofpurchaseform.value.purchaseCurrency;
+	contractofpurchaseRequest.Deposit = Addcontractofpurchaseform.value.deposit;
+	contractofpurchaseRequest.Salesperson = Addcontractofpurchaseform.value.salesperson;
+	contractofpurchaseRequest.Purchaser = Addcontractofpurchaseform.value.purchaser;
+	contractofpurchaseRequest.PaymentDays = Addcontractofpurchaseform.value.paymentDays;
+	contractofpurchaseRequest.PriceTerms = Addcontractofpurchaseform.value.priceTerms;
+	contractofpurchaseRequest.TotalGoodsValue = Totalvalueofgoodsform.value.totalValue;
+	contractofpurchaseRequest.TotalQuantity = Totalvalueofgoodsform.value.totalQuantity;
+	contractofpurchaseRequest.TotalBoxes = Totalvalueofgoodsform.value.totalBoxCount;
+	contractofpurchaseRequest.TotalGrossWeight = Totalvalueofgoodsform.value.totalGrossWeight;
+	contractofpurchaseRequest.TotalNetWeight = Totalvalueofgoodsform.value.totalNetWeight;
+	contractofpurchaseRequest.TotalVolume = Totalvalueofgoodsform.value.totalVolume;
+	contractofpurchaseRequest.AppliedPayment = Totalvalueofgoodsform.value.appliedPayment;
+	contractofpurchaseRequest.AvailablePayment = Totalvalueofgoodsform.value.availablePayment;
+	contractofpurchaseRequest.PaidAmount = Totalvalueofgoodsform.value.paidAmount;
+	contractofpurchaseRequest.UnpaidAmount = Totalvalueofgoodsform.value.unpaidAmount;
+	contractofpurchaseRequest.PurchaseContractProducts = productinfotableData.value;
+	contractofpurchaseRequest.PurchaseContractVendorExpenses = CustomerRelaterExoensesTableData.value;
+	// 提交采购合同
+	request.post("PurchaseContracts/AddPurchaseContracts/Add", contractofpurchaseRequest)
+		.then(response => {
+			if (response.code === 200) {
+				ElMessage({
+					message: "采购合同添加成功！",
+					type: "success",
+				});
 				Addcontractofpurchasedialog.value = false;
 				GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
 			} else {
-				console.error('新增采购合同出错');
+				ElMessage.error('添加采购合同失败');
 			}
-		}).catch(error => {
-			console.error('新增采购合同出错！😔错误内容：', error);
 		})
-	}).catch(() => {
-		ElMessage({
-			type: 'info',
-			message: '已取消保存采购合同'
+		.catch(error => {
+			console.error("添加采购合同失败:", error);
+			ElMessage.error('添加采购合同失败，请重试');
 		});
-	});
-}
+};
 
 const Totalvalueofgoodsform = ref({
 	totalValue: '',
@@ -606,56 +780,114 @@ const handleClick = (tab: TabsPaneContext, event: Event) => {
 
 const productinfotableData = ref([])
 
-///采购计划表格数据
+// 采购计划表格数据
 const shoppinglisttableData = ref([])
-const contractsTableDatatotalItems = ref(0);
-const contractsTableDatacurrentPage = ref(1);
-const contractsTableDatapageSize = ref(10);
+const contractsTableDatatotalItems = ref(0)
+const contractsTableDatacurrentPage = ref(1)
+const contractsTableDatapageSize = ref(10)
+
+// 处理页码变化
 const contractsTableDatahandlePageChange = async (newPage) => {
-	contractsTableDatacurrentPage.value = newPage;
-	const start = newPage;
-	const end = contractsTableDatapageSize.value;
-	const newData = await GetContractList(start, end);
-};
-function GetContractList(start, end) {
-	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
-		request({
-			url: 'Contracts/GetNoDepositContractList/GetList',
+	try {
+		contractsTableDatacurrentPage.value = newPage
+		await ProcurementRequirements(newPage, contractsTableDatapageSize.value)
+	} catch (error) {
+		console.error('页码切换失败:', error)
+		ElMessage.error('获取数据失败，请重试')
+	}
+}
+// 获取采购需求列表数据
+const ProcurementRequirements = async (pageNum, pageSize) => {
+	try {
+		const response = await request({
+			url: 'PurchaseContracts/GetProcurementRequirements/GetList',
 			method: 'GET',
 			params: {
-				PageNum: start,
-				PageSize: end
+				PageNum: pageNum,
+				PageSize: pageSize
 			}
-		}).then(response => {
-			if (response.data.result.length > 0) {
-				shoppinglisttableData.value = [];
-				response.data.result.forEach(element => {
-					shoppinglisttableData.value.push({
-						id: element.id,
-						contractNumber: element.contractNumber,
-						customerAbbreviation: state.optionss.sql_hr_customer.find(item => item.dictValue == element.customerId.toString()).dictLabel,
-						contractDate: formatDate(element.contractDate),
-						effectiveDate: formatDate(element.effectiveDate),
-						deliveryDate: formatDate(element.deliveryDate),
-						salesperson: state.optionss.sql_hr_sale.find(item => item.dictValue == element.salesperson.toString()).dictLabel
-					});
-				});
-				contractsTableDatatotalItems.value = response.data.totalNum;
-				resolve(response.data.data);
-			} else {
-				if (response.data.totalNum > 0 && start > 1) {
-					GetContractList(start - 1, end);
-				} else {
-					shoppinglisttableData.value = [];
-				}
-				reject(new Error('无数据'));  // Reject the promise if the response is null
+		})
+		// 检查响应数据
+		if (!response.data) {
+			throw new Error('返回数据格式错误')
+		}
+		// 清空现有数据
+		shoppinglisttableData.value = []
+		// 如果有数据则处理
+		if (response.data.result && response.data.result.length > 0) {
+			shoppinglisttableData.value = response.data.result.map(element => ({
+				contractId: element.contractId,
+				productId: element.productId,
+				procurementId: element.procurementId,
+				contractNumber: element.contractNumber,
+				productName: element.productName,
+				quantity: element.quantity,
+				unitPrice: element.unitPrice,
+				totalPrice: element.totalPrice,
+				status: element.status,
+				salesperson: optionss.value.sql_hr_sale.find(item => item.dictValue == element.salesperson.toString()).dictLabel,
+				createTime: formatDate(element.createTime),
+				remark: element.remark
+			}))
+			// 更新总条数
+			contractsTableDatatotalItems.value = response.data.totalNum
+		} else {
+			// 如果当前页无数据且不是第一页，则加载上一页
+			if (response.data.totalNum > 0 && pageNum > 1) {
+				return ProcurementRequirements(pageNum - 1, pageSize)
 			}
-		}).catch(error => {
-			console.error(error);
-			reject(error);  // Reject the promise if an error occurs
-		});
-	});
+			// 如果是第一页无数据，显示空数据
+			contractsTableDatatotalItems.value = 0
+		}
+		return response.data
+	} catch (error) {
+		console.error('获取采购需求列表失败:', error)
+		ElMessage.error('获取数据失败，请重试')
+		throw error
+	}
 }
+// 动态合并单元格
+const mergeCells = ({ row, columnIndex, rowIndex }) => {
+	// 合并销售合同号列（第1列）
+	if (columnIndex === 0) {
+		if (rowIndex === getFirstRowIndex(row.contractNumber)) {
+			const rowspan = getRowSpan(row.contractNumber);
+			return [rowspan, 1];
+		} else {
+			return [0, 0];
+		}
+	}
+
+	// 合并操作列（最后一列）
+	if (columnIndex === 6) {
+		if (rowIndex === getFirstRowIndex(row.contractNumber)) {
+			const rowspan = getRowSpan(row.contractNumber);
+			return [rowspan, 1];
+		} else {
+			return [0, 0];
+		}
+	}
+};
+
+// 获取当前合同号的第一行索引
+const getFirstRowIndex = (contractNumber) => {
+	return shoppinglisttableData.value.findIndex(
+		(item) => item.contractNumber === contractNumber
+	);
+};
+
+// 获取当前合同号的合并行数
+const getRowSpan = (contractNumber) => {
+	return shoppinglisttableData.value.filter(
+		(item) => item.contractNumber === contractNumber
+	).length;
+};
+
+// 判断当前行是否为该合同号的第一行
+const isFirstRow = (row) => {
+	return row.id === shoppinglisttableData.value[getFirstRowIndex(row.contractNumber)].id;
+};
+
 // 添加日期格式化函数
 const formatDate = (dateString) => {
 	if (!dateString) return '';
@@ -678,7 +910,11 @@ const GenerateContractPurchase = (row) => {
 		type: 'warning'
 	}).then(() => {
 		//alert(JSON.stringify(row));
-		Addcontractofpurchaseform.value.salesContract = row.id.toString();
+		Addcontractofpurchaseform.value.salesperson = row.salesperson;
+		Addcontractofpurchaseform.value.salesContract = row.contractId.toString();
+		Addcontractofpurchaseform.value.purchaser = userId.toString();
+		// 设置默认合同状态为1
+		Addcontractofpurchaseform.value.contractStatus = '1';
 		Addcontractofpurchasedialog.value = true;
 	}).catch(() => {
 		ElMessage({
@@ -697,9 +933,9 @@ const purchasecontractsTableDatahandlePageChange = async (newPage) => {
 	purchasecontractsTableDatacurrentPage.value = newPage;
 	const start = newPage;
 	const end = purchasecontractsTableDatapageSize.value;
-	const newData = await GetContractList(start, end);
+	const newData = await GetpurchaseContractList(start, end);
 };
-GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
+
 function GetpurchaseContractList(start, end) {
 	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
 		request({
@@ -724,7 +960,7 @@ function GetpurchaseContractList(start, end) {
 				resolve(response.data.data);
 			} else {
 				if (response.data.totalNum > 0 && start > 1) {
-					GetContractList(start - 1, end);
+					GetpurchaseContractList(start - 1, end);
 				} else {
 					contractofpurchasetableData.value = [];
 				}
@@ -810,6 +1046,8 @@ const GetNewPurchaseContractNumber = () => {
 const OpenAddcontractofpurchasedialog = () => {
 	clearAll();
 	GetNewPurchaseContractNumber();
+	Addcontractofpurchaseform.value.purchaser = userId.toString();
+	Addcontractofpurchaseform.value.contractStatus = '1';
 	Addcontractofpurchasedialog.value = true;
 	isSaveBtnShow.value = true;
 }
