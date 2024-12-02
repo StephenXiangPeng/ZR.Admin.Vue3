@@ -1,4 +1,4 @@
-<h2 align="center"> 惠扬特包办公协同系统</h2>
+<h2 align="center"> 惠扬特包综合管理系统</h2>
 
 <p align="center">
 	<a href="https://gitee.com/izory/ZrAdminNetCore"><img src="https://gitee.com/izory/ZrAdminNetCore/badge/star.svg?theme=dark"></a>

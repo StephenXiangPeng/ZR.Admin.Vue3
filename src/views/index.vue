@@ -1,247 +1,214 @@
 <template>
-  <div class="app-container home">
-    <noticeBar :dataList="noticeList"> </noticeBar>
+  <div class="dashboard-container">
     <el-row :gutter="20">
-      <el-col :sm="24" :lg="24">
-        <blockquote class="text-warning" style="font-size: 14px">
-          【阿里云特惠专区】
-          <el-link href="https://www.aliyun.com/minisite/goods?userCode=uotn5vt1&share_source=copy_link" type="primary" target="_black">
-            ☛☛点我进入☚☚
-          </el-link>
-          <br />
-          【领取腾讯云通用云产品新用户专属大礼包2860优惠券，每种代金券限量500张，先到先得。】
-          <el-link href="https://curl.qcloud.com/5J4nag8D" type="primary" target="_blank"> ☛☛点我进入☚☚ </el-link>
-          <br />
-
-          【腾讯云限时秒杀活动】
-          <el-link href="https://curl.qcloud.com/4yEoRquq" type="primary" target="_blank">☛☛点我进入☚☚ </el-link>
-          <br />
-
-          【华为特惠专区，多款产品限时特价】
-          <el-link
-            href="https://activity.huaweicloud.com/discount_area_v5/index.html?fromacct=a53709d1-149d-49f4-9b89-bf62bd96ef65&utm_source=aGlkX3N0dnZkMWNxejBnOTJ5OA===&utm_medium=cps&utm_campaign=201905"
-            type="primary"
-            target="_blank">
-            ☛☛点我进入☚☚
-          </el-link>
-          <br />
-          【领取七牛云通用云产品优惠券】
-          <el-link href="https://s.qiniu.com/FzEfay" type="primary" target="_blank"> ☛☛点我进入☚☚ </el-link>
-          <br />
-          【Gitee 企业版优惠专区】
-          <el-link href="https://gitee.com/enterprises?invite_code=Z2l0ZWUtMTI1NzM1OQ%3D%3D" type="primary" target="_blank"> ☛☛点我进入☚☚ </el-link>
-          <br />
-          <h4 class="text-danger">云产品通用红包，可叠加官网常规优惠使用。(仅限新用户)</h4>
-        </blockquote>
-      </el-col>
-    </el-row>
-    <el-row :gutter="20">
-      <el-col :lg="16" :sm="24">
-        <h2>ZRAdmin.NET {{ $t('layout.backstageManagement') }}</h2>
-        <p>
-          ZRAdmin.NET借鉴了很多开源项目的优点，让你开发Web管理系统更简单，所以我也把它给开源了（前端
-          <code>vue页面</code>主要使用了若依，后端参考Ruoyi SpringBoot版本，在此表示感谢.)
-        </p>
-        <p>{{ $t('layout.content1') }}</p>
-        <p>
-          <b>{{ $t('layout.currentVersion') }}:</b> <span>v{{ version }}</span>
-          <el-link
-            class="ml10"
-            type="primary"
-            size="small"
-            icon="Document"
-            plain
-            @click="goTarget('http://www.izhaorui.cn/doc/changelog.html#' + version)"
-            >{{ $t('layout.changeLog') }}
-          </el-link>
-        </p>
-        <p>
-          <el-button type="primary" size="small" icon="Cloudy" plain @click="goTarget('https://gitee.com/izory/ZrAdminNetCore')">Gitee </el-button>
-          <el-button type="primary" size="small" icon="Cloudy" plain @click="goTarget('https://github.com/izhaorui/ZrAdmin.NET')"
-            >Github
-          </el-button>
-        </p>
-        <p></p>
-        <h3>{{ $t('layout.tip1') }}</h3>
-      </el-col>
-      <el-col :lg="8" :sm="24">
-        <h2>{{ $t('layout.technicalSelection') }}</h2>
-        <div style="float: left; width: 50%">
-          <h4>{{ $t('layout.backendTechnology') }}</h4>
-          <ul>
-            <li>NET7</li>
-            <li>JWT</li>
-            <li>SqlSugar</li>
-            <li>Quartz.Net</li>
-            <li>MySql</li>
-            <li>Mapster</li>
-            <li>MiniExcel</li>
-            <li>Redis</li>
-            <li>Signalr</li>
-            <li>...</li>
-          </ul>
-        </div>
-        <div style="float: right; width: 50%">
-          <h4>{{ $t('layout.frontendTechnology') }}</h4>
-          <ul>
-            <li>Vue3</li>
-            <li>Pinia</li>
-            <li>Element plus</li>
-            <li>Axios</li>
-            <li>Sass</li>
-            <li>Wangeditor</li>
-            <li>Vite</li>
-            <li>Composition api</li>
-            <li>I18n</li>
-            <li>...</li>
-          </ul>
-        </div>
-      </el-col>
-    </el-row>
-    <el-divider />
-    <el-row :gutter="20" class="mt10">
-      <el-col :sm="24" :lg="8">
-        <el-card>
+      <!-- 系统概述卡片 -->
+      <el-col :span="24">
+        <el-card class="system-info mb20">
           <template #header>
-            <span>{{ $t('layout.donationSupport') }}</span>
+            <div class="card-header">
+              <span>惠扬特包综合管理系统(一期)</span>
+            </div>
           </template>
-
-          <div class="body">
-            <div style="color: red">{{ $t('layout.rewardUser') }}</div>
-            <img src="@/assets/images/reward.jpg" alt="donate" style="width: 100%" />
+          <div class="system-description">
+            通过模块化设计，解决文件管理、供应商管理、人事管理及库存管理的核心需求，提升企业管理效率，确保流程规范化、数据可追溯性及信息的高效流转。
           </div>
         </el-card>
       </el-col>
-      <el-col :sm="24" :lg="10">
-        <el-card>
-          <template #header>
-            <span>
-              移动端体验
-              <span style="color: red">如有需要联系作者</span>
-            </span>
-          </template>
 
-          <div class="body">
-            <table style="width: 100%; text-align: center">
-              <tr>
-                <td>微信小程序</td>
-                <td>H5</td>
-              </tr>
-              <tr>
-                <td>
-                  <img src="@/assets/images/qrcode.jpg" alt="donate" style="width: 160px" />
-                </td>
-                <td>
-                  <img src="@/assets/images/qrcodeH5.png" alt="donate" style="width: 160px" />
-                </td>
-              </tr>
-            </table>
+      <!-- 四大模块卡片 -->
+      <el-col :xs="24" :sm="12" :md="6">
+        <el-card class="module-card" shadow="hover" @click="navigateTo('/file')">
+          <div class="module-header">
+            <i class="el-icon-document"></i>
+            <span>文件管理</span>
+          </div>
+          <div class="module-content">
+            <ul>
+              <li>文件上传与分类存储</li>
+              <li>版本管理与历史记录</li>
+              <li>文件审核提醒</li>
+              <li>文件归档与导出</li>
+            </ul>
           </div>
         </el-card>
       </el-col>
-      <el-col :sm="24" :lg="6">
+
+      <el-col :xs="24" :sm="12" :md="6">
+        <el-card class="module-card" shadow="hover" @click="navigateTo('/supplier')">
+          <div class="module-header">
+            <i class="el-icon-office-building"></i>
+            <span>供应商管理</span>
+          </div>
+          <div class="module-content">
+            <ul>
+              <li>供应商基本信息管理</li>
+              <li>供应商分类管理</li>
+              <li>供应商评分管理</li>
+            </ul>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :sm="12" :md="6">
+        <el-card class="module-card" shadow="hover" @click="navigateTo('/hr')">
+          <div class="module-header">
+            <i class="el-icon-user"></i>
+            <span>人事管理</span>
+          </div>
+          <div class="module-content">
+            <ul>
+              <li>离职管理</li>
+              <li>请假管理</li>
+              <li>申请单据</li>
+              <li>审批流程</li>
+            </ul>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :sm="12" :md="6">
+        <el-card class="module-card" shadow="hover" @click="navigateTo('/inventory')">
+          <div class="module-header">
+            <i class="el-icon-box"></i>
+            <span>库存管理</span>
+          </div>
+          <div class="module-content">
+            <ul>
+              <li>库存管理</li>
+              <li>领用管理</li>
+              <li>数据导入导出</li>
+            </ul>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 待办提醒区域 -->
+    <el-row :gutter="20" class="mt20">
+      <el-col :span="12">
         <el-card>
           <template #header>
-            <span>{{ $t('layout.contactUs') }}</span>
+            <div class="card-header">
+              <span>待审核文件</span>
+              <el-button class="button" text>查看全部</el-button>
+            </div>
           </template>
-          <div class="body">
-            <p>
-              <el-icon> <promotion /> </el-icon>{{ $t('layout.officialWebsite') }}：
-              <el-link href="http://www.izhaorui.cn" target="_blank"> http://www.izhaorui.cn </el-link>
-            </p>
-            <p>
-              <el-icon> <UserFilled /> </el-icon>{{ $t('layout.qqGroup') }}：
-              <s>满191349103</s>
-              <s>满462862273</s>
+          <el-table :data="pendingFiles" style="width: 100%">
+            <el-table-column prop="fileName" label="文件名称" />
+            <el-table-column prop="type" label="类型" />
+            <el-table-column prop="deadline" label="审核期限" />
+          </el-table>
+        </el-card>
+      </el-col>
 
-              <el-link
-                target="_black"
-                href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=GZyydSOdrYq0hY-tPiDGeGNfQRQ3905-&authKey=eiZEzg8ey6BRldoBpPtmgA8NOFNCTkQTG0iXHznncMHYSeZdV6rwth2k9WKJ1FrM&noverify=0&group_code=658227537">
-                &nbsp;658227537
-              </el-link>
-            </p>
-          </div>
+      <el-col :span="12">
+        <el-card>
+          <template #header>
+            <div class="card-header">
+              <span>待办事项</span>
+              <el-button class="button" text>查看全部</el-button>
+            </div>
+          </template>
+          <el-table :data="todoItems" style="width: 100%">
+            <el-table-column prop="title" label="事项" />
+            <el-table-column prop="type" label="类型" />
+            <el-table-column prop="status" label="状态" />
+          </el-table>
         </el-card>
       </el-col>
     </el-row>
   </div>
 </template>
 
-<script setup name="index">
-import noticeBar from '@/components/NoticeBar/index'
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const noticeList = ref(['官网地址：http://www.izhaorui.cn', 'ZRAdmin.NET后台管理系统'])
+const router = useRouter()
 
-import defaultSettings from '@/settings'
-const version = defaultSettings.version
+// 模拟数据
+const pendingFiles = ref([
+  { fileName: '质量体系认证', type: '证书', deadline: '2024-04-01' },
+  { fileName: '安全生产许可证', type: '许可证', deadline: '2024-04-15' },
+  { fileName: '特种设备操作证', type: '人员证书', deadline: '2024-04-20' }
+])
 
-function goTarget(url) {
-  window.open(url, '__blank')
+const todoItems = ref([
+  { title: '供应商年度评估', type: '供应商管理', status: '待处理' },
+  { title: '员工请假审批', type: '人事管理', status: '待审批' },
+  { title: '物资采购申请', type: '库存管理', status: '待审批' }
+])
+
+// 页面跳转
+const navigateTo = (path) => {
+  router.push(path)
 }
 </script>
 
-<style scoped lang="scss">
-.home {
-  blockquote {
-    padding: 10px 20px;
-    margin: 0 0 20px;
-    font-size: 17.5px;
-    border-left: 5px solid #eee;
+<style lang="scss" scoped>
+.dashboard-container {
+  padding: 20px;
+
+  .mb20 {
+    margin-bottom: 20px;
   }
 
-  hr {
+  .mt20 {
     margin-top: 20px;
-    margin-bottom: 20px;
-    border: 0;
-    border-top: 1px solid #eee;
   }
 
-  .col-item {
-    margin-bottom: 20px;
-  }
-
-  ul {
-    padding: 0;
-    margin: 0;
-  }
-
-  font-family: 'open sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  font-size: 13px;
-  color: #676a6c;
-  overflow-x: hidden;
-
-  ul {
-    list-style-type: none;
-  }
-
-  h4 {
-    margin-top: 0px;
-  }
-
-  h2 {
-    margin-top: 10px;
-    font-size: 26px;
-    font-weight: 100;
-  }
-
-  p {
-    margin-top: 10px;
-
-    b {
-      font-weight: 700;
+  .system-info {
+    .system-description {
+      line-height: 1.8;
+      color: #666;
     }
   }
 
-  .update-log {
-    ol {
-      display: block;
-      list-style-type: decimal;
-      margin-block-start: 1em;
-      margin-block-end: 1em;
-      margin-inline-start: 0;
-      margin-inline-end: 0;
-      padding-inline-start: 40px;
+  .module-card {
+    height: 200px;
+    cursor: pointer;
+    transition: all 0.3s;
+
+    &:hover {
+      transform: translateY(-5px);
     }
+
+    .module-header {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #303133;
+
+      i {
+        margin-right: 8px;
+      }
+    }
+
+    .module-content {
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+
+        li {
+          line-height: 2;
+          color: #606266;
+          font-size: 14px;
+
+          &:before {
+            content: "•";
+            color: #409EFF;
+            margin-right: 8px;
+          }
+        }
+      }
+    }
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 }
 </style>

@@ -1,7 +1,7 @@
 {
   "name": "zr.admin",
   "version": "v20240105",
-  "description": "惠扬特包办公协同系统",
+  "description": "惠扬特包综合管理系统",
   "author": "ZR",
   "license": "MIT",
   "type": "module",
