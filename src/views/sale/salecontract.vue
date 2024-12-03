@@ -490,10 +490,14 @@
 							<el-table-column prop="purchaseunitprice" label="采购单价" width="110">
 								<template #default="{ row }">
 									<el-input v-model="row.purchaseunitprice" @change="calculateTotal"
-										:disabled="isDisabled" />
+										:disabled="isDisabled" :style="row.isPriceChanged === 1 ? {
+											'--el-input-text-color': 'red',
+											'--el-disabled-text-color': 'red',
+										} : {}">
+									</el-input>
 								</template>
 							</el-table-column>
-							<el-table-column prop="inlandfreightprice" label="内陆运费(m³)" width="110">
+							<el-table-column prop=" inlandfreightprice" label="内陆运费(m³)" width="110">
 								<template #default="{ row }">
 									<el-input v-model="row.inlandfreightprice" @change="calculateTotal"
 										:disabled="isDisabled" />
@@ -507,17 +511,21 @@
 							</el-table-column>
 							<el-table-column prop="singleProductGrossProfit" label="单个产品毛利" width="110">
 								<template #default="scope">
-									<span>{{ scope.row.singleProductGrossProfit }}</span>
+									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
+										scope.row.singleProductGrossProfit }}</span>
 								</template>
 							</el-table-column>
 							<el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="140">
 								<template #default="scope">
-									<span>{{ scope.row.singleProductGrossProfitTotal }}</span>
+									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
+										scope.row.singleProductGrossProfitTotal }}</span>
 								</template>
 							</el-table-column>
 							<el-table-column prop="grossProfitRate" label="毛利率%" width="110">
 								<template #default="scope">
-									<span>{{ scope.row.grossProfitRate }}</span>
+									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
+										scope.row.grossProfitRate
+									}}</span>
 								</template>
 							</el-table-column>
 							<el-table-column prop="isInvoicingc" label="是否开票" width="120">
@@ -633,7 +641,8 @@
 							</el-table-column>
 							<el-table-column prop="SinglesalesrevenueA" label="单个销售收入A" width="120" v-if="true">
 								<template #default="scope">
-									<span>{{ scope.row.SinglesalesrevenueA }}</span>
+									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
+										scope.row.SinglesalesrevenueA }}</span>
 								</template>
 							</el-table-column>
 							<el-table-column prop="Singleproductvolume" label="单个产品体积(m³)" width="135" v-if="true">
@@ -657,6 +666,11 @@
 								v-if="true">
 								<template #default="scope">
 									<span>{{ scope.row.Inlandfreightforasingleproduct }}</span>
+								</template>
+							</el-table-column>
+							<el-table-column prop="isPriceChanged" label="是否价格变动" width="140" v-if="true">
+								<template #default="scope">
+									<span>{{ scope.row.isPriceChanged }}</span>
 								</template>
 							</el-table-column>
 							<el-table-column fixed="right" label="操作" width="120">
@@ -773,12 +787,19 @@
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="采购合计">
-							<el-input v-model="Newcontractform.TotalPurchases" style="width: 300px" disabled></el-input>
+							<el-input v-model="Newcontractform.TotalPurchases" style="width: 300px"
+								:disabled="isDisabled" :style="hasChangedProducts ? {
+									'--el-input-text-color': 'red',
+									'--el-disabled-text-color': 'red',
+								} : {}"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="退税总额">
-							<el-input v-model="Newcontractform.TotalTaxRefund" style="width: 300px" disabled></el-input>
+							<el-input v-model="Newcontractform.TotalTaxRefund" style="width: 300px" :style="hasChangedProducts ? {
+								'--el-input-text-color': 'red',
+								'--el-disabled-text-color': 'red',
+							} : {}" disabled></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -791,24 +812,36 @@
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="金额合计">
-							<el-input v-model="Newcontractform.amountTotal" style="width: 300px" disabled></el-input>
+							<el-input v-model="Newcontractform.amountTotal" style="width: 300px" :style="hasChangedProducts ? {
+								'--el-input-text-color': 'red',
+								'--el-disabled-text-color': 'red',
+							} : {}" disabled></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="美金/欧元换算">
-							<el-input v-model="Newcontractform.usdConversion" style="width: 300px" disabled></el-input>
+							<el-input v-model="Newcontractform.usdConversion" style="width: 300px" :style="hasChangedProducts ? {
+								'--el-input-text-color': 'red',
+								'--el-disabled-text-color': 'red',
+							} : {}" disabled></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="总毛利合计">
-							<el-input v-model="Newcontractform.Totalgrossprofit" disabled style="width: 300px;" />
+							<el-input v-model="Newcontractform.Totalgrossprofit" disabled style="width: 300px;" :style="hasChangedProducts ? {
+								'--el-input-text-color': 'red',
+								'--el-disabled-text-color': 'red',
+							} : {}" />
 						</el-form-item>
 					</el-col>
 				</el-row>
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="其它费用合计">
-							<el-input v-model="Newcontractform.TotalOtherFees" disabled style="width: 300px;" />
+							<el-input v-model="Newcontractform.TotalOtherFees" disabled style="width: 300px;" :style="hasChangedProducts ? {
+								'--el-input-text-color': 'red',
+								'--el-disabled-text-color': 'red',
+							} : {}" />
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -817,17 +850,26 @@
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="利润金额">
-							<el-input v-model="Newcontractform.ProfitAmount" disabled style="width: 300px;" />
+							<el-input v-model="Newcontractform.ProfitAmount" :style="hasChangedProducts ? {
+								'--el-input-text-color': 'red',
+								'--el-disabled-text-color': 'red',
+							} : {}" disabled style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="退税总额">
-							<el-input v-model="Newcontractform.TotalTaxRefund" disabled style="width: 300px;" />
+							<el-input v-model="Newcontractform.TotalTaxRefund" :style="hasChangedProducts ? {
+								'--el-input-text-color': 'red',
+								'--el-disabled-text-color': 'red',
+							} : {}" disabled style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="总利润率%">
-							<el-input v-model="Newcontractform.Totalprofitmargin" disabled style="width: 300px;" />
+							<el-input v-model="Newcontractform.Totalprofitmargin" :style="hasChangedProducts ? {
+								'--el-input-text-color': 'red',
+								'--el-disabled-text-color': 'red',
+							} : {}" disabled style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -888,13 +930,17 @@ import {
 } from 'element-plus'
 import { FOCUSABLE_CHILDREN } from 'element-plus/es/directives/trap-focus';
 import request from '@/utils/request';
-import { number } from 'echarts';
+import { color, number } from 'echarts';
 import { Edit } from '@element-plus/icons-vue/dist/types';
 import { dataScope } from '@/api/system/role';
 import { JsonHubProtocol } from '@microsoft/signalr';
 import { get } from 'sortablejs';
 import useUserStore from "@/store/modules/user";
 import { Row } from 'element-plus/es/components/table-v2/src/components';
+
+const hasChangedProducts = computed(() => {
+	return productData.value.some(product => product.isPriceChanged === 1);
+});
 
 // 添加此函数来获取已收费用明细
 const getReceivedExpenseDetails = (contractId) => {
@@ -958,6 +1004,7 @@ const SubmitForReview = () => {
 
 //关闭合同窗体
 const handlecontractDialogclose = () => {
+	hasChangedProducts.value = false;
 	SelctedContractId.value = 0;
 	isDisabled.value = false;
 	showEditBtn.value = false;
@@ -2339,7 +2386,8 @@ const checkContractsDetails = (row) => {
 						Singleproductvolume: element.singleproductvolume,
 						Portchargesforindividualproducts: element.portchargesforindividualproducts,
 						Oceanfreightforasingleproduct: element.oceanfreightforasingleproduct,
-						Inlandfreightforasingleproduct: element.inlandfreightforasingleproduct
+						Inlandfreightforasingleproduct: element.inlandfreightforasingleproduct,
+						isPriceChanged: element.isPriceChanged
 					});
 				});
 			}
@@ -2641,3 +2689,30 @@ const FreightChange = () => {
 	}
 }
 </script>
+<style scoped>
+/* 基础红色文本 */
+.red-text {
+	color: red !important;
+}
+
+/* el-input 组件的输入框 */
+.red-text .el-input__inner {
+	color: red !important;
+}
+
+/* 禁用状态的 el-input */
+.red-text.el-input.is-disabled .el-input__inner {
+	color: red !important;
+}
+
+/* span 元素 */
+.red-text span {
+	color: red !important;
+}
+
+/* 确保禁用状态下也显示红色 */
+.el-input.is-disabled.red-text .el-input__inner {
+	-webkit-text-fill-color: red !important;
+	color: red !important;
+}
+</style>
