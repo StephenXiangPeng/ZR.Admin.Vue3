@@ -23,8 +23,8 @@
 				<template #default="scope">
 					<!-- 合并的“生成采购合同”按钮 -->
 					<div v-if="isFirstRow(scope.row)">
-						<el-button type="primary" size="small" @click="GenerateContractPurchase(scope.row)">
-							生成采购合同
+						<el-button type="primary" size="small" @click="ViewDetails(scope.row)">
+							查看详情
 						</el-button>
 					</div>
 				</template>
@@ -350,6 +350,51 @@
 				</span>
 			</template>
 		</el-dialog>
+		<!-- 添加新的查看详情对话框 -->
+		<el-dialog v-model="viewDetailsDialog" title="采购需求详情" :close-on-click-modal=false style="width: 70%;">
+			<el-table :data="detailsTableData">
+				<el-table-column prop="id" label="id" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="productId" label="产品ID" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
+				<el-table-column prop="customerCode" label="客户货号" width="150"></el-table-column>
+				<el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
+				<el-table-column prop="englishName" label="英文品名" width="150"></el-table-column>
+				<el-table-column prop="chineseSpec" label="中文规格" width="150"></el-table-column>
+				<el-table-column prop="unit" label="计量单位" width="150"></el-table-column>
+				<el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
+				<el-table-column prop="purchaseUnitPrice" label="采购单价" width="150">
+					<template #default="scope">
+						<el-input v-model="scope.row.purchaseUnitPrice" type="number" size="small"
+							@input="handleDetailsPriceChange(scope.row)" placeholder="请输入单价">
+						</el-input>
+					</template>
+				</el-table-column>
+				<el-table-column prop="purchaseTotalPrice" label="采购总价" width="150">
+					<template #default="scope">
+						<span>{{ scope.row.purchaseTotalPrice }}</span>
+					</template>
+				</el-table-column>
+				<!-- 添加其他字段 -->
+				<el-table-column prop="packaging" label="包装方式" width="150"></el-table-column>
+				<el-table-column prop="specialRequirements" label="特殊要求" width="150"></el-table-column>
+				<el-table-column prop="invoice" label="是否开票" width="150"></el-table-column>
+				<el-table-column prop="innerBoxQuantity" label="内盒装量" width="150"></el-table-column>
+				<el-table-column prop="outerBoxQuantity" label="外箱装量" width="150"></el-table-column>
+				<el-table-column prop="remark" label="备注" width="150"></el-table-column>
+			</el-table>
+
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button type="warning" v-if="hasPriceChanges" @click="notifySales">
+						通知销售
+					</el-button>
+					<el-button type="primary" v-if="!hasPriceChanges"
+						@click="GenerateContractPurchase(currentDetailRow)">
+						生成采购合同
+					</el-button>
+				</span>
+			</template>
+		</el-dialog>
 	</div>
 </template>
 
@@ -361,6 +406,130 @@ import { get } from 'sortablejs';
 import { el } from 'element-plus/es/locale';
 import useUserStore from "@/store/modules/user";
 import { FormInstance } from 'element-plus'
+
+// 添加新的响应式变量
+const viewDetailsDialog = ref(false)
+const detailsTableData = ref([])
+const hasPriceChanges = ref(false)
+const currentDetailRow = ref(null)
+
+// 查看详情方法
+const ViewDetails = (row) => {
+	currentDetailRow.value = row
+	hasPriceChanges.value = false
+	// 获取该合同的详细信息
+	request({
+		url: 'Contracts/GetContractDetailsById/GetContractDetails',
+		method: 'GET',
+		params: {
+			contractId: row.contractId
+		}
+	}).then(response => {
+		if (response.code === 200) {
+			// 映射产品数据到表格
+			detailsTableData.value = response.data.contractProducts.map(item => ({
+				id: item.id,
+				productId: item.productID,
+				productCode: item.productCode,
+				customerCode: item.customerCode,
+				chineseName: item.chineseName,
+				englishName: item.englishName,
+				chineseSpec: item.chineseSpec,
+				unit: state.optionss.hr_calculate_unit.find(p => p.dictValue === item.unit.toString())?.dictLabel || '',
+				contractQuantity: item.contractQuantity,
+				purchaseUnitPrice: item.purchaseUnitPrice,
+				purchaseTotalPrice: item.purchaseTotalPrice,
+				packaging: state.optionss.hr_packing.find(p => p.dictValue === item.packaging.toString())?.dictLabel || '',
+				specialRequirements: item.specialRequirements,
+				invoice: item.invoice,
+				innerBoxQuantity: item.innerBoxQuantity,
+				outerBoxQuantity: item.outerBoxQuantity,
+				remark: item.remark,
+				originalPrice: item.purchaseUnitPrice// 保存原始价格用于比较
+			}))
+			viewDetailsDialog.value = true
+		} else {
+			ElMessage.error('获取详情失败，请重试')
+		}
+	}).catch(error => {
+		console.error('获取详情失败:', error)
+		ElMessage.error('获取详情失败，请重试')
+	})
+}
+
+// 处理详情页面的价格变化
+const handleDetailsPriceChange = (row) => {
+	// 确保输入的是数字
+	const currentPrice = parseFloat(row.purchaseUnitPrice) || 0
+	const originalPrice = parseFloat(row.originalPrice) || 0
+	// 计算新的总价
+	row.purchaseTotalPrice = (row.contractQuantity * currentPrice).toFixed(2)
+
+	// 检查是否有价格变动（使用精确比较）
+	hasPriceChanges.value = Math.abs(currentPrice - originalPrice) > 0.000001
+}
+
+// 通知销售方法
+const notifySales = () => {
+	ElMessageBox.confirm('确认通知销售价格变动？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		// 构建更新请求
+		const editRequest = {
+			contractId: parseInt(currentDetailRow.value.contractId),
+			contractProductItems: detailsTableData.value.map(item => ({
+				id: item.id,
+				productId: item.productId,
+				purchaseUnitPrice: parseFloat(item.purchaseUnitPrice),
+				purchaseTotalPrice: parseFloat(item.purchaseTotalPrice),
+				isPriceChanged: 1
+			}))
+		}
+		// 调用更新价格接口
+		request.post("contracts/ContractPurchasePriceChanges/UpdatePrice", editRequest)
+			.then(response => {
+				if (response.code === 200) {
+					ElMessage.success('已通知销售价格变动！')
+					viewDetailsDialog.value = false
+					//更新生成采购合同状态
+					updateGenerateStatusByContractId(editRequest.contractId);
+					// 刷新列表
+					ProcurementRequirements(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value)
+				} else {
+					ElMessage.error('通知失败，请重试')
+				}
+			})
+			.catch(error => {
+				console.error('通知销售失败:', error)
+				ElMessage.error('通知失败，请重试')
+			})
+	})
+}
+
+// 更新生成状态
+const updateGenerateStatusByContractId = (contractId) => {
+	return new Promise((resolve, reject) => {
+		request({
+			url: 'PurchaseContracts/UpdateIsGenerateByContractID/EditGenerate',
+			method: 'GET',
+			params: {
+				ContractID: contractId
+			}
+		}).then(response => {
+			if (response.code == 200) {
+				// 供应商简称
+				resolve(response);  // Resolve the promise with the response data
+			} else {
+				console.error(error);
+			}
+		}).catch(error => {
+			console.error(error);
+			reject(error);  // Reject the promise if an error occurs
+		});
+	});
+};
 
 // 定义表单验证规则
 const rules = ref({
@@ -444,7 +613,8 @@ const state = reactive({
 		hr_china_city: [],
 		sql_sale_contracts: [],
 		sql_supplier_info: [],
-		sql_hr_purchase: []
+		sql_hr_purchase: [],
+		hr_packing: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -453,7 +623,7 @@ var dictParams = [{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' }
 { dictType: 'hr_transportation_method' }, { dictType: 'sys_yes_no' }, { dictType: 'hr_calculate_unit' }, { dictType: 'hr_contract_status' },
 { dictType: 'hr_customer_level' }, { dictType: 'hr_signing_place' }, { dictType: 'hr_quotation_basis' }, { dictType: 'hr_outerbox_unit' },
 { dictType: 'hr_supplier_level' }, { dictType: 'hr_business_scope' }, { dictType: 'hr_china_provinces' }, { dictType: 'hr_china_city' }, { dictType: 'sql_sale_contracts' },
-{ dictType: 'sql_supplier_info' }, { dictType: 'sql_hr_purchase' }]
+{ dictType: 'sql_supplier_info' }, { dictType: 'sql_hr_purchase' }, { dictType: 'hr_packing' }]
 
 // proxy.getDicts(dictParams).then((response) => {
 // 	response.data.forEach((element) => {

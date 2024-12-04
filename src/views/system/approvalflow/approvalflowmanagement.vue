@@ -10,9 +10,9 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="ApprovalProcessTableData">
-			<el-table-column prop="processName" label="流程名称" width="150" align="center"></el-table-column>
-			<el-table-column prop="documentType" label="单据类型" width="150" align="center"></el-table-column>
-			<el-table-column prop="triggerCondition" label="触发条件" width="150" align="center"></el-table-column>
+			<el-table-column prop="processName" label="流程名称" width="250" align="center"></el-table-column>
+			<el-table-column prop="documentType" label="单据类型" width="250" align="center"></el-table-column>
+			<el-table-column prop="triggerCondition" label="触发条件" width="250" align="center"></el-table-column>
 			<el-table-column prop="remark" label="备注信息" width="300" align="center"></el-table-column>
 			<el-table-column prop="createTime" label="创建时间" width="200" align="center"></el-table-column>
 			<el-table-column label="操作" align="center">
