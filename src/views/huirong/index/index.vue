@@ -1364,6 +1364,7 @@ import duration from 'dayjs/plugin/duration'
 import { number } from 'echarts';
 import SalesContractdialog from '@/views/components/SalesContractdialog.vue';
 import { Picture } from '@element-plus/icons-vue'
+import Salecontract from '@/views/sale/salecontract.vue';
 
 
 // #region 财务收款单相关
@@ -1677,163 +1678,167 @@ const openSaleContractDialog = (row) => {
   ApproveDocumentRequest.StageID = row.stageID;
   ApproveDocumentRequest.ApproverID = row.approverID;
   ApproveDocumentRequest.DocumentType = row.documentType;
-  request({
-    url: 'Contracts/GetContractDetailsById/GetContractDetails',
-    method: 'GET',
-    params: {
-      contractId: row.documentID
-    }
-  }).then(response => {
-    if (response.data != null) {
-      /*表单赋值*/
-      contractform.id = row.documentID;
-      contractform.contractNumber = response.data.contract.contractNumber;
-      contractform.contractDate = response.data.contract.contractDate;
-      contractform.contractStatus = state.optionss['hr_contract_status'].find(item => item.dictValue === response.data.contract.contractStatus.toString()).dictValue;
-      contractform.customerid = response.data.contract.customerId;
-      contractform.customerNumber = state.optionss['sql_hr_customer'].find(item => item.dictValue === response.data.contract.customerId.toString()).dictValue;
-      contractform.customerAbbreviation = state.optionss['sql_hr_customer'].find(item => item.dictValue === response.data.contract.customerId.toString()).dictValue;
-      GetCustomerContactPerson(response.data.contract.customerId);
-      contractform.contactPerson = response.data.contract.contactPerson;
-      contractform.contactEmail = response.data.contract.contactEmail;
-      contractform.effectiveDate = response.data.contract.effectiveDate;
-      contractform.customerLevel = state.optionss['hr_customer_level'].find(item => item.dictValue === response.data.contract.customerLevel.toString()).dictValue;
-      contractform.customerContract = response.data.contract.customerContract;
-      contractform.deliveryDate = response.data.contract.deliveryDate;
-      contractform.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictValue === response.data.contract.ourCompany.toString()).dictValue;
-      contractform.settlementType = response.data.contract.settlementType.toString();
-      contractform.foreignCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.contract.foreignCurrency.toString()).dictValue;
-      contractform.exchangeRate = response.data.contract.exchangeRate;
-      contractform.usdExchangeRate = response.data.contract.usdExchangeRate;
-      contractform.settlementMethod = state.optionss['hr_settlement_way'].find(item => item.dictValue === response.data.contract.settlementMethod.toString()).dictValue;
-      contractform.priceTerms = state.optionss['hr_pricing_term'].find(item => item.dictValue === response.data.contract.priceTerms.toString()).dictValue;
-      contractform.shippingPort = state.optionss['hr_transport_port'].find(item => item.dictValue === response.data.contract.shippingPort.toString()).dictValue;
-      contractform.destinationPort = state.optionss['hr_transport_port'].find(item => item.dictValue === response.data.contract.destinationPort.toString()).dictValue;
-      contractform.tradeCountry = state.optionss['hr_nation'].find(item => item.dictValue === response.data.contract.tradeCountry.toString()).dictValue;
-      contractform.transportation = state.optionss['hr_transportation_method'].find(item => item.dictValue === response.data.contract.transportation.toString()).dictValue;
-      contractform.salesperson = state.optionss['sql_hr_sale'].find(item => item.dictValue === response.data.contract.salesperson.toString()).dictValue;
-      contractform.hasDeposit = response.data.contract.hasDeposit;
-      if (response.data.contract.hasDeposit) {
-        DepositShow.value = true;
-        contractform.receivedDeposit = response.data.contract.receivedDeposit;
-        contractform.depositDate = response.data.contract.depositDate;
-        contractform.Depositratio = response.data.contract.depositratio;
-      } else {
-        DepositShow.value = false;
+  if (row.documentType == "1") {
+    request({
+      url: 'Contracts/GetContractDetailsById/GetContractDetails',
+      method: 'GET',
+      params: {
+        contractId: row.documentID
       }
-      contractform.stockProgress = response.data.contract.stockProgress;
-      contractform.deliveryProgress = response.data.contract.deliveryProgress;
-      contractform.profitCalculation = response.data.contract.profitCalculation;
-      contractform.estimatedProfitMargin = response.data.contract.estimatedProfitMargin;
-      contractform.customerOrder = response.data.contract.customerOrder;
-      contractform.contractremark = response.data.contract.remark;
-      //contractform.signingLocation = state.optionss['hr_signing_place'].find(item => item.dictValue === response.data.signingLocation.toString()).dictValue;
-      contractform.canPartial = state.optionss['sys_yes_no'].find(item => item.dictValue === (response.data.contract.canPartial.toString() == "true" ? "Y" : "N")).dictValue;
-      contractform.canTransit = state.optionss['sys_yes_no'].find(item => item.dictValue === (response.data.contract.canTransit.toString() == "true" ? "Y" : "N")).dictValue;
-      contractform.insuranceAddition = response.data.contract.insuranceAddition;
-      contractform.insuranceRate = response.data.contract.insuranceRate;
-      contractform.commissionRate = response.data.contract.commissionRate;
-      contractform.receivingBank = response.data.contract.receivingBank;
-      contractform.goodsValue = response.data.contract.goodsValue;
-      contractform.oceanFreight = response.data.contract.shippingCost;
-      contractform.shippingCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.contract.shippingCurrency.toString()).dictValue;
-      contractform.shippingrate = response.data.contract.shippingExchangeRate;
-      contractform.portMiscellaneousFees = response.data.contract.portMiscellaneousFees;
-      contractform.freightForwarderCustomsClearanceFees = response.data.contract.freightForwarderCustomsClearanceFees;
-      contractform.BankFee = response.data.contract.bankCost;
-      contractform.DocumentationFees = response.data.contract.documentationFees;
-      contractform.paymentDate = response.data.contract.paymentDate;
-      contractform.TotalValueOfGoods = response.data.contract.goodsValue;
-      contractform.TotalQuantity = response.data.contract.quantity;
-      contractform.TotalNumberOfBoxes = response.data.contract.boxCount;
-      contractform.TotalGrossWeight = response.data.contract.grossWeight;
-      contractform.TotalNetWeight = response.data.contract.netWeight;
-      contractform.TotalVolume = response.data.contract.volume;
-      contractform.TotalPurchases = response.data.contract.purchaseTotal;
-      contractform.TotalTaxRefund = response.data.contract.taxRefundTotal;
-      contractform.customerExpenseTotal = response.data.contract.customerExpenseTotal;
-      contractform.amountTotal = response.data.contract.amountTotal;
-      contractform.usdConversion = response.data.contract.usdConversion;
-      contractform.commissionAmount = response.data.contract.commissionAmount;
-      contractform.Totalgrossprofit = response.data.contract.totalgrossprofit;
-      contractform.TotalOtherFees = response.data.contract.totalOtherFees;
-      contractform.ProfitAmount = response.data.contract.profitAmount;
-      contractform.Totalprofitmargin = response.data.contract.totalprofitmargin;
-      /*合同产品信息与相关费用*/
-      return new Promise((resolve, reject) => {
-        request({
-          url: 'Contracts/GetContractDetailsById/GetContractDetails',
-          method: 'GET',
-          params: {
-            contractId: row.documentID
-          }
-        }).then(response => {
-          if (response.data.contractProducts.length > 0) {
-            productData.value = [];
-            response.data.contractProducts.forEach(element => {
-              productData.value.push({
-                Id: element.id,
-                ProductID: element.productID,
-                ContractId: element.contractId,
-                productNum: element.productCode,
-                CustomerCode: element.customerNum,
-                cproductname: element.chineseName,
-                cspecification: element.chineseSpec,
-                contractQuantity: element.contractQuantity,
-                exportunitprice: element.exportUnitPrice,
-                exporttotalprice: element.exportTotalPrice,
-                unitofmeasurement: state.optionss['hr_calculate_unit'].find(item => item.dictValue === element.unit.toString()).dictValue,
-                purchasecurrency: state.optionss['hr_export_currency'].find(item => item.dictValue === element.purchasecurrency.toString()).dictValue,
-                purchaseunitprice: element.purchaseUnitPrice,
-                inlandfreightprice: element.inlandfreightprice,
-                AdditionalPackagingCosts: element.additionalPackagingCosts,
-                singleProductGrossProfit: element.singleProductGrossProfit,
-                singleProductGrossProfitTotal: element.singleProductGrossProfitTotal,
-                grossProfitRate: element.grossProfitRate,
-                isInvoicingc: element.invoice == 0 ? "2" : state.optionss['hr_yes_no'].find(item => item.dictValue === element.invoice.toString()).dictValue,
-                packaging: state.optionss['hr_packing'].find(item => item.dictValue === element.packaging.toString()).dictValue,
-                specialrequirements: element.specialRequirements,
-                rebaterate: element.taxRefundRate,
-                innerBoxLoading: element.innerBoxQuantity,
-                outerboxloading: element.outerBoxQuantity,
-                outerboxunit: state.optionss['hr_calculate_unit'].find(item => item.dictValue === element.outerboxunit.toString()).dictValue,
-                outerboxlength: element.outerBoxLength,
-                outerboxwidth: element.outerBoxWidth,
-                outerboxheight: element.outerBoxHeight,
-                outerboxnetweight: element.outerBoxNetWeight,
-                outerboxgrossweight: element.outerBoxGrossWeight,
-                outerboxvolume: element.outerBoxVolume,
-                NumberOfBoxes: element.boxCount,
-                totalNetWeight: element.totalNetWeight,
-                totalGrossWeight: element.totalGrossWeight,
-                totalVolume: element.totalVolume,
-                OtherFees: element.otherFees,
-                SinglesalesrevenueA: element.singlesalesrevenue,
-                Singleproductvolume: element.singleproductvolume,
-                Portchargesforindividualproducts: element.portchargesforindividualproducts,
-                Oceanfreightforasingleproduct: element.oceanfreightforasingleproduct,
-                Inlandfreightforasingleproduct: element.inlandfreightforasingleproduct
+    }).then(response => {
+      if (response.data != null) {
+        /*表单赋值*/
+        contractform.id = row.documentID;
+        contractform.contractNumber = response.data.contract.contractNumber;
+        contractform.contractDate = response.data.contract.contractDate;
+        contractform.contractStatus = state.optionss['hr_contract_status'].find(item => item.dictValue === response.data.contract.contractStatus.toString()).dictValue;
+        contractform.customerid = response.data.contract.customerId;
+        contractform.customerNumber = state.optionss['sql_hr_customer'].find(item => item.dictValue === response.data.contract.customerId.toString()).dictValue;
+        contractform.customerAbbreviation = state.optionss['sql_hr_customer'].find(item => item.dictValue === response.data.contract.customerId.toString()).dictValue;
+        GetCustomerContactPerson(response.data.contract.customerId);
+        contractform.contactPerson = response.data.contract.contactPerson;
+        contractform.contactEmail = response.data.contract.contactEmail;
+        contractform.effectiveDate = response.data.contract.effectiveDate;
+        contractform.customerLevel = state.optionss['hr_customer_level'].find(item => item.dictValue === response.data.contract.customerLevel.toString()).dictValue;
+        contractform.customerContract = response.data.contract.customerContract;
+        contractform.deliveryDate = response.data.contract.deliveryDate;
+        contractform.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictValue === response.data.contract.ourCompany.toString()).dictValue;
+        contractform.settlementType = response.data.contract.settlementType.toString();
+        contractform.foreignCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.contract.foreignCurrency.toString()).dictValue;
+        contractform.exchangeRate = response.data.contract.exchangeRate;
+        contractform.usdExchangeRate = response.data.contract.usdExchangeRate;
+        contractform.settlementMethod = state.optionss['hr_settlement_way'].find(item => item.dictValue === response.data.contract.settlementMethod.toString()).dictValue;
+        contractform.priceTerms = state.optionss['hr_pricing_term'].find(item => item.dictValue === response.data.contract.priceTerms.toString()).dictValue;
+        contractform.shippingPort = state.optionss['hr_transport_port'].find(item => item.dictValue === response.data.contract.shippingPort.toString()).dictValue;
+        contractform.destinationPort = state.optionss['hr_transport_port'].find(item => item.dictValue === response.data.contract.destinationPort.toString()).dictValue;
+        contractform.tradeCountry = state.optionss['hr_nation'].find(item => item.dictValue === response.data.contract.tradeCountry.toString()).dictValue;
+        contractform.transportation = state.optionss['hr_transportation_method'].find(item => item.dictValue === response.data.contract.transportation.toString()).dictValue;
+        contractform.salesperson = state.optionss['sql_hr_sale'].find(item => item.dictValue === response.data.contract.salesperson.toString()).dictValue;
+        contractform.hasDeposit = response.data.contract.hasDeposit;
+        if (response.data.contract.hasDeposit) {
+          DepositShow.value = true;
+          contractform.receivedDeposit = response.data.contract.receivedDeposit;
+          contractform.depositDate = response.data.contract.depositDate;
+          contractform.Depositratio = response.data.contract.depositratio;
+        } else {
+          DepositShow.value = false;
+        }
+        contractform.stockProgress = response.data.contract.stockProgress;
+        contractform.deliveryProgress = response.data.contract.deliveryProgress;
+        contractform.profitCalculation = response.data.contract.profitCalculation;
+        contractform.estimatedProfitMargin = response.data.contract.estimatedProfitMargin;
+        contractform.customerOrder = response.data.contract.customerOrder;
+        contractform.contractremark = response.data.contract.remark;
+        //contractform.signingLocation = state.optionss['hr_signing_place'].find(item => item.dictValue === response.data.signingLocation.toString()).dictValue;
+        contractform.canPartial = state.optionss['sys_yes_no'].find(item => item.dictValue === (response.data.contract.canPartial.toString() == "true" ? "Y" : "N")).dictValue;
+        contractform.canTransit = state.optionss['sys_yes_no'].find(item => item.dictValue === (response.data.contract.canTransit.toString() == "true" ? "Y" : "N")).dictValue;
+        contractform.insuranceAddition = response.data.contract.insuranceAddition;
+        contractform.insuranceRate = response.data.contract.insuranceRate;
+        contractform.commissionRate = response.data.contract.commissionRate;
+        contractform.receivingBank = response.data.contract.receivingBank;
+        contractform.goodsValue = response.data.contract.goodsValue;
+        contractform.oceanFreight = response.data.contract.shippingCost;
+        contractform.shippingCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.contract.shippingCurrency.toString()).dictValue;
+        contractform.shippingrate = response.data.contract.shippingExchangeRate;
+        contractform.portMiscellaneousFees = response.data.contract.portMiscellaneousFees;
+        contractform.freightForwarderCustomsClearanceFees = response.data.contract.freightForwarderCustomsClearanceFees;
+        contractform.BankFee = response.data.contract.bankCost;
+        contractform.DocumentationFees = response.data.contract.documentationFees;
+        contractform.paymentDate = response.data.contract.paymentDate;
+        contractform.TotalValueOfGoods = response.data.contract.goodsValue;
+        contractform.TotalQuantity = response.data.contract.quantity;
+        contractform.TotalNumberOfBoxes = response.data.contract.boxCount;
+        contractform.TotalGrossWeight = response.data.contract.grossWeight;
+        contractform.TotalNetWeight = response.data.contract.netWeight;
+        contractform.TotalVolume = response.data.contract.volume;
+        contractform.TotalPurchases = response.data.contract.purchaseTotal;
+        contractform.TotalTaxRefund = response.data.contract.taxRefundTotal;
+        contractform.customerExpenseTotal = response.data.contract.customerExpenseTotal;
+        contractform.amountTotal = response.data.contract.amountTotal;
+        contractform.usdConversion = response.data.contract.usdConversion;
+        contractform.commissionAmount = response.data.contract.commissionAmount;
+        contractform.Totalgrossprofit = response.data.contract.totalgrossprofit;
+        contractform.TotalOtherFees = response.data.contract.totalOtherFees;
+        contractform.ProfitAmount = response.data.contract.profitAmount;
+        contractform.Totalprofitmargin = response.data.contract.totalprofitmargin;
+        /*合同产品信息与相关费用*/
+        return new Promise((resolve, reject) => {
+          request({
+            url: 'Contracts/GetContractDetailsById/GetContractDetails',
+            method: 'GET',
+            params: {
+              contractId: row.documentID
+            }
+          }).then(response => {
+            if (response.data.contractProducts.length > 0) {
+              productData.value = [];
+              response.data.contractProducts.forEach(element => {
+                productData.value.push({
+                  Id: element.id,
+                  ProductID: element.productID,
+                  ContractId: element.contractId,
+                  productNum: element.productCode,
+                  CustomerCode: element.customerNum,
+                  cproductname: element.chineseName,
+                  cspecification: element.chineseSpec,
+                  contractQuantity: element.contractQuantity,
+                  exportunitprice: element.exportUnitPrice,
+                  exporttotalprice: element.exportTotalPrice,
+                  unitofmeasurement: state.optionss['hr_calculate_unit'].find(item => item.dictValue === element.unit.toString()).dictValue,
+                  purchasecurrency: state.optionss['hr_export_currency'].find(item => item.dictValue === element.purchasecurrency.toString()).dictValue,
+                  purchaseunitprice: element.purchaseUnitPrice,
+                  inlandfreightprice: element.inlandfreightprice,
+                  AdditionalPackagingCosts: element.additionalPackagingCosts,
+                  singleProductGrossProfit: element.singleProductGrossProfit,
+                  singleProductGrossProfitTotal: element.singleProductGrossProfitTotal,
+                  grossProfitRate: element.grossProfitRate,
+                  isInvoicingc: element.invoice == 0 ? "2" : state.optionss['hr_yes_no'].find(item => item.dictValue === element.invoice.toString()).dictValue,
+                  packaging: state.optionss['hr_packing'].find(item => item.dictValue === element.packaging.toString()).dictValue,
+                  specialrequirements: element.specialRequirements,
+                  rebaterate: element.taxRefundRate,
+                  innerBoxLoading: element.innerBoxQuantity,
+                  outerboxloading: element.outerBoxQuantity,
+                  outerboxunit: state.optionss['hr_calculate_unit'].find(item => item.dictValue === element.outerboxunit.toString()).dictValue,
+                  outerboxlength: element.outerBoxLength,
+                  outerboxwidth: element.outerBoxWidth,
+                  outerboxheight: element.outerBoxHeight,
+                  outerboxnetweight: element.outerBoxNetWeight,
+                  outerboxgrossweight: element.outerBoxGrossWeight,
+                  outerboxvolume: element.outerBoxVolume,
+                  NumberOfBoxes: element.boxCount,
+                  totalNetWeight: element.totalNetWeight,
+                  totalGrossWeight: element.totalGrossWeight,
+                  totalVolume: element.totalVolume,
+                  OtherFees: element.otherFees,
+                  SinglesalesrevenueA: element.singlesalesrevenue,
+                  Singleproductvolume: element.singleproductvolume,
+                  Portchargesforindividualproducts: element.portchargesforindividualproducts,
+                  Oceanfreightforasingleproduct: element.oceanfreightforasingleproduct,
+                  Inlandfreightforasingleproduct: element.inlandfreightforasingleproduct
+                });
               });
-            });
-          }
-          if (response.data.contractExpenses.length > 0) {
-            CustomerRelaterExoensesTableData.value = [];
-            CustomerRelaterExoensesTableData.value = response.data.contractExpenses;
-            CustomerRelaterExoensesTableData.value.forEach(item => {
-              item.amount = item.expense * item.exchangeRate;
-            });
-          }
-        }).catch(error => {
-          console.error(error);
-          reject(error);
+            }
+            if (response.data.contractExpenses.length > 0) {
+              CustomerRelaterExoensesTableData.value = [];
+              CustomerRelaterExoensesTableData.value = response.data.contractExpenses;
+              CustomerRelaterExoensesTableData.value.forEach(item => {
+                item.amount = item.expense * item.exchangeRate;
+              });
+            }
+          }).catch(error => {
+            console.error(error);
+            reject(error);
+          });
         });
-      });
-    }
-  }).catch(error => {
-    console.error(error);
-  });
-  contractDialog.value = true;
-  contractform.id = row.documentID;
+      }
+    }).catch(error => {
+      console.error(error);
+    });
+    contractDialog.value = true;
+    contractform.id = row.documentID;
+  } else if (row.documentType == "2") {
+    ElMessage.warning("采购合同暂不支持查看");
+  }
 }
 
 const TimeoutNotProcessedClick = () => {
@@ -1896,7 +1901,8 @@ const state = reactive({
     hr_yes_no: [],
     hr_bank: [],
     funds_type: [],
-    sql_sale_contracts: []
+    sql_sale_contracts: [],
+    sql_purchase_contract: []
   }
 })
 const { optionss } = toRefs(state)
@@ -1926,7 +1932,8 @@ var dictParams = [
   { dictType: 'sql_hr_sale' },
   { dictType: 'hr_bank' },
   { dictType: 'sql_sale_contracts' },
-  { dictType: 'funds_type' }
+  { dictType: 'funds_type' },
+  { dictType: 'sql_purchase_contract' }
 ]
 proxy.getDicts(dictParams).then((response) => {
   response.data.forEach((element) => {
@@ -1948,7 +1955,11 @@ const getPendingCount = () => {
         AgencyProcesstableData.value.forEach(item => {
           item.createBy = state.optionss['sql_all_user'].filter(user => user.dictValue == item.createBy).map(user => user.dictLabel).values().next().value;
           item.documentTypeName = state.optionss['hr_approval_document_type'].filter(user => user.dictValue == item.documentType).map(user => user.dictLabel).values().next().value;
-          item.documentNumber = state.optionss['sql_sale_contracts'].filter(user => user.dictValue == item.documentType).map(user => user.dictLabel).values().next().value;
+          if (item.documentType == "1") {
+            item.documentNumber = state.optionss['sql_sale_contracts'].filter(Salecontract => Salecontract.dictValue == item.documentID.toString()).map(Salecontract => Salecontract.dictLabel).values().next().value;
+          } else if (item.documentType == "2") {
+            item.documentNumber = state.optionss['sql_purchase_contract'].filter(Purchasecontract => Purchasecontract.dictValue == item.documentID.toString()).map(Purchasecontract => Purchasecontract.dictLabel).values().next().value;
+          }
           const createTime = dayjs(item.createTime);
           const now = dayjs();
           const hoursDiff = now.diff(createTime, 'hour');
