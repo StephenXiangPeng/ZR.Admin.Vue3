@@ -26,9 +26,7 @@
           <el-button @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
-      <div class="operation-buttons">
-        <el-button type="primary" @click="handleAdd">新增员工</el-button>
-      </div>
+    
     </el-card>
 
     <!-- 表格区域 -->
@@ -137,8 +135,7 @@
       width="800px"
       append-to-body
     >
-      <!-- 对话框的表单内容将在后续实现 -->
-      <div>表单内容待实现</div>
+     
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialog.visible = false">取 消</el-button>
@@ -212,6 +209,10 @@ const handleAdd = () => {
   dialog.title = '新增员工';
   dialog.type = 'add';
   dialog.visible = true;
+  // 重置表单
+  if (employeeFormRef.value) {
+    employeeFormRef.value.resetFields();
+  }
 };
 
 // 编辑员工
@@ -235,10 +236,17 @@ const deleteEmployee = (id: number) => {
 };
 
 // 提交表单
-const submitForm = () => {
-  // TODO: 实现表单提交逻辑
-  dialog.visible = false;
-  ElMessage.success('操作成功');
+const submitForm = async () => {
+  if (!employeeFormRef.value) return;
+  
+  await employeeFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      // TODO: 实现表单提交逻辑
+      console.log('表单数据：', employeeForm);
+      dialog.visible = false;
+      ElMessage.success('操作成功');
+    }
+  });
 };
 
 // 分页方法
@@ -251,6 +259,8 @@ const handleCurrentChange = (val: number) => {
   queryParams.pageNum = val;
   handleQuery();
 };
+
+
 </script>
 
 <style scoped>
@@ -277,5 +287,11 @@ const handleCurrentChange = (val: number) => {
 
 .dialog-footer {
   text-align: right;
+}
+
+.employee-form {
+  padding: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 </style>
