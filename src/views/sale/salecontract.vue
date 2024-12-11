@@ -73,6 +73,7 @@
 				<el-table-column fixed="right" label="操作" width="100">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="checkContractsDetails(scope.row)">查看详情</el-button>
+						<el-button type="text" size="small" @click="GeneratePDF(scope.row)">生成PDF</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -937,6 +938,19 @@ import { JsonHubProtocol } from '@microsoft/signalr';
 import { get } from 'sortablejs';
 import useUserStore from "@/store/modules/user";
 import { Row } from 'element-plus/es/components/table-v2/src/components';
+
+const GeneratePDF = (row) => {
+	// 在这里添加生成PDF的逻辑
+	console.log('正在为以下数据生成PDF:', row);
+	request({
+		url: 'Contracts/CreatePDF/CreatePDF',
+		method: 'GET'
+	}).then(response => {
+		console.log(response);
+	}).catch(error => {
+		console.error('生成PDF失败:', error);
+	});
+}
 
 const hasChangedProducts = computed(() => {
 	return productData.value.some(product => product.isPriceChanged === 1);
