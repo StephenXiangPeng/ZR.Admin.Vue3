@@ -22,20 +22,8 @@
         </el-col>
         <el-col :span="6">
           <el-form-item label="政治面貌" prop="political_status_id">
-            <el-select v-model="employeeForm.political_status_id" placeholder="请选择政治面貌">
-              <el-option label="中共党员" :value="1" />
-              <el-option label="中共预备党员" :value="2" />
-              <el-option label="共青团员" :value="3" />
-              <el-option label="民革党员" :value="4" />
-              <el-option label="民盟盟员" :value="5" />
-              <el-option label="民建会员" :value="6" />
-              <el-option label="民进会员" :value="7" />
-              <el-option label="农工党党员" :value="8" />
-              <el-option label="致公党党员" :value="9" />
-              <el-option label="九三学社社员" :value="10" />
-              <el-option label="台盟盟员" :value="11" />
-              <el-option label="无党派人士" :value="12" />
-              <el-option label="群众" :value="13" />
+            <el-select v-model="employeeForm.political_status_id" filterable placeholder="请选择政治面貌" clearable>
+              <el-option v-for="dict in state.jdrs_zzmm" :key="dict.dictValue" :label="dict.dictLabel" :value="dict.dictValue" />
             </el-select>
           </el-form-item>
         </el-col>
@@ -54,9 +42,8 @@
         </el-col>
         <el-col :span="6">
           <el-form-item label="民族" prop="ethnicity_id">
-            <el-select v-model="employeeForm.ethnicity_id" placeholder="请选择民族">
-              <el-option label="汉族" :value="1" />
-              <el-option label="其他" :value="2" />
+            <el-select v-model="employeeForm.ethnicity_id"  filterable placeholder="请选择民族" clearable>
+              <el-option v-for="dict in state.jdrs_mz" :key="dict.dictValue" :label="dict.dictLabel" :value="dict.dictValue" />
             </el-select>
           </el-form-item>
         </el-col>
@@ -388,6 +375,27 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
+import { getDicts } from '@/api/system/dict/data'
+const { proxy } = getCurrentInstance()
+const state = reactive({
+  form: {},
+  queryParams: {
+    menuName: undefined,
+    visible: undefined,
+    menuTypeIds: 'M,C',
+    parentId: undefined
+  },
+  rules: {},
+  jdrs_zzmm: [],
+  jdrs_mz: []
+})
+
+var dictParams = [{ dictType: 'jdrs_zzmm' }, { dictType: 'jdrs_mz' }]
+proxy.getDicts(dictParams).then((response) => {
+  response.data.forEach((element) => {
+    state[element.dictType] = element.list
+  })
+})
 
 // 员工数据列表
 const employees = ref([
