@@ -1825,6 +1825,7 @@ const openSaleContractDialog = (row) => {
   ApproveDocumentRequest.StageID = row.stageID;
   ApproveDocumentRequest.ApproverID = row.approverID;
   ApproveDocumentRequest.DocumentType = row.documentType;
+  //获取销售合同详情
   if (row.documentType == "1") {
     request({
       url: 'Contracts/GetContractDetailsById/GetContractDetails',
@@ -1983,8 +1984,7 @@ const openSaleContractDialog = (row) => {
     });
     contractDialog.value = true;
     contractform.id = row.documentID;
-  } else if (row.documentType == "2") {
-    //GetPurchaseContractDetailsById获取采购合同详情
+  } else if (row.documentType == "2") {//获取采购合同详情
     request({
       url: 'PurchaseContracts/GetPurchaseContractDetailsById/GetPurchaseContractDetails',
       method: 'GET',
@@ -2006,7 +2006,7 @@ const openSaleContractDialog = (row) => {
         PurchaseContractDialogData.value.paymentDays = purchaseContracts.paymentDays;
         PurchaseContractDialogData.value.TotalValueOfGoods = purchaseContracts.totalGoodsValue;
         PurchaseContractDialogData.value.TotalQuantity = purchaseContracts.totalQuantity;
-        PurchaseContractDialogData.value.TotalNumberOfBoxes = purchaseContracts.totalNumberOfBoxes;
+        PurchaseContractDialogData.value.TotalNumberOfBoxes = purchaseContracts.totalBoxCount;
         PurchaseContractDialogData.value.TotalGrossWeight = purchaseContracts.totalGrossWeight;
         PurchaseContractDialogData.value.TotalNetWeight = purchaseContracts.totalNetWeight;
         PurchaseContractDialogData.value.TotalVolume = purchaseContracts.totalVolume;
