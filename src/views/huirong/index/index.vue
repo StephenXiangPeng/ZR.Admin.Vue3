@@ -1334,9 +1334,6 @@
         <el-descriptions-item label="交货日期">
           {{ PurchaseContractDialogData.deliveryDate }}
         </el-descriptions-item>
-        <el-descriptions-item label="厂商简称">
-          {{ PurchaseContractDialogData.vendorCode }}
-        </el-descriptions-item>
         <el-descriptions-item label="采购币种">
           {{ PurchaseContractDialogData.purchaseCurrency }}
         </el-descriptions-item>
@@ -1360,6 +1357,7 @@
       <el-tabs v-model="PurchaseContractDialogData.activeName" class="demo-tabs">
         <el-tab-pane label="产品资料" name="productinfo">
           <el-table :data="PurchaseContractDialogData.productinfotableData">
+            <el-table-column prop="productSupplier" label="产品供应商" width="150"></el-table-column>
             <el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
             <el-table-column prop="customerCode" label="客户货号" width="150"></el-table-column>
             <el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
@@ -1438,7 +1436,129 @@
         </span>
       </template>
     </el-dialog>
+    <el-dialog v-model="PaymentrequestDialog" title="付款申请审批" :close-on-click-modal="false" style="width: 70%;">
+      <!-- 基本信息 -->
+      <el-descriptions :column="3" :border="true" label-width="120px">
+        <el-descriptions-item label="申请单号">
+          {{ PaymentrequestForm.applicationNumber }}
+        </el-descriptions-item>
 
+        <el-descriptions-item label="申请日期">
+          {{ PaymentrequestForm.applicationDate }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="付款类别">
+          {{ PaymentrequestForm.paymentCategory }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="款项名称">
+          {{ PaymentrequestForm.paymentName }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="收款单位编号">
+          {{ PaymentrequestForm.payeeCode }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="收款单位名称">
+          {{ PaymentrequestForm.payeeName }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="开户银行">
+          {{ PaymentrequestForm.bankName }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="银行账号">
+          {{ PaymentrequestForm.bankAccount }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="我方公司">
+          {{ PaymentrequestForm.ourCompany }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="货币代码">
+          {{ PaymentrequestForm.currencyCode }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="申请总额">
+          {{ PaymentrequestForm.totalAmount }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="已付金额">
+          {{ PaymentrequestForm.paidAmount }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="未付金额">
+          {{ PaymentrequestForm.unpaidAmount }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="申请人">
+          {{ PaymentrequestForm.applicant }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="申请部门">
+          {{ PaymentrequestForm.applicationDepartment }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="经手人">
+          {{ PaymentrequestForm.handler }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 备注说明 -->
+      <el-descriptions :column="3" :border="true" label-width="120px">
+        <el-descriptions-item label="备注说明">
+          {{ PaymentrequestForm.remarks }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 费用信息 -->
+      <el-tabs v-model="PaymentactiveTab" class="demo-tabs">
+        <!-- 费用明细 -->
+        <el-tab-pane label="费用明细" name="CostDetailsTab">
+          <el-table :data="CostDetailsTbaleData" border>
+            <el-table-column prop="relatedModules" label="关联模块" />
+            <el-table-column prop="associatedOrderNumber" label="关联单号" />
+            <el-table-column prop="applicationAmount" label="申请金额" />
+            <el-table-column prop="relevantDates" label="关联日期" />
+            <el-table-column prop="specificPaymentItems" label="具体款项" />
+            <el-table-column prop="remark" label="备注" />
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 未支付款项详情 -->
+        <el-tab-pane label="未支付款项详情" name="UnpaidDetailsTab">
+          <el-table :data="UnpaidDetailsTbaleData" border>
+            <el-table-column prop="contractofpurchaseNo" label="采购合同" />
+            <el-table-column prop="contractdate" label="合同日期" />
+            <el-table-column prop="relatedmodules" label="关联模块" />
+            <el-table-column prop="exportcurrency" label="外销币种" />
+            <el-table-column prop="exchangerate" label="汇率" />
+            <el-table-column prop="amountspayable" label="应支付金额" />
+            <el-table-column prop="depositpaid" label="已付定金" />
+            <el-table-column prop="paymentrequested" label="已申请付款" />
+            <el-table-column prop="nopaymentrequested" label="未申请付款" />
+            <el-table-column prop="paymentpaid" label="已付货款" />
+            <el-table-column prop="unpaiditems" label="未付货款" />
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 客诉索赔 -->
+        <el-tab-pane label="客诉索赔" name="CustomerComplaintsTab">
+        </el-tab-pane>
+      </el-tabs>
+
+      <!-- 底部按钮 -->
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button type="danger" @click="ApproveReject">
+            驳回
+          </el-button>
+          <el-button type="success" @click="Approvepass">
+            通过
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
     <!-- 领取收款单对话框 -->
     <el-dialog v-model="claimDialogVisible" title="领取收款单" width="500px" :close-on-click-modal="false">
       <el-form ref="claimFormRef" :model="claimForm" :rules="claimRules" label-width="100px">
@@ -1483,6 +1603,7 @@ import { number } from 'echarts';
 import SalesContractdialog from '@/views/components/SalesContractdialog.vue';
 import { Picture } from '@element-plus/icons-vue'
 import Salecontract from '@/views/sale/salecontract.vue';
+import { id } from 'element-plus/es/locale';
 
 
 // #region 财务收款单相关
@@ -1603,7 +1724,6 @@ const getFinancialTasksList = (start, end) => {
         item.foreignCurrency = state.optionss.hr_export_currency.find(dict => dict.dictValue === item.foreignCurrency)?.dictLabel;
         item.bank = state.optionss.hr_bank.find(dict => dict.dictValue === item.bank)?.dictLabel;
       });
-
       // 更新分页信息
       FinancialTasksTableTotalItems.value = response.data.totalNum;
       FinancialTasksTableCurrentPage.value = response.data.pageIndex;
@@ -1818,7 +1938,7 @@ const GetCustomerContactPerson = (CustomerId) => {
     console.log(error)
   });
 }
-
+const PaymentactiveTab = ref('CostDetailsTab')//费用信息Tab
 const openSaleContractDialog = (row) => {
   ApproveDocumentRequest.ApprovalRecordID = row.recordID;
   ApproveDocumentRequest.DocumentID = row.documentID;
@@ -1997,7 +2117,7 @@ const openSaleContractDialog = (row) => {
         PurchaseContractDialogData.value.purchaseContract = purchaseContracts.purchaseContractNumber;
         PurchaseContractDialogData.value.contractStatus = state.optionss['hr_contract_status'].find(item => item.dictValue === purchaseContracts.contractStatus.toString()).dictLabel;
         PurchaseContractDialogData.value.deliveryDate = purchaseContracts.deliveryDate;
-        PurchaseContractDialogData.value.vendorCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === purchaseContracts.vendorCode.toString()).dictLabel;
+        //PurchaseContractDialogData.value.vendorCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === purchaseContracts.vendorCode.toString()).dictLabel;
         PurchaseContractDialogData.value.purchaseCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === purchaseContracts.purchaseCurrency.toString()).dictLabel;
         PurchaseContractDialogData.value.deposit = purchaseContracts.deposit;
         PurchaseContractDialogData.value.salesperson = (state.optionss['sql_hr_sale'].find(item => item.dictValue === purchaseContracts.salesperson.toString()) || { dictLabel: '未知销售员' }).dictLabel;
@@ -2017,10 +2137,10 @@ const openSaleContractDialog = (row) => {
         PurchaseContractDialogData.value.availablePayment = purchaseContracts.availablePayment;
         PurchaseContractDialogData.value.unpaidAmount = purchaseContracts.unpaidAmount;
         PurchaseContractDialogData.value.paidAmount = purchaseContracts.paidAmount;
-        alert(JSON.stringify(response.data.purchaseContractProducts));
         response.data.purchaseContractProducts.forEach(productData => {
-          productData.unit = state.optionss['hr_calculate_unit'].find(item => item.dictValue === productData.unit.toString()).dictLabel;
-          productData.packaging = state.optionss['hr_packing'].find(item => item.dictValue === productData.packaging.toString()).dictLabel;
+          productData.productSupplier = state.optionss['sql_supplier_info'].find(item => item.dictValue === productData.supplierID.toString()).dictLabel;
+          //productData.unit = state.optionss['hr_calculate_unit'].find(item => item.dictValue === productData.unit.toString()).dictLabel;
+          //productData.packaging = state.optionss['hr_packing'].find(item => item.dictValue === productData.packaging.toString()).dictLabel;
           productData.invoice = productData.invoice == 0 ? "否" : "是";
         });
         PurchaseContractDialogData.value.productinfotableData = response.data.purchaseContractProducts;
@@ -2030,9 +2150,87 @@ const openSaleContractDialog = (row) => {
     }).catch(error => {
       console.error(error);
     });
+  } else if (row.documentType == "5") {//获取付款申请详情
+    request({
+      url: 'PaymentRequest/GetPaymentRequestDetailsByID/GetDetails',
+      method: 'GET',
+      params: {
+        id: row.documentID
+      }
+    }).then(response => {
+      if (response.data != null) {
+        PaymentrequestForm.value.applicant = state.optionss['sql_all_user'].find(item => item.dictValue === response.data.paymentRequest.applicant.toString()).dictLabel;
+        PaymentrequestForm.value.applicationDepartment = state.optionss['sql_hr_dept'].find(item => item.dictValue === response.data.paymentRequest.applicationDepartment.toString()).dictLabel;
+        PaymentrequestForm.value.applicationDate = formatDate(response.data.paymentRequest.applicationDate);
+        PaymentrequestForm.value.applicationNumber = response.data.paymentRequest.applicationNumber;
+        PaymentrequestForm.value.currencyCode = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.paymentRequest.currencyCode.toString()).dictLabel;
+        PaymentrequestForm.value.totalAmount = response.data.paymentRequest.totalAmount;
+        PaymentrequestForm.value.paymentCategory = state.optionss['hr_payment_category'].find(item => item.dictValue === response.data.paymentRequest.paymentCategory.toString()).dictLabel;
+        PaymentrequestForm.value.paymentName = response.data.paymentRequest.paymentName;
+        switch (response.data.paymentRequest.paymentCategory.toString()) {
+          case '1':
+            PaymentrequestForm.value.paymentName = state.optionss['hr_factory_payment'].find(item => item.dictValue === response.data.paymentRequest.paymentName.toString()).dictLabel;
+            break;
+          case '2':
+            PaymentrequestForm.value.paymentName = state.optionss['hr_domestic_charges'].find(item => item.dictValue === response.data.paymentRequest.paymentName.toString()).dictLabel;
+            break;
+          case '3':
+            PaymentrequestForm.value.paymentName = state.optionss['hr_foreign_charges'].find(item => item.dictValue === response.data.paymentRequest.paymentName.toString()).dictLabel;
+            break;
+          case '4':
+            PaymentrequestForm.value.paymentName = state.optionss['hr_daily_expenses'].find(item => item.dictValue === response.data.paymentRequest.paymentName.toString()).dictLabel;
+            break;
+        }
+        PaymentrequestForm.value.payeeCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === response.data.paymentRequest.payeeCode.toString()).dictLabel;
+        PaymentrequestForm.value.payeeName = response.data.paymentRequest.payeeName;
+        PaymentrequestForm.value.bankName = response.data.paymentRequest.bankName;
+        PaymentrequestForm.value.bankAccount = response.data.paymentRequest.bankAccount;
+        PaymentrequestForm.value.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictValue === response.data.paymentRequest.ourCompany.toString()).dictLabel;
+        PaymentrequestForm.value.paidAmount = response.data.paymentRequest.paidAmount;
+        PaymentrequestForm.value.unpaidAmount = response.data.paymentRequest.unpaidAmount;
+        PaymentrequestForm.value.handler = state.optionss['sql_all_user'].find(item => item.dictValue === response.data.paymentRequest.handler.toString()).dictLabel;
+        PaymentrequestForm.value.remarks = response.data.paymentRequest.remarks;
+        CostDetailsTbaleData.value = [];
+        response.data.paymentRequestDetails.forEach(item => {
+          CostDetailsTbaleData.value.push(item);
+        });
+        var OrderType = [];
+        CostDetailsTbaleData.value.forEach(CostDetailsTbaleData => {
+          switch (CostDetailsTbaleData.relatedModules.toString()) {
+            case '1':
+              OrderType = state.optionss['sql_purchase_contract'];
+              break;
+            case '2':
+              OrderType = state.optionss['sql_sale_contracts'];
+              break;
+            default:
+              CostDetailsTbaleData.associatedOrderNumber = '无';
+              break;
+          }
+          CostDetailsTbaleData.associatedOrderNumber = OrderType.find(item => item.dictValue === CostDetailsTbaleData.associatedOrderNumber.toString()).dictLabel;
+          switch (response.data.paymentRequest.paymentCategory.toString()) {
+            case '1':
+              CostDetailsTbaleData.specificPaymentItems = state.optionss['hr_factory_payment'].find(item => item.dictValue === CostDetailsTbaleData.specificPaymentItems.toString()).dictLabel;
+              break;
+            case '2':
+              CostDetailsTbaleData.specificPaymentItems = state.optionss['hr_domestic_charges'].find(item => item.dictValue === CostDetailsTbaleData.specificPaymentItems.toString()).dictLabel;
+              break;
+            case '3':
+              CostDetailsTbaleData.specificPaymentItems = state.optionss['hr_foreign_charges'].find(item => item.dictValue === CostDetailsTbaleData.specificPaymentItems.toString()).dictLabel;
+              break;
+            case '4':
+              CostDetailsTbaleData.specificPaymentItems = state.optionss['hr_daily_expenses'].find(item => item.dictValue === CostDetailsTbaleData.specificPaymentItems.toString()).dictLabel;
+              break;
+          }
+          CostDetailsTbaleData.relatedModules = state.optionss['hr_associated_modules'].find(item => item.dictValue === CostDetailsTbaleData.relatedModules.toString()).dictLabel;
+        });
+        PaymentrequestDialog.value = true;
+      }
+    }).catch(error => {
+      console.error(error);
+    });
   }
 }
-
 
 
 const TimeoutNotProcessedClick = () => {
@@ -2098,7 +2296,15 @@ const state = reactive({
     sql_sale_contracts: [],
     sql_purchase_contract: [],
     sql_supplier_info: [],
-    sql_hr_purchase: []
+    sql_hr_purchase: [],
+    sql_payment_requests: [],
+    sql_hr_dept: [],
+    hr_payment_category: [],
+    hr_factory_payment: [],
+    hr_domestic_charges: [],
+    hr_foreign_charges: [],
+    hr_daily_expenses: [],
+    hr_associated_modules: []
   }
 })
 const { optionss } = toRefs(state)
@@ -2132,7 +2338,15 @@ var dictParams = [
   { dictType: 'sql_purchase_contract' },
   { dictType: 'sql_supplier_info' },
   { dictType: 'hr_customer_level' },
-  { dictType: 'sql_hr_purchase' }
+  { dictType: 'sql_hr_purchase' },
+  { dictType: 'sql_payment_requests' },
+  { dictType: 'sql_hr_dept' },
+  { dictType: 'hr_payment_category' },
+  { dictType: 'hr_factory_payment' },
+  { dictType: 'hr_domestic_charges' },
+  { dictType: 'hr_foreign_charges' },
+  { dictType: 'hr_daily_expenses' },
+  { dictType: 'hr_associated_modules' }
 ]
 proxy.getDicts(dictParams).then((response) => {
   response.data.forEach((element) => {
@@ -2158,6 +2372,8 @@ const getPendingCount = () => {
             item.documentNumber = state.optionss['sql_sale_contracts'].filter(Salecontract => Salecontract.dictValue == item.documentID.toString()).map(Salecontract => Salecontract.dictLabel).values().next().value;
           } else if (item.documentType == "2") {
             item.documentNumber = state.optionss['sql_purchase_contract'].filter(Purchasecontract => Purchasecontract.dictValue == item.documentID.toString()).map(Purchasecontract => Purchasecontract.dictLabel).values().next().value;
+          } else if (item.documentType == "5") {
+            item.documentNumber = state.optionss['sql_payment_requests'].filter(Paymentrequests => Paymentrequests.dictValue == item.documentID.toString()).map(Paymentrequests => Paymentrequests.dictLabel).values().next().value;
           }
           const createTime = dayjs(item.createTime);
           const now = dayjs();
@@ -2312,7 +2528,6 @@ const textContent = (date) => {
 // 工作任务列表
 const handleClick = () => {
   var num = 24700000000000 / 510000;
-  alert(num)
 }
 
 const tableData = [
@@ -2370,6 +2585,29 @@ const tableData = [
   }
 ]
 
+const UnpaidDetailsTbaleData = ref([])
+const CostDetailsTbaleData = ref([])
+const PaymentrequestDialog = ref(false)
+const PaymentrequestForm = ref({
+  applicationNumber: '',
+  applicationDate: '',
+  paymentCategory: '',
+  paymentName: '',
+  payeeCode: '',
+  payeeName: '',
+  bankName: '',
+  bankAccount: '',
+  ourCompany: '',
+  currencyCode: '',
+  totalAmount: '',
+  paidAmount: '',
+  unpaidAmount: '',
+  applicant: '',
+  applicationDepartment: '',
+  financialApproval: '',
+  handler: '',
+  remarks: ''
+})
 </script>
 
 

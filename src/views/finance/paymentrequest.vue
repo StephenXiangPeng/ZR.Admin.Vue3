@@ -4,7 +4,7 @@
 			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
 		</div>
 		<el-divider></el-divider>
-		<el-button type="primary" @click="addpaymentrequestdialog = true">新增付款申请</el-button>
+		<el-button type="primary" @click="AddPaymentDialog">新增付款申请</el-button>
 		<div style="margin-top: 30px;">
 			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
 		</div>
@@ -36,6 +36,8 @@
 		<el-divider> </el-divider>
 		<el-table :data="paymentrequesttableData">
 			<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
+			<el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
+			<el-table-column prop="reviewStatusStr" label="审核状态" width="150"></el-table-column>
 			<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
 			<el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
 			<el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
@@ -48,7 +50,6 @@
 			<el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
 			<el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
 			<el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
-			<el-table-column prop="financialApproval" label="财务审批" width="150"></el-table-column>
 			<el-table-column prop="handler" label="经手人" width="150"></el-table-column>
 			<el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
 			<el-table-column fixed="right" label="操作" width="100">
@@ -68,19 +69,20 @@
 				<el-row :gutter="20">
 					<el-col :span="8">
 						<el-form-item label="申请单号">
-							<el-input v-model="addpaymentrequestform.applicationNumber" style="width: 300px"></el-input>
+							<el-input v-model="addpaymentrequestform.applicationNumber" style="width: 300px"
+								disabled></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="申请日期">
 							<el-date-picker v-model="addpaymentrequestform.applicationDate" type="date"
-								style="width: 300px"></el-date-picker>
+								style="width: 300px" :disabled="IsDisabled"></el-date-picker>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="付款类别">
 							<el-select v-model="addpaymentrequestform.paymentCategory" style="width: 300px"
-								placeholder="请选择付款类别" @change="paymentCategoryChange">
+								placeholder="请选择付款类别" @change="paymentCategoryChange" :disabled="IsDisabled">
 								<el-option v-for="dict in optionss.hr_payment_category" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -91,7 +93,7 @@
 					<el-col :span="8">
 						<el-form-item label="款项名称">
 							<el-select v-model="addpaymentrequestform.paymentName" style="width: 300px"
-								placeholder="请选择款项名称">
+								placeholder="请选择款项名称" :disabled="IsDisabled">
 								<el-option v-for="dict in PaymentTypeOptions" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -100,7 +102,7 @@
 					<el-col :span="8">
 						<el-form-item label="收款单位编号" placeholder="请选择收款单位编号">
 							<el-select v-model="addpaymentrequestform.payeeCode" style="width: 300px"
-								@change="payeeCodeChange()">
+								@change="payeeCodeChange()" :disabled="IsDisabled">
 								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -127,7 +129,8 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="我方公司">
-							<el-select v-model="addpaymentrequestform.ourCompany" style="width: 300px">
+							<el-select v-model="addpaymentrequestform.ourCompany" style="width: 300px"
+								:disabled="IsDisabled">
 								<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -137,7 +140,8 @@
 				<el-row :gutter="20">
 					<el-col :span="8">
 						<el-form-item label="货币代码">
-							<el-select v-model="addpaymentrequestform.currencyCode" style="width: 300px">
+							<el-select v-model="addpaymentrequestform.currencyCode" style="width: 300px"
+								:disabled="IsDisabled">
 								<el-option v-for="dict in optionss.hr_currency_code" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -145,32 +149,37 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="申请总额">
-							<el-input v-model="addpaymentrequestform.totalAmount" style="width: 300px"></el-input>
+							<el-input v-model="addpaymentrequestform.totalAmount" style="width: 300px"
+								:disabled="IsDisabled"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="已付金额">
-							<el-input v-model="addpaymentrequestform.paidAmount" style="width: 300px"></el-input>
+							<el-input v-model="addpaymentrequestform.paidAmount" style="width: 300px"
+								:disabled="IsDisabled"></el-input>
 						</el-form-item>
 					</el-col>
 				</el-row>
 				<el-row :gutter="20">
 					<el-col :span="8">
 						<el-form-item label="未付金额">
-							<el-input v-model="addpaymentrequestform.unpaidAmount" style="width: 300px"></el-input>
+							<el-input v-model="addpaymentrequestform.unpaidAmount" style="width: 300px"
+								:disabled="IsDisabled"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="申请人">
-							<el-select v-model="addpaymentrequestform.applicant" style="width: 300px">
+							<el-select v-model="addpaymentrequestform.applicant" style="width: 300px"
+								:disabled="IsDisabled">
 								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
+									:label="dict.dictLabel" :value="dict.dictValue" :disabled="IsDisabled" />
 							</el-select>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="申请部门">
-							<el-select v-model="addpaymentrequestform.applicationDepartment" style="width: 300px">
+							<el-select v-model="addpaymentrequestform.applicationDepartment" style="width: 300px"
+								:disabled="IsDisabled">
 								<el-option v-for="dict in optionss.sql_hr_dept" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -179,16 +188,9 @@
 				</el-row>
 				<el-row :gutter="20">
 					<el-col :span="8">
-						<el-form-item label="财务审批">
-							<el-select v-model="addpaymentrequestform.financialApproval" style="width: 300px">
-								<el-option v-for="dict in optionss.sql_hr_finance" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
 						<el-form-item label="经手人">
-							<el-select v-model="addpaymentrequestform.handler" style="width: 300px">
+							<el-select v-model="addpaymentrequestform.handler" style="width: 300px"
+								:disabled="IsDisabled">
 								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -199,63 +201,68 @@
 					<el-col :span="26">
 						<el-form-item label="备注说明">
 							<el-input type="textarea" v-model="addpaymentrequestform.remarks"
-								:autosize="{ minRows: 5, maxRows: 10 }" placeholder="输入备注内容"
-								style="width: 743px"></el-input>
+								:autosize="{ minRows: 5, maxRows: 10 }" placeholder="输入备注内容" style="width: 743px"
+								:disabled="IsDisabled"></el-input>
 						</el-form-item>
 					</el-col>
 				</el-row>
 			</el-form>
 			<span style="font-size: 20px; font-weight: bold;">费用信息</span>
 			<el-divider></el-divider>
-			<el-button class="mt-4" type="primary" @click="handleAddRowCostDetails"
-				style="margin-bottom: 10px;">添加费用明细</el-button>
+			<el-button class="mt-4" type="primary" @click="handleAddRowCostDetails" style="margin-bottom: 10px;"
+				:disabled="IsDisabled">添加费用明细</el-button>
 			<el-tabs v-model="activeTab" tab-position="top" style="height: 350px; " class="demo-tabs">
 				<el-tab-pane label="费用明细" name="CostDetailsTab">
 					<el-table :data="CostDetailsTbaleData" style="width: 100%" height="280">
-						<el-table-column prop="relatedmodules" label="关联模块" width="120">
+						<el-table-column prop="relatedmodules" label="关联模块" width="150">
 							<template #default="{ row }">
-								<el-select v-model="row.relatedmodules" placeholder="选择关联模块" size="small"
-									@change="relatedmoduleshandleChange(row)">
+								<el-select v-model="row.relatedmodules" placeholder="选择关联模块" size="large"
+									@change="relatedmoduleshandleChange(row)" style="width: 130px;"
+									:disabled="IsDisabled">
 									<el-option v-for="dict in optionss.hr_associated_modules" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
 								</el-select>
 							</template>
 						</el-table-column>
-						<el-table-column prop="associatedordernumber" label="关联单号" width="120">
+						<el-table-column prop="associatedordernumber" label="关联单号" width="150">
 							<template #default="{ row }">
-								<el-select v-model="row.associatedordernumber" placeholder="选择关联单号" size="small">
+								<el-select v-model="row.associatedordernumber" placeholder="选择关联单号" size="large"
+									style="width: 130px;" :disabled="IsDisabled">
 									<el-option v-for="dict in row.AssociatedOrderNumberOptions" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
 								</el-select>
 							</template>
 						</el-table-column>
-						<el-table-column prop="applicationamount" label="申请金额" width="120">
+						<el-table-column prop="applicationamount" label="申请金额" width="150">
 							<template #default="{ row }">
-								<el-input v-model="row.applicationamount" placeholder="输入申请金额" size="small"></el-input>
+								<el-input v-model="row.applicationamount" placeholder="输入申请金额" size="large"
+									style="width: 130px" :disabled="IsDisabled"></el-input>
 							</template>
 						</el-table-column>
 						<el-table-column prop="relevantdates" label="关联日期" width="150">
 							<template #default="{ row }">
-								<el-date-picker v-model="row.relevantdates" type="date" size="small"
-									style="width: 120px;"></el-date-picker>
+								<el-date-picker v-model="row.relevantdates" type="date" size="large"
+									style="width: 130px" :disabled="IsDisabled"></el-date-picker>
 							</template>
 						</el-table-column>
-						<el-table-column prop="specificpaymentitems" label="具体款项" width="120">
+						<el-table-column prop="specificpaymentitems" label="具体款项" width="150">
 							<template #default="{ row }">
-								<el-select v-model="row.specificpaymentitems" placeholder="选择具体款项" size="small">
+								<el-select v-model="row.specificpaymentitems" placeholder="选择具体款项" size="large"
+									:disabled="IsDisabled">
 									<el-option v-for="dict in PaymentTypeOptions" :key="dict.dictCode"
-										:label="dict.dictLabel" :value="dict.dictValue" />
+										:label="dict.dictLabel" :value="dict.dictValue" style="width: 130px;" />
 								</el-select>
 							</template>
 						</el-table-column>
-						<el-table-column prop="remark" label="备注" width="120">
+						<el-table-column prop="remark" label="备注" width="150">
 							<template #default="{ row }"> <el-input v-model="row.remark" placeholder="输入备注内容"
-									size="small"></el-input></template>
+									size="large" style="width: 130px" :disabled="IsDisabled"></el-input></template>
 						</el-table-column>
 						<el-table-column fixed="right" label="操作" width="100">
 							<template #default="scope">
-								<el-button type="text" size="small"
-									@click="CostDetailsTbaleDatahandleDelete(scope.$index)">删除</el-button>
+								<el-button type="text" size="large"
+									@click="CostDetailsTbaleDatahandleDelete(scope.$index)"
+									:disabled="IsDisabled">删除</el-button>
 							</template>
 						</el-table-column>
 					</el-table>
@@ -285,6 +292,13 @@
 					<el-button type="primary" v-show="isEditSaveBtnShow" @click="EditSavePaymentRequest()">
 						编辑保存
 					</el-button>
+					<!-- 查看详情时的编辑按钮 -->
+					<el-button type="primary" v-show="showEditBtn" @click="EditPayment">
+						编辑
+					</el-button>
+					<el-button type="success" v-show="showSubmitReviewBtn" @click="submitForReview">
+						提交审核
+					</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -302,6 +316,10 @@ import { dataScope } from '@/api/system/role';
 import { JsonHubProtocol } from '@microsoft/signalr';
 import { get } from 'sortablejs';
 import { RefSymbol } from '@vue/reactivity';
+import useUserStore from '@/store/modules/user'
+
+// 获取用户信息
+const userInfo = useUserStore().userInfo
 
 /*查询条件*/
 const SearchPaymentRequsetID = ref('');
@@ -532,7 +550,13 @@ const SavePaymentRequest = () => {
 		});
 	});
 }
-
+//审核状态
+const reviewStatusMap = {
+	'0': '待提审',
+	'1': '审核中',
+	'2': '已批准',
+	'3': '已拒绝'
+}
 ///付款申请单表格数据
 const paymentrequesttableDataTotalItems = ref(0);
 const paymentrequesttableDataCurrentPage = ref(1);
@@ -567,8 +591,8 @@ function GetPaymentRequestList(start, end) {
 					element.currencyCode = state.optionss.hr_currency_code.find((item) => item.dictValue == element.currencyCode).dictLabel;
 					element.applicant = state.optionss.sql_all_user.find((item) => item.dictValue == element.applicant).dictLabel;
 					element.applicationDepartment = state.optionss.sql_hr_dept.find((item) => item.dictValue == element.applicationDepartment).dictLabel;
-					element.financialApproval = state.optionss.sql_hr_finance.find((item) => item.dictValue == element.financialApproval).dictLabel;
 					element.handler = state.optionss.sql_all_user.find((item) => item.dictValue == element.handler).dictLabel;
+					element.reviewStatusStr = reviewStatusMap[element.reviewStatus.toString()];
 				});
 				resolve(response.data.data);
 			} else {
@@ -587,10 +611,17 @@ function GetPaymentRequestList(start, end) {
 }
 const isCheckAndEdit = ref(false);
 const PaymentRequestID = ref(0);
+const showEditBtn = ref(false);
+const showSubmitReviewBtn = ref(false);
+//查看详情
 const CheckPaymentRequest = (row) => {
+	IsDisabled.value = true;
 	isCheckAndEdit.value = true;
+	showEditBtn.value = true;
+	showSubmitReviewBtn.value = true;
 	isSaveBtnShow.value = false;
-	isEditSaveBtnShow.value = true;
+	isEditSaveBtnShow.value = false;
+
 	request({
 		url: 'PaymentRequest/GetPaymentRequestDetailsByID/GetDetails',
 		method: 'GET',
@@ -639,6 +670,7 @@ const CheckPaymentRequest = (row) => {
 
 
 }
+//获取付款申请单名称
 const GetPaymentName = (paymentCategory, paymentName) => {
 	var Name = '';
 	switch (paymentCategory.toString()) {
@@ -658,6 +690,7 @@ const GetPaymentName = (paymentCategory, paymentName) => {
 	return Name;
 }
 var AssociatedOrderNumberOptionsArrar = ref([]);
+//获取关联单号
 const GetAssociatedOrderNumberOptions = (relatedmodules) => {
 	switch (relatedmodules) {
 		case '1':
@@ -672,6 +705,7 @@ const GetAssociatedOrderNumberOptions = (relatedmodules) => {
 	}
 	return AssociatedOrderNumberOptionsArrar;
 }
+//编辑付款申请单
 const EditSavePaymentRequest = () => {
 	ElMessageBox.confirm('确定保存编辑后付款申请单吗?', '提示', {
 		confirmButtonText: '确定',
@@ -705,7 +739,10 @@ const EditSavePaymentRequest = () => {
 					message: '付款申请单编辑成功！',
 					type: 'success'
 				})
-				addpaymentrequestdialog.value = false;
+				IsDisabled.value = true;
+				showEditBtn.value = true;
+				isEditSaveBtnShow.value = false;
+				showSubmitReviewBtn.value = true;
 				GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);
 			} else {
 				console.error('编辑付款申请单出错');
@@ -720,7 +757,14 @@ const EditSavePaymentRequest = () => {
 		});
 	});
 }
+//关闭付款申请单对话框
 const Closeaddpaymentrequestdialog = () => {
+	resetForm();
+	addpaymentrequestdialog.value = false;
+	isEditSaveBtnShow.value = false;
+	isSaveBtnShow.value = true;
+	isCheckAndEdit.value = false;
+	PaymentRequestID.value = 0;
 	addpaymentrequestdialog.value = false;
 	addpaymentrequestform.value.applicant = '';
 	addpaymentrequestform.value.applicationDate = '';
@@ -746,10 +790,11 @@ const Closeaddpaymentrequestdialog = () => {
 	isCheckAndEdit.value = false;
 	PaymentRequestID.value = 0;
 }
-
+//搜索
 const SearchSubmitClick = () => {
 	GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);
 }
+//重置
 const ResetClick = () => {
 	SearchPaymentRequsetID.value = '';
 	SearchSupplierID.value = '';
@@ -757,4 +802,132 @@ const ResetClick = () => {
 	SearchPaymentDateEnd.value = '';
 	GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);
 }
+//开启编辑
+const IsDisabled = ref(true);
+const EditPayment = () => {
+	showEditBtn.value = false;
+	showSubmitReviewBtn.value = false;
+	IsDisabled.value = false;
+	isEditSaveBtnShow.value = true;
+}
+//提交审核
+const SubmitReview = () => {
+	showEditBtn.value = false;
+	showSubmitReviewBtn.value = true;
+}
+
+
+// 获取申请单号
+const getNextPaymentNumber = async () => {
+	try {
+		const response = await request.get('PaymentRequest/GetPaymentNextNumber/GetNextNumber');
+		if (response.code === 200) {
+			addpaymentrequestform.value.applicationNumber = response.data;
+		} else {
+			ElMessage.error('获取申请单号失败');
+		}
+	} catch (error) {
+		console.error('获取申请单号失败:', error);
+		ElMessage.error('获取申请单号失败，请重试');
+	}
+};
+
+const AddPaymentDialog = async () => {
+	resetForm();
+	await getNextPaymentNumber();
+	IsDisabled.value = false;
+	if (userInfo.deptId.toString() == "0") {
+		addpaymentrequestform.value.applicationDepartment = state.optionss.sql_hr_dept.find((item) => item.dictValue == "205").dictValue;
+	} else {
+		addpaymentrequestform.value.applicationDepartment = state.optionss.sql_hr_dept.find((item) => item.dictValue == userInfo.deptId.toString()).dictValue;
+	}
+	addpaymentrequestform.value.applicant = state.optionss.sql_all_user.find((item) => item.dictValue == userInfo.userId.toString()).dictValue;
+	addpaymentrequestdialog.value = true;
+}
+
+// 提交审核方法
+const submitForReview = () => {
+	ElMessageBox.confirm('确定提交审核吗?', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		// 发送提交审核请求
+		request({
+			url: 'PaymentRequest/SubmitForReview/SubmitPaymentReview',
+			method: 'GET',
+			params: {
+				PaymentID: PaymentRequestID.value
+			}
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage({
+					message: response.msg || "付款申请单已提交审核！",
+					type: "success"
+				});
+				// 隐藏所有按钮
+				showEditBtn.value = false;
+				showSubmitReviewBtn.value = false;
+				IsDisabled.value = true;
+				isEditSaveBtnShow.value = false;
+				isSaveBtnShow.value = false;
+				isCheckAndEdit.value = false;
+				PaymentRequestID.value = 0;
+
+				// 关闭对话框
+				addpaymentrequestdialog.value = false;
+
+				// 刷新列表
+				GetPaymentRequestList(
+					paymentrequesttableDataCurrentPage.value,
+					paymentrequesttableDataPageSize.value
+				);
+			} else {
+				ElMessage.error(response.msg || '提交审核失败');
+			}
+		}).catch(error => {
+			console.error('提交审核失败:', error);
+			ElMessage.error('提交审核失败，请重试');
+		});
+	}).catch(() => {
+		ElMessage({
+			type: 'info',
+			message: '已取消提交审核'
+		});
+	});
+};
+
+// 清空表单数据的方法
+const resetForm = () => {
+	showEditBtn.value = false;
+	showSubmitReviewBtn.value = false;
+	IsDisabled.value = false;
+	isEditSaveBtnShow.value = false;
+	isSaveBtnShow.value = true;
+	isCheckAndEdit.value = false;
+	PaymentRequestID.value = 0;
+	addpaymentrequestform.value = {
+		applicationNumber: '',
+		applicationDate: '',
+		applicationDepartment: '',
+		paymentCategory: '',
+		paymentName: '',
+		payeeCode: '',
+		payeeName: '',
+		bankName: '',
+		bankAccount: '',
+		ourCompany: '',
+		currencyCode: '',
+		totalAmount: '',
+		paidAmount: '',
+		unpaidAmount: '',
+		applicant: '',
+		financialApproval: '',
+		handler: '',
+		remarks: ''
+	};
+
+	// 清空费用明细表格数据
+	CostDetailsTbaleData.value = [];
+};
 </script>
