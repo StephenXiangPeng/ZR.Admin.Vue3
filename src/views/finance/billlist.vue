@@ -6,14 +6,15 @@
 		<el-divider> </el-divider>
 		<div style="width: 100%; margin-top: 30px;">
 			<el-select v-model="receiptNumber" filterable placeholder="选择开票编号" style="width: 15%">
-				<el-option v-for="item in receiptNumberOptions" :key="item.value" :label="item.label" :value="item.value" />
+				<el-option v-for="item in receiptNumberOptions" :key="item.value" :label="item.label"
+					:value="item.value" />
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-select v-model="bank" filterable placeholder="选择厂家简称" style="width: 15%">
 				<el-option v-for="item in bankOptions" :key="item.value" :label="item.label" :value="item.value" />
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="receiptDateStart" type="date" placeholder="请选择发货日期起" size="Default"
+			<el-date-picker v-model="receiptDateStart" type="date" placeholder="请选择发货日期起"
 				style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="receiptDateEnd" type="date" placeholder="请选择发货日期止" size="Default" style="width: 15%" />
+			<el-date-picker v-model="receiptDateEnd" type="date" placeholder="请选择发货日期止" style="width: 15%" />
 		</div>
 		<div style="width: 100%; margin-top: 20px; text-align: right;">
 			<el-row class="mb-4">
@@ -40,14 +41,15 @@
 		<el-divider> </el-divider>
 		<div style="width: 100%; margin-top: 30px;">
 			<el-select v-model="receiptNumber" filterable placeholder="选择开票编号" style="width: 15%">
-				<el-option v-for="item in receiptNumberOptions" :key="item.value" :label="item.label" :value="item.value" />
+				<el-option v-for="item in receiptNumberOptions" :key="item.value" :label="item.label"
+					:value="item.value" />
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-select v-model="bank" filterable placeholder="选择厂家简称" style="width: 15%">
 				<el-option v-for="item in bankOptions" :key="item.value" :label="item.label" :value="item.value" />
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="receiptDateStart" type="date" placeholder="请选择发货日期起" size="Default"
+			<el-date-picker v-model="receiptDateStart" type="date" placeholder="请选择发货日期起"
 				style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="receiptDateEnd" type="date" placeholder="请选择发货日期止" size="Default" style="width: 15%" />
+			<el-date-picker v-model="receiptDateEnd" type="date" placeholder="请选择发货日期止" style="width: 15%" />
 		</div>
 		<div style="width: 100%; margin-top: 20px; text-align: right;">
 			<el-row class="mb-4">

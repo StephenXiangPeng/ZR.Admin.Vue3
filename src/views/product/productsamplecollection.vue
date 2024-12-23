@@ -56,15 +56,15 @@
 		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
 			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
 
-		<el-dialog v-model="CreateDialog" title="创建收样/寄样" :close-on-click-modal=false style="width: 70%;"
-			@closed="handleDialogClosed">
+		<el-dialog v-model="dialogVisible" :title="isCreateMode ? '创建收样/寄样' : '查看/编辑收样/寄样'"
+			:close-on-click-modal="false" style="width: 70%;" @closed="handleDialogClosed">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="CreateDialogform" label-width="120px">
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="请选择">
-							<el-radio-group v-model="radioValue" :disabled="IsEditDisabled">
+							<el-radio-group v-model="radioValue" :disabled="!isEditable">
 								<el-radio label="1" size="large" border>寄样</el-radio>
 								<el-radio label="2" size="large" border>收样</el-radio>
 							</el-radio-group>
@@ -73,7 +73,7 @@
 					<el-col :span="8">
 						<el-form-item label="客户/供应商">
 							<el-select v-model="CreateDialogform.recipienttypeexamples" placeholder="请选择供应商或客户"
-								style="width: 300px;" @change="handleRecipientTypeChange" :disabled="IsEditDisabled">
+								style="width: 300px;" @change="handleRecipientTypeChange" :disabled="!isEditable">
 								<el-option v-for="item in optionss.hr_recipient_type_examples" :key="item.dictCode"
 									:label="item.dictLabel" :value="item.dictValue" />
 							</el-select>
@@ -84,13 +84,13 @@
 					<el-col :span="8">
 						<el-form-item label="运单号">
 							<el-input v-model="CreateDialogform.waybillNumber" style="width: 300px;"
-								:disabled="IsEditDisabled"></el-input>
+								:disabled="!isEditable"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="快递公司">
 							<el-select v-model="CreateDialogform.expressCompany" placeholder="请选择快递公司"
-								style="width: 300px;" :disabled="IsEditDisabled">
+								style="width: 300px;" :disabled="!isEditable">
 								<el-option v-for="item in optionss.hr_express_delivery_company" :key="item.dictCode"
 									:label="item.dictLabel" :value="item.dictValue" />
 							</el-select>
@@ -99,11 +99,11 @@
 					<el-col :span="8">
 						<el-form-item v-if="radioValue === '1'" label="寄样日期">
 							<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
-								style="width: 300px;" :disabled="IsEditDisabled"></el-date-picker>
+								style="width: 300px;" :disabled="!isEditable"></el-date-picker>
 						</el-form-item>
 						<el-form-item v-else-if="radioValue === '2'" label="收样日期">
 							<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
-								style="width: 300px;" :disabled="IsEditDisabled"></el-date-picker>
+								style="width: 300px;" :disabled="!isEditable"></el-date-picker>
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -111,7 +111,7 @@
 					<el-col :span="8">
 						<el-form-item :label="sampleObjectLabel">
 							<el-select v-model="CreateDialogform.sampleObject" placeholder="请选择" style="width: 300px;"
-								:disabled="IsEditDisabled">
+								:disabled="!isEditable">
 								<el-option v-for="item in getObjectOptions" :key="item.dictCode" :label="item.dictLabel"
 									:value="item.dictValue" />
 							</el-select>
@@ -120,13 +120,13 @@
 					<el-col :span="8">
 						<el-form-item label="对方简称">
 							<el-input v-model="CreateDialogform.partnerAbbreviation" style="width: 300px;"
-								:disabled="IsEditDisabled"></el-input>
+								:disabled="!isEditable"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="我方公司">
 							<el-select v-model="CreateDialogform.ourCompany" placeholder="请选择" style="width: 300px;"
-								:disabled="IsEditDisabled">
+								:disabled="!isEditable">
 								<el-option v-for="item in optionss.hr_ourcompany" :key="item.dictCode"
 									:label="item.dictLabel" :value="item.dictValue" />
 							</el-select>
@@ -137,7 +137,7 @@
 					<el-col :span="8">
 						<el-form-item label="业务员">
 							<el-select v-model="CreateDialogform.salesperson" placeholder="请选择" style="width: 300px;"
-								:disabled="IsEditDisabled">
+								:disabled="!isEditable">
 								<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode"
 									:label="item.dictLabel" :value="item.dictValue" />
 							</el-select>
@@ -146,7 +146,7 @@
 					<el-col :span="8">
 						<el-form-item label="付费方式">
 							<el-select v-model="CreateDialogform.paymentMethod" placeholder="请选择快递付费方式"
-								style="width: 300px;" :disabled="IsEditDisabled">
+								style="width: 300px;" :disabled="!isEditable">
 								<el-option v-for="item in optionss.hr_express_payment_method" :key="item.dictCode"
 									:label="item.dictLabel" :value="item.dictValue" />
 							</el-select>
@@ -155,20 +155,20 @@
 					<el-col :span="8">
 						<el-form-item label="已付快递费">
 							<el-input v-model="CreateDialogform.paidExpressCost" style="width: 300px;"
-								:disabled="!isExpressFeeRequired || IsEditDisabled"></el-input>
+								:disabled="!isExpressFeeRequired || !isEditable"></el-input>
 						</el-form-item>
 					</el-col>
 				</el-row>
 				<span style="font-size: 20px; font-weight: bold;">样品信息</span>
 				<el-divider></el-divider>
 				<el-button class="mt-4" type="primary" style="margin-bottom: 10px;" @click="addSampleRow"
-					:disabled="IsEditDisabled">添加样品</el-button>
+					:disabled="!isEditable">添加样品</el-button>
 				<el-table :data="SampleProductData" style="width: 100%;margin-bottom: 15px;" max-height="550">
 					<el-table-column prop="productNumber" label="样品编号" width="250">
 						<template #default="{ row, $index }">
 							<el-select v-model="row.productNumber" filterable clearable allow-create
 								:default-first-option="true" placeholder="请选择或输入样品编号" style="width: 100%"
-								:disabled="IsEditDisabled"
+								:disabled="!isEditable"
 								@change="(value) => handleProductNumberChange(value, $index, $event)"
 								@clear="handleClearProductNumber($index)">
 								<el-option v-for="item in optionss.sql_product_name" :key="item.dictCode"
@@ -178,17 +178,17 @@
 					</el-table-column>
 					<el-table-column prop="productChineseName" label="中文品名" width="170">
 						<template #default="{ row }">
-							<el-input v-model="row.productChineseName" :disabled="IsEditDisabled"></el-input>
+							<el-input v-model="row.productChineseName" :disabled="!isEditable"></el-input>
 						</template>
 					</el-table-column>
 					<el-table-column prop="SampleQuantity" label="寄样数量" width="100">
 						<template #default="{ row }">
-							<el-input v-model="row.SampleQuantity" :disabled="IsEditDisabled"></el-input>
+							<el-input v-model="row.SampleQuantity" :disabled="!isEditable"></el-input>
 						</template>
 					</el-table-column>
 					<el-table-column prop="PricingAmount" label="计价金额" width="100">
 						<template #default="{ row }">
-							<el-input v-model="row.PricingAmount" :disabled="IsEditDisabled"></el-input>
+							<el-input v-model="row.PricingAmount" :disabled="!isEditable"></el-input>
 						</template>
 					</el-table-column>
 					<el-table-column prop="subproductImage" label="产品图片" width="200" align="center">
@@ -198,8 +198,8 @@
 								:on-remove="(file) => handleImageRemove(file, scope.$index)" :limit="3" accept="image/*"
 								multiple list-type="text" :file-list="scope.row.subproductImages || []">
 								<el-button
-									v-if="!isViewMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3)"
-									type="primary" icon="Plus" size="small" :disabled="IsEditDisabled">
+									v-if="!isCreateMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3)"
+									type="primary" icon="Plus" size="small" :disabled="!isEditable">
 									选择图片
 								</el-button>
 								<template #tip>
@@ -224,9 +224,9 @@
 									@click="openPreview(scope.$index)" />
 								<el-button type="text" :icon="ArrowRight" @click="nextImage(scope.$index)"
 									:disabled="scope.row.currentImageIndex === scope.row.subproductImages.length - 1" />
-								<el-button v-if="!isViewMode" type="danger" icon="Delete"
+								<el-button v-if="!isCreateMode" type="danger" icon="Delete"
 									@click="deleteCurrentImage(scope.$index)" size="small"
-									:disabled="IsEditDisabled">删除</el-button>
+									:disabled="!isEditable">删除</el-button>
 							</div>
 							<span v-else>暂无图片</span>
 						</template>
@@ -234,19 +234,22 @@
 					<el-table-column label="操作" width="100" fixed="right">
 						<template #default="{ $index }">
 							<el-button type="danger" size="small" @click="removeSampleRow($index)"
-								:disabled="IsEditDisabled">删除</el-button>
+								:disabled="!isEditable">删除</el-button>
 						</template>
 					</el-table-column>
 				</el-table>
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<!-- 新建时显示的保存按钮 -->
-					<el-button v-if="isViewMode" type="primary" :loading="loading" @click="handleSave">确定保存</el-button>
-					<!-- 查看时显示的编辑按钮 -->
-					<el-button v-if="!isViewMode && IsEditDisabled" type="primary" @click="handleEdit">编辑</el-button>
-					<!-- 编辑时显示的保存按钮 -->
-					<el-button v-if="!isViewMode && !IsEditDisabled" type="primary" :loading="loading"
+					<!-- 新建模式：显示保存按钮 -->
+					<el-button v-if="isCreateMode" type="primary" :loading="loading"
+						@click="handleSave">确定保存</el-button>
+
+					<!-- 查看模式：显示编辑按钮 -->
+					<el-button v-if="!isCreateMode && !isEditable" type="primary" @click="handleEdit">编辑</el-button>
+
+					<!-- 编辑模式：显示保存按钮 -->
+					<el-button v-if="!isCreateMode && isEditable" type="primary" :loading="loading"
 						@click="handleEditSave">编辑保存</el-button>
 				</span>
 			</template>
@@ -342,25 +345,24 @@ const formatDate = (dateString) => {
 	return dateString.split(' ')[0]; // Returns just the date part
 };
 
-// 编辑按钮点击事件
-const handleEdit = () => {
-	IsEditDisabled.value = false; // 切换到可编辑状态
+// 1. 修改状态变量
+const isCreateMode = ref(false);    // 是否是新建模式
+const isEditable = ref(false);      // 是否可编辑
+const dialogVisible = ref(false);   // 对话框显示状态（原 CreateDialog）
+
+// 2. 修改处理函数
+// 新建按钮点击事件
+const handleCreate = () => {
+	isCreateMode.value = true;      // 设置为新建模式
+	isEditable.value = true;        // 允许编辑
+	dialogVisible.value = true;     // 打开对话框
 };
 
-// 修改新建按钮点击事件
-const handleCreate = () => {
-	isViewMode.value = false;
-	IsEditDisabled.value = false; // 新建时可编辑
-	CreateDialog.value = true;
-};
-// 状态控制变量
-const isViewMode = ref(false);
-const IsEditDisabled = ref(false);
-//查看详情的方法
+// 查看/编辑按钮点击事件
 const handleView = async (id) => {
 	currentEditId.value = id;
-	isViewMode.value = false;
-	IsEditDisabled.value = true; // 初始查看状态，表单不可编辑
+	isCreateMode.value = false;     // 设置为查看模式
+	isEditable.value = false;       // 初始禁用编辑
 	try {
 		const response = await request({
 			url: 'ProductSample/GetProductSampleDetails/GetDetails',
@@ -403,7 +405,7 @@ const handleView = async (id) => {
 				};
 			});
 
-			CreateDialog.value = true;
+			dialogVisible.value = true;
 		} else {
 			ElMessage.error(response.msg || '获取详情失败');
 		}
@@ -411,6 +413,12 @@ const handleView = async (id) => {
 		ElMessage.error('获取详情失败');
 	}
 };
+
+// 编辑按钮点击事件
+const handleEdit = () => {
+	isEditable.value = true;        // 切换到可编辑状态
+};
+
 /*动态下拉框start*/
 const proxy = getCurrentInstance().proxy
 const state = reactive({
@@ -589,7 +597,6 @@ const CreateDialogform = ref({
 });
 
 const radioValue = ref('1');
-const CreateDialog = ref(false);
 const customerinfoselect = ref('');
 const loading = ref(false);
 // 添加上传URL常量
@@ -671,7 +678,7 @@ const handleSave = async () => {
 		const response = await request.post('ProductSample/AddProductSample/Add', requestData);
 		if (response.code === 200) {
 			ElMessage.success(response.msg || '保存成功');
-			CreateDialog.value = false;
+			dialogVisible.value = false;
 			resetForm();
 			// 6. 刷新列表数据
 			await GetProductSampleList(currentPage.value, pageSize.value);
@@ -766,13 +773,13 @@ const resetForm = () => {
 	// 清空样品列表数据
 	SampleProductData.value = [];
 	// 重置编辑状态
-	IsEditDisabled.value = false;
+	isEditable.value = false;
 };
 // 对话框关闭时的处理函数
 const handleDialogClosed = () => {
 	resetForm();
-	isViewMode.value = false;
-	IsEditDisabled.value = true;
+	isCreateMode.value = false;
+	isEditable.value = false;
 };
 
 // 编辑保存方法
@@ -806,7 +813,7 @@ const handleEditSave = async () => {
 	// 2. 表单验证
 	if (!validateForm(requestData)) {
 		// 验证失败时保持编辑状态
-		IsEditDisabled.value = false;
+		isEditable.value = false;
 		return;
 	}
 	loading.value = true;
@@ -826,7 +833,7 @@ const handleEditSave = async () => {
 							}
 						} catch (error) {
 							ElMessage.error(`图片 ${img.name} 上传失败`);
-							IsEditDisabled.value = false; // 保持编辑状态
+							isEditable.value = false; // 保持编辑状态
 							loading.value = false;
 							return;
 						}
@@ -848,15 +855,15 @@ const handleEditSave = async () => {
 			ElMessage.success('更新成功');
 			// 6. 刷新列表数据
 			await GetProductSampleList(currentPage.value, pageSize.value);
-			IsEditDisabled.value = true; // 成功后禁用编辑
+			isEditable.value = false; // 成功后禁用编辑
 		} else {
 			ElMessage.error('更新失败');
-			IsEditDisabled.value = false; // 失败时保持编辑状态
+			isEditable.value = false; // 失败时保持编辑状态
 		}
 	} catch (error) {
 		console.error('更新失败:', error);
 		ElMessage.error('更新失败，请稍后重试');
-		IsEditDisabled.value = false; // 错误时保持编辑状态
+		isEditable.value = false; // 错误时保持编辑状态
 	} finally {
 		loading.value = false;
 	}

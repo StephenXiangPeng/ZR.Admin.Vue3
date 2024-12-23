@@ -259,9 +259,9 @@ const calculation = () => {
 		refundAmount += element.RefundAmount;
 		actualRefundAmount += element.ActualRefundAmount;
 	});
-	addtaxrefundform2.value.refundAmount = refundAmount;
-	addtaxrefundform2.value.actualRefundAmount = actualRefundAmount;
-	addtaxrefundform2.value.unrefundedAmount = refundAmount - actualRefundAmount;
+	addtaxrefundform2.value.refundAmount = refundAmount.toString();
+	addtaxrefundform2.value.actualRefundAmount = actualRefundAmount.toString();
+	addtaxrefundform2.value.unrefundedAmount = (refundAmount - actualRefundAmount).toString();
 }
 
 const SaveClick = () => {
@@ -274,9 +274,9 @@ const SaveClick = () => {
 			addTaxRefundInfoRequest.RefundNumber = addctaxrefundform.value.taxRefundNumber;
 			addTaxRefundInfoRequest.RefundDate = addctaxrefundform.value.taxRefundDate;
 			addTaxRefundInfoRequest.Company = addctaxrefundform.value.ourCompany;
-			addTaxRefundInfoRequest.TotalRefundAmount = addtaxrefundform2.value.refundAmount;
-			addTaxRefundInfoRequest.ActualRefundAmount = addtaxrefundform2.value.actualRefundAmount;
-			addTaxRefundInfoRequest.UnrefundedAmount = addtaxrefundform2.value.unrefundedAmount;
+			addTaxRefundInfoRequest.TotalRefundAmount = parseFloat(addtaxrefundform2.value.refundAmount);
+			addTaxRefundInfoRequest.ActualRefundAmount = parseFloat(addtaxrefundform2.value.actualRefundAmount);
+			addTaxRefundInfoRequest.UnrefundedAmount = parseFloat(addtaxrefundform2.value.unrefundedAmount);
 			addTaxRefundInfoRequest.Remark = addtaxrefundform3.value.remarks;
 			for (var i = 0; i < addtaxrefundtableData.value.length; i++) {
 				if (addtaxrefundtableData.value[i].IsRefunded == 'Y') {
@@ -317,9 +317,9 @@ const SaveClick = () => {
 			addTaxRefundInfoRequest.RefundNumber = addctaxrefundform.value.taxRefundNumber;
 			addTaxRefundInfoRequest.RefundDate = addctaxrefundform.value.taxRefundDate;
 			addTaxRefundInfoRequest.Company = addctaxrefundform.value.ourCompany;
-			addTaxRefundInfoRequest.TotalRefundAmount = addtaxrefundform2.value.refundAmount;
-			addTaxRefundInfoRequest.ActualRefundAmount = addtaxrefundform2.value.actualRefundAmount;
-			addTaxRefundInfoRequest.UnrefundedAmount = addtaxrefundform2.value.unrefundedAmount;
+			addTaxRefundInfoRequest.TotalRefundAmount = parseFloat(addtaxrefundform2.value.refundAmount);
+			addTaxRefundInfoRequest.ActualRefundAmount = parseFloat(addtaxrefundform2.value.actualRefundAmount);
+			addTaxRefundInfoRequest.UnrefundedAmount = parseFloat(addtaxrefundform2.value.unrefundedAmount);
 			addTaxRefundInfoRequest.Remark = addtaxrefundform3.value.remarks;
 			for (var i = 0; i < addtaxrefundtableData.value.length; i++) {
 				if (addtaxrefundtableData.value[i].IsRefunded == 'Y') {

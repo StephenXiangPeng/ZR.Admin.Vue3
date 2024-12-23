@@ -458,45 +458,36 @@
 				</el-tab-pane>
 				<el-tab-pane label="报价记录" name="QuoteRecordTable">
 					<el-table :data="QuotationRecordData">
-						<el-table-column prop="Cnum" label="报价单号" style="width: 8%;" />
-						<el-table-column prop="Cstate" label="报价日期" style="width: 8%;" />
-						<el-table-column prop="Cgrade" label="有效期" style="width: 8%;" />
-						<el-table-column prop="Cabbreviation" label="价格条款" style="width: 8%;" />
-						<el-table-column prop="Ctradingcountry" label="产品编号" style="width: 8%;" />
-						<el-table-column prop="Lastcontactdate" label="产品品名" style="width: 8%;" />
-						<el-table-column prop="Archivecreationdate" label="报价数量" style="width: 8%;" />
-						<el-table-column prop="CSeller" label="计量单位" style="width: 8%;" />
-						<el-table-column prop="Originalfollower" label="销售单价" style="width: 8%;" />
-						<el-table-column prop="Founder" label="采购单价" style="width: 8%;" />
-						<el-table-column prop="Founder" label="包装方式" style="width: 8%;" />
-						<el-table-column prop="Founder" label="装箱量" style="width: 8%;" />
+						<el-table-column prop="quotationNum" label="报价单号" style="width: 8%;" />
+						<el-table-column prop="realQuotationDate" label="报价日期" style="width: 8%;" />
+						<el-table-column prop="validityPeriod" label="有效期" style="width: 8%;" />
 					</el-table>
 				</el-tab-pane>
 				<el-tab-pane label="销售记录" name="saleRecordTable">
-					<el-table :data="SalesRecoreData">
-						<el-table-column prop="Cnum" label="销售合同" style="width: 8%;" />
-						<el-table-column prop="Cstate" label="合同日期" style="width: 8%;" />
-						<el-table-column prop="Cgrade" label="产品编号" style="width: 8%;" />
-						<el-table-column prop="Cabbreviation" label="客户货号" style="width: 8%;" />
-						<el-table-column prop="Ctradingcountry" label="中文品名" style="width: 8%;" />
-						<el-table-column prop="Lastcontactdate" label="销售单价" style="width: 8%;" />
-						<el-table-column prop="Archivecreationdate" label="销售总价" style="width: 8%;" />
-						<el-table-column prop="CSeller" label="合同数量" style="width: 8%;" />
-						<el-table-column prop="Originalfollower" label="计量单位" style="width: 8%;" />
-						<el-table-column prop="Founder" label="包装方式" style="width: 8%;" />
-						<el-table-column prop="Founder" label="外箱装量" style="width: 8%;" />
+					<el-table :data="SalesContractRecordData">
+						<el-table-column prop="contractNumber" label="销售合同" style="width: 8%;" />
+						<el-table-column prop="contractDate" label="合同日期" style="width: 8%;" />
+						<el-table-column prop="effectiveDate" label="生效日期" style="width: 8%;" />
+						<el-table-column prop="deliveryDate" label="交货日期" style="width: 8%;" />
+						<el-table-column prop="goodsValue" label="货值合计" style="width: 8%;" />``
 					</el-table>
 				</el-tab-pane>
-				<el-tab-pane label="寄样历史" name="SampleHistoryTable">
-					<el-table :data="FosterCareHistoryData">
-						<el-table-column prop="Cnum" label="运单号" style="width: 8%;" />
-						<el-table-column prop="Cstate" label="快件公司" style="width: 8%;" />
-						<el-table-column prop="Cgrade" label="寄样日期" style="width: 8%;" />
-						<el-table-column prop="Cabbreviation" label="产品编号" style="width: 8%;" />
-						<el-table-column prop="Ctradingcountry" label="中文品名" style="width: 8%;" />
-						<el-table-column prop="Lastcontactdate" label="寄样数量" style="width: 8%;" />
-					</el-table>
-				</el-tab-pane>
+				<el-tab-pane label="收寄样历史" name="SampleCollectionHistory">
+					<el-table :data="CustomerSendSampleData" style="width: 100%">
+						<el-table-column prop="type" label="寄样/收样" width="100"></el-table-column>
+						<el-table-column prop="waybillNumber" label="运单号" width="150"></el-table-column>
+						<el-table-column prop="expressCompany" label="快递公司" width="120"></el-table-column>
+						<el-table-column prop="sampleDate" label="样品日期" width="120"></el-table-column>
+						<el-table-column prop="abbreviation" label="供应商简称" width="150"></el-table-column>
+						<el-table-column prop="companyName" label="我方公司" width="150"></el-table-column>
+						<el-table-column prop="paymentMethod" label="付费方式" width="120"></el-table-column>
+						<el-table-column prop="paidExpressFee" label="已付快递费" width="120">
+							<template #default="scope">
+								<span>￥{{ scope.row.paidExpressFee }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="remark" label="备注"></el-table-column>
+					</el-table></el-tab-pane>
 				<el-tab-pane label="出货记录" name="ShippingRecordTable">
 					<el-table :data="ShipRecoreData">
 						<el-table-column prop="Cnum" label="发票号码" style="width: 8%;" />
@@ -543,7 +534,11 @@ const state = reactive({
 		hr_settlement_way: [],
 		hr_pricing_term: [],
 		sql_hr_sale: [],
-		sys_user_sex: []
+		sys_user_sex: [],
+		hr_express_delivery_company: [],
+		hr_express_payment_method: [],
+		hr_contract_status: [],
+		hr_ourcompany: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -558,7 +553,11 @@ var dictParams = [
 	{ dictType: 'hr_customer_level' },
 	{ dictType: 'hr_nation' },
 	{ dictType: 'hr_business_scope' },
-	{ dictType: 'sql_all_user' }
+	{ dictType: 'sql_all_user' },
+	{ dictType: 'hr_express_delivery_company' },
+	{ dictType: 'hr_express_payment_method' },
+	{ dictType: 'hr_contract_status' },
+	{ dictType: 'hr_ourcompany' }
 ]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
@@ -1281,6 +1280,8 @@ function GetCustomeInfoList(start, end) {
 const ContactPersonData = ref([]);
 //联系日志
 const ContactLogData = ref([]);
+//报价记录
+const QuotationRecordData = ref([]);
 //双击查看详情
 const CunstomeinfotableDatahandleRowDblClick = (row) => {
 	OpenCustomerProfileDetailDialog(row);
@@ -1331,6 +1332,12 @@ const OpenCustomerProfileDetailDialog = (row) => {
 	//加载联系日志
 	var contactEmailStr = row.contactPerson.map(item => item.email).join(',');
 	getContactLogList(contactEmailStr);
+	//加载报价记录
+	loadQuotationHistory(row.id);
+	//加载销售合同记录
+	loadContractHistory(row.id);
+	//加载收寄样历史
+	loadCustomerSendSampleHistory(row.id);
 	CustomerProfileDetailDialog.value = true;
 }
 
@@ -1471,4 +1478,100 @@ const DuplicationCheckReset = () => {
 	CustomerDuplicationCheckData.value = [];
 }
 
+// 获取报价历史记录
+const loadQuotationHistory = async (customerId: number) => {
+	try {
+		const response = await request({
+			url: 'Quotation/GetQuotaionHistoryByCustomerID/GetHistory',
+			method: 'GET',
+			params: { CustomerID: customerId }
+		});
+		if (response.code === 200) {
+			QuotationRecordData.value = [];
+			// 转换数据
+			QuotationRecordData.value = response.data;
+		} else {
+			ElMessage.error(response.msg || '获取报价历史失败');
+		}
+	} catch (error) {
+		console.error('获取报价历史失败:', error);
+		ElMessage.error('获取报价历史失败，请稍后重试');
+	}
+};
+//销售合同记录
+const SalesContractRecordData = ref([]);
+// 获取销售历史记录
+const loadContractHistory = async (customerId: number) => {
+	try {
+		const response = await request({
+			url: 'Contracts/GetContractHistoryByCustomerID/GetHistory',
+			method: 'GET',
+			params: { CustomerID: customerId }
+		});
+
+		if (response.code === 200) {
+			SalesContractRecordData.value = [];
+			// 转换数据
+			SalesContractRecordData.value = response.data;
+		} else {
+			ElMessage.error(response.msg || '获取销售历史失败');
+		}
+	} catch (error) {
+		console.error('获取销售历史失败:', error);
+		ElMessage.error('获取销售历史失败，请稍后重试');
+	}
+};
+// 定义接口类型
+interface SampleHistoryItem {
+	id: number;
+	type: number;                    // 1:寄样 2:收样
+	customer_or_Supplier: number;    // 1:客户 2:供应商
+	waybill_Number: string;
+	express_Company: number;
+	sample_Date: string;
+	customer_ID: number;
+	abbreviation: string;
+	company_ID: number;
+	salesperson_ID: number;
+	payment_Method: number;
+	paid_Express_Fee: number;
+	remark: string | null;
+}
+const CustomerSendSampleData = ref([]) //收寄样历史
+// 获取客户寄样历史
+const loadCustomerSendSampleHistory = async (customerId) => {
+	try {
+		const response = await request({
+			url: 'ProductSample/GetCustomerHistoryByCustomerID/GetHistory',
+			method: 'GET',
+			params: { CustomerID: customerId }
+		});
+
+		if (response.code === 200) {
+			// 转换数据
+			CustomerSendSampleData.value = response.data.map((item: SampleHistoryItem) => ({
+				type: item.type === 1 ? '寄样' : '收样',
+				waybillNumber: item.waybill_Number,
+				expressCompany: state.optionss.hr_express_delivery_company.find(
+					company => company.dictValue === item.express_Company.toString()
+				)?.dictLabel || '',
+				sampleDate: item.sample_Date ? item.sample_Date.split(' ')[0] : '',
+				abbreviation: item.abbreviation,
+				companyName: state.optionss.hr_ourcompany.find(
+					company => company.dictValue === item.company_ID.toString()
+				)?.dictLabel || '',
+				paymentMethod: state.optionss.hr_express_payment_method.find(
+					method => method.dictValue === item.payment_Method.toString()
+				)?.dictLabel || '',
+				paidExpressFee: item.paid_Express_Fee?.toFixed(2) || '0.00',
+				remark: item.remark || ''
+			}));
+		} else {
+			ElMessage.error(response.msg || '获取收寄样历史失败');
+		}
+	} catch (error) {
+		console.error('获取收寄样历史失败:', error);
+		ElMessage.error('获取收寄样历史失败，请稍后重试');
+	}
+};
 </script>

@@ -21,10 +21,9 @@
 				<el-option v-for="item in productselectoptions" :key="item.value" :label="item.label"
 					:value="item.value" />
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchinquiryDate" type="date" placeholder="请选择最近交易日期" size="Default"
+			<el-date-picker v-model="SearchinquiryDate" type="date" placeholder="请选择最近交易日期"
 				style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchquotationDate" type="date" placeholder="请选择最近交易日期" size="Default"
-				style="width: 15%" />
+			<el-date-picker v-model="SearchquotationDate" type="date" placeholder="请选择最近交易日期" style="width: 15%" />
 		</div>
 		<div style="width: 100%; margin-top: 5px;">
 		</div>
@@ -358,18 +357,30 @@
 						<el-table-column prop="create_time" label="创建日期"></el-table-column>
 					</el-table>
 				</el-tab-pane>
-				<el-tab-pane label="寄样历史" name="sendSampleHistory">
+				<el-tab-pane label="收寄样历史" name="SampleCollectionHistory">
 					<el-table :data="supperinfoSendSampleData" style="width: 100%">
-						<el-table-column prop="sendDate" label="寄样日期" width="150"></el-table-column>
-						<el-table-column prop="contact" label="联系人" width="150"></el-table-column>
-						<el-table-column prop="remarks" label="备注"></el-table-column>
+						<el-table-column prop="type" label="寄样/收样" width="100"></el-table-column>
+						<el-table-column prop="waybillNumber" label="运单号" width="150"></el-table-column>
+						<el-table-column prop="expressCompany" label="快递公司" width="120"></el-table-column>
+						<el-table-column prop="sampleDate" label="样品日期" width="120"></el-table-column>
+						<el-table-column prop="abbreviation" label="供应商简称" width="150"></el-table-column>
+						<el-table-column prop="companyName" label="我方公司" width="150"></el-table-column>
+						<el-table-column prop="paymentMethod" label="付费方式" width="120"></el-table-column>
+						<el-table-column prop="paidExpressFee" label="已付快递费" width="120">
+							<template #default="scope">
+								<span>￥{{ scope.row.paidExpressFee }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="remark" label="备注"></el-table-column>
 					</el-table></el-tab-pane>
-				<el-tab-pane label="收样历史" name="receiveSampleHistory">
-					<el-table :data="supperinfoReceiveSampleData" style="width: 100%">
-						<el-table-column prop="receiveDate" label="收样日期" width="150"></el-table-column>
-						<el-table-column prop="contact" label="联系人" width="150"></el-table-column>
-						<el-table-column prop="remarks" label="备注"></el-table-column>
-					</el-table></el-tab-pane>
+				<el-tab-pane label="往来邮件" name="emailHistory">
+					<el-table :data="EmailHistoryData" style="width: 100%; max-height: 300px; overflow-y: auto;">
+						<el-table-column prop="EmailDate" label="联系日期" />
+						<el-table-column prop="Contact" label="联系人" />
+						<el-table-column prop="OurPersonnel" label="我方人员" />
+						<el-table-column prop="ContactDetails" label="联系内容" show-overflow-tooltip />
+					</el-table>
+				</el-tab-pane>
 				<el-tab-pane label="客诉历史" name="complaintHistory">
 					<el-table :data="supperinfoComplaintHistoryData" style="width: 100%">
 						<el-table-column prop="purchaseContract" label="采购合同" width="120"></el-table-column>
@@ -384,7 +395,6 @@
 						<el-table-column prop="shippingDate" label="出运日期" width="120"></el-table-column>
 						<el-table-column prop="customerShortName" label="客户简称" width="120"></el-table-column>
 					</el-table></el-tab-pane>
-				<el-tab-pane label="往来邮件" name="emailHistory"></el-tab-pane>
 			</el-tabs>
 			<template #footer>
 				<span class="dialog-footer">
@@ -414,9 +424,10 @@ const supperinfoBankAccountInfoTableData = ref([]) //银行账号
 const supperinfoProductTableData = ref([]) //产品清单
 const supperinfoQuotationHistoryData = ref([]) //报价历史
 const supperinfoPurchaseHistoryData = ref([]) //采购历史
-const supperinfoSendSampleData = ref([]) //寄样历史
+const supperinfoSendSampleData = ref([]) //收寄样历史
 const supperinfoReceiveSampleData = ref([]) //收样历史	
 const supperinfoComplaintHistoryData = ref([]) //客诉历史
+const EmailHistoryData = ref([]) //往来邮件
 const currentSupplierProductIds = ref<number[]>([]);// 存储当前供应商所有产品ID的数组
 
 // 获取供应商产品列表
@@ -747,7 +758,10 @@ const state = reactive({
 		hr_business_scope: [],
 		hr_china_provinces: [],
 		hr_china_city: [],
-		hr_recipient_type_examples: []
+		hr_recipient_type_examples: [],
+		hr_express_delivery_company: [],
+		hr_express_payment_method: [],
+		sys_user_sex: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -756,7 +770,7 @@ var dictParams = [{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' }
 { dictType: 'hr_transportation_method' }, { dictType: 'sys_yes_no' }, { dictType: 'hr_calculate_unit' }, { dictType: 'hr_contract_status' },
 { dictType: 'hr_customer_level' }, { dictType: 'hr_signing_place' }, { dictType: 'hr_quotation_basis' }, { dictType: 'hr_outerbox_unit' },
 { dictType: 'hr_supplier_level' }, { dictType: 'hr_business_scope' }, { dictType: 'hr_china_provinces' }, { dictType: 'hr_china_city' },
-{ dictType: 'hr_recipient_type_examples' }]
+{ dictType: 'hr_recipient_type_examples' }, { dictType: 'hr_express_delivery_company' }, { dictType: 'hr_express_payment_method' }, { dictType: 'sys_user_sex' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -995,12 +1009,13 @@ const isEditable = ref(false);
 // 供应商详情
 const SelctedSupplierId = ref('')
 //查看供应商详情
-const checkSupplierDetails = (row) => {
+const checkSupplierDetails = async (row) => {
 	loadSupplierProductList(row.id)// 加载供应商产品列表
 	loadBankAccountList();// 加载银行账号列表
 	isEditBtnVisible.value = true;
 	isEditSaveBtnVisible.value = false;
 	isSavebtnVisible.value = false;
+	await loadSupplierSendSampleHistory(row.id);
 	// 获取供应商信息
 	isEditable.value = true;
 	SelctedSupplierId.value = row.id;
@@ -1047,8 +1062,10 @@ const checkSupplierDetails = (row) => {
 		if (response.data.length > 0) {
 			supperinfoContactsTableData.value = response.data;
 			supperinfoContactsTableData.value.forEach((element) => {
-				element.gender = state.optionss.hr_gender.find(option => option.dictValue === element.gender)?.dictValue || '';
+				element.gender = state.optionss.sys_user_sex.find(option => option.dictValue === element.gender)?.dictValue || '';
 			})
+			const emailAddress = response.data.map(item => item.email).join(',');
+			getEmailHistoryList(emailAddress);
 		} else {
 			supperinfoContactsTableData.value = [];
 		}
@@ -1074,7 +1091,6 @@ const checkSupplierDetails = (row) => {
 	}).catch(error => {
 		console.error(error);
 	});
-
 	AddSupperDialog.value = true;
 }
 const IsEditBtnClick = () => {
@@ -1191,5 +1207,101 @@ const Closeaddsupperdialog = () => {
 	isEditBtnVisible.value = false;
 	isEditSaveBtnVisible.value = false;
 	isSavebtnVisible.value = true;
+}
+
+// 定义接口类型
+interface SampleHistoryItem {
+	id: number;
+	type: number;                    // 1:寄样 2:收样
+	customer_or_Supplier: number;    // 1:客户 2:供应商
+	waybill_Number: string;
+	express_Company: number;
+	sample_Date: string;
+	customer_ID: number;
+	abbreviation: string;
+	company_ID: number;
+	salesperson_ID: number;
+	payment_Method: number;
+	paid_Express_Fee: number;
+	isDelete: number;
+	createBy: string;
+	createTime: string;
+	updateTime: string;
+	remark: string | null;
+}
+// 获取供应商寄样历史
+const loadSupplierSendSampleHistory = async (supplierId) => {
+	try {
+		const response = await request({
+			url: 'ProductSample/GetSupplierHistoryBySupplierID/GetHistory',
+			method: 'GET',
+			params: { SupplierID: supplierId }
+		});
+
+		if (response.code === 200) {
+			// 转换数据
+			supperinfoSendSampleData.value = response.data.map((item: SampleHistoryItem) => ({
+				type: item.type === 1 ? '寄样' : '收样',
+				waybillNumber: item.waybill_Number,
+				expressCompany: state.optionss.hr_express_delivery_company.find(
+					company => company.dictValue === item.express_Company.toString()
+				)?.dictLabel || '',
+				sampleDate: item.sample_Date ? item.sample_Date.split(' ')[0] : '',
+				abbreviation: item.abbreviation,
+				companyName: state.optionss.hr_ourcompany.find(
+					company => company.dictValue === item.company_ID.toString()
+				)?.dictLabel || '',
+				paymentMethod: state.optionss.hr_express_payment_method.find(
+					method => method.dictValue === item.payment_Method.toString()
+				)?.dictLabel || '',
+				paidExpressFee: item.paid_Express_Fee?.toFixed(2) || '0.00',
+				remark: item.remark || ''
+			}));
+		} else {
+			ElMessage.error(response.msg || '获取收寄样历史失败');
+		}
+	} catch (error) {
+		console.error('获取收寄样历史失败:', error);
+		ElMessage.error('获取收寄样历史失败，请稍后重试');
+	}
+};
+// 获取往来邮件数据的方法
+const getEmailHistoryList = (emailAddress) => {
+	EmailHistoryData.value = [];
+	request({
+		url: 'Email/GetEmailContactRecords/GetEmailList',
+		method: 'GET',
+		params: {
+			EmailAddress: emailAddress
+		}
+	}).then(response => {
+		if (response.data.length > 0) {
+			response.data.forEach(item => {
+				EmailHistoryData.value.push({
+					EmailDate: formatDateTime(item.emaildate),
+					Contact: item.toEmail,
+					OurPersonnel: item.fromEmail,
+					ContactDetails: item.emailsubject
+				});
+			});
+		} else {
+			EmailHistoryData.value = [];
+		}
+	}).catch(error => {
+		console.error('获取往来邮件失败:', error);
+		EmailHistoryData.value = [];
+	});
+}
+//日期格式化函数
+const formatDateTime = (dateTimeStr) => {
+	if (!dateTimeStr) return '';
+	const date = new Date(dateTimeStr);
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	const hours = String(date.getHours()).padStart(2, '0');
+	const minutes = String(date.getMinutes()).padStart(2, '0');
+	const seconds = String(date.getSeconds()).padStart(2, '0');
+	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 </script>
