@@ -351,7 +351,7 @@
 								multiple list-type="text" :file-list="scope.row.subproductImages || []">
 								<el-button
 									v-if="!isViewMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3)"
-									type="primary" icon="Plus">
+									type="primary" icon="Plus" size="small">
 									选择图片
 								</el-button>
 								<template #tip>
@@ -377,7 +377,7 @@
 								<el-button type="text" :icon="ArrowRight" @click="nextImage(scope.$index)"
 									:disabled="scope.row.currentImageIndex === scope.row.subproductImages.length - 1" />
 								<el-button v-if="!isViewMode" type="danger" icon="Delete"
-									@click="deleteCurrentImage(scope.$index)">删除</el-button>
+									@click="deleteCurrentImage(scope.$index)" size="small">删除</el-button>
 							</div>
 							<span v-else>暂无图片</span>
 						</template>

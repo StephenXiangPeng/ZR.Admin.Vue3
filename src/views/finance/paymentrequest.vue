@@ -617,8 +617,13 @@ const showSubmitReviewBtn = ref(false);
 const CheckPaymentRequest = (row) => {
 	IsDisabled.value = true;
 	isCheckAndEdit.value = true;
-	showEditBtn.value = true;
-	showSubmitReviewBtn.value = true;
+	if (row.reviewStatus == "0" || row.reviewStatus == "1" || row.reviewStatus == "3") {
+		showEditBtn.value = true;
+		showSubmitReviewBtn.value = true;
+	} else {
+		showEditBtn.value = false;
+		showSubmitReviewBtn.value = false;
+	}
 	isSaveBtnShow.value = false;
 	isEditSaveBtnShow.value = false;
 

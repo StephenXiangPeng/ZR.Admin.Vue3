@@ -449,17 +449,11 @@
 					</el-table>
 				</el-tab-pane>
 				<el-tab-pane label="联系日志" name="ContactLogTable">
-					<el-table :data="ContactLogData">
-						<el-table-column prop="Cnum" label="联系日期" style="width: 8%;" />
-						<el-table-column prop="Cstate" label="联系人" style="width: 8%;" />
-						<el-table-column prop="Cgrade" label="我方人员" style="width: 8%;" />
-						<el-table-column prop="Cabbreviation" label="联系方式" style="width: 8%;" />
-						<el-table-column prop="Ctradingcountry" label="联系内容" style="width: 8%;" />
-						<el-table-column prop="Lastcontactdate" label="相关图片1" style="width: 8%;" />
-						<el-table-column prop="Archivecreationdate" label="相关图片2" style="width: 8%;" />
-						<el-table-column prop="CSeller" label="相关图片3" style="width: 8%;" />
-						<el-table-column prop="Originalfollower" label="相关图片4" style="width: 8%;" />
-						<el-table-column prop="Founder" label="相关图片5" style="width: 8%;" />
+					<el-table :data="ContactLogData" height="300" style="width: 100%">
+						<el-table-column prop="EmailDate" label="联系日期" />
+						<el-table-column prop="Contact" label="联系人" />
+						<el-table-column prop="OurPersonnel" label="我方人员" />
+						<el-table-column prop="ContactDetails" label="联系内容" show-overflow-tooltip />
 					</el-table>
 				</el-tab-pane>
 				<el-tab-pane label="报价记录" name="QuoteRecordTable">
@@ -1285,7 +1279,8 @@ function GetCustomeInfoList(start, end) {
 }
 //详情联系人列表
 const ContactPersonData = ref([]);
-
+//联系日志
+const ContactLogData = ref([]);
 //双击查看详情
 const CunstomeinfotableDatahandleRowDblClick = (row) => {
 	OpenCustomerProfileDetailDialog(row);
@@ -1334,7 +1329,49 @@ const OpenCustomerProfileDetailDialog = (row) => {
 	});
 	ContactPersonData.value = row.contactPerson;
 	//加载联系日志
+	var contactEmailStr = row.contactPerson.map(item => item.email).join(',');
+	getContactLogList(contactEmailStr);
 	CustomerProfileDetailDialog.value = true;
+}
+
+//日期格式化函数
+const formatDateTime = (dateTimeStr) => {
+	if (!dateTimeStr) return '';
+	const date = new Date(dateTimeStr);
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	const hours = String(date.getHours()).padStart(2, '0');
+	const minutes = String(date.getMinutes()).padStart(2, '0');
+	const seconds = String(date.getSeconds()).padStart(2, '0');
+	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+// 获取联系日志数据的方法
+const getContactLogList = (emailAddress) => {
+	ContactLogData.value = [];
+	request({
+		url: 'Email/GetEmailContactRecords/GetEmailList',
+		method: 'GET',
+		params: {
+			EmailAddress: emailAddress
+		}
+	}).then(response => {
+		if (response.data.length > 0) {
+			response.data.forEach(item => {
+				ContactLogData.value.push({
+					EmailDate: formatDateTime(item.emaildate),
+					Contact: item.toEmail,
+					OurPersonnel: item.fromEmail,
+					ContactDetails: item.emailsubject
+				});
+			});
+		} else {
+			ContactLogData.value = [];
+		}
+	}).catch(error => {
+		console.error('获取联系日志失败:', error);
+		ContactLogData.value = [];
+	});
 }
 
 
@@ -1433,4 +1470,5 @@ const DuplicationCheckReset = () => {
 	CustomerDuplicationCheckform.Ctellphone = '';
 	CustomerDuplicationCheckData.value = [];
 }
+
 </script>

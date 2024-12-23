@@ -68,10 +68,12 @@
 					<el-col :span="8">
 						<el-form-item label="请选择">
 							<el-radio-group v-model="radioValue">
-								<el-radio label="1" size="large" border>寄样</el-radio>
+								<el-radio label="1" size="large" border>寄样1111</el-radio>
 								<el-radio label="2" size="large" border>收样</el-radio>
 							</el-radio-group>
+
 						</el-form-item>
+
 					</el-col>
 				</el-row>
 				<el-row>
@@ -204,7 +206,9 @@
 import { createApp, ref } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer } from 'element-plus'
 
+
 const CreateDialogform = ref({
+	recipienttypeexamples: '',
 	waybillNumber: '',
 	expressCompany: '',
 	sampleDate: '',

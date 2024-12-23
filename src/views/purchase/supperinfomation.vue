@@ -350,12 +350,12 @@
 				</el-tab-pane>
 				<el-tab-pane label="采购历史" name="purchaseHistory">
 					<el-table :data="supperinfoPurchaseHistoryData" style="width: 100%">
-						<el-table-column prop="contractNo" label="采购合同" width="150"></el-table-column>
-						<el-table-column prop="contractStatus" label="合同状态" width="150"></el-table-column>
-						<el-table-column prop="totalValue" label="货值合计" width="150"></el-table-column>
-						<el-table-column prop="totalBoxes" label="箱数合计" width="150"></el-table-column>
-						<el-table-column prop="totalVolume" label="体积合计" width="150"></el-table-column>
-						<el-table-column prop="totalGrossWeight" label="毛重合计" width="150"></el-table-column>
+						<el-table-column prop="purchaseContractNumber" label="采购合同号"></el-table-column>
+						<el-table-column prop="contractStatus" label="合同状态"></el-table-column>
+						<el-table-column prop="contractQuantity" label="合同数量"></el-table-column>
+						<el-table-column prop="purchasePrice" label="采购单价"></el-table-column>
+						<el-table-column prop="purchaseTotalPrice" label="采购总价"></el-table-column>
+						<el-table-column prop="create_time" label="创建日期"></el-table-column>
 					</el-table>
 				</el-tab-pane>
 				<el-tab-pane label="寄样历史" name="sendSampleHistory">
@@ -746,7 +746,8 @@ const state = reactive({
 		hr_supplier_level: [],
 		hr_business_scope: [],
 		hr_china_provinces: [],
-		hr_china_city: []
+		hr_china_city: [],
+		hr_recipient_type_examples: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -754,7 +755,8 @@ var dictParams = [{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' }
 { dictType: 'hr_settlement_way' }, { dictType: 'hr_pricing_term' }, { dictType: 'hr_nation' }, { dictType: 'sql_hr_sale' }, { dictType: 'hr_transport_port' },
 { dictType: 'hr_transportation_method' }, { dictType: 'sys_yes_no' }, { dictType: 'hr_calculate_unit' }, { dictType: 'hr_contract_status' },
 { dictType: 'hr_customer_level' }, { dictType: 'hr_signing_place' }, { dictType: 'hr_quotation_basis' }, { dictType: 'hr_outerbox_unit' },
-{ dictType: 'hr_supplier_level' }, { dictType: 'hr_business_scope' }, { dictType: 'hr_china_provinces' }, { dictType: 'hr_china_city' }]
+{ dictType: 'hr_supplier_level' }, { dictType: 'hr_business_scope' }, { dictType: 'hr_china_provinces' }, { dictType: 'hr_china_city' },
+{ dictType: 'hr_recipient_type_examples' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -994,7 +996,6 @@ const isEditable = ref(false);
 const SelctedSupplierId = ref('')
 //查看供应商详情
 const checkSupplierDetails = (row) => {
-
 	loadSupplierProductList(row.id)// 加载供应商产品列表
 	loadBankAccountList();// 加载银行账号列表
 	isEditBtnVisible.value = true;
@@ -1054,6 +1055,26 @@ const checkSupplierDetails = (row) => {
 	}).catch(error => {
 		console.error(error);
 	});
+	//获取采购历史
+	request({
+		url: 'PurchaseContracts/GetPurchseHistoryListBySupplierID/GetPurchaseHistoryList',
+		method: 'GET',
+		params: {
+			SupplierID: SelctedSupplierId.value
+		}
+	}).then(response => {
+		if (response.data.length > 0) {
+			supperinfoPurchaseHistoryData.value = response.data;
+			supperinfoPurchaseHistoryData.value.forEach((element) => {
+				element.contractStatus = state.optionss.hr_contract_status.find(option => option.dictValue === element.contractStatus.toString())?.dictLabel || '未知状态';
+			})
+		} else {
+			supperinfoPurchaseHistoryData.value = [];
+		}
+	}).catch(error => {
+		console.error(error);
+	});
+
 	AddSupperDialog.value = true;
 }
 const IsEditBtnClick = () => {
