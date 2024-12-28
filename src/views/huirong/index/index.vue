@@ -1978,7 +1978,7 @@ const openSaleContractDialog = (row) => {
         contractform.settlementMethod = state.optionss['hr_settlement_way'].find(item => item.dictValue === response.data.contract.settlementMethod.toString()).dictValue;
         contractform.priceTerms = state.optionss['hr_pricing_term'].find(item => item.dictValue === response.data.contract.priceTerms.toString()).dictValue;
         contractform.shippingPort = state.optionss['hr_transport_port'].find(item => item.dictValue === response.data.contract.shippingPort.toString()).dictValue;
-        contractform.destinationPort = state.optionss['hr_transport_port'].find(item => item.dictValue === response.data.contract.destinationPort.toString()).dictValue;
+        contractform.destinationPort = response.data.contract.destinationPort;
         contractform.tradeCountry = state.optionss['hr_nation'].find(item => item.dictValue === response.data.contract.tradeCountry.toString()).dictValue;
         contractform.transportation = state.optionss['hr_transportation_method'].find(item => item.dictValue === response.data.contract.transportation.toString()).dictValue;
         contractform.salesperson = state.optionss['sql_hr_sale'].find(item => item.dictValue === response.data.contract.salesperson.toString()).dictValue;

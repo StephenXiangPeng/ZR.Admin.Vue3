@@ -39,22 +39,22 @@
 			<el-table-column prop="quotationNum" label="报价单号" :width="150" />
 			<el-table-column prop="inquiryDate" label="询价日期" :width="180" />
 			<el-table-column prop="realQuotationDate" label="实际报价日期" :width="180" />
-			<el-table-column prop="quotationStatus" label="报价状态" :width="80" />
-			<el-table-column prop="validityPeriod" label="有效期限" :width="80" />
-			<el-table-column prop="customerNum" label="客户编号" :width="80" />
-			<el-table-column prop="customerName" label="客户简称" :width="80" />
-			<el-table-column prop="totalValueOfGoods" label="货值合计" :width="80" />
-			<el-table-column prop="totalQuantity" label="数量合计" :width="80" />
-			<el-table-column prop="totalNumberOfBoxes" label="箱数合计" :width="80" />
-			<el-table-column prop="totalGrossWeight" label="毛重合计" :width="80" />
-			<el-table-column prop="totalNetWeight" label="净重合计" :width="80" />
-			<el-table-column prop="totalVolume" label="体积合计" :width="80" />
-			<el-table-column prop="totalPurchases" label="采购合计" :width="80" />
-			<el-table-column prop="totalOtherFees" label="其它费用合计" :width="120" />
-			<el-table-column prop="totalTaxRefund" label="退税总额" :width="80" />
-			<el-table-column prop="profitAmount" label="利润金额" :width="80" />
-			<el-table-column prop="createBy" label="创建人" :width="80" />
-			<el-table-column fixed="right" prop="operate" label="操作" :width="80">
+			<el-table-column prop="quotationStatus" label="报价状态" :width="150" />
+			<el-table-column prop="validityPeriod" label="有效期限" :width="150" />
+			<el-table-column prop="customerNum" label="客户编号" :width="150" />
+			<el-table-column prop="customerName" label="客户简称" :width="150" />
+			<el-table-column prop="totalValueOfGoods" label="货值合计" :width="150" />
+			<el-table-column prop="totalQuantity" label="数量合计" :width="150" />
+			<el-table-column prop="totalNumberOfBoxes" label="箱数合计" :width="150" />
+			<el-table-column prop="totalGrossWeight" label="毛重合计" :width="150" />
+			<el-table-column prop="totalNetWeight" label="净重合计" :width="150" />
+			<el-table-column prop="totalVolume" label="体积合计" :width="150" />
+			<el-table-column prop="totalPurchases" label="采购合计" :width="150" />
+			<el-table-column prop="totalOtherFees" label="其它费用合计" :width="150" />
+			<el-table-column prop="totalTaxRefund" label="退税总额" :width="150" />
+			<el-table-column prop="profitAmount" label="利润金额" :width="150" />
+			<el-table-column prop="createBy" label="创建人" :width="150" />
+			<el-table-column fixed="right" prop="operate" label="操作" :width="150">
 				<template v-slot:default="scope">
 					<el-button link type="primary" size="small" @click="ChcekDetails(scope.row)">查看详情</el-button>
 				</template>
@@ -173,11 +173,8 @@
 					</el-select>
 				</el-form-item>
 				<el-form-item label="目的口岸" prop="destinationport">
-					<el-select v-model="quotationDialogform.destinationport" filterable placeholder="选择目的口岸"
-						:disabled="isDisabled" style="width: 250px;">
-						<el-option v-for="dict in optionss.hr_transport_port" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue" />
-					</el-select>
+					<el-input v-model="quotationDialogform.destinationport" :disabled="isDisabled"
+						style="width: 250px;" />
 				</el-form-item>
 				<el-form-item label="贸易国别" prop="tradingcountry">
 					<el-select v-model="quotationDialogform.tradingcountry" filterable placeholder="选择贸易国别"
@@ -648,7 +645,7 @@ interface quotationDialogform {
 	//出运口岸
 	shippingport: number,
 	//目的口岸
-	destinationport: number,
+	destinationport: string,
 	//贸易国别
 	tradingcountry: number,
 	//运输方式
@@ -1538,7 +1535,7 @@ const ChcekDetails = (row) => {
 	quotationDialogform.settlementway = state.optionss['hr_settlement_way'].filter(hr_settlement_way => hr_settlement_way.dictValue == row.settlementWay).map(item => item.dictValue).values().next().value;
 	quotationDialogform.pricingterm = state.optionss['hr_pricing_term'].filter(hr_pricing_term => hr_pricing_term.dictValue == row.pricingTerm).map(item => item.dictValue).values().next().value;
 	quotationDialogform.shippingport = state.optionss['hr_transport_port'].filter(hr_transport_port => hr_transport_port.dictValue == row.shippingPort).map(item => item.dictValue).values().next().value;
-	quotationDialogform.destinationport = state.optionss['hr_transport_port'].filter(hr_transport_port => hr_transport_port.dictValue == row.destinationPort).map(item => item.dictValue).values().next().value;
+	quotationDialogform.destinationport = row.destinationPort;
 	quotationDialogform.tradingcountry = state.optionss['hr_nation'].filter(hr_nation => hr_nation.dictValue == row.tradingCountry).map(item => item.dictValue).values().next().value;
 	quotationDialogform.transportationmethod = state.optionss['hr_transportation_method'].filter(hr_transportation_method => hr_transportation_method.dictValue == row.transportationMethod).map(item => item.dictValue).values().next().value;
 	quotationDialogform.shippingcurrency = state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == row.shippingCurrency).map(item => item.dictValue).values().next().value;

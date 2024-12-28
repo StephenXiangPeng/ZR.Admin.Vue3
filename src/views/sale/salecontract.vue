@@ -249,11 +249,8 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="目的口岸" prop="destinationPort">
-							<el-select filterable v-model="Newcontractform.destinationPort" placeholder="请选择目的口岸"
-								:disabled="isDisabled" style="width: 300px">
-								<el-option v-for="dict in optionss.hr_transport_port" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
+							<el-input v-model="Newcontractform.destinationPort" style="width: 300px"
+								:disabled="isDisabled"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -1395,7 +1392,7 @@ interface Newcontractform {
 	settlementMethod: number,//结汇方式
 	priceTerms: number,//价格条款
 	shippingPort: number,//出运口岸
-	destinationPort: number,//目的口岸
+	destinationPort: string,//目的口岸
 	tradeCountry: number,//贸易国别
 	transportation: number,//运输方式
 	salesperson: number,//销售员
@@ -1698,7 +1695,6 @@ function GetContractList(start, end) {
 					contractsTableData.value[i].settlementMethod = state.optionss.hr_settlement_way.find(item => item.dictValue === contractsTableData.value[i].settlementMethod.toString()).dictLabel;
 					contractsTableData.value[i].priceTerms = state.optionss.hr_pricing_term.find(item => item.dictValue === contractsTableData.value[i].priceTerms.toString()).dictLabel;
 					contractsTableData.value[i].shippingPort = state.optionss.hr_transport_port.find(item => item.dictValue === contractsTableData.value[i].shippingPort.toString()).dictLabel;
-					contractsTableData.value[i].destinationPort = state.optionss.hr_transport_port.find(item => item.dictValue === contractsTableData.value[i].destinationPort.toString()).dictLabel;
 					contractsTableData.value[i].tradeCountry = state.optionss.hr_nation.find(item => item.dictValue === contractsTableData.value[i].tradeCountry.toString()).dictLabel;
 					contractsTableData.value[i].transportation = state.optionss.hr_transportation_method.find(item => item.dictValue === contractsTableData.value[i].transportation.toString()).dictLabel;
 					contractsTableData.value[i].contractDate = contractsTableData.value[i].contractDate ? contractsTableData.value[i].contractDate.substring(0, 10) : '';
@@ -2296,7 +2292,7 @@ const checkContractsDetails = (row) => {
 	Newcontractform.settlementMethod = state.optionss['hr_settlement_way'].find(item => item.dictLabel === row.settlementMethod.toString()).dictValue;
 	Newcontractform.priceTerms = state.optionss['hr_pricing_term'].find(item => item.dictLabel === row.priceTerms.toString()).dictValue;
 	Newcontractform.shippingPort = state.optionss['hr_transport_port'].find(item => item.dictLabel === row.shippingPort.toString()).dictValue;
-	Newcontractform.destinationPort = state.optionss['hr_transport_port'].find(item => item.dictLabel === row.destinationPort.toString()).dictValue;
+	Newcontractform.destinationPort = row.destinationPort;
 	Newcontractform.tradeCountry = state.optionss['hr_nation'].find(item => item.dictLabel === row.tradeCountry.toString()).dictValue;
 	Newcontractform.transportation = state.optionss['hr_transportation_method'].find(item => item.dictLabel === row.transportation.toString()).dictValue;
 	Newcontractform.salesperson = state.optionss['sql_hr_sale'].find(item => item.dictValue === row.salesperson.toString()).dictValue;
