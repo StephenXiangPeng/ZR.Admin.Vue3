@@ -38,6 +38,7 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="SupplierInfoTableData">
+			<el-table-column prop="Id" label="供应商ID" width="150"></el-table-column>
 			<el-table-column prop="supplierId" label="供应商编号" width="150"></el-table-column>
 			<el-table-column prop="shortName" label="供应商简称" width="150"></el-table-column>
 			<el-table-column prop="fullName" label="供应商全称" width="150"></el-table-column>
@@ -249,8 +250,8 @@
 						<el-table-column label="联系人性别">
 							<template #default="{ row }">
 								<el-select v-model="row.gender" placeholder="联系人性别" :disabled="isEditable">
-									<el-option label="男" value="0" />
-									<el-option label="女" value="1" />
+									<el-option v-for="dict in optionss.sys_user_sex" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 								</el-select>
 							</template>
 						</el-table-column>
@@ -603,7 +604,7 @@ const saveBankAccountInfo = () => {
 		.then(responses => {
 			const hasError = responses.some(response => response.code !== 200);
 			if (!hasError) {
-				ElMessage.success('银行账号信息保存成功！');
+				ElMessage.success('信息保存成功！');
 				loadBankAccountList(); // 重新加载列表
 			} else {
 				ElMessage.error('部分银行账号信息保存失败，请重试！');
@@ -685,6 +686,7 @@ const handleDeleteContactRow = (index) => {
 }
 /*供应商联系人列表*/
 const Addsupperinfoform = reactive({
+	Id: 0,
 	supplierId: '',
 	shortName: '',
 	fullName: '',
@@ -707,7 +709,7 @@ const Addsupperinfoform = reactive({
 })
 
 const SupplierRequest = reactive({
-	Id: '',
+	Id: 0,
 	SupplierId: '',
 	ShortName: '',
 	FullName: '',
@@ -719,7 +721,7 @@ const SupplierRequest = reactive({
 	BusinessScope: '',
 	CreditLevel: '',
 	CooperationLevel: '',
-	CanInvoice: '',
+	CanInvoice: false,
 	PaymentMethod: '',
 	BankName: '',
 	BankAccount: '',
@@ -727,7 +729,7 @@ const SupplierRequest = reactive({
 	DevelopmentDate: '',
 	LastTransaction: '',
 	FactoryImageUrl: '',
-	IsDelete: '',
+	IsDelete: 0,
 	contactInfoItems: []
 });
 
@@ -795,7 +797,7 @@ const SaveSupperinfo = () => {
 		type: 'warning'
 	}).then(() => {
 		// 保存供应商信息
-		SupplierRequest.Id = Addsupperinfoform.supplierId
+		SupplierRequest.Id = 0
 		SupplierRequest.SupplierId = Addsupperinfoform.supplierId
 		SupplierRequest.ShortName = Addsupperinfoform.shortName
 		SupplierRequest.FullName = Addsupperinfoform.fullName
@@ -807,22 +809,26 @@ const SaveSupperinfo = () => {
 		SupplierRequest.BusinessScope = Addsupperinfoform.businessScope
 		SupplierRequest.CreditLevel = Addsupperinfoform.creditLevel
 		SupplierRequest.CooperationLevel = Addsupperinfoform.cooperationLevel
-		SupplierRequest.CanInvoice = Addsupperinfoform.canInvoice
+		SupplierRequest.CanInvoice = Addsupperinfoform.canInvoice ? true : false
 		SupplierRequest.PaymentMethod = Addsupperinfoform.paymentMethod
 		SupplierRequest.BankName = Addsupperinfoform.bankName
 		SupplierRequest.BankAccount = Addsupperinfoform.bankAccount
 		SupplierRequest.TaxNumber = Addsupperinfoform.taxNumber
 		SupplierRequest.DevelopmentDate = Addsupperinfoform.developmentDate
 		SupplierRequest.LastTransaction = Addsupperinfoform.lastTransaction
-		SupplierRequest.IsDelete = '0'
+		SupplierRequest.IsDelete = 0
 		SupplierRequest.contactInfoItems = supperinfoContactsTableData.value
-		supperinfoContactsTableData.value.forEach((element) => {
-			if (element.gender == '0') {
-				element.gender = '男'
-			} else {
-				element.gender = '女'
-			}
-		})
+		// 如果联系人为空，赋值空字符串
+		SupplierRequest.contactInfoItems.forEach((element) => {
+			element.name = element.name || '';
+			element.department = element.department || '';
+			element.gender = element.gender || '2';
+			element.position = element.position || '';
+			element.phoneNumber = element.phoneNumber || '';
+			element.mobileNumber = element.mobileNumber || '';
+			element.email = element.email || '';
+			element.Remark = element.remarks || '无';
+		});
 		//上传供应商图片
 		const uploadPromises = fileList.value.map(file => {
 			const formData = new FormData();
@@ -845,7 +851,7 @@ const SaveSupperinfo = () => {
 					})
 				}
 			});
-			// 保存线索
+			// 保存供应商
 			Addsupperinfoform.factoryImageURL = filelistUrlStr.value;
 			SupplierRequest.FactoryImageUrl = Addsupperinfoform.factoryImageURL;
 			request.post('Supplierinfo/AddSupplierinfo/Add', SupplierRequest).then(response => {
@@ -857,7 +863,8 @@ const SaveSupperinfo = () => {
 						message: response.msg,
 						type: 'success'
 					})
-
+					GetSupplierInfoList(SupplierInfoTableDatacurrentPage.value, SupplierInfoTableDatapageSize.value);
+					AddSupperDialog.value = false;
 				} else {
 					console.error('新增供应商资料出错');
 				}
@@ -1019,6 +1026,7 @@ const checkSupplierDetails = async (row) => {
 	// 获取供应商信息
 	isEditable.value = true;
 	SelctedSupplierId.value = row.id;
+	Addsupperinfoform.Id = row.id;
 	Addsupperinfoform.supplierId = row.supplierId;
 	Addsupperinfoform.shortName = row.shortName;
 	Addsupperinfoform.fullName = row.fullName;
@@ -1062,10 +1070,12 @@ const checkSupplierDetails = async (row) => {
 		if (response.data.length > 0) {
 			supperinfoContactsTableData.value = response.data;
 			supperinfoContactsTableData.value.forEach((element) => {
-				element.gender = state.optionss.sys_user_sex.find(option => option.dictValue === element.gender)?.dictValue || '';
+				element.gender = state.optionss.sys_user_sex.find(option => option.dictValue === element.gender.toString())?.dictValue || '';
 			})
 			const emailAddress = response.data.map(item => item.email).join(',');
-			getEmailHistoryList(emailAddress);
+			if (emailAddress != null && emailAddress != '') {
+				getEmailHistoryList(emailAddress);
+			}
 		} else {
 			supperinfoContactsTableData.value = [];
 		}
@@ -1106,7 +1116,7 @@ const EditSaveSupperinfo = () => {
 		type: 'warning'
 	}).then(() => {
 		// 保存供应商信息
-		SupplierRequest.Id = Addsupperinfoform.supplierId
+		SupplierRequest.Id = Number(Addsupperinfoform.Id)
 		SupplierRequest.SupplierId = Addsupperinfoform.supplierId
 		SupplierRequest.ShortName = Addsupperinfoform.shortName
 		SupplierRequest.FullName = Addsupperinfoform.fullName
@@ -1118,15 +1128,25 @@ const EditSaveSupperinfo = () => {
 		SupplierRequest.BusinessScope = Addsupperinfoform.businessScope
 		SupplierRequest.CreditLevel = Addsupperinfoform.creditLevel
 		SupplierRequest.CooperationLevel = Addsupperinfoform.cooperationLevel
-		SupplierRequest.CanInvoice = Addsupperinfoform.canInvoice
+		SupplierRequest.CanInvoice = Addsupperinfoform.canInvoice ? false : true
 		SupplierRequest.PaymentMethod = Addsupperinfoform.paymentMethod
 		SupplierRequest.BankName = Addsupperinfoform.bankName
 		SupplierRequest.BankAccount = Addsupperinfoform.bankAccount
 		SupplierRequest.TaxNumber = Addsupperinfoform.taxNumber
 		SupplierRequest.DevelopmentDate = Addsupperinfoform.developmentDate
 		SupplierRequest.LastTransaction = Addsupperinfoform.lastTransaction
-		SupplierRequest.IsDelete = '0'
+		SupplierRequest.IsDelete = 0
 		SupplierRequest.contactInfoItems = supperinfoContactsTableData.value
+		SupplierRequest.contactInfoItems.forEach((element) => {
+			element.name = element.name || '';
+			element.department = element.department || '';
+			element.gender = element.gender || '2';
+			element.position = element.position || '';
+			element.phoneNumber = element.phoneNumber || '';
+			element.mobileNumber = element.mobileNumber || '';
+			element.email = element.email || '';
+			element.Remark = element.remarks || '无';
+		});
 		// 上传供应商图片
 		const uploadPromises = fileList.value.filter(file => file.isChanged).map(file => {
 			const formData = new FormData();

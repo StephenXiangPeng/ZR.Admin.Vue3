@@ -42,6 +42,8 @@
 			<el-table-column prop="salesContractNumber" label="销售合同号" width="150px"></el-table-column>
 			<el-table-column prop="createTime" label="制单日期" width="150px"></el-table-column>
 			<el-table-column prop="shippingStatus" label="出运状态" width="150px"></el-table-column>
+			<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
+			<el-table-column prop="ReviewStatusStr" label="审核状态" width="150"></el-table-column>
 			<el-table-column prop="shippingDate" label="出运日期" width="150px"></el-table-column>
 			<el-table-column prop="invoiceDate" label="发票日期" width="150px"></el-table-column>
 			<el-table-column prop="customerNumber" label="客户编号" width="150px"></el-table-column>
@@ -83,12 +85,13 @@
 					<el-col :span="8">
 						<el-form-item label="制单日期">
 							<el-date-picker v-model="AddShippingDeliveryform.OrderMakingDate" type="date"
-								style="width: 300px"></el-date-picker>
+								style="width: 300px" :disabled="IsEditable"></el-date-picker>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="出运状态">
-							<el-select filterable v-model="AddShippingDeliveryform.shippingStatus" style="width: 300px">
+							<el-select filterable v-model="AddShippingDeliveryform.shippingStatus" style="width: 300px"
+								:disabled="IsEditable">
 								<el-option v-for="dict in optionss.hr_shipping_status" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -99,20 +102,20 @@
 					<el-col :span="8">
 						<el-form-item label="出运日期">
 							<el-date-picker v-model="AddShippingDeliveryform.shippingDate" type="date"
-								style="width: 300px"></el-date-picker>
+								style="width: 300px" :disabled="IsEditable"></el-date-picker>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="发票日期">
 							<el-date-picker v-model="AddShippingDeliveryform.invoiceDate" type="date"
-								style="width: 300px"></el-date-picker>
+								style="width: 300px" :disabled="IsEditable"></el-date-picker>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="客户编号">
 							<el-select filterable v-model="AddShippingDeliveryform.customerNumber"
 								placeholder="选择客户（可输入查询）" style="width: 300px" @change="customerNumberChange()"
-								clearable>
+								clearable :disabled="IsEditable">
 								<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -130,7 +133,7 @@
 						<el-form-item label="参考合同">
 							<el-select filterable v-model="AddShippingDeliveryform.referenceContractNumber"
 								placeholder="选择销售合同（可输入查询）" style="width: 300px" clearable
-								@change="referenceContractNumberChange()">
+								@change="referenceContractNumberChange()" :disabled="IsEditable">
 								<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -161,7 +164,8 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="收汇银行">
-							<el-select filterable v-model="AddShippingDeliveryform.bankOfReceipt" style="width: 300px">
+							<el-select filterable v-model="AddShippingDeliveryform.bankOfReceipt" style="width: 300px"
+								:disabled="IsEditable">
 								<el-option v-for="dict in optionss.hr_bank" :key="dict.dictCode" :label="dict.dictLabel"
 									:value="dict.dictValue" />
 							</el-select>
@@ -206,11 +210,8 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="目的口岸">
-							<el-select filterable v-model="AddShippingDeliveryform.destinationPort" placeholder="选择目的口岸"
-								disabled style="width: 300px">
-								<el-option v-for="dict in optionss.hr_transport_port" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
+							<el-input v-model="AddShippingDeliveryform.destinationPort" style="width: 300px"
+								disabled></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -245,7 +246,7 @@
 					<el-col :span="8">
 						<el-form-item label="应收汇日">
 							<el-date-picker v-model="AddShippingDeliveryform.receivableDate" type="date"
-								style="width: 300px"></el-date-picker>
+								style="width: 300px" :disabled="IsEditable"></el-date-picker>
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -253,7 +254,7 @@
 					<el-col :span="8">
 						<el-form-item label="单证员">
 							<el-select filterable v-model="AddShippingDeliveryform.documentClerk" placeholder="选择单证员"
-								style="width: 300px">
+								style="width: 300px" :disabled="IsEditable">
 								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -261,7 +262,8 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="有无定金">
-							<el-checkbox v-model="AddShippingDeliveryform.isDeposit"></el-checkbox>
+							<el-checkbox v-model="AddShippingDeliveryform.isDeposit"
+								:disabled="IsEditable"></el-checkbox>
 						</el-form-item>
 
 					</el-col>
@@ -274,7 +276,7 @@
 					<el-col :span="8">
 						<el-form-item label="前程运输">
 							<el-select filterable v-model="AddShippingDeliveryform.preCarriageTransport"
-								style="width: 300px">
+								style="width: 300px" :disabled="IsEditable">
 								<el-option v-for="dict in optionss.hr_domestic_transport" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -282,7 +284,8 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="船代公司">
-							<el-select filterable v-model="AddShippingDeliveryform.shippingAgent" style="width: 300px">
+							<el-select filterable v-model="AddShippingDeliveryform.shippingAgent" style="width: 300px"
+								:disabled="IsEditable">
 								<el-option v-for="dict in optionss.hr_freight_forwarding_company" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -302,7 +305,7 @@
 				<el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
 				<el-table-column prop="shipmentQuantity" label="出货数量" width="150">
 					<template #default="scope">
-						<el-input v-model="scope.row.shipmentQuantity" :disabled="!isEditable" style="width: 100%"
+						<el-input v-model="scope.row.shipmentQuantity" :disabled="IsEditable" style="width: 100%"
 							@change="shipmentQuantityChange(scope.row)"></el-input>
 					</template>
 				</el-table-column>
@@ -333,7 +336,8 @@
 				<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small"
-							@click="DeleteShippingDeliveryContrctProduct(scope.row)">删除</el-button>
+							@click="DeleteShippingDeliveryContrctProduct(scope.row)"
+							:disabled="IsEditable">删除</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -371,7 +375,8 @@
 				<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small"
-							@click="DeleteShippingDeliveryPurchaseDetails(scope.row)">删除</el-button>
+							@click="DeleteShippingDeliveryPurchaseDetails(scope.row)"
+							:disabled="IsEditable">删除</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -379,15 +384,21 @@
 			<el-divider></el-divider>
 			<el-form-item label="备注：" style="width: 100%;">
 				<el-input v-model="AddShippingDeliveryform.remark" :autosize="{ minRows: 5, maxRows: 10 }"
-					type="textarea" placeholder="输入备注内容" />
+					type="textarea" placeholder="输入备注内容" :disabled="IsEditable" />
 			</el-form-item>
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button v-show="isSaveBtnShow" type="primary" @click="SaveClick()">
 						确定保存
 					</el-button>
+					<el-button type="primary" v-show="isEditBtnShow" @click="EditClick()">
+						编辑
+					</el-button>
 					<el-button type="primary" v-show="isEditSaveBtnShow" @click="EditSaveClick()">
 						编辑保存
+					</el-button>
+					<el-button type="warning" v-show="isReviewBtnShow" @click="SubmitReview">
+						提交审核
 					</el-button>
 				</span>
 			</template>
@@ -404,8 +415,12 @@ import { get } from 'sortablejs';
 import Supperinfomation from '../purchase/supperinfomation.vue';
 import dayjs from 'dayjs';
 
-const isSaveBtnShow = ref(true)
-const isEditSaveBtnShow = ref(false)
+//是否可编辑
+const IsEditable = ref(false) //是否可编辑
+const isReviewBtnShow = ref(false) //提交审核按钮是否显示
+const isEditBtnShow = ref(false) //编辑按钮是否显示
+const isSaveBtnShow = ref(true) //保存按钮是否显示
+const isEditSaveBtnShow = ref(false) //编辑保存按钮是否显示
 
 //查询条件
 const SearchCustomerID = ref('')
@@ -699,12 +714,14 @@ const referenceContractNumberChange = () => {
 	});
 }
 
-const isCreateMode = ref(true)
-const isEditable = ref(true)
-const dialogVisible = ref(false)
+const isCreateMode = ref(true) //是否是创建模式
+const isEditable = ref(true) //是否可编辑
+const dialogVisible = ref(false) //弹窗是否显示
+
+//打开弹窗
 const OpenCreateshippingdeliveryDialog = () => {
+	IsEditable.value = false;
 	isCreateMode.value = true;
-	isEditable.value = true;
 	dialogVisible.value = true;
 
 	// 重置表单
@@ -745,6 +762,7 @@ const OpenCreateshippingdeliveryDialog = () => {
 	CreateshippingdeliveryDialog.value = true;
 }
 
+//出运发货单请求数据
 const shippingDeliveriesRequest = reactive({
 	Id: 0,
 	InvoiceNumber: '',
@@ -1007,8 +1025,11 @@ const EditSaveClick = () => {
 				ElMessage({
 					message: '出运发货单编辑成功！',
 					type: 'success'
-				})
-				CreateshippingdeliveryDialog.value = false;
+				});
+				IsEditable.value = true;
+				isEditBtnShow.value = true;
+				isReviewBtnShow.value = true;
+				isEditSaveBtnShow.value = false;
 			} else {
 				console.error('出运发货单编辑出错');
 			}
@@ -1064,6 +1085,20 @@ function GetShippingDeliveriesList(start, end) {
 				item.OrderMakingDate = item.OrderMakingDate ? dayjs(item.OrderMakingDate).format('YYYY-MM-DD') : '';
 				item.receivableDate = item.receivableDate ? dayjs(item.receivableDate).format('YYYY-MM-DD') : '';
 				item.createTime = item.createTime ? dayjs(item.createTime).format('YYYY-MM-DD') : '';
+				switch (item.reviewStatus) {
+					case 0:
+						item.ReviewStatusStr = '待提审';
+						break;
+					case 1:
+						item.ReviewStatusStr = '审核中';
+						break;
+					case 2:
+						item.ReviewStatusStr = '已批准';
+						break;
+					case 3:
+						item.ReviewStatusStr = '已拒绝';
+						break;
+				}
 			});
 		}
 	}).catch(error => {
@@ -1071,9 +1106,25 @@ function GetShippingDeliveriesList(start, end) {
 	});
 }
 
+//检查出运发货单
 const CheckShipingDelivery = (row) => {
-	isEditSaveBtnShow.value = true;
-	isSaveBtnShow.value = false;
+	// 根据审核状态设置按钮显示
+	const reviewStatus = row.reviewStatus;
+	// 如果是审核中(1)或已批准(2),所有按钮都不显示
+	if (reviewStatus === 1 || reviewStatus === 2) {
+		IsEditable.value = true; // 设为不可编辑
+		isReviewBtnShow.value = false; // 隐藏提交审核按钮
+		isEditBtnShow.value = false; // 隐藏编辑按钮 
+		isEditSaveBtnShow.value = false; // 隐藏编辑保存按钮
+		isSaveBtnShow.value = false; // 隐藏保存按钮
+	} else {
+		// 其他状态(0:待提审 3:已拒绝)显示正常按钮
+		IsEditable.value = true;
+		isReviewBtnShow.value = true;
+		isEditBtnShow.value = true;
+		isEditSaveBtnShow.value = false;
+		isSaveBtnShow.value = false;
+	}
 	request({
 		url: 'ShippingDeliveries/GetShippingDeliveriesDetailsByid/GetShippingDeliveriesDetails',
 		method: 'GET',
@@ -1206,6 +1257,7 @@ const CheckShipingDelivery = (row) => {
 	});
 };
 
+//关闭弹窗
 const CreateshippingdeliveryDialogClose = () => {
 	CreateshippingdeliveryDialog.value = false;
 	isEditSaveBtnShow.value = false;
@@ -1387,5 +1439,62 @@ const shipmentQuantityChange = (row) => {
 	} else {
 		ElMessage.warning(`产品 ${row.productCode} 没有关联的采购明细`);
 	}
+};
+
+//编辑
+const EditClick = () => {
+	isReviewBtnShow.value = false;
+	IsEditable.value = false;
+	isEditBtnShow.value = false;
+	isSaveBtnShow.value = false;
+	isEditSaveBtnShow.value = true;
+}
+
+// 提交审核
+const SubmitReview = () => {
+	ElMessageBox.confirm(
+		'确定要提交此出运发货单进行审核吗?',
+		'提示',
+		{
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning',
+		}
+	).then(() => {
+		// 调用提交审核接口
+		request({
+			url: 'ShippingDeliveries/SubmitForReview/SubmitShippingDeliveriesReview',
+			method: 'GET',
+			params: {
+				ShippingDeliveriesID: IsEditShippingDeliveryID.value
+			}
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage({
+					type: 'success',
+					message: response.msg
+				});
+
+				// 关闭弹窗
+				CreateshippingdeliveryDialog.value = false;
+
+				// 刷新列表数据
+				GetShippingDeliveriesList(
+					ShippingDeliveriesTableDataCurrentPage.value,
+					ShippingDeliveriesTableDataPageSize.value
+				);
+			} else {
+				ElMessage.error(response.msg || '提交审核失败');
+			}
+		}).catch(error => {
+			console.error('提交审核失败:', error);
+			ElMessage.error('提交审核失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage({
+			type: 'info',
+			message: '已取消提交审核'
+		});
+	});
 };
 </script>

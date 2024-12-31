@@ -1207,7 +1207,6 @@ const handleMoveEmail = async (command) => {
 	try {
 		// 保存当前的菜单状态
 		const currentMenuState = activeMenu.value;
-
 		// 移动邮件
 		await MoveEmail(command);
 
@@ -1236,7 +1235,7 @@ const MoveEmail = (emailType) => {
 				message: response.msg,
 				type: 'success'
 			})
-			getInboxEmail(currentPage.value, pageSize.value, emailType);
+			//getInboxEmail(currentPage.value, pageSize.value, emailType);
 		} else {
 			console.error('移动邮件失败');
 		}

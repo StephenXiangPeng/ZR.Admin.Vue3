@@ -897,8 +897,9 @@
 			@close="handleCloseSearchProcutDialog">
 			<el-input v-model="searchProductNameText" placeholder="请输入产品关键字进行搜索" style="margin-bottom: 10px;"
 				@input="searchProductNameTextChange" />
-			<el-table :data="productDatatwo" style="width: 100%" @row-dblclick="handleRowDblClick" stripe>
-				<el-table-column prop="productCode" label="产编号" width="120" />
+			<el-table :data="productDatatwo" :default-sort="{ prop: 'productCode', order: 'descending' }"
+				style="width: 100%" @row-dblclick="handleRowDblClick" stripe>
+				<el-table-column prop="productCode" label="产品编号" sortable width="120" />
 				<el-table-column prop="chineseProductName" label="中文品名" width="150" />
 				<el-table-column prop="englishProductName" label="英文品名" width="180" />
 				<el-table-column prop="chineseSpecification" label="中文规格" width="150" />

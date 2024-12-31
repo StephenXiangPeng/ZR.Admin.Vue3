@@ -328,8 +328,9 @@
 		<el-dialog v-model="SearchProcutDialog" title="选择产品" :close-on-click-modal=false :width="'50%'">
 			<el-input v-model="searchProductNameText" placeholder="请输入产品关键字进行搜索" style="margin-bottom: 10px;"
 				@input="searchProductNameTextChange" />
-			<el-table :data="productDatatwo" style="width: 100%" @row-dblclick="handleRowDblClick" stripe>
-				<el-table-column prop="productCode" label="产品编号" width="120" />
+			<el-table :data="productDatatwo" style="width: 100%"
+				:default-sort="{ prop: 'productCode', order: 'descending' }" @row-dblclick="handleRowDblClick" stripe>
+				<el-table-column prop="productCode" label="产品编号" sortable width="120" />
 				<el-table-column prop="chineseProductName" label="中文品名" width="150" />
 				<el-table-column prop="englishProductName" label="英文品名" width="180" />
 				<el-table-column prop="chineseSpecification" label="中文规格" width="150" />
@@ -382,7 +383,7 @@ GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
 function GetProductInfoList(start, end) {
 	return new Promise((resolve, reject) => {
 		request({
-			url: 'ProductInformation/GetProductList/GetList',
+			url: 'ProductInformation/GetAllProductList/AllProduct',
 			method: 'GET',
 			params: {
 				PageNum: start,
@@ -739,14 +740,14 @@ const uploadFilesAndSaveInquiry = async () => {
 	const invalidProduct = inquryProductTableData.value.find(product =>
 		!product.priceterms || !product.taxincluded
 	);
-	if (invalidProduct) {
-		if (!invalidProduct.priceterms) {
-			ElMessage.error('请为所有产品选择价格条款');
-		} else if (!invalidProduct.taxincluded) {
-			ElMessage.error('请为所有产品填写含税信息');
-		}
-		return;
-	}
+	// if (invalidProduct) {
+	// 	if (!invalidProduct.priceterms) {
+	// 		ElMessage.error('请为所有产品选择价格条款');
+	// 	} else if (!invalidProduct.taxincluded) {
+	// 		ElMessage.error('请为所有产品填写含税信息');
+	// 	}
+	// 	return;
+	// }
 	ElMessageBox.confirm('确定保存该询价单吗？', '提示', {
 		confirmButtonText: '确定',
 		cancelButtonText: '取消',
@@ -782,6 +783,10 @@ const uploadFilesAndSaveInquiry = async () => {
 
 		// 保存询价单
 		NewprudctInquityDetailsform.InquiryProducts = inquryProductTableData.value
+		NewprudctInquityDetailsform.InquiryProducts.forEach(item => {
+			item.priceterms = item.priceterms ? item.priceterms : 0
+			item.taxincluded = item.taxincluded ? item.taxincluded : 0
+		})
 		try {
 			const response = await request.post('Inquiry/AddInquiry/Add', NewprudctInquityDetailsform)
 			if (response.code === 200) {
@@ -892,7 +897,7 @@ const ChcekDetails = (row) => {
 					moq: item.moq,
 					negotiateprice: item.negotiateprice,
 					custommade: item.customMade,
-					priceterms: state.optionss.hr_pricing_term.find(option => option.dictValue === item.priceTerms.toString()).dictValue,
+					priceterms: item.priceTerms == 0 ? 0 : state.optionss.hr_pricing_term.find(option => option.dictValue === item.priceTerms.toString()).dictValue,
 					taxincluded: item.taxIncluded,
 					price: item.price,
 					QuoteQuantity: item.quoteQuantity,
@@ -998,17 +1003,17 @@ const EditSaveInquiry = async () => {
 			return;
 		}
 		// 添加价格条款和含税校验
-		const invalidProduct = inquryProductTableData.value.find(product =>
-			!product.priceterms || !product.taxincluded
-		);
-		if (invalidProduct) {
-			if (!invalidProduct.priceterms) {
-				ElMessage.error('请为所有产品选择价格条款');
-			} else if (!invalidProduct.taxincluded) {
-				ElMessage.error('请为所有产品填写含税信息');
-			}
-			return;
-		}
+		// const invalidProduct = inquryProductTableData.value.find(product =>
+		// 	!product.priceterms || !product.taxincluded
+		// );
+		// if (invalidProduct) {
+		// 	if (!invalidProduct.priceterms) {
+		// 		ElMessage.error('请为所有产品选择价格条款');
+		// 	} else if (!invalidProduct.taxincluded) {
+		// 		ElMessage.error('请为所有产品填写含税信息');
+		// 	}
+		// 	return;
+		// }
 		try {
 			await ElMessageBox.confirm('确定编辑该询价单吗？', '提示', {
 				confirmButtonText: '确定',
@@ -1054,8 +1059,8 @@ const EditSaveInquiry = async () => {
 				MOQ: product.moq,
 				negotiateprice: product.negotiateprice,
 				CustomMade: product.custommade,
-				PriceTerms: product.priceterms,
-				TaxIncluded: product.taxincluded,
+				PriceTerms: product.priceterms ? product.priceterms : 0,
+				TaxIncluded: product.taxincluded ? product.taxincluded : 0,
 				QuoteQuantity: product.QuoteQuantity,
 				Price: product.price,
 				ProductLength: product.productlength,

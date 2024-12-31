@@ -86,7 +86,7 @@
 				label-width="auto">
 				<el-form-item label="客户状态：">
 					<el-select filterable v-model="CustomerProfileform.customerStatus" placeholder="选择客户状态"
-						style="width: 300px;">
+						style="width: 300px;" disabled>
 						<el-option v-for="dict in optionss.hr_customer_status" :key="dict.dictCode"
 							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 					</el-select>
@@ -158,7 +158,7 @@
 				</el-form-item>
 				<el-form-item label="销售人员：" prop="salesPerson">
 					<el-select filterable v-model="CustomerProfileform.salesPerson" placeholder="选择销售员"
-						style="width: 300px;">
+						style="width: 300px;" disabled>
 						<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode" :label="dict.dictLabel"
 							:value="dict.dictValue"></el-option>
 					</el-select>
@@ -517,6 +517,7 @@
 import { getCurrentInstance, reactive, toRefs, ref } from 'vue'
 import { ElMessageBox, UploadUserFile, ElMessage, UploadFile, FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/request';
+import useUserStore from "@/store/modules/user";
 import { number } from 'echarts';
 import { fa } from 'element-plus/es/locale';
 
@@ -681,9 +682,13 @@ const handleRowDblClick = (row) => {
 
 //客户建档窗体
 const CustomerProfileDialog = ref(false)
+
 const openCustomerProfileDialog = () => {
 	GetNextCustomerNo();
 	clearUploadfile();
+	// 设置默认销售人员为当前登录用户
+	var userId = useUserStore().userId;
+	CustomerProfileform.salesPerson = state.optionss.sql_hr_sale.filter(item => item.dictValue == userId).map(item => item.dictValue).values().next().value;
 	CustomerProfileDialog.value = true;
 }
 
@@ -1049,6 +1054,9 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 				cancelButtonText: '取消',
 				type: 'warning'
 			}).then(() => {
+				if (CustomerProfileform.customerStatus == null) {
+					CustomerProfileform.customerStatus = 0;
+				}
 				if (addCustomerInfo.customerInfo.customerLevel == null) {
 					addCustomerInfo.customerInfo.customerLevel = 0;
 				}
@@ -1331,7 +1339,9 @@ const OpenCustomerProfileDetailDialog = (row) => {
 	ContactPersonData.value = row.contactPerson;
 	//加载联系日志
 	var contactEmailStr = row.contactPerson.map(item => item.email).join(',');
-	getContactLogList(contactEmailStr);
+	if (contactEmailStr != null && contactEmailStr != '') {
+		getContactLogList(contactEmailStr);
+	}
 	//加载报价记录
 	loadQuotationHistory(row.id);
 	//加载销售合同记录

@@ -1559,6 +1559,186 @@
         </span>
       </template>
     </el-dialog>
+    <el-dialog v-model="ShippingDeliveryDialog" title="出运发货单审批" :close-on-click-modal=false style="width: 70%;">
+      <!-- 基本信息 -->
+      <span style="font-size: 20px; font-weight: bold;">基本信息</span>
+      <el-divider></el-divider>
+      <el-descriptions :column="3" border>
+        <el-descriptions-item label="发票号码">
+          {{ ShippingDeliveryForm.invoiceNumber }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="制单日期">
+          {{ ShippingDeliveryForm.OrderMakingDate }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="出运状态">
+          {{ ShippingDeliveryForm.shippingStatus }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="出运日期">
+          {{ ShippingDeliveryForm.shippingDate }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="发票日期">
+          {{ ShippingDeliveryForm.invoiceDate }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="客户编号">
+          {{ ShippingDeliveryForm.customerNumber }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="客户简称">
+          {{ ShippingDeliveryForm.customerAbbreviation }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="参考合同">
+          {{ ShippingDeliveryForm.referenceContractNumber }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="销售合同">
+          {{ ShippingDeliveryForm.salesContractNumber }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="客户合同">
+          {{ ShippingDeliveryForm.customerContractNumber }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="我方公司">
+          {{ ShippingDeliveryForm.ourCompany }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="收汇银行">
+          {{ ShippingDeliveryForm.bankOfReceipt }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="外销币种">
+          {{ ShippingDeliveryForm.exportCurrency }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="汇率">
+          {{ ShippingDeliveryForm.exchangeRate }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="价格条款">
+          {{ ShippingDeliveryForm.priceTerms }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="出运口岸">
+          {{ ShippingDeliveryForm.departurePort }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="目的口岸">
+          {{ ShippingDeliveryForm.destinationPort }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="贸易国别">
+          {{ ShippingDeliveryForm.tradeCountry }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="结汇方式">
+          {{ ShippingDeliveryForm.settlementMethod }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="运输方式">
+          {{ ShippingDeliveryForm.transportationMethod }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="应收汇日">
+          {{ ShippingDeliveryForm.receivableDate }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="单证员">
+          {{ ShippingDeliveryForm.documentClerk }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="有无定金">
+          <el-checkbox v-model="ShippingDeliveryForm.isDeposit" disabled />
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 辅助信息 -->
+      <br><span style="font-size: 20px; font-weight: bold;">辅助信息</span>
+      <el-divider></el-divider>
+
+      <el-descriptions :column="3" border>
+        <el-descriptions-item label="前程运输">
+          {{ ShippingDeliveryForm.preCarriageTransport }}
+        </el-descriptions-item>
+
+        <el-descriptions-item label="船代公司">
+          {{ ShippingDeliveryForm.shippingAgent }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 销售合同 -->
+      <br><span style="font-size: 20px; font-weight: bold;">销售合同</span>
+      <el-divider></el-divider>
+      <el-table :data="shippingDeliveryContrctProductTableData">
+        <el-table-column prop="contractNumber" label="销售合同" width="150"></el-table-column>
+        <el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
+        <el-table-column prop="customerCode" label="客户货号" width="150"></el-table-column>
+        <el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
+        <el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
+        <el-table-column prop="shipmentQuantity" label="出货数量" width="150"></el-table-column>
+        <el-table-column prop="unit" label="计量单位" width="150"></el-table-column>
+        <el-table-column prop="exportUnitPrice" label="外销单价" width="150"></el-table-column>
+        <el-table-column prop="exportTotalPrice" label="外销总价" width="150"></el-table-column>
+        <el-table-column prop="specialRequirements" label="特殊要求" width="150"></el-table-column>
+        <el-table-column prop="outerBoxQuantity" label="外箱装量" width="150"></el-table-column>
+        <el-table-column prop="boxCount" label="箱数" width="150"></el-table-column>
+        <el-table-column prop="outerBoxUnit" label="外箱单位" width="150"></el-table-column>
+        <el-table-column prop="outerBoxLength" label="外箱长度" width="150"></el-table-column>
+        <el-table-column prop="outerBoxWidth" label="外箱宽度" width="150"></el-table-column>
+        <el-table-column prop="outerBoxHeight" label="外箱高度" width="150"></el-table-column>
+        <el-table-column prop="outerBoxVolume" label="外箱体积" width="150"></el-table-column>
+        <el-table-column prop="totalVolume" label="总体积" width="150"></el-table-column>
+        <el-table-column prop="outerBoxNetWeight" label="外箱净重" width="150"></el-table-column>
+        <el-table-column prop="outerBoxGrossWeight" label="外箱毛重" width="150"></el-table-column>
+        <el-table-column prop="totalNetWeight" label="总净重" width="150"></el-table-column>
+        <el-table-column prop="totalGrossWeight" label="总毛重" width="150"></el-table-column>
+      </el-table>
+
+      <!-- 采购合同 -->
+      <br><span style="font-size: 20px; font-weight: bold;">采购合同</span>
+      <el-divider></el-divider>
+      <el-table :data="shippingDeliveryPurchaseDetailsTableData">
+        <el-table-column prop="purchaseContractNumber" label="采购合同" width="150"></el-table-column>
+        <el-table-column prop="vendorAbbreviation" label="厂商简称" width="150"></el-table-column>
+        <el-table-column prop="productNumber" label="产品编号" width="150"></el-table-column>
+        <el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
+        <el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
+        <el-table-column prop="shipmentQuantity" label="出货数量" width="150"></el-table-column>
+        <el-table-column prop="purchaseCurrency" label="采购币种" width="150"></el-table-column>
+        <el-table-column prop="purchaseUnitPrice" label="采购单价" width="150"></el-table-column>
+        <el-table-column prop="purchaseTotalPrice" label="采购总价" width="150"></el-table-column>
+        <el-table-column prop="measurementUnit" label="计量单位" width="150"></el-table-column>
+        <el-table-column prop="invoice" label="是否开票" width="150"></el-table-column>
+        <el-table-column prop="totalVolume" label="总体积" width="150"></el-table-column>
+        <el-table-column prop="totalGrossWeight" label="总毛重" width="150"></el-table-column>
+      </el-table>
+
+      <!-- 备注信息 -->
+      <br><span style="font-size: 20px; font-weight: bold;">备注信息</span>
+      <el-divider></el-divider>
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="备注">
+          {{ ShippingDeliveryForm.remark }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 底部按钮 -->
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button type="danger" @click="ApproveReject">
+            驳回
+          </el-button>
+          <el-button type="success" @click="Approvepass">
+            通过
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
     <!-- 领取收款单对话框 -->
     <el-dialog v-model="claimDialogVisible" title="领取收款单" width="500px" :close-on-click-modal="false">
       <el-form ref="claimFormRef" :model="claimForm" :rules="claimRules" label-width="100px">
@@ -1757,6 +1937,7 @@ const Approvepass = () => {
         type: 'success'
       })
       contractDialog.value = false;
+      ShippingDeliveryDialog.value = false;
       getPendingCount();
     } else {
       console.error('审批失败');
@@ -1787,7 +1968,7 @@ const ApproveReject = () => {
 //联系人
 const contactpersonSelectOptions = ref([]);
 
-//产��资料表格
+//产品资料表格
 const NewcontractProductTbaleData = ref([]);
 const DepositShow = ref(false);
 //产品资料tab&客户相关费用tab
@@ -2229,6 +2410,134 @@ const openSaleContractDialog = (row) => {
     }).catch(error => {
       console.error(error);
     });
+  } else if (row.documentType == "3") {//获取出运发货单详情
+    ShippingDeliveryDialog.value = true;
+    request({
+      url: 'ShippingDeliveries/GetShippingDeliveriesDetailsByid/GetShippingDeliveriesDetails',
+      method: 'GET',
+      params: {
+        ShippingDeliveriesId: row.documentID
+      }
+    }).then(response => {
+      ShippingDeliveryForm.value.invoiceNumber = response.data.shippingDeliveries.invoiceNumber;
+      ShippingDeliveryForm.value.OrderMakingDate = response.data.shippingDeliveries.createTime;
+      ShippingDeliveryForm.value.shippingStatus = state.optionss['hr_shipping_status'].find(item => item.dictValue === response.data.shippingDeliveries.shippingStatus.toString()).dictLabel;
+      ShippingDeliveryForm.value.shippingDate = response.data.shippingDeliveries.shippingDate;
+      ShippingDeliveryForm.value.invoiceDate = response.data.shippingDeliveries.invoiceDate;
+      ShippingDeliveryForm.value.customerNumber = state.optionss['sql_hr_customer'].find(item => item.dictValue === response.data.shippingDeliveries.customerNumber.toString()).dictLabel;
+      ShippingDeliveryForm.value.customerAbbreviation = response.data.shippingDeliveries.customerAbbreviation;
+      ShippingDeliveryForm.value.referenceContractNumber = state.optionss['sql_sale_contracts'].find(item => item.dictValue === response.data.shippingDeliveries.referenceContractNumber.toString()).dictLabel;
+      ShippingDeliveryForm.value.salesContractNumber = response.data.shippingDeliveries.salesContractNumber.toString();
+      ShippingDeliveryForm.value.customerContractNumber = response.data.shippingDeliveries.customerContractNumber.toString();
+      ShippingDeliveryForm.value.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictValue === response.data.shippingDeliveries.ourCompany.toString()).dictLabel;
+      ShippingDeliveryForm.value.bankOfReceipt = state.optionss['hr_bank'].find(item => item.dictValue === response.data.shippingDeliveries.bankOfReceipt.toString()).dictLabel;
+      ShippingDeliveryForm.value.exportCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.shippingDeliveries.exportCurrency.toString()).dictLabel;
+      ShippingDeliveryForm.value.exchangeRate = response.data.shippingDeliveries.exchangeRate;
+      ShippingDeliveryForm.value.priceTerms = state.optionss['hr_pricing_term'].find(item => item.dictValue === response.data.shippingDeliveries.priceTerms.toString()).dictLabel;
+      ShippingDeliveryForm.value.departurePort = state.optionss['hr_transport_port'].find(item => item.dictValue === response.data.shippingDeliveries.departurePort.toString()).dictLabel;
+      ShippingDeliveryForm.value.destinationPort = response.data.shippingDeliveries.destinationPort;
+      ShippingDeliveryForm.value.transportationMethod = state.optionss['hr_transportation_method'].find(item => item.dictValue === response.data.shippingDeliveries.transportationMethod.toString()).dictLabel;
+      ShippingDeliveryForm.value.tradeCountry = state.optionss['hr_nation'].find(item => item.dictValue === response.data.shippingDeliveries.tradeCountry.toString()).dictLabel;
+      ShippingDeliveryForm.value.settlementMethod = state.optionss['hr_settlement_way'].find(item => item.dictValue === response.data.shippingDeliveries.settlementMethod.toString()).dictLabel;
+      ShippingDeliveryForm.value.receivableDate = response.data.shippingDeliveries.receivableDate;
+      ShippingDeliveryForm.value.documentClerk = state.optionss['sql_all_user'].find(item => item.dictValue === response.data.shippingDeliveries.documentClerk.toString()).dictLabel;
+      ShippingDeliveryForm.value.isDeposit = response.data.shippingDeliveries.isDeposit.toString();
+      ShippingDeliveryForm.value.preCarriageTransport = state.optionss['hr_domestic_transport'].find(item => item.dictValue === response.data.shippingDeliveries.shippingAgent.toString()).dictLabel;
+      ShippingDeliveryForm.value.shippingAgent = state.optionss['hr_freight_forwarding_company'].find(item => item.dictValue === response.data.shippingDeliveries.preCarriageTransport.toString()).dictLabel;
+      ShippingDeliveryForm.value.remark = response.data.shippingDeliveries.remark;
+
+      if (response.data.shippingDeliveryProducts.length > 0) {
+        shippingDeliveryContrctProductTableData.value = response.data.shippingDeliveryProducts;
+        shippingDeliveryContrctProductTableData.value.forEach(item => {
+          request({
+            url: 'Contracts/GetCustomerContractProductByCPID/GetCustomerContractProduct',
+            method: 'GET',
+            params: {
+              CPID: item.contractProductId
+            }
+          }).then(response => {
+            if (response.data != null && response.data.length > 0) {
+              // 找到当前产品在表格数据中的索引
+              const index = shippingDeliveryContrctProductTableData.value.findIndex(
+                x => x.contractProductId === item.contractProductId
+              );
+              if (index !== -1) {
+                // 更新产品信息
+                const productData = response.data[0];
+                shippingDeliveryContrctProductTableData.value[index] = {
+                  ...shippingDeliveryContrctProductTableData.value[index], // 保留原有数据
+                  contractNumber: productData.contractNumber,
+                  productCode: productData.productCode,
+                  chineseName: productData.chineseName,
+                  contractQuantity: productData.contractQuantity,
+                  unit: state.optionss.hr_calculate_unit.find(u => u.dictValue === productData.unit.toString())?.dictLabel || '无',
+                  exportUnitPrice: productData.exportUnitPrice,
+                  exportTotalPrice: productData.exportTotalPrice,
+                  specialRequirements: productData.specialRequirements,
+                  outerBoxQuantity: productData.outerBoxQuantity,
+                  boxCount: productData.boxCount,
+                  outerBoxUnit: state.optionss.hr_outerbox_unit.find(u => u.dictValue === productData.outerboxunit.toString())?.dictLabel || '无',
+                  outerBoxLength: productData.outerBoxLength,
+                  outerBoxWidth: productData.outerBoxWidth,
+                  outerBoxHeight: productData.outerBoxHeight,
+                  outerBoxVolume: productData.outerBoxVolume,
+                  totalVolume: productData.totalVolume,
+                  outerBoxNetWeight: productData.outerBoxNetWeight,
+                  outerBoxGrossWeight: productData.outerBoxGrossWeight,
+                  totalNetWeight: productData.totalNetWeight,
+                  totalGrossWeight: productData.totalGrossWeight
+                };
+              }
+            }
+          }).catch(error => {
+            console.error('获取产品详情失败:', error);
+            ElMessage.error('获取产品详情失败，请稍后重试');
+          });
+        });
+      }
+      if (response.data.shippingDeliveryPurchaseDetails != null) {
+        shippingDeliveryPurchaseDetailsTableData.value = response.data.shippingDeliveryPurchaseDetails;
+        shippingDeliveryPurchaseDetailsTableData.value.forEach(item => {
+          request({
+            url: 'PurchaseContracts/GetPurchaseProductByPPID/GetPurchaseProduct',
+            method: 'GET',
+            params: {
+              PurchaseProductID: item.purchaseContractProductID
+            }
+          }).then(response => {
+            if (response.data != null && response.data.length > 0) {
+              // 找到当前采购明细在表格数据中的索引
+              const index = shippingDeliveryPurchaseDetailsTableData.value.findIndex(
+                x => x.purchaseContractProductID === item.purchaseContractProductID
+              );
+
+              if (index !== -1) {
+                // 更新采购明细信息
+                const purchaseData = response.data[0];
+                shippingDeliveryPurchaseDetailsTableData.value[index] = {
+                  ...shippingDeliveryPurchaseDetailsTableData.value[index], // 保留原有数据
+                  purchaseContractNumber: purchaseData.purchaseContractNumber,
+                  vendorAbbreviation: state.optionss.sql_supplier_info.find(s => s.dictValue === purchaseData.supplierID.toString())?.dictLabel || '无',
+                  productNumber: state.optionss.sql_product.find(p => p.dictValue === purchaseData.productNumber.toString())?.dictLabel || '无',
+                  chineseName: purchaseData.chineseName,
+                  purchaseCurrency: state.optionss.hr_export_currency.find(c => c.dictValue === purchaseData.purchaseCurrency.toString())?.dictLabel || '无',
+                  purchaseUnitPrice: purchaseData.purchasePrice,
+                  purchaseTotalPrice: purchaseData.purchaseTotalPrice,
+                  measurementUnit: state.optionss.hr_calculate_unit.find(u => u.dictValue === purchaseData.unit.toString())?.dictLabel || '无',
+                  invoice: purchaseData.invoice === 1 ? '是' : '否',
+                  totalVolume: purchaseData.totalVolume,
+                  totalGrossWeight: purchaseData.totalGrossWeight,
+                  contractQuantity: purchaseData.contractQuantity
+                };
+              }
+            }
+          }).catch(error => {
+            console.error('获取采购明细失败:', error);
+            ElMessage.error('获取采购明细失败，请稍后重试');
+          });
+        });
+      }
+    });
   }
 }
 
@@ -2304,7 +2613,12 @@ const state = reactive({
     hr_domestic_charges: [],
     hr_foreign_charges: [],
     hr_daily_expenses: [],
-    hr_associated_modules: []
+    hr_associated_modules: [],
+    sql_shippingdeliveries: [],
+    hr_shipping_status: [],
+    hr_domestic_transport: [],
+    hr_freight_forwarding_company: [],
+    sql_product: []
   }
 })
 const { optionss } = toRefs(state)
@@ -2346,7 +2660,12 @@ var dictParams = [
   { dictType: 'hr_domestic_charges' },
   { dictType: 'hr_foreign_charges' },
   { dictType: 'hr_daily_expenses' },
-  { dictType: 'hr_associated_modules' }
+  { dictType: 'hr_associated_modules' },
+  { dictType: 'sql_shippingdeliveries' },
+  { dictType: 'hr_shipping_status' },
+  { dictType: 'hr_domestic_transport' },
+  { dictType: 'hr_freight_forwarding_company' },
+  { dictType: 'sql_product' }
 ]
 proxy.getDicts(dictParams).then((response) => {
   response.data.forEach((element) => {
@@ -2374,6 +2693,8 @@ const getPendingCount = () => {
             item.documentNumber = state.optionss['sql_purchase_contract'].filter(Purchasecontract => Purchasecontract.dictValue == item.documentID.toString()).map(Purchasecontract => Purchasecontract.dictLabel).values().next().value;
           } else if (item.documentType == "5") {
             item.documentNumber = state.optionss['sql_payment_requests'].filter(Paymentrequests => Paymentrequests.dictValue == item.documentID.toString()).map(Paymentrequests => Paymentrequests.dictLabel).values().next().value;
+          } else if (item.documentType == "3") {
+            item.documentNumber = state.optionss['sql_shippingdeliveries'].filter(Shippingdeliveries => Shippingdeliveries.dictValue == item.documentID.toString()).map(Shippingdeliveries => Shippingdeliveries.dictLabel).values().next().value;
           }
           const createTime = dayjs(item.createTime);
           const now = dayjs();
@@ -2514,7 +2835,6 @@ const calendarState = reactive({
   ],
 });
 
-
 //处理日期获取后台数据动态渲染上去
 const textContent = (date) => {
   //当前date是拿到上面日历组件当前的日期值 根据该值去筛选测试数据找到对应各个日期下对应的数据return出去
@@ -2523,7 +2843,6 @@ const textContent = (date) => {
     return date === item.day;
   });
 };
-
 
 // 工作任务列表
 const handleClick = () => {
@@ -2608,6 +2927,41 @@ const PaymentrequestForm = ref({
   handler: '',
   remarks: ''
 })
+
+//出运发货单审批
+const shippingDeliveryContrctProductTableData = ref([])
+const shippingDeliveryPurchaseDetailsTableData = ref([])
+const ShippingDeliveryDialog = ref(false)
+const ShippingDeliveryForm = ref({
+  invoiceNumber: '',
+  shippingStatus: '',
+  shippingDate: null,
+  OrderMakingDate: null,
+  invoiceDate: null,
+  customerNumber: '',
+  customerAbbreviation: '',
+  referenceContractNumber: '',
+  salesContractNumber: '',
+  customerContractNumber: '',
+  ourCompany: '',
+  bankOfReceipt: '',
+  exportCurrency: '',
+  exchangeRate: '',
+  priceTerms: '',
+  departurePort: '',
+  destinationPort: '',
+  tradeCountry: '',
+  settlementMethod: '',
+  transportationMethod: '',
+  receivableDate: null,
+  documentClerk: '',
+  isDeposit: 0,
+  preCarriageTransport: '',
+  shippingAgent: '',
+  remark: ''
+})
+
+
 </script>
 
 
