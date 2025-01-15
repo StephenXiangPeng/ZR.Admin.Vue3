@@ -1739,6 +1739,333 @@
         </span>
       </template>
     </el-dialog>
+    <el-dialog v-model="SettlementApprovalDialog" title="结算单审批" :close-on-click-modal="false" style="width: 70%;">
+      <!-- 主要信息 -->
+      <div style="margin-top: 30px;">
+        <span style="font-size: 20px; font-weight: bold;">主要信息</span>
+      </div>
+      <el-divider></el-divider>
+      <el-descriptions :column="3" border>
+        <el-descriptions-item label="发票号码">
+          {{ SettlementForm.invoiceNumber }}
+        </el-descriptions-item>
+        <el-descriptions-item label="出运日期">
+          {{ SettlementForm.shippingDate }}
+        </el-descriptions-item>
+        <el-descriptions-item label="出运状态">
+          {{ SettlementForm.shippingStatus }}
+        </el-descriptions-item>
+        <el-descriptions-item label="销售合同">
+          {{ SettlementForm.salesContractNumber }}
+        </el-descriptions-item>
+        <el-descriptions-item label="客户合同">
+          {{ SettlementForm.customerContract }}
+        </el-descriptions-item>
+        <el-descriptions-item label="客户名称">
+          {{ SettlementForm.customerName }}
+        </el-descriptions-item>
+        <el-descriptions-item label="我方公司">
+          {{ SettlementForm.ourCompany }}
+        </el-descriptions-item>
+        <el-descriptions-item label="外销币种">
+          {{ SettlementForm.foreignCurrency }}
+        </el-descriptions-item>
+        <el-descriptions-item label="汇率">
+          {{ SettlementForm.exchangeRate }}
+        </el-descriptions-item>
+        <el-descriptions-item label="价格条款">
+          {{ SettlementForm.priceTerms }}
+        </el-descriptions-item>
+        <el-descriptions-item label="结汇方式">
+          {{ SettlementForm.settlementMethod }}
+        </el-descriptions-item>
+        <el-descriptions-item label="应收汇日">
+          {{ SettlementForm.receivableDate }}
+        </el-descriptions-item>
+        <el-descriptions-item label="销售员">
+          {{ SettlementForm.salesClerk }}
+        </el-descriptions-item>
+        <el-descriptions-item label="单证员">
+          {{ SettlementForm.documentClerk }}
+        </el-descriptions-item>
+        <el-descriptions-item label="是否结账">
+          {{ SettlementForm.isSettlement }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+
+      <!-- 客户收汇 -->
+      <div style="margin-top: 30px;">
+        <span style="font-size: 20px; font-weight: bold;">客户收汇</span>
+      </div>
+      <el-divider></el-divider>
+      <el-descriptions :column="3" border>
+        <el-descriptions-item label="货值合计">
+          {{ CustomerReceiptForm.totalValue }}
+        </el-descriptions-item>
+        <el-descriptions-item label="费用合计">
+          {{ CustomerReceiptForm.totalCost }}
+        </el-descriptions-item>
+        <el-descriptions-item label="索赔金额">
+          {{ CustomerReceiptForm.claimAmount }}
+        </el-descriptions-item>
+        <el-descriptions-item label="应收货款">
+          {{ CustomerReceiptForm.totalReceivable }}
+        </el-descriptions-item>
+        <el-descriptions-item label="已收货款">
+          {{ CustomerReceiptForm.totalReceived }}
+        </el-descriptions-item>
+        <el-descriptions-item label="未收货款">
+          {{ CustomerReceiptForm.totalUnreceived }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 退税情况 -->
+      <div style="margin-top: 30px;">
+        <span style="font-size: 20px; font-weight: bold;">退税情况</span>
+      </div>
+      <el-divider></el-divider>
+      <el-descriptions :column="3" border>
+        <el-descriptions-item label="应退税金额">
+          {{ TaxRefundForm.totalRefund }}
+        </el-descriptions-item>
+        <el-descriptions-item label="已退税金额">
+          {{ TaxRefundForm.totalRefunded }}
+        </el-descriptions-item>
+        <el-descriptions-item label="未退税金额">
+          {{ TaxRefundForm.totalUnrefunded }}
+        </el-descriptions-item>
+        <el-descriptions-item label="是否已退税">
+          <el-checkbox v-model="TaxRefundForm.isRefunded" disabled />
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 国内费用 -->
+      <div style="margin-top: 30px;">
+        <span style="font-size: 20px; font-weight: bold;">国内费用</span>
+      </div>
+      <el-divider></el-divider>
+      <el-descriptions :column="3" border>
+        <el-descriptions-item label="前程运输">
+          {{ DomesticFeesForm.transportation }}
+        </el-descriptions-item>
+        <el-descriptions-item label="应付运杂费￥">
+          {{ DomesticFeesForm.totalPayable }}
+        </el-descriptions-item>
+        <el-descriptions-item label="已付运杂费">
+          {{ DomesticFeesForm.totalPaid }}
+        </el-descriptions-item>
+        <el-descriptions-item label="未付运杂费">
+          {{ DomesticFeesForm.totalUnpaid }}
+        </el-descriptions-item>
+        <el-descriptions-item label="快件费用￥">
+          {{ DomesticFeesForm.expressFee }}
+        </el-descriptions-item>
+        <el-descriptions-item label="其它国内费用￥">
+          {{ DomesticFeesForm.otherDomesticCost }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+
+      <!-- 国外费用 -->
+      <div style="margin-top: 30px;">
+        <span style="font-size: 20px; font-weight: bold;">国外费用</span>
+      </div>
+      <el-divider></el-divider>
+      <el-descriptions :column="3" border>
+        <el-descriptions-item label="应付佣金">
+          {{ ForeignExpensesForm.commissionPayable }}
+        </el-descriptions-item>
+        <el-descriptions-item label="已付佣金">
+          {{ ForeignExpensesForm.commissionPaid }}
+        </el-descriptions-item>
+        <el-descriptions-item label="已付佣金￥">
+          {{ ForeignExpensesForm.commissionPaidAmount }}
+        </el-descriptions-item>
+        <el-descriptions-item label="未付佣金">
+          {{ ForeignExpensesForm.commissionUnpaid }}
+        </el-descriptions-item>
+        <el-descriptions-item label="船代公司">
+          {{ ForeignExpensesForm.shippingAgentCompany }}
+        </el-descriptions-item>
+        <el-descriptions-item label="海运费币种">
+          {{ ForeignExpensesForm.shippingCurrency }}
+        </el-descriptions-item>
+        <el-descriptions-item label="海运费汇率">
+          {{ ForeignExpensesForm.shippingExchangeRate }}
+        </el-descriptions-item>
+        <el-descriptions-item label="应付海运">
+          {{ ForeignExpensesForm.shippingPayable }}
+        </el-descriptions-item>
+        <el-descriptions-item label="已付海运">
+          {{ ForeignExpensesForm.shippingPaid }}
+        </el-descriptions-item>
+        <el-descriptions-item label="已付海运￥">
+          {{ ForeignExpensesForm.shippingPaidAmount }}
+        </el-descriptions-item>
+        <el-descriptions-item label="未付海运￥">
+          {{ ForeignExpensesForm.shippingUnpaidAmount }}
+        </el-descriptions-item>
+        <el-descriptions-item label="其它国外费用￥">
+          {{ ForeignExpensesForm.otherForeignCost }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 列表部分 -->
+      <div style="margin-top: 30px;">
+        <el-tabs v-model="settlementactiveTab">
+          <!-- 工厂付款 -->
+          <el-tab-pane label="工厂付款" name="factoryPayment">
+            <el-table :data="FactoryPaymentData" border>
+              <el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
+              <el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
+              <el-table-column prop="reviewStatusStr" label="审核状态" width="150">
+                <template #default="scope">
+                  <el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
+                    {{ scope.row.reviewStatusStr }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
+              <el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
+              <el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
+              <el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
+              <el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
+              <el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
+              <el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
+              <el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
+              <el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
+              <el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
+              <el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
+              <el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
+              <el-table-column prop="handler" label="经手人" width="150"></el-table-column>
+              <el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
+            </el-table>
+          </el-tab-pane>
+
+          <!-- 采购其它费用 -->
+          <el-tab-pane label="采购其它费用" name="purchaseOtherCosts">
+            <el-table :data="PurchaseOtherCostsData" border>
+              <el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
+              <el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
+              <el-table-column prop="reviewStatusStr" label="审核状态" width="150">
+                <template #default="scope">
+                  <el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
+                    {{ scope.row.reviewStatusStr }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
+              <el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
+              <el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
+              <el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
+              <el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
+              <el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
+              <el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
+              <el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
+              <el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
+              <el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
+              <el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
+              <el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
+              <el-table-column prop="handler" label="经手人" width="150"></el-table-column>
+              <el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
+            </el-table>
+          </el-tab-pane>
+
+          <!-- 客户已收汇详情 -->
+          <el-tab-pane label="客户已收汇详情" name="customerReceipts">
+            <el-table :data="CustomerReceiptsData" border>
+              <el-table-column prop="ReceiptNumber" label="收汇单号" width="150"></el-table-column>
+              <el-table-column prop="ReceiptBank" label="收汇银行" width="150"></el-table-column>
+              <el-table-column prop="ReceiptDate" label="收汇日期" width="150"></el-table-column>
+              <el-table-column prop="OurCompany" label="我方公司" width="150"></el-table-column>
+              <el-table-column prop="FundsType" label="款项类型" width="150"></el-table-column>
+              <el-table-column prop="ReceiptAmount" label="收汇金额" width="150"></el-table-column>
+              <el-table-column prop="ReceiptCurrency" label="收汇币种" width="150"></el-table-column>
+              <el-table-column prop="ExchangeRate" label="汇率" width="150"></el-table-column>
+            </el-table>
+          </el-tab-pane>
+
+          <!-- 退税详情 -->
+          <el-tab-pane label="退税详情" name="taxRefundDetails">
+            <el-table :data="TaxRefundDetailsData" border>
+              <el-table-column prop="ReceiptNumber" label="退税单编号" width="150"></el-table-column>
+              <el-table-column prop="InvoiceNumber" label="发票号" width="150"></el-table-column>
+              <el-table-column prop="RefundAmount" label="应退税额" width="150"></el-table-column>
+              <el-table-column prop="ActualRefundAmount" label="实际退税额" width="150"></el-table-column>
+              <el-table-column prop="IsRefunded" label="是否已退" width="150"></el-table-column>
+              <el-table-column prop="RefundDate" label="退税日期" width="150"></el-table-column>
+            </el-table>
+          </el-tab-pane>
+
+          <!-- 国内已付费用详情 -->
+          <el-tab-pane label="国内已付费用详情" name="domesticPayments">
+            <el-table :data="DomesticPaymentsData" border>
+              <el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
+              <el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
+              <el-table-column prop="reviewStatusStr" label="审核状态" width="150">
+                <template #default="scope">
+                  <el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
+                    {{ scope.row.reviewStatusStr }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
+              <el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
+              <el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
+              <el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
+              <el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
+              <el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
+              <el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
+              <el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
+              <el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
+              <el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
+              <el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
+              <el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
+              <el-table-column prop="handler" label="经手人" width="150"></el-table-column>
+              <el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
+            </el-table>
+          </el-tab-pane>
+
+          <!-- 国外已付费用详情 -->
+          <el-tab-pane label="国外已付费用详情" name="internationalPayments">
+            <el-table :data="InternationalPaymentsData" border>
+              <el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
+              <el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
+              <el-table-column prop="reviewStatusStr" label="审核状态" width="150">
+                <template #default="scope">
+                  <el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
+                    {{ scope.row.reviewStatusStr }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
+              <el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
+              <el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
+              <el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
+              <el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
+              <el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
+              <el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
+              <el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
+              <el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
+              <el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
+              <el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
+              <el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
+              <el-table-column prop="handler" label="经手人" width="150"></el-table-column>
+              <el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
+            </el-table>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+
+      <!-- 底部操作按钮 -->
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button type="danger" @click="ApproveReject">驳回</el-button>
+          <el-button type="success" @click="Approvepass">通过</el-button>
+        </span>
+      </template>
+    </el-dialog>
     <!-- 领取收款单对话框 -->
     <el-dialog v-model="claimDialogVisible" title="领取收款单" width="500px" :close-on-click-modal="false">
       <el-form ref="claimFormRef" :model="claimForm" :rules="claimRules" label-width="100px">
@@ -1937,7 +2264,10 @@ const Approvepass = () => {
         type: 'success'
       })
       contractDialog.value = false;
+      PurchaseContractDialog.value = false;
+      PaymentrequestDialog.value = false;
       ShippingDeliveryDialog.value = false;
+      SettlementApprovalDialog.value = false;
       getPendingCount();
     } else {
       console.error('审批失败');
@@ -1956,6 +2286,10 @@ const ApproveReject = () => {
         type: 'success'
       })
       contractDialog.value = false;
+      PurchaseContractDialog.value = false;
+      PaymentrequestDialog.value = false;
+      ShippingDeliveryDialog.value = false;
+      SettlementApprovalDialog.value = false;
       getPendingCount();
     } else {
       console.error('驳回失败');
@@ -2120,6 +2454,27 @@ const GetCustomerContactPerson = (CustomerId) => {
   });
 }
 const PaymentactiveTab = ref('CostDetailsTab')//费用信息Tab
+const settlementactiveTab = ref('factoryPayment')//结算单Tab
+// 审核状态转换函数
+const getReviewStatusText = (status) => {
+  const statusMap = {
+    0: '待提审',
+    1: '审核中',
+    2: '已批准',
+    3: '已拒绝'
+  }
+  return statusMap[status] || '未知状态'
+}
+// 获取状态对应的标签类型
+const getStatusType = (status) => {
+  const typeMap = {
+    0: 'info',    // 待提审 - 灰色
+    1: 'warning', // 审核中 - 黄色
+    2: 'success', // 已批准 - 绿色
+    3: 'danger'   // 已拒绝 - 红色
+  }
+  return typeMap[status] || 'info'
+}
 const openSaleContractDialog = (row) => {
   ApproveDocumentRequest.ApprovalRecordID = row.recordID;
   ApproveDocumentRequest.DocumentID = row.documentID;
@@ -2538,6 +2893,266 @@ const openSaleContractDialog = (row) => {
         });
       }
     });
+  } else if (row.documentType == "6") {//获取结算单详情
+    var ShippingDeliveryID = null;
+    request({
+      url: 'ShippingDeliveries/GetSettlementByID/GetSettlement',
+      method: 'GET',
+      params: {
+        SettlementID: row.documentID
+      }
+    }).then(response => {
+      if (response.data != null) {
+        //主要信息
+        SettlementForm.value.invoiceNumber = response.data.invoiceNumber;
+        SettlementForm.value.shippingDate = response.data.shippingDate;
+        SettlementForm.value.shippingStatus = response.data.shippingStatus;
+        SettlementForm.value.salesContractNumber = response.data.salesContract;
+        SettlementForm.value.customerName = response.data.customerName;
+        SettlementForm.value.customerContract = response.data.customerContract;
+        SettlementForm.value.ourCompany = response.data.ourCompany;
+        SettlementForm.value.foreignCurrency = state.optionss.hr_export_currency.find(item => item.dictValue === response.data.foreignCurrency.toString()).dictLabel;
+        SettlementForm.value.exchangeRate = response.data.exchangeRate;
+        SettlementForm.value.settlementMethod = response.data.settlementMethod;
+        SettlementForm.value.isSettlement = response.data.isSettlement;
+        SettlementForm.value.priceTerms = response.data.priceTerms;
+        SettlementForm.value.receivableDate = response.data.receivableDate;
+        SettlementForm.value.salesClerk = response.data.salesperson;
+        SettlementForm.value.documentClerk = response.data.documentOfficer;
+        SettlementForm.value.isSettlement = response.data.isSettled ? '是' : '否';
+
+        //客户收汇
+        CustomerReceiptForm.value.totalValue = response.data.totalValue;
+        CustomerReceiptForm.value.totalCost = response.data.totalCost;
+        CustomerReceiptForm.value.claimAmount = response.data.claimAmount;
+        CustomerReceiptForm.value.totalReceivable = response.data.totalReceivable;
+        CustomerReceiptForm.value.totalReceived = response.data.totalReceived;
+        CustomerReceiptForm.value.totalUnreceived = response.data.totalUnreceived;
+
+        //应退税金额
+        TaxRefundForm.value.totalRefund = response.data.totalRefund;
+        TaxRefundForm.value.totalRefunded = response.data.totalRefunded;
+        TaxRefundForm.value.totalUnrefunded = response.data.totalUnrefunded;
+        TaxRefundForm.value.isRefunded = response.data.isRefunded ? '是' : '否';
+
+        //国内费用
+        DomesticFeesForm.value.expressFee = response.data.expressFee;
+        DomesticFeesForm.value.transportation = response.data.transportation;
+        DomesticFeesForm.value.totalPayable = response.data.totalPayable;
+        DomesticFeesForm.value.totalPaid = response.data.totalPaid;
+        DomesticFeesForm.value.totalUnpaid = response.data.totalUnpaid;
+
+        //国外费用
+        ForeignExpensesForm.value.commissionPayable = response.data.commissionPayable;
+        ForeignExpensesForm.value.commissionPaid = response.data.commissionPaid;
+        ForeignExpensesForm.value.commissionPaidAmount = response.data.commissionPaidAmount || 0;
+        ForeignExpensesForm.value.commissionUnpaid = response.data.commissionUnpaid;
+        ForeignExpensesForm.value.shippingAgentCompany = response.data.shippingAgentCompany;
+        ForeignExpensesForm.value.shippingCurrency = response.data.shippingCurrency || '无';
+        ForeignExpensesForm.value.shippingExchangeRate = response.data.shippingExchangeRate || 0;
+        ForeignExpensesForm.value.shippingPayable = response.data.shippingPayable || 0;
+        ForeignExpensesForm.value.shippingPaid = response.data.shippingPaid || 0;
+        ForeignExpensesForm.value.shippingPaidAmount = response.data.shippingPaidAmount || 0;
+        ForeignExpensesForm.value.shippingUnpaidAmount = response.data.shippingUnpaidAmount || 0;
+        ForeignExpensesForm.value.otherForeignCost = response.data.otherForeignCost || 0;
+        ShippingDeliveryID = response.data.shippingDeliveriesID;
+        if (ShippingDeliveryID != null) {
+          //#region 获取工厂付款数据
+          request({
+            url: 'ShippingDeliveries/GetFactoryPaymentData/GetFactoryPaymentDataList',
+            method: 'GET',
+            params: {
+              ShippingDeliveriesId: ShippingDeliveryID
+            }
+          }).then(GetFactoryPaymentDataList => {
+            if (GetFactoryPaymentDataList.code === 200) {
+              FactoryPaymentData.value = GetFactoryPaymentDataList.data.map(item => ({
+                applicationNumber: item.applicationNumber,
+                reviewStatus: item.reviewStatus,
+                reviewStatusStr: getReviewStatusText(item.reviewStatus),
+                paymentCategory: state.optionss["hr_payment_category"].find(pc => pc.dictValue == item.paymentCategory.toString())?.dictLabel || '',
+                paymentName: state.optionss["hr_factory_payment"].find(hfp => hfp.dictValue == item.paymentName.toString())?.dictLabel || '', // 转换款项名称
+                payeeName: item.payeeName,
+                bankName: item.bankName,
+                bankAccount: item.bankAccount,
+                ourCompany: state.optionss["hr_ourcompany"].find(oc => oc.dictValue == item.ourCompany.toString())?.dictLabel || '',
+                currencyCode: state.optionss["hr_export_currency"].find(cc => cc.dictValue == item.currencyCode.toString())?.dictLabel || '',
+                totalAmount: item.applicationAmount?.toFixed(2) || '0.00',
+                paidAmount: item.paidAmount?.toFixed(2) || '0.00',
+                unpaidAmount: item.unpaidAmount?.toFixed(2) || '0.00',
+                applicant: state.optionss["sql_all_user"].find(user => user.dictValue == item.applicant.toString())?.dictLabel || '',
+                applicationDepartment: state.optionss["sql_hr_dept"].find(dept => dept.dictValue == item.applicationDepartment.toString())?.dictLabel || '',
+                handler: state.optionss["sql_all_user"].find(user => user.dictValue == item.handler.toString())?.dictLabel || '',
+                applicationDate: item.applicationDate ? item.applicationDate.split(' ')[0] : ''
+              }))
+            } else {
+              ElMessage.error('获取工厂付款数据失败：无效的响应数据');
+            }
+          }).catch(error => {
+            ElMessage.error('获取工厂付款数据失败，请稍后重试');
+          });
+          //#endregion
+          //#region 获取采购其它费用数据
+          request({
+            url: 'ShippingDeliveries/GetPurchaseOtherFeeDataByShippingDeliveriesID/GetPurchaseOtherFeeData',
+            method: 'GET',
+            params: {
+              ShippingDeliveriesId: ShippingDeliveryID
+            }
+          }).then(GetPurchaseOtherFeeDataresponse => {
+            if (GetPurchaseOtherFeeDataresponse.code === 200) {
+              PurchaseOtherCostsData.value = GetPurchaseOtherFeeDataresponse.data.map(item => ({
+                applicationNumber: item.applicationNumber,
+                reviewStatus: item.reviewStatus,
+                reviewStatusStr: getReviewStatusText(item.reviewStatus),
+                paymentCategory: state.optionss["hr_payment_category"].find(pc => pc.dictValue == item.paymentCategory.toString())?.dictLabel || '',
+                paymentName: state.optionss["hr_factory_payment"].find(hfp => hfp.dictValue == item.paymentName.toString())?.dictLabel || '', // 转换款项名称
+                payeeName: item.payeeName,
+                bankName: item.bankName,
+                bankAccount: item.bankAccount,
+                ourCompany: state.optionss["hr_ourcompany"].find(oc => oc.dictValue == item.ourCompany.toString())?.dictLabel || '',
+                currencyCode: state.optionss["hr_export_currency"].find(cc => cc.dictValue == item.currencyCode.toString())?.dictLabel || '',
+                totalAmount: item.applicationAmount?.toFixed(2) || '0.00',
+                paidAmount: item.paidAmount?.toFixed(2) || '0.00',
+                unpaidAmount: item.unpaidAmount?.toFixed(2) || '0.00',
+                applicant: state.optionss["sql_all_user"].find(user => user.dictValue == item.applicant.toString())?.dictLabel || '',
+                applicationDepartment: state.optionss["sql_hr_dept"].find(dept => dept.dictValue == item.applicationDepartment.toString())?.dictLabel || '',
+                handler: state.optionss["sql_all_user"].find(user => user.dictValue == item.handler.toString())?.dictLabel || '',
+                applicationDate: item.applicationDate ? item.applicationDate.split(' ')[0] : ''
+              }))
+            } else {
+              ElMessage.error('获取采购其它费用数据失败：无效的响应数据');
+            }
+          }).catch(error => {
+            ElMessage.error('获取采购其它费用数据失败，请稍后重试');
+          });
+          //#endregion
+          //#region 获取客户收汇数据
+          request({
+            url: 'ShippingDeliveries/GetCustomerControllerDataByShippingDeliveriesID/GetCustomerControllerData',
+            method: 'GET',
+            params: {
+              ShippingDeliveriesId: ShippingDeliveryID
+            }
+          }).then(GetCustomerControllerDataresponse => {
+            if (GetCustomerControllerDataresponse.code === 200) {
+              CustomerReceiptsData.value = GetCustomerControllerDataresponse.data.map(item => ({
+                ReceiptNumber: item.receiptNumber,
+                ReceiptDate: item.receiptDate ? item.receiptDate.split(' ')[0] : '',
+                ReceiptAmount: item.amount,
+                ReceiptCurrency: state.optionss["hr_export_currency"].find(cc => cc.dictValue == item.foreignCurrency.toString())?.dictLabel || '',
+                ExchangeRate: item.exchangeRate,
+                ReceiptBank: state.optionss["hr_bank"].find(bank => bank.dictValue == item.bank.toString())?.dictLabel || '',
+                OurCompany: state.optionss["hr_ourcompany"].find(oc => oc.dictValue == item.ourCompany.toString())?.dictLabel || '',
+                FundsType: state.optionss["funds_type"].find(ft => ft.dictValue == item.fundsType.toString())?.dictLabel || '',
+              }))
+            } else {
+              ElMessage.error('获取客户收汇数据失败：无效的响应数据');
+            }
+          }).catch(error => {
+            ElMessage.error('获取客户收汇数据失败，请稍后重试');
+          });
+          //#endregion
+          //#region 获取退税数据
+          request({
+            url: 'ShippingDeliveries/GetTaxRefundDataByShippingDeliveriesID/GetTaxRefundData',
+            method: 'GET',
+            params: {
+              ShippingDeliveriesId: ShippingDeliveryID
+            }
+          }).then(GetTaxRefundDataresponse => {
+            if (GetTaxRefundDataresponse.code === 200) {
+              TaxRefundDetailsData.value = GetTaxRefundDataresponse.data.map(item => ({
+                ReceiptNumber: item.refundNumber,
+                InvoiceNumber: item.invoiceNumber,
+                RefundAmount: item.refundAmount,
+                ActualRefundAmount: item.actualRefundAmount,
+                IsRefunded: item.isRefunded ? '是' : '否',
+                RefundDate: item.refundDate ? item.refundDate.split(' ')[0] : '',
+              }))
+            } else {
+              ElMessage.error('获取退税数据失败：无效的响应数据');
+            }
+          }).catch(error => {
+            ElMessage.error('获取退税数据失败，请稍后重试');
+          });
+          //#endregion
+          //#region 获取国内已付费用数据
+          request({
+            url: 'ShippingDeliveries/GetDomesticFeesDataByShippingDeliveriesID/GetDomesticFeesData',
+            method: 'GET',
+            params: {
+              ShippingDeliveriesId: ShippingDeliveryID
+            }
+          }).then(GetDomesticFeesDataresponse => {
+            if (GetDomesticFeesDataresponse.code === 200) {
+              DomesticPaymentsData.value = GetDomesticFeesDataresponse.data.map(item => ({
+                applicationNumber: item.applicationNumber,
+                reviewStatus: item.reviewStatus,
+                reviewStatusStr: getReviewStatusText(item.reviewStatus),
+                paymentCategory: state.optionss["hr_payment_category"].find(pc => pc.dictValue == item.paymentCategory.toString())?.dictLabel || '',
+                paymentName: state.optionss["hr_domestic_charges"].find(hfp => hfp.dictValue == item.paymentName.toString())?.dictLabel || '', // 转换款项名称
+                payeeName: item.payeeName,
+                bankName: item.bankName,
+                bankAccount: item.bankAccount,
+                ourCompany: state.optionss["hr_ourcompany"].find(oc => oc.dictValue == item.ourCompany.toString())?.dictLabel || '',
+                currencyCode: state.optionss["hr_export_currency"].find(cc => cc.dictValue == item.currencyCode.toString())?.dictLabel || '',
+                totalAmount: item.applicationAmount?.toFixed(2) || '0.00',
+                paidAmount: item.paidAmount?.toFixed(2) || '0.00',
+                unpaidAmount: item.unpaidAmount?.toFixed(2) || '0.00',
+                applicant: state.optionss["sql_all_user"].find(user => user.dictValue == item.applicant.toString())?.dictLabel || '',
+                applicationDepartment: state.optionss["sql_hr_dept"].find(dept => dept.dictValue == item.applicationDepartment.toString())?.dictLabel || '',
+                handler: state.optionss["sql_all_user"].find(user => user.dictValue == item.handler.toString())?.dictLabel || '',
+                applicationDate: item.applicationDate ? item.applicationDate.split(' ')[0] : ''
+              }))
+            } else {
+              ElMessage.error('获取国内已付费用数据失败：无效的响应数据');
+            }
+          }).catch(error => {
+            ElMessage.error('获取国内已付费用数据失败，请稍后重试');
+          });
+          //#endregion
+          //#region 获取国外已付费用数据
+          request({
+            url: 'ShippingDeliveries/GetForeignExpensesByShippingDeliveriesID/GetForeignExpensesData',
+            method: 'GET',
+            params: {
+              ShippingDeliveriesId: ShippingDeliveryID
+            }
+          }).then(GetForeignExpensesDataresponse => {
+            if (GetForeignExpensesDataresponse.code === 200) {
+              InternationalPaymentsData.value = GetForeignExpensesDataresponse.data.map(item => ({
+                applicationNumber: item.applicationNumber,
+                reviewStatus: item.reviewStatus,
+                reviewStatusStr: getReviewStatusText(item.reviewStatus),
+                paymentCategory: state.optionss["hr_payment_category"].find(pc => pc.dictValue == item.paymentCategory.toString())?.dictLabel || '',
+                paymentName: state.optionss["hr_foreign_charges"].find(hfp => hfp.dictValue == item.paymentName.toString())?.dictLabel || '', // 转换款项名称
+                payeeName: item.payeeName,
+                bankName: item.bankName,
+                bankAccount: item.bankAccount,
+                ourCompany: state.optionss["hr_ourcompany"].find(oc => oc.dictValue == item.ourCompany.toString())?.dictLabel || '',
+                currencyCode: state.optionss["hr_export_currency"].find(cc => cc.dictValue == item.currencyCode.toString())?.dictLabel || '',
+                totalAmount: item.applicationAmount?.toFixed(2) || '0.00',
+                paidAmount: item.paidAmount?.toFixed(2) || '0.00',
+                unpaidAmount: item.unpaidAmount?.toFixed(2) || '0.00',
+                applicant: state.optionss["sql_all_user"].find(user => user.dictValue == item.applicant.toString())?.dictLabel || '',
+                applicationDepartment: state.optionss["sql_hr_dept"].find(dept => dept.dictValue == item.applicationDepartment.toString())?.dictLabel || '',
+                handler: state.optionss["sql_all_user"].find(user => user.dictValue == item.handler.toString())?.dictLabel || '',
+                applicationDate: item.applicationDate ? item.applicationDate.split(' ')[0] : ''
+              }))
+            } else {
+              ElMessage.error('获取国外已付费用数据失败：无效的响应数据');
+            }
+          }).catch(error => {
+            ElMessage.error('获取国外已付费用数据失败，请稍后重试');
+          });
+          //#endregion
+        }
+      }
+    }).catch(error => {
+      ElMessage.error('获取结算单失败，请稍后重试');
+    });
+    SettlementApprovalDialog.value = true;
   }
 }
 
@@ -2618,7 +3233,8 @@ const state = reactive({
     hr_shipping_status: [],
     hr_domestic_transport: [],
     hr_freight_forwarding_company: [],
-    sql_product: []
+    sql_product: [],
+    sql_settlement: []
   }
 })
 const { optionss } = toRefs(state)
@@ -2665,7 +3281,8 @@ var dictParams = [
   { dictType: 'hr_shipping_status' },
   { dictType: 'hr_domestic_transport' },
   { dictType: 'hr_freight_forwarding_company' },
-  { dictType: 'sql_product' }
+  { dictType: 'sql_product' },
+  { dictType: 'sql_settlement' }
 ]
 proxy.getDicts(dictParams).then((response) => {
   response.data.forEach((element) => {
@@ -2676,6 +3293,7 @@ proxy.getDicts(dictParams).then((response) => {
 })
 
 const getPendingCount = () => {
+  AgencyProcesstableData.value = [];
   request({
     url: 'ApprovalFlow/GetApprovalRecord/GetApprovalRecordCount',
     method: 'GET'
@@ -2695,6 +3313,8 @@ const getPendingCount = () => {
             item.documentNumber = state.optionss['sql_payment_requests'].filter(Paymentrequests => Paymentrequests.dictValue == item.documentID.toString()).map(Paymentrequests => Paymentrequests.dictLabel).values().next().value;
           } else if (item.documentType == "3") {
             item.documentNumber = state.optionss['sql_shippingdeliveries'].filter(Shippingdeliveries => Shippingdeliveries.dictValue == item.documentID.toString()).map(Shippingdeliveries => Shippingdeliveries.dictLabel).values().next().value;
+          } else if (item.documentType == "6") {
+            item.documentNumber = state.optionss['sql_settlement'].filter(Settlement => Settlement.dictValue == item.documentID.toString()).map(Settlement => Settlement.dictLabel).values().next().value;
           }
           const createTime = dayjs(item.createTime);
           const now = dayjs();
@@ -2961,6 +3581,75 @@ const ShippingDeliveryForm = ref({
   remark: ''
 })
 
+//结算单
+const SettlementApprovalDialog = ref(false)
+const SettlementForm = ref({
+  invoiceNumber: '',
+  shippingDate: '',
+  shippingStatus: '',
+  salesContractNumber: '',
+  customerContract: '',
+  customerName: '',
+  ourCompany: '',
+  foreignCurrency: '',
+  exchangeRate: '',
+  priceTerms: '',
+  settlementMethod: '',
+  receivableDate: '',
+  salesClerk: '',
+  documentClerk: '',
+  isSettlement: ''
+})
+
+const CustomerReceiptForm = ref({
+  totalValue: '',
+  totalCost: '',
+  claimAmount: '',
+  totalReceivable: '',
+  totalReceived: '',
+  totalUnreceived: ''
+})
+
+//退税
+const TaxRefundForm = ref({
+  totalRefund: '',
+  totalRefunded: '',
+  totalUnrefunded: '',
+  isRefunded: ''
+})
+
+//国内费用
+const DomesticFeesForm = ref({
+  transportation: '',
+  totalPayable: '',
+  totalPaid: '',
+  totalUnpaid: '',
+  expressFee: '',
+  otherDomesticCost: ''
+})
+
+//国外费用
+const ForeignExpensesForm = ref({
+  commissionPayable: '',
+  commissionPaid: '',
+  commissionPaidAmount: '',
+  commissionUnpaid: '',
+  shippingAgentCompany: '',
+  shippingCurrency: '',
+  shippingPayable: '',
+  shippingPaid: '',
+  shippingPaidAmount: '',
+  shippingUnpaidAmount: '',
+  otherForeignCost: '',
+  shippingExchangeRate: ''
+})
+
+const FactoryPaymentData = ref([])
+const PurchaseOtherCostsData = ref([])
+const CustomerReceiptsData = ref([])
+const TaxRefundDetailsData = ref([])
+const DomesticPaymentsData = ref([])
+const InternationalPaymentsData = ref([])
 
 </script>
 

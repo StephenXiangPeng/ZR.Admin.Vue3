@@ -10,18 +10,17 @@
 		</div>
 		<el-divider> </el-divider>
 		<div style="width: 100%; margin-top: 30px;">
-			<el-select v-model="SearchInvoiceNumber" placeholder="选择发票号码">
-				<el-option v-for=" dict in optionss.sql_invoicenumber" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue" />
+			<!-- <el-select v-model="SearchInvoiceNumber" placeholder="选择发票号码" style="width: 15%">
+				<el-option v-for=" dict in optionss.sql_settlement_center_shipping" :key="dict.dictCode"
+					:label="dict.dictLabel" :value="dict.dictValue" />
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-select v-model="SearchCustomerID" filterable placeholder="选择客户简称" style="width: 15%">
-				<el-option v-for="dict in optionss.sql_hr_customerabbr" :key="dict.dictCode" :label="dict.dictLabel"
+				<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchStartDate" type="date" placeholder="请选择退税日期起" size="Default"
+			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
+			<el-date-picker v-model="SearchStartDate" type="date" placeholder="请选择退税日期起"
 				style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchEndDate" type="date" placeholder="请选择退税日期止" size="Default"
-				style="width: 15%" />
+			<el-date-picker v-model="SearchEndDate" type="date" placeholder="请选择退税日期止" style="width: 15%" />
 		</div>
 		<div style="width: 100%; margin-top: 20px; text-align: right;">
 			<el-row class="mb-4">
@@ -35,12 +34,17 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="TaxrefundtableData" style="width: 100%">
-			<el-table-column prop="invoiceNumber" label="发票号码" width="150"></el-table-column>
-			<el-table-column prop="refundAmount" label="应退税额" width="150"></el-table-column>
+			<el-table-column prop="refundNumber" label="退税编号" width="150"></el-table-column>
+			<el-table-column prop="refundDate" label="退税日期" width="150">
+				<template #default="scope">
+					{{ formatDate(scope.row.refundDate) }}
+				</template>
+			</el-table-column>
+			<el-table-column prop="company" label="我方公司" width="150"></el-table-column>
+			<el-table-column prop="totalRefundAmount" label="应退税总额" width="150"></el-table-column>
 			<el-table-column prop="actualRefundAmount" label="实际退税额" width="150"></el-table-column>
-			<el-table-column prop="customerAbbr" label="客户简称" width="150"></el-table-column>
-			<el-table-column prop="isRefunded" label="是否已退" width="150"></el-table-column>
-			<el-table-column prop="refundDate" label="退税日期" width="150"></el-table-column>
+			<el-table-column prop="unrefundedAmount" label="未退税额" width="150"></el-table-column>
+			<el-table-column prop="remark" label="备注" width="150"></el-table-column>
 			<el-table-column fixed="right" label="操作" width="100">
 				<template #default="scope">
 					<el-button type="text" size="small" @click="CheckTaxrefundtableData(scope.row)">查看/编辑</el-button>
@@ -59,7 +63,7 @@
 					<el-col :span="8">
 						<el-form-item label="退税编号">
 							<el-input v-model="addctaxrefundform.taxRefundNumber" placeholder="请输入退税编号"
-								style="width: 300px;" :disabled=isDisable></el-input>
+								style="width: 300px;" disabled></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -85,53 +89,53 @@
 			<el-button class="mt-4" type="primary" @click="AddTaxRefundDetailsClick" style="margin-bottom: 10px;"
 				:disabled="isDisable">添加退税明细</el-button>
 			<el-table :data="addtaxrefundtableData" style="width: 100%" :disable="true">
-				<el-table-column prop="Id" label="Id" width="150" v-if="false">
+				<el-table-column prop="Id" label="Id" v-if="false">
 					<template #default="{ row }">
 						<el-input v-model="row.Id" size="small" :disabled=isDisable></el-input>
 					</template>
 				</el-table-column>
-				<el-table-column prop="invoiceNumber" label="发票号码" width="150">
+				<el-table-column prop="invoiceNumber" label="发票号码">
 					<template #default="{ row }">
-						<el-select v-model="row.InvoiceNumber" placeholder="选择发票号码" size="small"
+						<el-select v-model="row.InvoiceNumber" placeholder="选择发票号码" size="default"
 							@change="invoiceNumberChange(row)" :disabled=isDisable>
-							<el-option v-for="dict in optionss.sql_invoicenumber" :key="dict.dictCode"
+							<el-option v-for="dict in optionss.sql_settlement_center_shipping" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue" />
 						</el-select>
 					</template>
 				</el-table-column>
-				<el-table-column prop=" RefundAmount" label="应退税额" width="150">
+				<el-table-column prop="CustomerAbbr" label="客户简称">
 					<template #default="{ row }">
-						<el-input-number v-model="row.RefundAmount" placeholder="应退税额" size="small" :precision="3"
-							:step="0.01" @change="calculation" :disabled=isDisable></el-input-number>
+						<el-input v-model="row.CustomerAbbr" size="default" :disabled=isDisable></el-input>
 					</template>
 				</el-table-column>
-				<el-table-column prop=" ActualRefundAmount" label="实际退税额" width="150">
+				<el-table-column prop=" RefundAmount" label="应退税额">
 					<template #default="{ row }">
-						<el-input-number v-model="row.ActualRefundAmount" placeholder="输入实际退税额" size="small"
-							:precision="3" :step="0.01" @change="calculation" :disabled=isDisable></el-input-number>
+						<el-input v-model="row.RefundAmount" placeholder="应退税额" size="Default" :precision="3"
+							@change="calculation" :disabled=isDisable></el-input>
 					</template>
 				</el-table-column>
-				<el-table-column prop="CustomerAbbr" label="客户简称" width="150">
+				<el-table-column prop=" ActualRefundAmount" label="实际退税额">
 					<template #default="{ row }">
-						<el-input v-model="row.CustomerAbbr" size="small" :disabled=isDisable></el-input>
+						<el-input v-model="row.ActualRefundAmount" placeholder="输入实际退税额" size="Default" :precision="3"
+							@input="validateAndCalculate(row)" :disabled=isDisable>
+						</el-input>
 					</template>
 				</el-table-column>
-
-				<el-table-column prop="IsRefunded" label="是否已退" width="150">
+				<el-table-column prop="IsRefunded" label="是否已退">
 					<template #default="{ row }">
-						<el-select v-model="row.IsRefunded" placeholder="选择是否" size="small" :disabled=isDisable>
+						<el-select v-model="row.IsRefunded" placeholder="选择是否" size="Default" :disabled=isDisable>
 							<el-option v-for="dict in optionss.sys_yes_no" :key="dict.dictCode" :label="dict.dictLabel"
 								:value="dict.dictValue" />
 						</el-select>
 					</template>
 				</el-table-column>
-				<el-table-column prop="RefundDate" label="退税日期" width="200">
+				<el-table-column prop="RefundDate" label="退税日期">
 					<template #default="{ row }">
 						<el-date-picker v-model="row.RefundDate" type="date" placeholder="请选择退税日期" size="Default"
 							style="width: 150px;" :disabled=isDisable></el-date-picker>
 					</template>
 				</el-table-column>
-				<el-table-column fixed="right" label="操作" width="100">
+				<el-table-column fixed="right" label="操作">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="addtaxrefundtableDatahandleDelete(scope.$index)"
 							:disabled=isDisable>删除</el-button>
@@ -197,8 +201,6 @@ import { createApp, ref } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 
-
-
 const isDisable = ref(false);
 const isEdit = ref(false);
 const isEditBtnShow = ref(false);
@@ -212,7 +214,20 @@ const addctaxrefundform = ref({
 const addctaxrefunddialog = ref(false)
 const currentDate = new Date();
 const formattedDate = currentDate.toISOString().split('T')[0];
-const openaddctaxrefunddialog = () => {
+const openaddctaxrefunddialog = async () => {
+	// 重置表单
+	clearTaxrefundDialog();
+
+	// 获取新的退税单编号
+	await getNextTaxRefundNumber();
+
+	// 设置默认日期为当天
+	const today = new Date();
+	const year = today.getFullYear();
+	const month = String(today.getMonth() + 1).padStart(2, '0');
+	const day = String(today.getDate()).padStart(2, '0');
+	addctaxrefundform.value.taxRefundDate = `${year}-${month}-${day}`;
+
 	addctaxrefunddialog.value = true
 	addctaxrefundform.value.taxRefundDate = formattedDate;
 }
@@ -252,16 +267,53 @@ const invoiceNumberChange = (row) => {
 	});
 }
 
+// 验证并计算金额
+const validateAndCalculate = (row) => {
+	// 转换为数字进行比较
+	const refundAmount = parseFloat(row.RefundAmount) || 0;
+	const actualAmount = parseFloat(row.ActualRefundAmount) || 0;
+
+	// 检查实际退税额是否大于应退税额
+	if (actualAmount > refundAmount) {
+		ElMessage.warning('实际退税额不能大于应退税额');
+		// 重置为应退税额
+		row.ActualRefundAmount = refundAmount.toString();
+	}
+
+	// 重新计算总额
+	calculation();
+}
+
+// 修改原有的计算方法
 const calculation = () => {
 	let refundAmount = 0;
 	let actualRefundAmount = 0;
+
 	addtaxrefundtableData.value.forEach((element) => {
-		refundAmount += element.RefundAmount;
-		actualRefundAmount += element.ActualRefundAmount;
+		// 将字符串转换为数字并累加
+		refundAmount += parseFloat(element.RefundAmount) || 0;
+		actualRefundAmount += parseFloat(element.ActualRefundAmount) || 0;
 	});
-	addtaxrefundform2.value.refundAmount = refundAmount.toString();
-	addtaxrefundform2.value.actualRefundAmount = actualRefundAmount.toString();
-	addtaxrefundform2.value.unrefundedAmount = (refundAmount - actualRefundAmount).toString();
+
+	// 更新合计信息
+	addtaxrefundform2.value.refundAmount = refundAmount.toFixed(2);
+	addtaxrefundform2.value.actualRefundAmount = actualRefundAmount.toFixed(2);
+	addtaxrefundform2.value.unrefundedAmount = (refundAmount - actualRefundAmount).toFixed(2);
+}
+
+
+// 在输入应退税额时也需要验证
+const handleRefundAmountChange = (row) => {
+	const refundAmount = parseFloat(row.RefundAmount) || 0;
+	const actualAmount = parseFloat(row.ActualRefundAmount) || 0;
+
+	// 如果修改应退税额后小于实际退税额，则调整实际退税额
+	if (refundAmount < actualAmount) {
+		row.ActualRefundAmount = refundAmount.toString();
+		ElMessage.warning('已自动调整实际退税额以匹配应退税额');
+	}
+
+	calculation();
 }
 
 const SaveClick = () => {
@@ -360,13 +412,17 @@ const state = reactive({
 	optionss: {
 		// 选项列表(动态字典将会从后台获取数据)
 		hr_ourcompany: [],
-		sql_invoicenumber: [],
+		sql_settlement_center_shipping: [],
 		sys_yes_no: [],
-		sql_hr_customerabbr: []
+		sql_hr_customer: []
 	}
 })
 const { optionss } = toRefs(state)
-var dictParams = [{ dictType: 'hr_ourcompany' }, { dictType: 'sql_invoicenumber' }, { dictType: 'sys_yes_no' }, { dictType: 'sql_hr_customerabbr' }]
+var dictParams = [
+	{ dictType: 'hr_ourcompany' },
+	{ dictType: 'sql_settlement_center_shipping' },
+	{ dictType: 'sys_yes_no' },
+	{ dictType: 'sql_hr_customer' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -374,6 +430,13 @@ proxy.getDicts(dictParams).then((response) => {
 	GetTaxRefundInfoList(TaxrefundtableDataCurrentPage.value, TaxrefundtableDataPageSize.value);
 })
 /*动态下拉框end*/
+
+// 添加日期格式化函数
+const formatDate = (dateString) => {
+	if (!dateString) return '';
+	// 处理包含时间的日期字符串
+	return dateString.split(' ')[0];
+}
 
 ///查询条件
 const SearchInvoiceNumber = ref('')
@@ -403,12 +466,11 @@ function GetTaxRefundInfoList(start, end) {
 	}).then(response => {
 		if (response.data != null) {
 			if (response.data.result.length > 0) {
-				response.data.result.forEach(item => {
-					item.isRefunded = item.isRefunded ? '是' : '否';
-					const invoice = state.optionss.sql_invoicenumber.find(x => x.dictValue === item.invoiceNumber);
-					item.invoiceNumber = invoice ? invoice.dictLabel : item.invoiceNumber;
-				});
 				TaxrefundtableData.value = response.data.result;
+				TaxrefundtableData.value.forEach(item => {
+					item.refundDate = formatDate(item.refundDate); // 格式化日期
+					item.company = state.optionss.hr_ourcompany.find(x => x.dictValue === item.company).dictLabel;
+				});
 			} else {
 				TaxrefundtableData.value = [];
 			}
@@ -441,6 +503,7 @@ const CheckTaxrefundtableData = (row) => {
 				addtaxrefundform3.value.remarks = response.data.data.taxRefundInfo.remark;
 				response.data.data.taxRefundDetailList.forEach(item => {
 					const newRow = {
+						Id: item.id,
 						InvoiceNumber: item.invoiceNumber,
 						RefundAmount: item.refundAmount,
 						ActualRefundAmount: item.actualRefundAmount,
@@ -519,4 +582,24 @@ const addtaxrefundform2 = ref({
 const addtaxrefundform3 = ref({
 	remarks: ''
 })
+
+// 定义获取退税单编号的方法
+const getNextTaxRefundNumber = async () => {
+	try {
+		const response = await request({
+			url: 'TaxRefund/GetNextTaxReFundNumber/GetNextNumber',
+			method: 'GET'
+		});
+
+		if (response.code === 200) {
+			// 将获取到的编号设置到表单中
+			addctaxrefundform.value.taxRefundNumber = response.data;
+		} else {
+			ElMessage.error('获取退税单编号失败');
+		}
+	} catch (error) {
+		console.error('Error:', error);
+		ElMessage.error('获取退税单编号失败，请稍后重试');
+	}
+}
 </script>

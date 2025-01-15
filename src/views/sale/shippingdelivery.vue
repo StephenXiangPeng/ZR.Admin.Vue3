@@ -303,6 +303,8 @@
 				<el-table-column prop="customerCode" label="客户货号" width="150"></el-table-column>
 				<el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
 				<el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
+				<el-table-column prop="RemainingQuantityToBeShipped" label="剩余待出货数量" width="150"
+					v-if="false"></el-table-column>
 				<el-table-column prop="shipmentQuantity" label="出货数量" width="150">
 					<template #default="scope">
 						<el-input v-model="scope.row.shipmentQuantity" :disabled="IsEditable" style="width: 100%"
@@ -336,7 +338,7 @@
 				<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small"
-							@click="DeleteShippingDeliveryContrctProduct(scope.row)"
+							@click="DeleteShippingDeliveryContrctProduct(scope.$index)"
 							:disabled="IsEditable">删除</el-button>
 					</template>
 				</el-table-column>
@@ -375,7 +377,7 @@
 				<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small"
-							@click="DeleteShippingDeliveryPurchaseDetails(scope.row)"
+							@click="DeleteShippingDeliveryPurchaseDetails(scope.$index)"
 							:disabled="IsEditable">删除</el-button>
 					</template>
 				</el-table-column>
@@ -461,7 +463,7 @@ const AddShippingDeliveryform = ref({
 	exchangeRate: '',
 	priceTerms: '',
 	departurePort: '',
-	destinationPort: '',
+	destinationPort: null,
 	tradeCountry: '',
 	settlementMethod: '',
 	transportationMethod: '',
@@ -554,32 +556,46 @@ const customerNumberChange = () => {
 	}).then(response => {
 		shippingDeliveryContrctProductTableData.value = [];
 		response.data.forEach((element) => {
-			shippingDeliveryContrctProductTableData.value.push({
-				contractProductID: element.id,
-				contractId: element.contractId,
-				contractNumber: element.contractNumber,
-				productCode: element.productCode,
-				chineseName: element.chineseName,
-				contractQuantity: element.contractQuantity,
-				shipmentQuantity: element.contractQuantity,
-				unit: element.unit,
-				exportUnitPrice: element.exportUnitPrice,
-				exportTotalPrice: element.exportTotalPrice,
-				specialRequirements: element.specialRequirements,
-				outerBoxQuantity: element.outerBoxQuantity,
-				boxCount: element.boxCount,
-				outerBoxUnit: element.outerboxunit,
-				outerBoxLength: element.outerBoxLength,
-				outerBoxWidth: element.outerBoxWidth,
-				outerBoxHeight: element.outerBoxHeight,
-				outerBoxVolume: element.outerBoxVolume,
-				totalVolume: element.totalVolume,
-				outerBoxNetWeight: element.outerBoxNetWeight,
-				outerBoxGrossWeight: element.outerBoxGrossWeight,
-				totalNetWeight: element.totalNetWeight,
-				totalGrossWeight: element.totalGrossWeight
+			var ShippingQuantity = 0;
+			request({
+				url: 'ShippingDeliveries/GetShippingQuantityByContractIDAndProductID/GetShippingQuantity',
+				method: 'GET',
+				params: {
+					ContractID: element.contractId,
+					ProductID: element.id
+				}
+			}).then(ShippingQuantityResponse => {
+				ShippingQuantity = ShippingQuantityResponse.data;
+				shippingDeliveryContrctProductTableData.value.push({
+					contractProductID: element.id,
+					contractId: element.contractId,
+					contractNumber: element.contractNumber,
+					productCode: element.productCode,
+					chineseName: element.chineseName,
+					contractQuantity: element.contractQuantity,
+					RemainingQuantityToBeShipped: element.contractQuantity - ShippingQuantity,
+					shipmentQuantity: element.contractQuantity - ShippingQuantity,
+					unit: element.unit,
+					exportUnitPrice: element.exportUnitPrice,
+					exportTotalPrice: element.exportTotalPrice,
+					specialRequirements: element.specialRequirements,
+					outerBoxQuantity: element.outerBoxQuantity,
+					boxCount: element.boxCount,
+					outerBoxUnit: element.outerboxunit,
+					outerBoxLength: element.outerBoxLength,
+					outerBoxWidth: element.outerBoxWidth,
+					outerBoxHeight: element.outerBoxHeight,
+					outerBoxVolume: element.outerBoxVolume,
+					totalVolume: element.totalVolume,
+					outerBoxNetWeight: element.outerBoxNetWeight,
+					outerBoxGrossWeight: element.outerBoxGrossWeight,
+					totalNetWeight: element.totalNetWeight,
+					totalGrossWeight: element.totalGrossWeight
+				});
 			});
-		});
+		}).catch(error => {
+			console.log(error)
+		})
 		shippingDeliveryContrctProductTableData.value.forEach((element) => {
 			element.unit = state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无';
 			element.outerBoxUnit = state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerBoxUnit.toString())?.dictLabel || '无';
@@ -601,6 +617,7 @@ const customerNumberChange = () => {
 				purchaseContractID: element.purchaseContractID,
 				purchaseContractProductID: element.purchaseContractProductID,
 				purchaseContractNumber: element.purchaseContractNumber,
+				shipmentQuantity: element.contractQuantity,
 				vendorAbbreviation: state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictLabel || '无',
 				productNumber: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
 				chineseName: element.chineseName,
@@ -650,32 +667,47 @@ const referenceContractNumberChange = () => {
 			AddShippingDeliveryform.value.transportationMethod = response.data.contract.transportation.toString();
 			shippingDeliveryContrctProductTableData.value = [];
 			response.data.contractProducts.forEach((element) => {
-				shippingDeliveryContrctProductTableData.value.push({
-					contractId: element.contractId,
-					contractProductId: element.id,
-					contractNumber: response.data.contract.contractNumber,
-					productCode: element.productCode,
-					chineseName: element.chineseName,
-					contractQuantity: element.contractQuantity,
-					shipmentQuantity: element.contractQuantity,
-					unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
-					exportUnitPrice: element.exportUnitPrice,
-					exportTotalPrice: element.exportTotalPrice,
-					specialRequirements: element.specialRequirements,
-					outerBoxQuantity: element.outerBoxQuantity,
-					boxCount: element.boxCount,
-					outerBoxUnit: state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerboxunit.toString())?.dictLabel || '无',
-					outerBoxLength: element.outerBoxLength,
-					outerBoxWidth: element.outerBoxWidth,
-					outerBoxHeight: element.outerBoxHeight,
-					outerBoxVolume: element.outerBoxVolume,
-					totalVolume: element.totalVolume,
-					outerBoxNetWeight: element.outerBoxNetWeight,
-					outerBoxGrossWeight: element.outerBoxGrossWeight,
-					totalNetWeight: element.totalNetWeight,
-					totalGrossWeight: element.totalGrossWeight
+				var ShippingQuantity = 0;
+				request({
+					url: 'ShippingDeliveries/GetShippingQuantityByContractIDAndProductID/GetShippingQuantity',
+					method: 'GET',
+					params: {
+						ContractID: element.contractId,
+						ProductID: element.id
+					}
+				}).then(ShippingQuantityResponse => {
+					ShippingQuantity = ShippingQuantityResponse.data;
+					shippingDeliveryContrctProductTableData.value.push({
+						contractId: element.contractId,
+						contractProductId: element.id,
+						contractNumber: response.data.contract.contractNumber,
+						productCode: element.productCode,
+						chineseName: element.chineseName,
+						contractQuantity: element.contractQuantity,
+						RemainingQuantityToBeShipped: element.contractQuantity - ShippingQuantity,
+						shipmentQuantity: element.contractQuantity - ShippingQuantity,
+						unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
+						exportUnitPrice: element.exportUnitPrice,
+						exportTotalPrice: element.exportTotalPrice,
+						specialRequirements: element.specialRequirements,
+						outerBoxQuantity: element.outerBoxQuantity,
+						boxCount: element.boxCount,
+						outerBoxUnit: state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerboxunit.toString())?.dictLabel || '无',
+						outerBoxLength: element.outerBoxLength,
+						outerBoxWidth: element.outerBoxWidth,
+						outerBoxHeight: element.outerBoxHeight,
+						outerBoxVolume: element.outerBoxVolume,
+						totalVolume: element.totalVolume,
+						outerBoxNetWeight: element.outerBoxNetWeight,
+						outerBoxGrossWeight: element.outerBoxGrossWeight,
+						totalNetWeight: element.totalNetWeight,
+						totalGrossWeight: element.totalGrossWeight
+					});
 				});
-			});
+			}).catch(error => {
+				console.log(error)
+			})
+
 		}
 	}).catch(error => {
 		console.error(error);
@@ -695,6 +727,8 @@ const referenceContractNumberChange = () => {
 					purchaseContractID: element.purchaseContractID,
 					purchaseContractProductID: element.purchaseContractProductID,
 					purchaseContractNumber: element.purchaseContractNumber,
+					purchaseShippingNumber: element.purchaseContractNumber,
+					shipmentQuantity: element.contractQuantity,
 					vendorAbbreviation: state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictLabel || '无',
 					productNumber: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
 					chineseName: element.chineseName,
@@ -836,7 +870,7 @@ const SaveClick = async () => {
 			DeparturePort: AddShippingDeliveryform.value.departurePort ?
 				Number(AddShippingDeliveryform.value.departurePort) : null,
 			DestinationPort: AddShippingDeliveryform.value.destinationPort ?
-				Number(AddShippingDeliveryform.value.destinationPort) : null,
+				AddShippingDeliveryform.value.destinationPort : null,
 			TradeCountry: AddShippingDeliveryform.value.tradeCountry ?
 				Number(AddShippingDeliveryform.value.tradeCountry) : null,
 			SettlementMethod: AddShippingDeliveryform.value.settlementMethod ?
@@ -1072,10 +1106,10 @@ function GetShippingDeliveriesList(start, end) {
 				item.shippingStatus = state.optionss.hr_shipping_status.find(s => s.dictValue === item.shippingStatus.toString())?.dictLabel || '无';
 				item.customerNumber = state.optionss.sql_hr_customer.find(c => c.dictValue === item.customerNumber.toString())?.dictLabel || '无';
 				item.ourCompany = state.optionss.hr_ourcompany.find(c => c.dictValue === item.ourCompany.toString())?.dictLabel || '无';
-				item.bankOfReceipt = state.optionss.hr_bank.find(c => c.dictValue === item.bankOfReceipt.toString())?.dictLabel || '无';
+				item.bankOfReceipt = !item.bankOfReceipt ? '无' : state.optionss.hr_bank.find(c => c.dictValue === item.bankOfReceipt.toString())?.dictLabel || '无';
 				item.exportCurrency = state.optionss.hr_export_currency.find(c => c.dictValue === item.exportCurrency.toString())?.dictLabel || '无';
 				item.departurePort = state.optionss.hr_transport_port.find(c => c.dictValue === item.departurePort.toString())?.dictLabel || '无';
-				item.destinationPort = state.optionss.hr_transport_port.find(c => c.dictValue === item.destinationPort.toString())?.dictLabel || '无';
+				item.destinationPort = item.destinationPort.toString() || '无';
 				item.priceTerms = state.optionss.hr_pricing_term.find(c => c.dictValue === item.priceTerms.toString())?.dictLabel || '无';
 				item.settlementMethod = state.optionss.hr_settlement_way.find(c => c.dictValue === item.settlementMethod.toString())?.dictLabel || '无';
 				item.transportationMethod = state.optionss.hr_transportation_method.find(c => c.dictValue === item.transportationMethod.toString())?.dictLabel || '无';
@@ -1145,7 +1179,7 @@ const CheckShipingDelivery = (row) => {
 			AddShippingDeliveryform.value.salesContractNumber = response.data.shippingDeliveries.salesContractNumber;
 			AddShippingDeliveryform.value.customerContractNumber = response.data.shippingDeliveries.customerContractNumber;
 			AddShippingDeliveryform.value.ourCompany = response.data.shippingDeliveries.ourCompany.toString();
-			AddShippingDeliveryform.value.bankOfReceipt = response.data.shippingDeliveries.bankOfReceipt.toString();
+			AddShippingDeliveryform.value.bankOfReceipt = response.data.shippingDeliveries.bankOfReceipt ? response.data.shippingDeliveries.bankOfReceipt.toString() : '';
 			AddShippingDeliveryform.value.exportCurrency = response.data.shippingDeliveries.exportCurrency.toString();
 			AddShippingDeliveryform.value.exchangeRate = response.data.shippingDeliveries.exchangeRate;
 			AddShippingDeliveryform.value.priceTerms = response.data.shippingDeliveries.priceTerms.toString();
@@ -1251,6 +1285,7 @@ const CheckShipingDelivery = (row) => {
 				});
 			});
 		}
+		GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
 		CreateshippingdeliveryDialog.value = true;
 	}).catch(error => {
 		console.error(error);
@@ -1322,31 +1357,8 @@ const DeleteShippingDeliveryContrctProduct = (row) => {
 			type: 'warning',
 		}
 	).then(() => {
-		// 找到要删除的产品索引
-		const index = shippingDeliveryContrctProductTableData.value.findIndex(
-			item => item.productCode === row.productCode
-		);
-
-		if (index > -1) {
-			// 从数组中删除该产品
-			shippingDeliveryContrctProductTableData.value.splice(index, 1);
-
-			// 如果需要，同时删除对应的采购明细
-			const purchaseIndexesToDelete = shippingDeliveryPurchaseDetailsTableData.value
-				.reduce((indexes, item, i) => {
-					if (item.productNumber === row.productCode) {
-						indexes.push(i);
-					}
-					return indexes;
-				}, [])
-				.reverse(); // 从后往前删除，避免索引变化
-
-			purchaseIndexesToDelete.forEach(i => {
-				shippingDeliveryPurchaseDetailsTableData.value.splice(i, 1);
-			});
-
-			ElMessage.success('删除成功');
-		}
+		shippingDeliveryContrctProductTableData.value.splice(row, 1);
+		ElMessage.success('删除成功');
 	}).catch(() => {
 		// 用户取消删除操作
 		ElMessage.info('已取消删除');
@@ -1363,46 +1375,10 @@ const DeleteShippingDeliveryPurchaseDetails = (row) => {
 			type: 'warning',
 		}
 	).then(() => {
-		// 找到要删除的采购明细索引
-		const index = shippingDeliveryPurchaseDetailsTableData.value.findIndex(
-			item => (
-				item.purchaseContractNumber === row.purchaseContractNumber &&
-				item.productNumber === row.productNumber
-			)
-		);
+		// 从数组中删除该采购明细
+		shippingDeliveryPurchaseDetailsTableData.value.splice(row, 1);
+		ElMessage.success('删除成功');
 
-		if (index > -1) {
-			// 从数组中删除该采购明细
-			shippingDeliveryPurchaseDetailsTableData.value.splice(index, 1);
-
-			// 检查是否需要更新相关的销售合同产品数据
-			const relatedProduct = shippingDeliveryContrctProductTableData.value.find(
-				item => item.productCode === row.productNumber
-			);
-
-			if (relatedProduct) {
-				// 重新计算相关产品的数据
-				// 例如：检查是否还有其他采购明细关联到这个产品
-				const remainingPurchaseDetails = shippingDeliveryPurchaseDetailsTableData.value.filter(
-					item => item.productNumber === row.productNumber
-				);
-
-				if (remainingPurchaseDetails.length === 0) {
-					// 如果没有剩余的采购明细，可以选择：
-					// 1. 提示用户
-					ElMessage.warning(`产品 ${row.productNumber} 已没有关联的采购明细`);
-					// 2. 或者自动删除相关的销售产品
-					// const productIndex = shippingDeliveryContrctProductTableData.value.findIndex(
-					//     item => item.productCode === row.productNumber
-					// );
-					// if (productIndex > -1) {
-					//     shippingDeliveryContrctProductTableData.value.splice(productIndex, 1);
-					// }
-				}
-			}
-
-			ElMessage.success('删除成功');
-		}
 	}).catch(() => {
 		// 用户取消删除操作
 		ElMessage.info('已取消删除');
@@ -1411,33 +1387,81 @@ const DeleteShippingDeliveryPurchaseDetails = (row) => {
 
 // 发货数量变化处理
 const shipmentQuantityChange = (row) => {
-	// 转换为数字类型
-	const newQuantity = parseFloat(row.shipmentQuantity);
-	const contractQuantity = parseFloat(row.contractQuantity);
+	// // 转换为数字类型
+	// const newQuantity = parseFloat(row.shipmentQuantity);
+	// const contractQuantity = parseFloat(row.contractQuantity);
 
-	// 数据验证
-	if (isNaN(newQuantity)) {
-		ElMessage.warning('请输入有效的数字');
-		row.shipmentQuantity = row.contractQuantity;
-		return;
-	}
+	// // 数据验证
+	// if (isNaN(newQuantity)) {
+	// 	ElMessage.warning('请输入有效的数字');
+	// 	row.shipmentQuantity = row.contractQuantity;
+	// 	return;
+	// }
 
-	// 检查是否超过合同数量
-	if (newQuantity > contractQuantity) {
-		ElMessage.warning('发货数量不能超过合同数量');
-		row.shipmentQuantity = row.contractQuantity;
-		return;
-	}
+	// // 检查是否超过合同数量
+	// if (newQuantity > contractQuantity) {
+	// 	ElMessage.warning('发货数量不能超过合同数量');
+	// 	row.shipmentQuantity = row.contractQuantity;
+	// 	return;
+	// }
 
-	// 更新对应的采购合同出运数量
-	const purchaseDetail = shippingDeliveryPurchaseDetailsTableData.value.find(
-		item => item.productNumber === row.productCode
-	);
+	// // 更新对应的采购合同出运数量
+	// const purchaseDetail = shippingDeliveryPurchaseDetailsTableData.value.find(
+	// 	item => item.productNumber === row.productCode
+	// );
 
-	if (purchaseDetail) {
-		purchaseDetail.shipmentQuantity = row.shipmentQuantity;
-	} else {
-		ElMessage.warning(`产品 ${row.productCode} 没有关联的采购明细`);
+	// if (purchaseDetail) {
+	// 	purchaseDetail.shipmentQuantity = row.shipmentQuantity;
+	// } else {
+	// 	ElMessage.warning(`产品 ${row.productCode} 没有关联的采购明细`);
+	// }
+	try {
+		// 转换为数字进行比较
+		const shipmentQty = Number(row.shipmentQuantity);
+		const remainingQty = Number(row.RemainingQuantityToBeShipped);
+
+		// 验证输入是否为有效数字
+		if (isNaN(shipmentQty)) {
+			ElMessage.warning('请输入有效的数字');
+			row.shipmentQuantity = 0;
+			return;
+		}
+
+		// 验证是否为正数
+		if (shipmentQty <= 0) {
+			ElMessage.warning('出货数量必须大于0');
+			row.shipmentQuantity = 0;
+			return;
+		}
+
+		// 验证是否超过剩余待出货数量
+		if (shipmentQty > remainingQty) {
+			ElMessage.warning(`出货数量不能大于剩余待出货数量(${remainingQty})`);
+			row.shipmentQuantity = remainingQty;
+			return;
+		}
+
+		// 更新相关计算
+		row.exportTotalPrice = (shipmentQty * Number(row.exportUnitPrice)).toFixed(2);
+		row.boxCount = Math.ceil(shipmentQty / Number(row.outerBoxQuantity));
+		row.totalVolume = (row.boxCount * Number(row.outerBoxVolume)).toFixed(3);
+		row.totalNetWeight = (shipmentQty * Number(row.outerBoxNetWeight)).toFixed(2);
+		row.totalGrossWeight = (row.boxCount * Number(row.outerBoxGrossWeight)).toFixed(2);
+
+		// 更新对应的采购合同出运数量
+		const purchaseDetail = shippingDeliveryPurchaseDetailsTableData.value.find(
+			item => item.productNumber === row.productCode
+		);
+
+		if (purchaseDetail) {
+			purchaseDetail.shipmentQuantity = row.shipmentQuantity;
+		} else {
+			ElMessage.warning(`产品 ${row.productCode} 没有关联的采购明细`);
+		}
+
+	} catch (error) {
+		console.error('出货数量变更处理错误：', error);
+		ElMessage.error('出货数量计算出错，请重试');
 	}
 };
 

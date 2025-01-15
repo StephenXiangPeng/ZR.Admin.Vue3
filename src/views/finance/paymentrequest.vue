@@ -236,7 +236,8 @@
 						<el-table-column prop="applicationamount" label="申请金额" width="150">
 							<template #default="{ row }">
 								<el-input v-model="row.applicationamount" placeholder="输入申请金额" size="large"
-									style="width: 130px" :disabled="IsDisabled"></el-input>
+									style="width: 130px" :disabled="IsDisabled"
+									@input="CalculatetotalAmount(row)"></el-input>
 							</template>
 						</el-table-column>
 						<el-table-column prop="relevantdates" label="关联日期" width="150">
@@ -335,6 +336,8 @@ const paymentrequesttableData = ref([])//付款申请列表Table
 const CostDetailsTbaleData = ref([])//费用明细Table
 const UnpaidDetailsTbaleData = ref([])//未支付款项详情Table
 const addpaymentrequestform = ref({
+	paymentContractType: '',
+	paymentContractID: 0,
 	applicationNumber: '',
 	applicationDate: '',
 	paymentCategory: '',
@@ -356,9 +359,18 @@ const addpaymentrequestform = ref({
 })
 const CostDetailsTbaleDatahandleDelete = (index: number) => {
 	CostDetailsTbaleData.value.splice(index, 1)
+	CalculatetotalAmount() // 重新计算总金额
 }
 const handleAddRowCostDetails = () => {
 	activeTab.value = 'CostDetailsTab'
+
+	// 获取当前日期
+	const today = new Date();
+	const year = today.getFullYear();
+	const month = String(today.getMonth() + 1).padStart(2, '0');
+	const day = String(today.getDate()).padStart(2, '0');
+	const todayStr = `${year}-${month}-${day}`;
+
 	CostDetailsTbaleData.value.push({
 		productCode: '',
 		customerCode: '',
@@ -368,6 +380,11 @@ const handleAddRowCostDetails = () => {
 		englishSpec: '',
 		associatedordernumber: '',
 		AssociatedOrderNumberOptions: [],
+		applicationamount: '',
+		relevantdates: todayStr, // 设置关联日期默认值为当天
+		relatedmodules: '',
+		specificpaymentitems: '',
+		remark: ''
 	})
 }
 /*动态下拉框start*/
@@ -394,7 +411,9 @@ const state = reactive({
 		hr_associated_modules: [],
 		sql_purchase_contract: [],
 		sql_sale_contracts: [],
-		sql_payment_requests: []
+		sql_payment_requests: [],
+		hr_payment_contract_type: [],
+		sql_shippingdeliveries: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -402,7 +421,7 @@ var dictParams = [{ dictType: 'hr_ourcompany' }, { dictType: 'hr_export_currency
 { dictType: 'hr_payment_category' }, { dictType: 'hr_factory_payment' }, { dictType: 'hr_domestic_charges' }, { dictType: 'hr_foreign_charges' },
 { dictType: 'hr_daily_expenses' }, { dictType: 'sql_supplier_info' }, { dictType: 'hr_currency_code' }, { dictType: 'sql_all_user' }, { dictType: 'sql_hr_sale' },
 { dictType: 'sql_hr_purchase' }, { dictType: 'sql_hr_finance' }, { dictType: 'sql_hr_dept' }, { dictType: 'hr_associated_modules' }, { dictType: 'sql_purchase_contract' },
-{ dictType: 'sql_sale_contracts' }, { dictType: 'sql_payment_requests' }]
+{ dictType: 'sql_sale_contracts' }, { dictType: 'sql_payment_requests' }, { dictType: 'hr_payment_contract_type' }, { dictType: 'sql_shippingdeliveries' }]
 
 async function fetchDataAndExecute() {
 	try {
@@ -446,6 +465,9 @@ const relatedmoduleshandleChange = (row) => {
 		case '2':
 			row.AssociatedOrderNumberOptions = state.optionss.sql_sale_contracts;
 			break;
+		case '3':
+			row.AssociatedOrderNumberOptions = state.optionss.sql_shippingdeliveries;
+			break;
 		default:
 			row.AssociatedOrderNumberOptions = [];
 			break;
@@ -481,6 +503,8 @@ const payeeCodeChange = () => {
 
 const paymentRequestRequest = reactive({
 	id: 0,
+	paymentContractType: 0,
+	paymentContractID: 0,
 	ApplicationNumber: '',
 	ApplicationDate: '',
 	PaymentCategory: 0,
@@ -841,6 +865,15 @@ const AddPaymentDialog = async () => {
 	resetForm();
 	await getNextPaymentNumber();
 	IsDisabled.value = false;
+
+	// 设置默认申请日期为当天
+	const today = new Date();
+	const year = today.getFullYear();
+	const month = String(today.getMonth() + 1).padStart(2, '0');
+	const day = String(today.getDate()).padStart(2, '0');
+	addpaymentrequestform.value.applicationDate = `${year}-${month}-${day}`;
+
+	// 设置部门和申请人
 	if (userInfo.deptId.toString() == "0") {
 		addpaymentrequestform.value.applicationDepartment = state.optionss.sql_hr_dept.find((item) => item.dictValue == "205").dictValue;
 	} else {
@@ -935,4 +968,23 @@ const resetForm = () => {
 	// 清空费用明细表格数据
 	CostDetailsTbaleData.value = [];
 };
+
+const CalculatetotalAmount = () => {
+	// 初始化总金额为0
+	let total = 0;
+
+	// 遍历费用明细表格中的所有行
+	CostDetailsTbaleData.value.forEach(row => {
+		// 将字符串转换为数字并累加
+		// 如果applicationamount为空或非数字，使用0
+		const amount = parseFloat(row.applicationamount) || 0;
+		total += amount;
+	});
+
+	// 更新表单中的总金额字段
+	addpaymentrequestform.value.totalAmount = total.toFixed(2);
+	// 更新未付金额字段（总金额 - 已付金额）
+	const paidAmount = parseFloat(addpaymentrequestform.value.paidAmount) || 0;
+	addpaymentrequestform.value.unpaidAmount = (total - paidAmount).toFixed(2);
+}
 </script>
