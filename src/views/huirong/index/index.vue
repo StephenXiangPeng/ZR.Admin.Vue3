@@ -78,56 +78,36 @@
       </el-col>
     </el-row>
 
-    <!-- 计划任务 -->
-    <el-calendar>
+    <!-- 计划任务日历 -->
+    <el-calendar class="custom-calendar" v-model="currentDate">
       <template #date-cell="{ data }">
-        <el-row :class="data.isSelected ? 'is-selected' : 'sds'">
-          {{ data.day.split('-').slice(1).join('-') }}
-          {{ data.isSelected ? '✔️' : '' }}
-        </el-row>
-        <div v-for="(item, index) in textContent(data.day)" :key="index">
-          <e-row>
-            <el-col class="center">
-              <el-tag type="warning" class="tag">
-                <el-row v-if="item.xianyue == 0">
-                  <el-col :span="17" class="tag">
-                    <span>逾期的任务</span>
-                  </el-col>
-                  <el-col :span="1"></el-col>
-                  <el-col :span="6" class="tag2">
-                    <span>0</span>
-                  </el-col>
-                </el-row>
-                <el-row v-else>
-                  <el-col :span="17" class="tag">
-                    <span>逾期的任务</span>
-                  </el-col>
-                  <el-col :span="1"></el-col>
-                  <el-col :span="6" class="tag2">
-                    <span>{{ item.xianyue }}</span>
-                  </el-col>
-                </el-row>
-              </el-tag>
-            </el-col>
-          </e-row>
-          <!-- <el-row style="margin-top: 10px" class="yuyue" v-if="item.yiyue && item.sy == 0">
-            <el-col :span="11" class="center">
-              <span>已约</span><span class="center2" style="">0</span></el-col>
-            <el-col :span="2" class="center">|</el-col>
-            <el-col :span="11" class="center">
-              <span>剩余</span><span class="center2">0</span></el-col>
-          </el-row>
-          <el-row style="margin-top: 10px" class="yuyue" v-else>
-            <el-col :span="11" class="center">
-              <span>已约</span><span class="center2" style="">{{
-                item.yiyue
-              }}</span></el-col>
-            <el-col :span="2" class="center">|</el-col>
-            <el-col :span="11" class="center">
-              <span>剩余</span><span class="center2">{{ item.sy }}</span></el-col>
-          </el-row> -->
-        </div>
+        <div class="calendar-cell">
+          <!-- 日期显示部分 -->
+          <div :class="[
+            'date-text',
+            isToday(data.day) ? 'is-today' : '',
+            data.isSelected ? 'is-selected' : '',
+            calendarDates.find(d => formatDate(d.date) === data.day)?.type
+          ]">
+            {{ data.day.split('-').slice(1).join('-') }}
+            <span v-if="isToday(data.day)" class="today-icon">今日</span>
+          </div>
 
+          <!-- 任务列表部分 -->
+          <div class="tasks-container">
+            <template v-for="task in getDateTasks(data.day)" :key="task.id">
+              <el-tooltip
+                :content="`${task.itemName}<br/>时间：${formatDateTime(task.timePoint)}<br/>备注：${task.remark || '无'}`"
+                raw-content placement="top">
+                <div class="task-item" :class="{ 'is-overdue': isOverdue(task.timePoint) }">
+                  <el-tag size="small" :type="isOverdue(task.timePoint) ? 'danger' : 'warning'">
+                    {{ task.itemName }}
+                  </el-tag>
+                </div>
+              </el-tooltip>
+            </template>
+          </div>
+        </div>
       </template>
     </el-calendar>
 
@@ -2112,6 +2092,17 @@ import { Picture } from '@element-plus/icons-vue'
 import Salecontract from '@/views/sale/salecontract.vue';
 import { id } from 'element-plus/es/locale';
 
+// 添加当前日期的响应式引用
+const currentDate = ref(new Date())
+
+// 添加判断是否为今天的方法
+const isToday = (dateString) => {
+  const today = new Date()
+  const date = new Date(dateString)
+  return date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+}
 
 // #region 财务收款单相关
 // 对话框显示控制
@@ -3429,28 +3420,28 @@ const calendarState = reactive({
   //测试数据
   calendarData: [
     {
-      day: "2023-11-04",
-      xianyue: 400,
+      day: "2025-01-04",
+      xianyue: 100,
       yiyue: 5,
       sy: 1,
     },
     {
-      day: "2023-11-05",
-      xianyue: 500,
+      day: "2025-01-05",
+      xianyue: 100,
       yiyue: 5,
       sy: 1,
     },
     {
-      day: "2023-11-06",
-      xianyue: 200,
+      day: "2025-01-06",
+      xianyue: 100,
       yiyue: 5,
       sy: 1,
     },
     {
-      day: "2023-11-07",
-      xianyue: 0,
-      yiyue: 0,
-      sy: 0,
+      day: "2025-01-07",
+      xianyue: 100,
+      yiyue: 5,
+      sy: 1,
     },
   ],
 });
@@ -3458,7 +3449,6 @@ const calendarState = reactive({
 //处理日期获取后台数据动态渲染上去
 const textContent = (date) => {
   //当前date是拿到上面日历组件当前的日期值 根据该值去筛选测试数据找到对应各个日期下对应的数据return出去
-  console.log(date, 1111);
   return calendarState.calendarData.filter((item) => {
     return date === item.day;
   });
@@ -3651,6 +3641,161 @@ const TaxRefundDetailsData = ref([])
 const DomesticPaymentsData = ref([])
 const InternationalPaymentsData = ref([])
 
+//#region 计划任务日历
+// 存储当前日历显示的所有日期
+const calendarDates = ref([])
+
+// 监听日历月份变化
+const handleMonthChange = (date) => {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+
+  // 获取当月第一天和最后一天
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+
+  // 获取当月第一天是星期几（0-6，0代表星期日）
+  const firstDayWeek = firstDay.getDay()
+
+  // 获取上个月需要显示的天数
+  const prevMonthDays = firstDayWeek === 0 ? 6 : firstDayWeek - 1
+
+  // 获取当月的总天数
+  const currentMonthDays = lastDay.getDate()
+
+  // 计算下个月需要显示的天数（确保总行数为6行）
+  const totalDays = 42 // 6行 * 7天
+  const nextMonthDays = totalDays - prevMonthDays - currentMonthDays
+
+  const dates = []
+
+  // 添加上个月的日期
+  const prevMonth = new Date(year, month - 1)
+  const prevMonthLastDay = new Date(year, month, 0).getDate()
+  for (let i = prevMonthDays - 1; i >= 0; i--) {
+    const day = prevMonthLastDay - i
+    dates.push({
+      date: new Date(prevMonth.getFullYear(), prevMonth.getMonth(), day),
+      type: 'prev-month'
+    })
+  }
+
+  // 添加当月的日期
+  for (let i = 1; i <= currentMonthDays; i++) {
+    dates.push({
+      date: new Date(year, month, i),
+      type: 'current-month'
+    })
+  }
+
+  // 添加下个月的日期
+  const nextMonth = new Date(year, month + 1)
+  for (let i = 1; i <= nextMonthDays; i++) {
+    dates.push({
+      date: new Date(nextMonth.getFullYear(), nextMonth.getMonth(), i),
+      type: 'next-month'
+    })
+  }
+
+  calendarDates.value = dates
+}
+
+// 监听当前日期变化
+watch(currentDate, (newDate) => {
+  handleMonthChange(newDate)
+}, { immediate: true })
+
+
+// 在模板中使用
+const getDateInfo = (date) => {
+  return {
+    formattedDate: formatDate(date),
+    isCurrentMonth: date.getMonth() === currentDate.value.getMonth(),
+    isToday: isToday(formatDate(date))
+  }
+}
+
+// 获取当前月份的所有日期
+const currentMonthDates = calendarDates.value.filter(d => d.type === 'current-month')
+
+// 获取所有显示的日期的格式化字符串
+const allFormattedDates = calendarDates.value.map(d => formatDate(d.date))
+
+// 获取当前显示的日期范围
+const dateRange = {
+  start: formatDate(calendarDates.value[0].date),
+  end: formatDate(calendarDates.value[calendarDates.value.length - 1].date)
+}
+
+// 存储计划任务数据
+const planTaskItems = ref([])
+
+// 获取计划任务数据
+const getPlanTaskItems = async (startDate, endDate) => {
+  try {
+    const response = await request({
+      url: 'PlanTasks/GetPlanTaskItemsByUserIDAndDate/GetPlanTaskItems',
+      method: 'GET',
+      params: {
+        startDate,
+        endDate
+      }
+    })
+    if (response.code === 200) {
+      // 确保response.data是数组
+      planTaskItems.value = Array.isArray(response.data) ? response.data : []
+    } else {
+      ElMessage.error('获取计划任务失败：' + response.msg)
+      planTaskItems.value = []
+    }
+  } catch (error) {
+    console.error('获取计划任务出错:', error)
+    ElMessage.error('获取计划任务出错')
+    planTaskItems.value = []
+  }
+}
+
+// 获取指定日期的任务
+const getDateTasks = (dateString) => {
+  if (!Array.isArray(planTaskItems.value)) {
+    return []
+  }
+
+  const dateData = planTaskItems.value.find(item => {
+    // 将接口返回的日期格式化为 YYYY-MM-DD 格式进行比较
+    const itemDate = formatDate(new Date(item.date))
+    return itemDate === dateString
+  })
+
+  return dateData?.items || []
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTimeString) => {
+  const date = new Date(dateTimeString)
+  if (isNaN(date)) {
+    return ''
+  }
+  return `${formatDate(date)} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+// 判断任务是否过期
+const isOverdue = (timePoint) => {
+  const date = new Date(timePoint)
+  return !isNaN(date) && date < new Date()
+}
+
+// 监听日历日期范围变化，获取对应时间段的任务
+watch(calendarDates, (newDates) => {
+  if (Array.isArray(newDates) && newDates.length > 0) {
+    const startDate = formatDate(newDates[0].date)
+    const endDate = formatDate(newDates[newDates.length - 1].date)
+    if (startDate && endDate) {
+      getPlanTaskItems(startDate, endDate)
+    }
+  }
+}, { immediate: true })
+//#endregion
 </script>
 
 
@@ -3693,8 +3838,6 @@ const InternationalPaymentsData = ref([])
 }
 
 //财务任务 图片预览样式结束
-
-
 
 .home {
   .home-card-more {
@@ -3768,10 +3911,6 @@ const InternationalPaymentsData = ref([])
   }
 }
 
-// .is-selected {
-//   color: #1989fa;
-// }</style>
-<style scoped>
 :deep .el-calendar__body {
   padding: 4px 20px 35px;
 }
@@ -3851,5 +3990,157 @@ const InternationalPaymentsData = ref([])
 
 :deep .el-calendar__header {
   justify-content: center;
+}
+
+/* 日历整体样式 */
+.custom-calendar {
+  margin: 20px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 日历单元格样式 */
+.calendar-cell {
+  min-height: 80px;
+  padding: 8px;
+}
+
+/* 日期文本样式 */
+.date-text {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #606266;
+}
+
+/* 选中日期的样式 */
+.date-text.is-selected {
+  color: #409EFF;
+  font-weight: bold;
+}
+
+/* 选中图标样式 */
+.selected-icon {
+  margin-left: 4px;
+  color: #67C23A;
+}
+
+/* 任务标签容器样式 */
+.task-tag-container {
+  margin: 4px 0;
+}
+
+/* 任务标签样式 */
+.task-tag {
+  width: 100%;
+  margin: 2px 0;
+}
+
+/* 任务标签文本样式 */
+.task-label {
+  font-size: 12px;
+}
+
+/* 任务数量样式 */
+.task-count {
+  text-align: right;
+  font-weight: bold;
+}
+
+/* 有任务时的样式 */
+.has-tasks {
+  color: #E6A23C;
+}
+
+/* 无任务时的样式 */
+.no-tasks {
+  color: #909399;
+}
+
+/* 添加今天日期的样式 */
+.date-text.is-today {
+  color: #409EFF;
+  font-weight: bold;
+  background-color: #ecf5ff;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+/* 今天图标样式 */
+.today-icon {
+  display: inline-block;
+  padding: 0 4px;
+  height: 18px;
+  line-height: 18px;
+  background-color: #409EFF;
+  color: white;
+  font-size: 12px;
+  text-align: center;
+  border-radius: 9px;
+  /* 改为圆角矩形 */
+  margin-left: 4px;
+}
+
+/* 选中日期的样式调整 */
+.date-text.is-selected {
+  color: #409EFF;
+  font-weight: bold;
+  background-color: #ecf5ff;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+/* 同时选中且是今天的样式 */
+.date-text.is-today.is-selected {
+  background-color: #409EFF;
+  color: white;
+}
+
+/* 添加过渡效果 */
+.date-text {
+  transition: all 0.3s ease;
+}
+
+/* 悬停效果 */
+.calendar-cell:hover .date-text:not(.is-selected):not(.is-today) {
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.tasks-container {
+  margin-top: 4px;
+  max-height: 60px;
+  overflow-y: auto;
+}
+
+.task-item {
+  margin: 2px 0;
+}
+
+.task-item .el-tag {
+  width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.task-item.is-overdue .el-tag {
+  background-color: var(--el-color-danger-light-9);
+  border-color: var(--el-color-danger);
+  color: var(--el-color-danger);
+}
+
+/* 自定义滚动条样式 */
+.tasks-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.tasks-container::-webkit-scrollbar-thumb {
+  background-color: #E4E7ED;
+  border-radius: 2px;
+}
+
+.tasks-container::-webkit-scrollbar-track {
+  background-color: transparent;
 }
 </style>
