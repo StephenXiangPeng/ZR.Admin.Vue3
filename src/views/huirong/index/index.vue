@@ -99,7 +99,8 @@
               <el-tooltip
                 :content="`${task.itemName}<br/>时间：${formatDateTime(task.timePoint)}<br/>备注：${task.remark || '无'}`"
                 raw-content placement="top">
-                <div class="task-item" :class="{ 'is-overdue': isOverdue(task.timePoint) }">
+                <div class="task-item" :class="{ 'is-overdue': isOverdue(task.timePoint) }"
+                  @click="handleTaskClick(task)">
                   <el-tag size="small" :type="isOverdue(task.timePoint) ? 'danger' : 'warning'">
                     {{ task.itemName }}
                   </el-tag>
@@ -2074,6 +2075,21 @@
         </span>
       </template>
     </el-dialog>
+    <!-- 添加确认对话框 -->
+    <el-dialog v-model="confirmDialogVisible" title="确认完成任务" width="30%">
+      <div class="completion-dialog">
+        <p>确认完成任务：{{ currentTask?.itemName }}？</p>
+        <el-input v-model="completionNote" type="textarea" rows="3" placeholder="请输入备注（选填）"></el-input>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="confirmDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="confirmTaskCompletion">
+            确认完成
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -3795,6 +3811,46 @@ watch(calendarDates, (newDates) => {
     }
   }
 }, { immediate: true })
+
+// 添加确认对话框相关的响应式变量
+const confirmDialogVisible = ref(false)
+const currentTask = ref(null)
+const completionNote = ref('')
+
+// 处理任务点击事件
+const handleTaskClick = (task) => {
+  currentTask.value = task
+  confirmDialogVisible.value = true
+}
+
+// 确认完成任务
+const confirmTaskCompletion = async () => {
+  try {
+    const res = await request.get(`PlanTasks/ConfirmationOfCompletion/ConfirmItem`, {
+      params: {
+        ID: currentTask.value.id,
+        remark: completionNote.value
+      }
+    });
+    if (res.code === 200) {
+      ElMessage.success('任务完成确认成功');
+      // 刷新当前日历数据
+      const startDate = formatDate(calendarDates.value[0].date)
+      const endDate = formatDate(calendarDates.value[calendarDates.value.length - 1].date)
+      await getPlanTaskItems(startDate, endDate)
+    } else {
+      ElMessage.error(res.msg || '确认失败');
+    }
+  } catch (error) {
+    console.error('确认失败:', error);
+    ElMessage.error('确认失败：' + (error.message || '未知错误'));
+  } finally {
+    confirmDialogVisible.value = false;
+    completionNote.value = '';
+    currentTask.value = null;
+  }
+}
+
 //#endregion
 </script>
 

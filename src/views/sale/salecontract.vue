@@ -70,8 +70,9 @@
 				<el-table-column prop="stockProgress" label="备货进度" width="150"></el-table-column>
 				<el-table-column prop="deliveryProgress" label="交货进度" width="150"></el-table-column>
 				<el-table-column prop="estimatedProfitMargin" label="预估利润率" width="150"></el-table-column>
-				<el-table-column fixed="right" label="操作" width="100">
+				<el-table-column fixed="right" label="操作" width="300">
 					<template #default="scope">
+						<el-button type="text" size="small" icon="Bell" @click="openReminderDialog()">设置提醒</el-button>
 						<el-button type="text" size="small" @click="checkContractsDetails(scope.row)">查看详情</el-button>
 						<el-button type="text" size="small" @click="GeneratePDF(scope.row)">生成PDF</el-button>
 					</template>
@@ -914,6 +915,25 @@
 					<el-button type="danger" @click="SearchProcutDialog = false">
 						关闭
 					</el-button>
+				</span>
+			</template>
+		</el-dialog>
+		<el-dialog v-model="reminderDialogVisible" title="设置提醒" width="30%" :close-on-click-modal="false">
+			<div class="reminder-dialog">
+				<el-form :model="reminderForm" label-width="100px">
+					<el-form-item label="提醒内容">
+						<el-input v-model="reminderForm.message" type="text" placeholder="请输入提醒内容"></el-input>
+					</el-form-item>
+					<el-form-item label="提醒时间">
+						<el-date-picker v-model="reminderForm.reminderTime" type="datetime" placeholder="选择提醒时间"
+							format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm:ss"></el-date-picker>
+					</el-form-item>
+				</el-form>
+			</div>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button @click="reminderDialogVisible = false">取消</el-button>
+					<el-button type="primary" @click="setReminder">确定</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -2699,6 +2719,52 @@ const FreightChange = () => {
 		IsOceanFreightEdit.value = false;
 	}
 }
+// region 设置提醒
+// 添加提醒对话框相关的响应式变量
+const reminderDialogVisible = ref(false)
+const reminderForm = ref({
+	message: '',
+	reminderTime: null
+})
+
+// 打开提醒设置对话框
+const openReminderDialog = () => {
+	reminderDialogVisible.value = true;
+}
+// 设置提醒
+const setReminder = async () => {
+	try {
+		if (!reminderForm.value.message || !reminderForm.value.reminderTime) {
+			ElMessage.warning('请填写完整信息')
+			return
+		}
+
+		const res = await request({
+			url: 'TaskReminder/AddTaskReminder/Add',
+			method: 'GET',
+			params: {
+				userId: '', // 这个参数服务端会自动获取，可以传空
+				message: reminderForm.value.message,
+				reminderTime: reminderForm.value.reminderTime
+			}
+		})
+		if (res.code === 200) {
+			ElMessage.success('提醒设置成功')
+			reminderDialogVisible.value = false
+			// 重置表单
+			reminderForm.value = {
+				message: '',
+				reminderTime: null
+			}
+		} else {
+			ElMessage.error(res.msg || '设置失败')
+		}
+	} catch (error) {
+		console.error('设置提醒失败:', error)
+		ElMessage.error('设置提醒失败：' + (error.message || '未知错误'))
+	}
+}
+// endregion 设置提醒
 </script>
 <style scoped>
 /* 基础红色文本 */
