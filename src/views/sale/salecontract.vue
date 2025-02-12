@@ -72,7 +72,8 @@
 				<el-table-column prop="estimatedProfitMargin" label="预估利润率" width="150"></el-table-column>
 				<el-table-column fixed="right" label="操作" width="300">
 					<template #default="scope">
-						<el-button type="text" size="small" icon="Bell" @click="openReminderDialog()">设置提醒</el-button>
+						<el-button type="text" size="small" icon="Bell"
+							@click="openReminderDialog(scope.row)">设置提醒</el-button>
 						<el-button type="text" size="small" @click="checkContractsDetails(scope.row)">查看详情</el-button>
 						<el-button type="text" size="small" @click="GeneratePDF(scope.row)">生成PDF</el-button>
 					</template>
@@ -921,8 +922,11 @@
 		<el-dialog v-model="reminderDialogVisible" title="设置提醒" width="30%" :close-on-click-modal="false">
 			<div class="reminder-dialog">
 				<el-form :model="reminderForm" label-width="100px">
+					<el-form-item label="项目分类">
+						<el-input v-model="reminderForm.title" type="text" placeholder="请输入项目分类" disabled></el-input>
+					</el-form-item>
 					<el-form-item label="提醒内容">
-						<el-input v-model="reminderForm.message" type="text" placeholder="请输入提醒内容"></el-input>
+						<el-input v-model="reminderForm.content" type="text" placeholder="请输入提醒内容"></el-input>
 					</el-form-item>
 					<el-form-item label="提醒时间">
 						<el-date-picker v-model="reminderForm.reminderTime" type="datetime" placeholder="选择提醒时间"
@@ -2723,18 +2727,21 @@ const FreightChange = () => {
 // 添加提醒对话框相关的响应式变量
 const reminderDialogVisible = ref(false)
 const reminderForm = ref({
-	message: '',
+	title: '',
+	content: '',
 	reminderTime: null
 })
 
 // 打开提醒设置对话框
-const openReminderDialog = () => {
+const openReminderDialog = (row) => {
 	reminderDialogVisible.value = true;
+	reminderForm.value.title = '销售合同';
+	reminderForm.value.content = '合同号：' + row.contractNumber;
 }
 // 设置提醒
 const setReminder = async () => {
 	try {
-		if (!reminderForm.value.message || !reminderForm.value.reminderTime) {
+		if (!reminderForm.value.content || !reminderForm.value.reminderTime) {
 			ElMessage.warning('请填写完整信息')
 			return
 		}
@@ -2744,7 +2751,8 @@ const setReminder = async () => {
 			method: 'GET',
 			params: {
 				userId: '', // 这个参数服务端会自动获取，可以传空
-				message: reminderForm.value.message,
+				title: reminderForm.value.title,
+				content: reminderForm.value.content,
 				reminderTime: reminderForm.value.reminderTime
 			}
 		})
@@ -2753,7 +2761,8 @@ const setReminder = async () => {
 			reminderDialogVisible.value = false
 			// 重置表单
 			reminderForm.value = {
-				message: '',
+				title: '',
+				content: '',
 				reminderTime: null
 			}
 		} else {

@@ -115,18 +115,25 @@
     <!-- 工作任务 -->
     <span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;工作任务</span>
     <el-divider></el-divider>
-    <el-table :data="tableData" style="width: 50%;">
-      <el-table-column fixed prop="date" label="项目分类" style="width: 25%;" />
-      <el-table-column prop="name" label="内容" style="width: 25%;" />
-      <el-table-column prop="state" label="原设定时间节点" style="width: 25%;" />
-      <el-table-column fixed="right" label="Operations" style="width: 25%;">
-        <template #default>
-          <el-button link type="primary" size="small" @click="handleClick">Detail</el-button>
-          <el-button link type="primary" size="small">Edit</el-button>
+    <el-table :data="TaskReminderTableData" style="width: 50%;">
+      <el-table-column prop="taskName" label="项目分类" style="width: 25%;" />
+      <el-table-column prop="taskDescription" label="内容" style="width: 25%;" />
+      <el-table-column prop="reminderTime" label="原设定时间节点" style="width: 25%;">
+        <template #default="scope">
+          {{ formatDateTime(scope.row.reminderTime) }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="isCompleted" label="是否通知" style="width: 25%;" v-if="false">
+        <template #default="scope">
+          <span :class="scope.row.isCompleted ? 'text-success' : 'text-danger'">
+            {{ scope.row.isCompleted ? '已通知' : '未通知' }}
+          </span>
         </template>
       </el-table-column>
     </el-table>
-    <el-pagination background layout="prev, pager, next" :total="1000" style="margin-top: 5px;" />
+    <el-pagination v-model:current-page="TaskReminderTableCurrentPage" v-model:page-size="TaskReminderTablePageSize"
+      :total="TaskReminderTableTotalItems" @current-change="TaskReminderTableshandlePageChange"
+      layout="total, prev, pager, next" />
 
     <div style="margin-top: 30px;"></div>
     <!-- 财务任务 -->
@@ -175,16 +182,61 @@
     <div style="margin-top: 30px;"></div>
     <span style="font-size: 20px; font-weight: bold; ">&nbsp;&nbsp;商机</span>
     <el-divider></el-divider>
-    <div style="width: 100%; height: 600px;">
-      <div style="margin-top: 5px;margin-bottom: 5px;">
+    <div style="display: flex; margin-top: 5px;">
+      <div v-for="stage in sortedStages" :key="stage.salesStage" style="width: 20%; height: 560px;">
+        <!-- 标题栏 -->
+        <div
+          style="background-color: #41c16e; height: 8%; padding: 10px; text-align: center; color: white; font-weight:500;">
+          {{ stage.salesStage }}（{{ stage.count }}）
+        </div>
+
+        <!-- 金额显示 - 询盘和沟通需求显示0，其他阶段显示实际金额 -->
+        <div style="text-align: center;">
+          <span style="color: black; font-weight: 600;">
+            CNY {{ shouldShowZeroAmount(stage.salesStage) ? '0.00' : formatAmount(stage.totalAmount) }}
+          </span>
+        </div>
+
+        <!-- 商机卡片列表 -->
+        <div style="overflow: auto; height: 490px;">
+          <el-card v-for="item in stage.details" :key="item.id" style="margin: 3px;" class="box-card">
+            <template #header>
+              <div class="card-header">
+                <span>商机编号：{{ item.opportunityNumber }}</span>
+              </div>
+            </template>
+            <div class="text item">商机名称：
+              <el-tooltip :content="item.businessName" placement="top" :disabled="item.businessName.length <= 8">
+                <span class="truncate-text">{{ truncateText(item.businessName, 8) }}</span>
+              </el-tooltip>
+            </div>
+            <div class="text item">客户邮箱：
+              <el-tooltip :content="item.customer" placement="top" :disabled="item.customer.length <= 16">
+                <span class="truncate-text">{{ truncateText(item.customer, 16) }}</span>
+              </el-tooltip>
+            </div>
+            <div class="text item">创建时间：{{ formatDateTime(item.create_time) }}</div>
+            <!-- 根据销售阶段显示不同信息 -->
+            <div class="text item" v-if="shouldShowAmount(stage.salesStage)">
+              预估金额：{{ formatAmount(item.amount) }}
+            </div>
+            <div class="text item" v-if="stage.salesStage === '沟通需求' && item.emailcreatetime">
+              最后沟通：{{ formatDateTime(item.emailcreatetime) }}
+            </div>
+          </el-card>
+        </div>
+      </div>
+    </div>
+    <!-- <div style="width: 100%; height: 600px;"> -->
+    <!-- <div style="margin-top: 5px;margin-bottom: 5px;">
         <span style="color: #6d6d71;">总销售金额：</span><span style="color: black; font-weight: 600;">CNY 1,247.97万 </span>
         <el-divider direction="vertical" />
         <span style="color: #6d6d71;">进行中金额：</span><span style="color: #51bf5d; font-weight: 600;">CNY 1,247.97万 </span>
         <el-divider direction="vertical" />
         <span style="color: #6d6d71;">赢单金额：</span><span style="color: #338bff; font-weight: 600;">CNY 1,247.97万 </span>
-      </div>
+      </div> -->
 
-      <div style="display: flex; margin-top: 5px;">
+    <!-- <div style="display: flex; margin-top: 5px;">
         <div style="width: 20%;; height: 560px;">
           <div
             style="background-color: #41c16e;height: 8%; padding: 10px; text-align: center; color: white; font-weight:500; ">
@@ -247,7 +299,7 @@
         <div style="width: 20%; height: 560px;overflow: auto;">
           <div
             style="background-color: #41c16e;height: 8%;padding: 10px; text-align: center; color: white; font-weight:500; ">
-            第一次报价（1000）
+            初次报价（1000）
           </div>
           <div style="text-align: center;">
             <span style="color: black; font-weight: 600; ">CNY 50.88 万 </span>
@@ -539,9 +591,9 @@
             </el-card>
           </div>
         </div>
-      </div>
+      </div> -->
 
-    </div>
+    <!-- </div> -->
 
     <el-row :gutter="15" style=" margin-top: 30px; font-size: 25px;">
       <el-col :lg="8" class="mb10">
@@ -2094,7 +2146,7 @@
 </template>
 
 <script lang="ts" setup>
-import { getCurrentInstance, reactive, toRefs, ref } from 'vue'
+import { getCurrentInstance, reactive, toRefs, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from "element-plus";
 import request from '@/utils/request';
 import dayjs from 'dayjs';
@@ -2107,6 +2159,82 @@ import SalesContractdialog from '@/views/components/SalesContractdialog.vue';
 import { Picture } from '@element-plus/icons-vue'
 import Salecontract from '@/views/sale/salecontract.vue';
 import { id } from 'element-plus/es/locale';
+
+// #region 商机看板
+
+// 文本截断方法
+const truncateText = (text, length) => {
+  if (!text) return ''
+  if (text.length <= length) return text
+  return text.slice(0, length) + '...'
+}
+
+function getBusinessDashboard() {
+  return request({
+    url: 'BusinessOpportunity/GetBusinessOpportunityDashboardDataByUser/GetDashboardData',
+    method: 'get'
+  })
+}
+// 定义固定的阶段顺序
+const stageOrder = ['询盘', '初次报价', '沟通需求', '再次报价', '合同确定']
+
+// 根据固定顺序排序并补充缺失的阶段
+const sortedStages = computed(() => {
+  return stageOrder.map(stageName => {
+    const existingStage = businessStages.value.find(s => s.salesStage === stageName)
+    return existingStage || {
+      salesStage: stageName,
+      count: 0,
+      details: [],
+      totalAmount: 0
+    }
+  })
+})
+const businessStages = ref([])
+
+// 判断是否显示金额为0
+const shouldShowZeroAmount = (stage) => {
+  return ['询盘', '沟通需求'].includes(stage)
+}
+
+// 判断是否显示金额
+const shouldShowAmount = (stage) => {
+  return ['初次报价', '再次报价', '合同确定'].includes(stage)
+}
+
+// 格式化金额显示
+const formatAmount = (amount) => {
+  if (amount === null || amount === undefined) {
+    return '0.00'
+  }
+  return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+// 获取看板数据
+const fetchDashboardData = async () => {
+  try {
+    const response = await getBusinessDashboard()
+    if (response.code === 200) {
+      const stages = response.data.map(stageData => ({
+        salesStage: stageData.salesStage,
+        count: stageData.count,
+        details: stageData.details,
+        totalAmount: shouldShowAmount(stageData.salesStage)
+          ? stageData.details.reduce((sum, item) => sum + (item.amount || 0), 0)
+          : 0
+      }))
+
+      businessStages.value = stages
+    }
+  } catch (error) {
+    console.error('获取看板数据失败:', error)
+  }
+}
+
+onMounted(() => {
+  fetchDashboardData()
+})
+// #endregion
 
 // 添加当前日期的响应式引用
 const currentDate = ref(new Date())
@@ -3475,60 +3603,7 @@ const handleClick = () => {
   var num = 24700000000000 / 510000;
 }
 
-const tableData = [
-  {
-    date: '2016-05-03',
-    name: 'Tom',
-    state: 'California'
 
-  },
-  {
-    date: '2016-05-02',
-    name: 'Tom',
-    state: 'California'
-  },
-  {
-    date: '2016-05-04',
-    name: 'Tom',
-    state: 'California'
-  },
-  {
-    date: '2016-05-01',
-    name: 'Tom',
-    state: 'California',
-    city: 'Los Angeles'
-  }, {
-    date: '2016-05-03',
-    name: 'Tom',
-    state: 'California'
-
-  }, {
-    date: '2016-05-03',
-    name: 'Tom',
-    state: 'California'
-
-  },
-  {
-    date: '2016-05-02',
-    name: 'Tom',
-    state: 'California'
-  },
-  {
-    date: '2016-05-04',
-    name: 'Tom',
-    state: 'California'
-  },
-  {
-    date: '2016-05-01',
-    name: 'Tom',
-    state: 'California',
-    city: 'Los Angeles'
-  }, {
-    date: '2016-05-03',
-    name: 'Tom',
-    state: 'California'
-  }
-]
 
 const UnpaidDetailsTbaleData = ref([])
 const CostDetailsTbaleData = ref([])
@@ -3850,8 +3925,51 @@ const confirmTaskCompletion = async () => {
     currentTask.value = null;
   }
 }
-
 //#endregion
+
+
+// 表格数据和分页
+const TaskReminderTableData = ref([])
+const TaskReminderTableCurrentPage = ref(1)
+const TaskReminderTablePageSize = ref(5)
+const TaskReminderTableTotalItems = ref(0)
+
+
+
+// 获取任务提醒数据
+const fetchTaskReminderData = async () => {
+  try {
+    const params = {
+      pageNum: TaskReminderTableCurrentPage.value,
+      pageSize: TaskReminderTablePageSize.value
+    }
+    const res = await getTaskReminderList(params)
+    if (res.code === 200) {
+      TaskReminderTableData.value = res.data.result
+      TaskReminderTableTotalItems.value = res.data.totalNum
+    }
+  } catch (error) {
+    console.error('获取任务提醒数据失败:', error)
+  }
+}
+// 处理页码改变
+const TaskReminderTableshandlePageChange = (page) => {
+  TaskReminderTableCurrentPage.value = page
+  fetchTaskReminderData()
+}
+
+// Load data when component mounts
+onMounted(() => {
+  fetchTaskReminderData()
+})
+
+const getTaskReminderList = (params) => {
+  return request({
+    url: 'TaskReminder/GetTaskReminderList/GetList',
+    method: 'get',
+    params
+  })
+}
 </script>
 
 

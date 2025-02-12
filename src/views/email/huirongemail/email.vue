@@ -56,8 +56,8 @@
 									</el-icon>
 									<span>{{ tag.emailTagName }}</span>
 								</div>
-								<el-button class="delete-button" link type="danger" size="small"
-									@click.stop="deleteEmailTag(tag.id)">
+								<el-button v-if="!isSystemTag(tag.emailTagName)" class="delete-button" link
+									type="danger" size="small" @click.stop="deleteEmailTag(tag.id)">
 									<el-icon>
 										<Delete />
 									</el-icon>
@@ -186,7 +186,7 @@
 									<template #default="{ row }">
 										<div class="email-tags-container">
 											<el-tag v-for="tagId in getRowTags(row.emailTags)" :key="tagId" size="small"
-												:type="getTagType(tagId)" class="mx-1">
+												:type="getTagType(getTagName(tagId))" class="mx-1">
 												{{ getTagName(tagId) }}
 											</el-tag>
 										</div>
@@ -240,6 +240,8 @@
 									</el-dropdown>
 									<el-button :icon="Message" circle title="标记为未读"
 										@click="markAsUnread(currentEmail.id)" />
+									<el-button icon="Bell" circle title="设置提醒"
+										@click="openReminderDialog(currentEmail)" />
 								</template>
 							</div>
 							<div class="right-actions" v-if="activeMenu != '3'">
@@ -251,8 +253,8 @@
 									</template>
 									<!-- 转发按钮始终显示 -->
 									<el-button icon="Right" circle title="转发" @click="handleForward" />
-									<el-popover placement="bottom" :width="300" trigger="click"
-										popper-class="tag-popover">
+									<el-popover ref="tagPopover" v-model:visible="tagPopoverVisible" placement="bottom"
+										:width="300" trigger="click" popper-class="tag-popover">
 										<template #reference>
 											<el-button icon="CollectionTag" circle
 												:class="{ 'has-tags': currentEmail.tags?.length }" title="标签" />
@@ -270,6 +272,7 @@
 														</div>
 														<div class="tag-actions">
 															<el-button type="danger" link size="small"
+																v-if="!isSystemTag(tag.label)"
 																@click="deleteEmailTag(tag.value)">
 																删除
 															</el-button>
@@ -301,7 +304,7 @@
 								<!-- 标签区域 -->
 								<div class="email-tags" v-if="EmailTagcheckboxGroup.length">
 									<el-tag v-for="tagId in EmailTagcheckboxGroup" :key="tagId" size="small"
-										effect="plain" class="custom-tag" :type="getTagType(tagId)">
+										effect="plain" class="custom-tag" :type="getTagType(getTagName(tagId))">
 										{{ getTagName(tagId) }}
 									</el-tag>
 								</div>
@@ -458,7 +461,16 @@
 					<div class="form-label">主题：</div>
 					<el-input v-model="emailForm.subject" placeholder="邮件主题" class="form-input" />
 				</div>
-
+				<!-- 选择标签 -->
+				<div class="form-item">
+					<div class="form-label">标签：</div>
+					<el-select v-model="emailForm.emailTags" clearable filterable allow-create default-first-option
+						placeholder="请选择标签" class="full-width">
+						<el-option v-for="tag in EmailTagcheckboxoptions" :key="tag.value" :label="tag.label"
+							:value="tag.value">
+						</el-option>
+					</el-select>
+				</div>
 				<!-- 富文本编辑器 -->
 				<div class="email-content">
 					<QuillEditor ref="quillEditor" v-model:content="emailForm.content" contentType="html" toolbar="full"
@@ -502,6 +514,9 @@
 						<el-button type="primary" class="mp4" @click="sendEmail">发送</el-button>
 						<el-dropdown>
 							<el-button>
+								<span>
+									抄送
+								</span>
 								<el-icon>
 									<ArrowDown />
 								</el-icon>
@@ -618,7 +633,7 @@
 				</div>
 			</template>
 		</el-dialog>
-
+		<!-- 配置邮箱 -->
 		<el-dialog v-model="ConfigEmaildialog" title="配置邮箱" :close-on-click-modal=false style="width: 35%;"
 			@close="handleConfigEmailDialogClose">
 			<el-form class="mt10" :model="ConfigEmailForm" label-width="250px">
@@ -648,6 +663,7 @@
 				</span>
 			</template>
 		</el-dialog>
+		<!-- 新建标签 -->
 		<el-dialog v-model="showNewFolderDialog" title="新建标签" width="30%">
 			<el-form>
 				<el-form-item label="标签名称">
@@ -684,6 +700,71 @@
 				</div>
 			</template>
 		</el-dialog>
+		<!-- 设置提醒 -->
+		<el-dialog v-model="reminderDialogVisible" title="设置提醒" width="30%" :close-on-click-modal="false">
+			<div class="reminder-dialog">
+				<el-form :model="reminderForm" label-width="100px">
+					<el-form-item label="项目分类">
+						<el-input v-model="reminderForm.title" type="text" placeholder="请输入项目分类" disabled></el-input>
+					</el-form-item>
+					<el-form-item label="提醒内容">
+						<el-input v-model="reminderForm.content" type="text" placeholder="请输入提醒内容"></el-input>
+					</el-form-item>
+					<el-form-item label="提醒时间">
+						<el-date-picker v-model="reminderForm.reminderTime" type="datetime" placeholder="选择提醒时间"
+							format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm:ss"></el-date-picker>
+					</el-form-item>
+				</el-form>
+			</div>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button @click="reminderDialogVisible = false">取消</el-button>
+					<el-button type="primary" @click="setReminder">确定</el-button>
+				</span>
+			</template>
+		</el-dialog>
+		<!-- 商机选择 -->
+		<el-dialog v-model="BusinessOpportunitySelectionDialog" title="商机选择" width="30%">
+			<div class="reminder-dialog">
+				<el-form :model="BusinessOpportunityForm" label-width="100px">
+					<!-- 商机选择（所有情况都显示） -->
+					<el-form-item label="商机编号">
+						<el-select v-model="BusinessOpportunityForm.opportunityId" clearable filterable
+							placeholder="请选择商机编号" @change="handleOpportunityChange">
+							<el-option v-for="item in BusinessOpportunityList" :key="item.id"
+								:label="item.opportunityNumber" :value="item.id">
+							</el-option>
+						</el-select>
+					</el-form-item>
+
+					<!-- 报价单选择（仅在初次报价和再次报价时显示） -->
+					<el-form-item v-if="BusinessOpportunityForm.type === 'quotation'" label="报价单号">
+						<el-select v-model="BusinessOpportunityForm.quotationId" clearable filterable
+							placeholder="请选择报价单号">
+							<el-option v-for="item in quotationList" :key="item.id" :label="item.quotationNum"
+								:value="item.id">
+							</el-option>
+						</el-select>
+					</el-form-item>
+
+					<!-- 合同选择（仅在合同确定时显示） -->
+					<el-form-item v-if="BusinessOpportunityForm.type === 'contract'" label="合同编号">
+						<el-select v-model="BusinessOpportunityForm.contractId" clearable filterable
+							placeholder="请选择合同编号">
+							<el-option v-for="item in contractList" :key="item.id" :label="item.contractNumber"
+								:value="item.id">
+							</el-option>
+						</el-select>
+					</el-form-item>
+				</el-form>
+			</div>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button @click="BusinessOpportunitySelectionDialog = false">取消</el-button>
+					<el-button type="primary" @click="handleConfirmSelection">确定</el-button>
+				</span>
+			</template>
+		</el-dialog>
 	</div>
 </template>
 
@@ -703,7 +784,113 @@ import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import request from '@/utils/request'
 import DOMPurify from 'dompurify'
 import { id } from 'element-plus/es/locale';
+import { h } from 'vue'
+import { ElSelect, ElOption } from 'element-plus'
+import { stringify } from 'qs';
 
+// #region 商机选择
+const BusinessOpportunitySelectionDialog = ref(false);
+const BusinessOpportunityList = ref([]);
+const quotationList = ref([]);
+const contractList = ref([]);
+const BusinessOpportunityForm = ref({
+	opportunityId: null,
+	quotationId: null,
+	contractId: null,
+	type: '', // 'quotation', 'contract', 'communication'
+	tagNames: []
+});
+
+// 打开商机选择对话框
+const openBusinessOpportunitySelectionDialog = async (type, tagNames) => {
+	BusinessOpportunityForm.value = {
+		opportunityId: null,
+		quotationId: null,
+		contractId: null,
+		type,
+		tagNames
+	};
+
+	try {
+		// 获取商机下拉框数据
+		const listResponse = await request({
+			url: '/BusinessOpportunity/GetBusinessOpportunityListByUser/GetBusinessOpportunityList',
+			method: 'GET'
+		});
+		if (listResponse.code === 200 && listResponse.data?.length > 0) {
+			// 如果是报价或合同类型，需要获取相关列表
+			await handleOpportunityChange(listResponse.data[0].id);
+			BusinessOpportunityList.value = listResponse.data;
+			BusinessOpportunitySelectionDialog.value = true;
+		} else {
+			ElMessage.warning('未找到相关商机');
+		}
+	} catch (error) {
+		console.error('获取商机列表失败:', error);
+		ElMessage.error('获取商机列表失败');
+	}
+}
+
+// 获取商机列表
+const GetBusinessOpportunityList = async () => {
+	try {
+		const response = await request({
+			url: '/BusinessOpportunity/GetBusinessOpportunityListByUser/GetBusinessOpportunityList',
+			method: 'GET'
+		});
+		if (response.code === 200) {
+			BusinessOpportunityList.value = response.data;
+		}
+	} catch (error) {
+		console.error('获取商机列表失败:', error);
+		ElMessage.error('获取商机列表失败');
+	}
+}
+
+// 商机选择变更时的处理
+const handleOpportunityChange = async (opportunityId) => {
+	if (!opportunityId) return;
+	try {
+		if (BusinessOpportunityForm.value.type === 'quotation') {
+			// 获取报价单列表
+			const response = await request({
+				url: '/Quotation/GetQuotaionListByUser/GetQuotaionList',
+				method: 'GET'
+			});
+			if (response.code === 200) {
+				quotationList.value = response.data;
+			}
+		} else if (BusinessOpportunityForm.value.type === 'contract') {
+			// 获取合同列表
+			const response = await request({
+				url: '/Contracts/GetContractListByUser/GetContractList',
+				method: 'GET'
+			});
+			if (response.code === 200) {
+				contractList.value = response.data;
+			}
+		}
+	} catch (error) {
+		console.error('获取关联数据失败:', error);
+		ElMessage.error('获取关联数据失败');
+	}
+}
+// endregion 商机选择
+
+// 定义系统标签列表
+const systemTags = [
+	'开发信',
+	'询盘',
+	'初次报价',
+	'沟通需求',
+	'再次报价',
+	'合同确定'
+]
+
+// 检查是否为系统标签
+const isSystemTag = (tagName) => {
+	return systemTags.includes(tagName)
+}
 
 // 修改编辑草稿方法，确保设置草稿ID
 const editDraft = async () => {
@@ -731,7 +918,6 @@ const editDraft = async () => {
 		}
 
 		await GetEmailContract()
-		showEmailDialog.value = true
 		showEmailDetail.value = false
 	} catch (error) {
 		console.error('编辑草稿失败:', error)
@@ -749,7 +935,8 @@ const emailForm = reactive({
 	cc: [],
 	bcc: [],
 	subject: '',
-	content: ''
+	content: '',
+	emailTags: []
 })
 
 // 添加暂存相关的状态
@@ -981,8 +1168,11 @@ const editSignature = (signature) => {
 
 }
 
-
-const MenuClick = (menuIndex) => {
+// 菜单切换
+const MenuClick = async (menuIndex) => {
+	if (await CheckShowEmailDetail() == false) {
+		return;
+	}
 	showEmailDetail.value = false
 	EmailTagIndex.value = 0
 	folderName.value = null
@@ -1010,15 +1200,19 @@ const getTagName = (tagId) => {
 }
 
 // 可以根据标签ID返回不同的类型，实现标签的多彩效果
-const getTagType = (tagId) => {
-	//EditEmailTags();
-	const types = ['', 'success', 'warning', 'info', 'danger']
-	return types[tagId % types.length]
-}
+// const getTagType = (tagId) => {
+// 	//EditEmailTags();
+// 	const types = ['', 'success', 'warning', 'info', 'danger']
+// 	return types[tagId % types.length]
+// }
 
-// 添加 filterByTag 函数
+// 标签过滤列表
 const filterByTag = async (tagId) => {
+	if (await CheckShowEmailDetail() == false) {
+		return;
+	}
 	try {
+		showEmailDetail.value = false
 		// 设置当前选中的标签ID
 		EmailTagIndex.value = tagId.toString();
 		activeMenu.value = `tag-${tagId}`;
@@ -1034,15 +1228,110 @@ const filterByTag = async (tagId) => {
 }
 
 const isLoadingTags = ref(false)
+
 // 在复选框变化时调用
-const handleTagChange = async () => {
-	if (isLoadingTags.value == false) {
+const handleTagChange = async (value) => {
+	if (isLoadingTags.value) return;
+
+	// 获取最后一个改变的标签ID
+	const lastChangedTagId = value[value.length - 1];
+	// 判断是选中还是取消选中
+	const isChecked = EmailTagcheckboxGroup.value.includes(lastChangedTagId);
+
+	if (!isChecked) {
+		// 取消选中，直接调用EditEmailTags
 		EditEmailTags();
+	} else {
+		// 选中标签，调用SelectEmailTags
+		SelectEmailTags();
 	}
+}
+
+// 确认选择
+const handleConfirmSelection = async () => {
+	// 验证必填项
+	if (!BusinessOpportunityForm.value.opportunityId) {
+		ElMessage.warning('请选择商机编号');
+		return;
+	}
+
+	if (BusinessOpportunityForm.value.type === 'quotation' && !BusinessOpportunityForm.value.quotationId) {
+		ElMessage.warning('请选择报价单号');
+		return;
+	}
+
+	if (BusinessOpportunityForm.value.type === 'contract' && !BusinessOpportunityForm.value.contractId) {
+		ElMessage.warning('请选择合同编号');
+		return;
+	}
+
+	try {
+		// 根据不同类型更新销售阶段
+		let salesStage = '';
+		let docuementID = 0;
+		if (BusinessOpportunityForm.value.type === 'quotation') {
+			salesStage = BusinessOpportunityForm.value.tagNames.includes('初次报价') ? '初次报价' : '再次报价';
+			docuementID = BusinessOpportunityForm.value.quotationId;
+		} else if (BusinessOpportunityForm.value.type === 'contract') {
+			salesStage = '合同确定';
+			docuementID = BusinessOpportunityForm.value.contractId;
+		} else if (BusinessOpportunityForm.value.type === 'communication') {
+			salesStage = '沟通需求';
+			docuementID = 0;
+		}
+		// 更新商机销售阶段
+		const response = await request({
+			url: '/BusinessOpportunity/UpdateBusinessOpportunitySalesStage/UpdateSalesStage',
+			method: 'GET',
+			params: {
+				BusinessOpportunityID: BusinessOpportunityForm.value.opportunityId,
+				SalesStage: salesStage,
+				DocuementID: docuementID
+			}
+		});
+
+		if (response.code === 200) {
+			// 更新标签和关联信息
+			await EditEmailTags();
+			BusinessOpportunitySelectionDialog.value = false;
+			ElMessage.success('设置成功');
+		} else {
+			ElMessage.error(response.msg || '更新销售阶段失败');
+		}
+	} catch (error) {
+		console.error('设置失败:', error);
+		ElMessage.error('设置失败');
+	}
+}
+
+const SelectEmailTags = () => {
+	EmailModel.EmailTags = EmailTagcheckboxGroup.value.toString();
+	EmailModel.EmailTagNames = EmailTagcheckboxGroup.value.map(tagId => getTagName(tagId)).join(',');
+	// 根据标签名称判断需要打开的对话框类型
+	if (EmailModel.EmailTagNames.includes('初次报价')) {
+		openBusinessOpportunitySelectionDialog('quotation', ['初次报价']);
+		return;
+	}
+	if (EmailModel.EmailTagNames.includes('再次报价')) {
+		openBusinessOpportunitySelectionDialog('quotation', ['再次报价']);
+		return;
+	}
+	if (EmailModel.EmailTagNames.includes('合同确定')) {
+		openBusinessOpportunitySelectionDialog('contract', ['合同确定']);
+		return;
+	}
+	if (EmailModel.EmailTagNames.includes('沟通需求')) {
+		openBusinessOpportunitySelectionDialog('communication', ['沟通需求']);
+		return;
+	}
+	// 如果不是特殊标签，直接更新
+	EditEmailTags();
 }
 
 const EditEmailTags = () => {
 	EmailModel.EmailTags = EmailTagcheckboxGroup.value.toString();
+	EmailModel.EmailTagNames = EmailTagcheckboxGroup.value.map(tagId => getTagName(tagId)).join(',');
+	EmailModel.businessopportunityid = BusinessOpportunityForm.value.opportunityId;
 	request({
 		url: 'Email/EditEmailTags/EditEmailTags',
 		method: 'POST',
@@ -1247,7 +1536,11 @@ const MoveEmail = (emailType) => {
 const folderName = ref(null);
 // 过滤分类邮件
 const filterByFolder = async (folderId) => {
+	if (await CheckShowEmailDetail() == false) {
+		return;
+	}
 	try {
+		showEmailDetail.value = false
 		// 设置当前选中的邮件分类ID
 		activeMenu.value = `folder-${folderId}`;
 		// 重置页码
@@ -1304,7 +1597,8 @@ const EmailModel = reactive({
 	"emaildate": '',
 	"isRead": 0,
 	"EmailTags": '',
-	"EmailTagNames": ''
+	"EmailTagNames": '',
+	"businessopportunityid": 0
 });
 
 const activeMenu = ref('1');
@@ -1443,11 +1737,12 @@ function ConfigUserEmail() {
 				if (response != null) {
 					ConfigEmaildialog.value = false;
 					ElMessage({
-						message: response.data.msg,
+						message: response.msg,
 						type: 'success'
 					})
 					getInboxEmail(currentPage.value, pageSize.value, 1);
 					initEmailTag();
+					fetchCustomFolders();
 				} else {
 					console.error('No data in response');
 				}
@@ -1466,11 +1761,12 @@ function ConfigUserEmail() {
 				if (response != null) {
 					ConfigEmaildialog.value = false;
 					ElMessage({
-						message: response.data.msg,
+						message: response.msg,
 						type: 'success'
 					})
 					getInboxEmail(currentPage.value, pageSize.value, 1);
 					initEmailTag();
+					fetchCustomFolders();
 				} else {
 					console.error('No data in response');
 				}
@@ -1502,6 +1798,7 @@ const VerifyUserEmailConfigurationExists = () => {
 			ConfigEmaildialog.value = false;
 			getInboxEmail(currentPage.value, pageSize.value, 1);
 			initEmailTag();
+			fetchCustomFolders();
 		}
 	}).catch(error => {
 		console.error(error);
@@ -2100,6 +2397,8 @@ const handleRowClick = async (row) => {
 	};
 
 	EmailModel.id = row.id;
+	EmailModel.emailsubject = row.subject;
+	EmailModel.fromEmail = row.fromEmailAddress;
 	isLoadingTags.value = true;
 	markAsRead(row); // 标记为已读
 
@@ -2142,8 +2441,10 @@ const handleRowClick = async (row) => {
 
 // 返回列表
 const backToList = async (updateMenu = true) => {
+	if (await CheckShowEmailDetail() == false) {
+		return;
+	}
 	showEmailDetail.value = false
-
 	if (isSearchMode.value && lastSearchParams.value) {
 		// 如果是搜索模式，使用保存的搜索参数和当前页码
 		const searchParams = {
@@ -2294,7 +2595,10 @@ const sendNewEmail = async () => {
 			ElMessage.warning('请填写主题')
 			return
 		}
-
+		if (!emailForm.emailTags) {
+			ElMessage.warning('请选择标签')
+			return
+		}
 		// 验证所有邮箱格式
 		const allEmails = [
 			...emailForm.ToEmail,
@@ -2332,7 +2636,9 @@ const sendNewEmail = async () => {
 			BccEmail: emailForm.bcc || [],
 			Subject: emailForm.subject,
 			EmailContent: emailForm.content,
-			Attachments: attachments
+			Attachments: attachments,
+			EmailTags: emailForm.emailTags,
+			EmailTagNames: EmailTagcheckboxoptions.value.find(option => option.value === emailForm.emailTags).label
 		}
 
 		const loading = ElLoading.service({
@@ -2418,7 +2724,9 @@ const sendFromDraft = async () => {
 			BccEmail: emailForm.bcc || [],
 			Subject: emailForm.subject,
 			EmailContent: emailForm.content,
-			Attachments: attachments
+			Attachments: attachments,
+			EmailTags: emailForm.emailTags,
+			EmailTagNames: EmailTagcheckboxoptions.value.find(option => option.value === emailForm.emailTags).label
 		}
 
 		loading = ElLoading.service({
@@ -2436,7 +2744,7 @@ const sendFromDraft = async () => {
 		if (response.code === 200) {
 			ElMessage.success('草稿邮件发送成功')
 			loading.close()
-			showEmailDialog.value = false
+			showEmailDetail.value = false // 触发 watch
 			resetEmailForm()
 			await getInboxEmail(currentPage.value, pageSize.value, activeMenu.value)
 		} else {
@@ -2561,6 +2869,7 @@ const handleFileInputChange = (event) => {
 const showCc = ref(false)
 // 修改重置表单函数，确保清空附件
 const resetEmailForm = () => {
+	emailForm.emailTags = null;
 	emailForm.draftId = null
 	emailForm.ToEmail = []
 	emailForm.cc = []
@@ -2582,7 +2891,8 @@ const discardEmail = () => {
 	emailForm.bcc = []
 	emailForm.subject = ''
 	emailForm.content = ''
-	showEmailDialog.value = false
+	emailForm.emailTags = null;
+	showEmailDetail.value = false // 触发 watch
 }
 
 const quillEditor = ref(null) // 添加编辑器引用
@@ -2634,6 +2944,127 @@ const tableRowClassName = ({ row }) => {
 
 	return classes.join(' ')
 }
+
+// 设置提醒
+const reminderDialogVisible = ref(false);
+const reminderForm = ref({
+	title: '',
+	content: '',
+	reminderTime: null
+})
+const openReminderDialog = (email) => {
+	reminderForm.value.title = '邮件提醒';
+	reminderForm.value.content = email.from + '发来的邮件';
+	reminderDialogVisible.value = true;
+}
+const setReminder = async () => {
+	try {
+		if (!reminderForm.value.content || !reminderForm.value.reminderTime) {
+			ElMessage.warning('请填写完整信息')
+			return
+		}
+
+		const res = await request({
+			url: 'TaskReminder/AddTaskReminder/Add',
+			method: 'GET',
+			params: {
+				userId: '', // 这个参数服务端会自动获取，可以传空
+				title: reminderForm.value.title,
+				content: reminderForm.value.content,
+				reminderTime: reminderForm.value.reminderTime
+			}
+		})
+		if (res.code === 200) {
+			ElMessage.success('提醒设置成功')
+			reminderDialogVisible.value = false
+			// 重置表单
+
+		} else {
+			ElMessage.error(res.msg || '设置失败')
+		}
+	} catch (error) {
+		console.error('设置提醒失败:', error)
+		ElMessage.error('设置提醒失败：' + (error.message || '未知错误'))
+	}
+}
+
+// 添加控制 popover 显示的变量
+const tagPopoverVisible = ref(false)
+const tagPopover = ref(null)
+// 检查当前详情页是否显示，如果显示，说明正在浏览邮件，需要判断当前被浏览的邮件有没有标签
+// 如果被浏览的邮件有标签，则允许关闭详情页，否则不允许关闭详情页
+// 检查邮件方法
+const CheckShowEmailDetail = async () => {
+	return new Promise(async (resolve) => {
+		// 如果详情页没有显示，直接返回true
+		if (!showEmailDetail.value) {
+			resolve(true)
+			return
+		}
+
+		// 如果正在查看邮件详情
+		if (currentEmail.value) {
+			try {
+				// 调用检查标签接口
+				const res = await request({
+					url: 'Email/CheckEmailTagsByEmailID/CheckEmailTags',
+					method: 'GET',
+					params: {
+						id: currentEmail.value.id
+					}
+				})
+
+				if (res.code === 200 && !res.data) {
+					// 如果没有标签，显示提示框
+					ElMessageBox.confirm(
+						'当前邮件未添加标签，添加标签后才能关闭。是否现在添加标签？',
+						'提示',
+						{
+							confirmButtonText: '去添加标签',
+							type: 'warning',
+							showCancelButton: false,
+							closeOnClickModal: false,
+							closeOnPressEscape: false,
+							showClose: false
+						}
+					)
+						.then(() => {
+							tagPopoverVisible.value = true
+							resolve(false)
+						})
+						.catch(() => {
+							resolve(false)
+						})
+					return
+				}
+				resolve(true)
+			} catch (error) {
+				console.error('检查邮件标签失败:', error)
+				resolve(true) // 出错时允许关闭
+			}
+			return
+		}
+
+		// 如果没有当前邮件数据，允许关闭
+		resolve(true)
+	})
+}
+
+// 定义标签类型映射
+const tagTypeMap = {
+	'询盘': 'info',        // 蓝色
+	'初次报价': 'success', // 绿色
+	'沟通需求': 'warning', // 橙色
+	'再次报价': 'danger',  // 红色
+	'合同确定': 'primary',        // 主色调
+	'开发信': ''    // 主色调	
+}
+// 获取标签类型的方法
+const getTagType = (tagName) => {
+	return tagTypeMap[tagName] || '' // 默认返回空字符串（灰色）
+}
+
+
 </script>
 
 <style lang="scss" scoped>

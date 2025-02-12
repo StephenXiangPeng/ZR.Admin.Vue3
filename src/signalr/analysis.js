@@ -81,6 +81,13 @@ export default {
           })
         })
     })
+
+    connection.on('TaskReminder', (data) => {
+      console.log(data);
+      ElMessageBox.alert(`${data.message}`, '自定义提醒', {
+        confirmButtonText: '确定'
+      })
+    })
   }
 }
 const MsgType = {

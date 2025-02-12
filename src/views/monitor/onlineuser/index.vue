@@ -38,7 +38,7 @@
       </el-table-column>
       <el-table-column label="操作" align="center" width="160">
         <template #default="scope">
-          <el-button text @click="onChat(scope.row)" icon="bell" v-hasRole="['admin']">通知111</el-button>
+          <el-button text @click="onChat(scope.row)" icon="bell" v-hasRole="['admin']">通知</el-button>
           <el-button text @click="onLock(scope.row)" icon="lock"
             v-hasPermi="['monitor:online:forceLogout']">强退</el-button>
         </template>

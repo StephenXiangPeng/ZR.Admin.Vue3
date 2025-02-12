@@ -156,5 +156,9 @@ export default {
           })
         })
     })
+
+    connection.on('TaskReminder', (data) => {
+      alert(JSON.stringify(data));
+    })
   }
 }
