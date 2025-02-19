@@ -1235,8 +1235,6 @@ const handlePageChange = async (newPage) => {
 };
 
 
-
-
 //获取客户信息列表
 function GetCustomeInfoList(start, end) {
 	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
@@ -1258,8 +1256,9 @@ function GetCustomeInfoList(start, end) {
 				EndDate: Search_EndDate_Select.value || ''
 			}
 		}).then(response => {
-			if (response.data.length > 0) {
-				CunstomeinfotableData.value = response.data;
+			totalItems.value = response.data.totalNum;
+			if (response.data.result.length > 0) {
+				CunstomeinfotableData.value = response.data.result;
 				CunstomeinfotableData.value.forEach(item => {
 					item.customerStatus = state.optionss['hr_customer_status'].filter(option => option.dictValue == item.customerStatus).map(option => option.dictLabel).values().next().value;
 					item.customerLevel = state.optionss['hr_customer_level'].filter(option => option.dictValue == item.customerLevel).map(option => option.dictLabel).values().next().value;

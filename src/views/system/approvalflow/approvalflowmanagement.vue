@@ -236,7 +236,7 @@ const CloseApprovalProcessDialog = () => {
 }
 
 const DocumentTypeChange = () => {
-	if (ApprovalProcessForm.DocumentType == '1') {
+	if (ApprovalProcessForm.DocumentType == '1' || ApprovalProcessForm.DocumentType == '7') {
 		IsSaleOrderShow.value = true;
 	} else {
 		IsSaleOrderShow.value = false;
@@ -300,7 +300,7 @@ const editProcess = (row) => {
 			ApprovalProcessForm.CustomFields1operators = state.optionss.hr_operators.find(item => item.dictValue == response.data.process.customFields1Operators).dictValue;
 			ApprovalProcessForm.CustomFields2operators = state.optionss.hr_operators.find(item => item.dictValue == response.data.process.customFields2Operators).dictValue;
 			ApprovalProcessForm.CustomFields3operators = state.optionss.hr_operators.find(item => item.dictValue == response.data.process.customFields3Operators).dictValue;
-			if (response.data.process.documentType == '1') {
+			if (response.data.process.documentType == '1' || response.data.process.documentType == '7') {
 				IsSaleOrderShow.value = true;
 			} else {
 				IsSaleOrderShow.value = false;

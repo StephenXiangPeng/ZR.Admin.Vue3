@@ -3044,7 +3044,6 @@ const CheckShowEmailDetail = async () => {
 			}
 			return
 		}
-
 		// 如果没有当前邮件数据，允许关闭
 		resolve(true)
 	})

@@ -4,7 +4,7 @@
     <el-row :gutter="15" style="font-size: 25px;">
       <el-col :lg="8" class="mb10">
         <el-card style="height: 100%; border: 0px;" shadow="never">
-          <div class="text-warning mb10">代办流程</div>
+          <div class="text-warning mb10">待办流程</div>
           <el-divider></el-divider>
           <div class="work-wrap" style="font-size: 25px;">
             <el-row>
@@ -47,9 +47,19 @@
                 <span>沟通逾期</span>
               </cl-col>
             </el-row>
-            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;10</span>
-            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;10</span>
-            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;10</span>
+            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;
+              <el-button type="text" style="font-weight: bold;font-size: 30px; color: red;"
+                @click="OverdueDeliveryContractClick">{{ OverdueDeliveryContractCount }}
+              </el-button>
+            </span>
+            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;
+              <el-button type="text" style="font-weight: bold;font-size: 30px; color: red;"
+                @click="PaymentoverdueClick">{{ PaymentoverdueCount }}
+              </el-button></span>
+            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp; <el-button type="text"
+                style="font-weight: bold;font-size: 30px; color: red;" @click="CommunicationOverdueClick">{{
+                  CommunicationOverdueCount }}
+              </el-button></span>
           </div>
         </el-card>
       </el-col>
@@ -613,17 +623,15 @@
       <el-col :lg="8" class="mb10">
         <el-card style="height: 100%">
           <div class="text-warning mb10">实时汇率&nbsp;&nbsp;&nbsp;&nbsp;
-
             <el-select v-model="value2" class="m-2" placeholder="请选择" size="default" style="width: 33%;">
               <el-option v-for="item in options2" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
             --
             <el-select v-model="value3" class="m-2" placeholder="请选择" size="default" style="width: 33%;">
-              <el-option v-for=" item in options3" :key="item.value" :label="item.label" :value="item.value" />
+              <el-option v-for="item in options3" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </div>
           <el-divider />
-
           <div class="work-wrap" style="margin-top: 10px;">
             <el-text class="mx-1" type="warning" size="large"
               style="color: black; font-size: 25px;">实时汇率：100&nbsp;&nbsp;=&nbsp;&nbsp;732&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</el-text>
@@ -2102,9 +2110,17 @@
     <!-- 领取收款单对话框 -->
     <el-dialog v-model="claimDialogVisible" title="领取收款单" width="500px" :close-on-click-modal="false">
       <el-form ref="claimFormRef" :model="claimForm" :rules="claimRules" label-width="100px">
+        <el-form-item label="合同类型" prop="contractType">
+          <el-select v-model="claimForm.contractType" placeholder="请选择合同类型" style="width: 100%" filterable
+            @change="relatedmoduleshandleChange(claimForm.contractType)">
+            <el-option v-for="item in state.optionss.hr_payment_contract_type" :key="item.dictValue"
+              :label="item.dictLabel" :value="item.dictValue" />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="合同号" prop="contractsID">
           <el-select v-model="claimForm.contractsID" placeholder="请选择合同号" style="width: 100%" filterable>
-            <el-option v-for="item in state.optionss.sql_sale_contracts" :key="item.dictValue" :label="item.dictLabel"
+            <el-option v-for="item in AssociatedOrderNumberOptions" :key="item.dictValue" :label="item.dictLabel"
               :value="item.dictValue" />
           </el-select>
         </el-form-item>
@@ -2142,12 +2158,52 @@
         </span>
       </template>
     </el-dialog>
+    <!-- 逾期交货合同 -->
+    <el-dialog v-model="overdueDeliveryContractDialogVisible" title="逾期交货合同" width="600px"
+      :close-on-click-modal="false">
+      <el-table :data="overdueDeliveryContractData">
+        <el-table-column prop="contractNumber" label="合同号" width="150"></el-table-column>
+        <el-table-column prop="originalDeliveryDate" label="原交货日期" width="150"></el-table-column>
+        <el-table-column prop="overdueDays" label="已超期天数" width="150"></el-table-column>
+        <el-table-column fixed="right" label="操作" style="width: 25%;">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="handleModifyDeliveryDate(row)">申请修改交货日期</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+    <!-- 沟通逾期 -->
+    <el-dialog v-model="communicationOverdueDialogVisible" title="沟通逾期" width="500px" :close-on-click-modal="false">
+      <el-table :data="communicationOverdueData">
+        <el-table-column prop="ID" label="客户编号" width="150" v-if="false"></el-table-column>
+        <el-table-column prop="customerNo" label="客户编号" width="150"></el-table-column>
+        <el-table-column prop="customerName" label="客户名称" width="150"></el-table-column>
+        <el-table-column prop="daysSinceLastContact" label="未沟通天数" width="150"></el-table-column>
+      </el-table>
+    </el-dialog>
+    <!-- 货款逾期列表 -->
+    <el-dialog v-model="overdueContractsDialogVisible" title="货款逾期列表" width="800px">
+      <el-table :data="overdueContractsData">
+        <el-table-column prop="id" label="出运单id" width="100" v-if="false" />
+        <el-table-column prop="contractName" label="出运单号" width="100" />
+        <el-table-column prop="receivableDate" label="应收汇日" width="150" />
+        <el-table-column prop="totalAmount" label="出运单金额" width="150" />
+        <el-table-column prop="totalReceivedAmount" label="已收金额" width="100" />
+        <el-table-column prop="overdueDays" label="逾期天数" width="100" />
+        <el-table-column fixed="right" label="操作" style="width: 25%; ">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="handleModifyPaymentDate(row)">申请修改收款日期</el-button>
+          </template>
+        </el-table-column>
+        <!-- 其他需要显示的列 -->
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { getCurrentInstance, reactive, toRefs, ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from "element-plus";
+import { getCurrentInstance, reactive, toRefs, ref, onMounted, h } from 'vue'
+import { ElMessage, ElMessageBox, ElDatePicker } from "element-plus";
 import request from '@/utils/request';
 import dayjs from 'dayjs';
 import useUserStore from '@/store/modules/user'
@@ -2159,6 +2215,7 @@ import SalesContractdialog from '@/views/components/SalesContractdialog.vue';
 import { Picture } from '@element-plus/icons-vue'
 import Salecontract from '@/views/sale/salecontract.vue';
 import { id } from 'element-plus/es/locale';
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 
 // #region 商机看板
 
@@ -2258,11 +2315,15 @@ const claimForm = reactive({
   id: '', // 收款单ID
   contractsID: '', // 合同号
   fundsType: '', // 款项类型
-  remark: '' // 备注
+  remark: '', // 备注
+  contractType: '' // 合同类型
 })
 
 // 表单验证规则
 const claimRules = {
+  contractType: [
+    { required: true, message: '请选择合同类型', trigger: 'change' }
+  ],
   contractsID: [
     { required: true, message: '请选择合同号', trigger: 'change' }
   ],
@@ -2277,6 +2338,26 @@ const handleClaim = (row) => {
   claimDialogVisible.value = true
 }
 
+const AssociatedOrderNumberOptions = ref([])
+const relatedmoduleshandleChange = (type) => {
+  claimForm.contractsID = '';
+  switch (type) {
+    case '1':
+      AssociatedOrderNumberOptions.value = state.optionss.sql_purchase_contract;
+      break;
+    case '2':
+      AssociatedOrderNumberOptions.value = state.optionss.sql_sale_contracts;
+      break;
+    case '3':
+      AssociatedOrderNumberOptions.value = state.optionss.sql_shippingdeliveries;
+      break;
+    default:
+      AssociatedOrderNumberOptions.value = [];
+      break;
+  }
+}
+
+
 // 提交领取
 const submitClaim = () => {
   claimFormRef.value?.validate(async (valid) => {
@@ -2289,7 +2370,8 @@ const submitClaim = () => {
             id: claimForm.id,
             ContractsID: claimForm.contractsID,
             FundsType: claimForm.fundsType,
-            Remark: claimForm.remark
+            Remark: claimForm.remark,
+            ContractType: claimForm.contractType
           }
         })
 
@@ -2314,9 +2396,10 @@ const submitClaim = () => {
 
 // 对话框关闭时重置表单
 const resetClaimForm = () => {
-  claimForm.contractId = ''
+  claimForm.contractsID = ''
   claimForm.fundsType = ''
   claimForm.remark = ''
+  claimForm.contractType = ''
   claimFormRef.value?.resetFields()
 }
 
@@ -2528,7 +2611,8 @@ const contractform = reactive({
   boxCount: null,           // 箱数
   grossWeight: null,        // 毛重
   netWeight: null,          // 净重
-  volume: null              // 体积
+  volume: null,              // 体积
+  NewdeliveryDate: null      // 新交货日期
 });
 //采购合同审批对话框
 const PurchaseContractDialog = ref(false);
@@ -2617,7 +2701,7 @@ const openSaleContractDialog = (row) => {
   ApproveDocumentRequest.ApproverID = row.approverID;
   ApproveDocumentRequest.DocumentType = row.documentType;
   //获取销售合同详情
-  if (row.documentType == "1") {
+  if (row.documentType == "1" || row.documentType == "7") {
     request({
       url: 'Contracts/GetContractDetailsById/GetContractDetails',
       method: 'GET',
@@ -2626,6 +2710,11 @@ const openSaleContractDialog = (row) => {
       }
     }).then(response => {
       if (response.data != null) {
+        if (row.documentType == "7") {
+          ElMessageBox.alert('该合同申请将交货日期修改为：' + response.data.contract.newDeliveryDate + '，请确认！', '交货日期修改申请', {
+            confirmButtonText: 'OK'
+          })
+        }
         /*表单赋值*/
         contractform.id = row.documentID;
         contractform.contractNumber = response.data.contract.contractNumber;
@@ -3322,7 +3411,69 @@ const AgencyProcesstableData = ref([]);
 const pendingCount = ref(0);
 // 超时未处理数量
 const TimeoutNotProcessedCount = ref(0);
+//逾期交货合同数量
+const OverdueDeliveryContractCount = ref(0);
+//逾期交货合同数据
+const overdueDeliveryContractData = ref([]);
+//逾期交货合同弹窗
+const overdueDeliveryContractDialogVisible = ref(false);
+//获取逾期交货合同数量
+const GetOverdueDeliveryContractCount = () => {
+  OverdueDeliveryContractCount.value = 0;
+  overdueDeliveryContractData.value = [];
+  request({
+    url: 'Contracts/GetOverdueContractInfo/GetOverdueContract',
+    method: 'GET'
+  }).then(response => {
+    if (response.code == "200") {
+      OverdueDeliveryContractCount.value = response.data.length;
+      overdueDeliveryContractData.value = response.data;
+    } else {
+      ElMessage.error('获取逾期交货合同数量失败');
+    }
+  })
+}
+GetOverdueDeliveryContractCount();
 
+const OverdueDeliveryContractClick = () => {
+  if (OverdueDeliveryContractCount.value > 0) {
+    overdueDeliveryContractDialogVisible.value = true;
+  } else {
+    ElMessage.warning("没有逾期交货合同");
+  }
+}
+
+//获取沟通逾期的数量
+const CommunicationOverdueCount = ref(0);
+//沟通逾期数据
+const communicationOverdueData = ref([]);
+//沟通逾期弹窗
+const communicationOverdueDialogVisible = ref(false);
+//获取沟通逾期数量
+const GetCommunicationOverdueCount = () => {
+  CommunicationOverdueCount.value = 0;
+  communicationOverdueData.value = [];
+  request({
+    url: 'CustomerInfoMation/GetExpiringCustomersDataByUser/GetExpiringCustomers',
+    method: 'GET'
+  }).then(response => {
+    if (response.code == "200") {
+      CommunicationOverdueCount.value = response.data.length;
+      communicationOverdueData.value = response.data;
+    } else {
+      ElMessage.error('获取沟通逾期数量失败');
+    }
+  })
+}
+GetCommunicationOverdueCount();
+
+const CommunicationOverdueClick = () => {
+  if (CommunicationOverdueCount.value > 0) {
+    communicationOverdueDialogVisible.value = true;
+  } else {
+    ElMessage.warning("没有沟通逾期");
+  }
+}
 const proxy = getCurrentInstance().proxy
 const state = reactive({
   optionss: {
@@ -3369,7 +3520,8 @@ const state = reactive({
     hr_domestic_transport: [],
     hr_freight_forwarding_company: [],
     sql_product: [],
-    sql_settlement: []
+    sql_settlement: [],
+    hr_payment_contract_type: []
   }
 })
 const { optionss } = toRefs(state)
@@ -3417,7 +3569,8 @@ var dictParams = [
   { dictType: 'hr_domestic_transport' },
   { dictType: 'hr_freight_forwarding_company' },
   { dictType: 'sql_product' },
-  { dictType: 'sql_settlement' }
+  { dictType: 'sql_settlement' },
+  { dictType: 'hr_payment_contract_type' }
 ]
 proxy.getDicts(dictParams).then((response) => {
   response.data.forEach((element) => {
@@ -3440,7 +3593,7 @@ const getPendingCount = () => {
         AgencyProcesstableData.value.forEach(item => {
           item.createBy = state.optionss['sql_all_user'].filter(user => user.dictValue == item.createBy).map(user => user.dictLabel).values().next().value;
           item.documentTypeName = state.optionss['hr_approval_document_type'].filter(user => user.dictValue == item.documentType).map(user => user.dictLabel).values().next().value;
-          if (item.documentType == "1") {
+          if (item.documentType == "1" || item.documentType == "7") {
             item.documentNumber = state.optionss['sql_sale_contracts'].filter(Salecontract => Salecontract.dictValue == item.documentID.toString()).map(Salecontract => Salecontract.dictLabel).values().next().value;
           } else if (item.documentType == "2") {
             item.documentNumber = state.optionss['sql_purchase_contract'].filter(Purchasecontract => Purchasecontract.dictValue == item.documentID.toString()).map(Purchasecontract => Purchasecontract.dictLabel).values().next().value;
@@ -3461,7 +3614,7 @@ const getPendingCount = () => {
         });
       }
     } else {
-      ElMessage.error("获取代办流程数量失败");
+      ElMessage.error("获取待办流程数量失败");
     }
   }).catch(error => {
     console.error(error);
@@ -3934,8 +4087,6 @@ const TaskReminderTableCurrentPage = ref(1)
 const TaskReminderTablePageSize = ref(5)
 const TaskReminderTableTotalItems = ref(0)
 
-
-
 // 获取任务提醒数据
 const fetchTaskReminderData = async () => {
   try {
@@ -3970,6 +4121,170 @@ const getTaskReminderList = (params) => {
     params
   })
 }
+
+const selectedDate = ref('')
+const handleModifyDeliveryDate = (row) => {
+  // 重置日期
+  selectedDate.value = ''
+  const DatePickerVNode = h(ElDatePicker, {
+    modelValue: selectedDate.value,
+    'onUpdate:modelValue': (val) => {
+      selectedDate.value = val
+      // 强制更新 VNode
+      DatePickerVNode.component.props.modelValue = val
+    },
+    type: 'date',
+    placeholder: '请选择日期',
+    style: 'width: 100%',
+    valueFormat: 'YYYY-MM-DD',
+    locale: zhCn,
+    disabledDate: (time) => time.getTime() < Date.now() - 8.64e7,
+  })
+  ElMessageBox({
+    title: '申请修改交货日期',
+    message: () => DatePickerVNode,
+    showCancelButton: true,
+    confirmButtonText: '提交审批',
+    cancelButtonText: '取消',
+    beforeClose: (action, instance, done) => {
+      if (action === 'confirm' && !selectedDate.value) {
+        ElMessage.warning('请选择日期')
+        return
+      }
+      done()
+    }
+  }).then(async () => {
+    try {
+      const res = await request({
+        url: 'Contracts/SubmitUpdateContractDeliveryDateApproval/UpdateDeliverryDateApproval',
+        method: 'GET',
+        params: {
+          Id: row.id,  // 合同ID
+          DeliveryDate: selectedDate.value  // 新的交货日期
+        }
+      })
+      if (res.code === 200) {
+        if (res.data == true) {
+          // 获取逾期交货合同数量
+          GetOverdueDeliveryContractCount()
+          ElMessage.success('交货日期修改申请已提交！')
+        } else {
+          ElMessage.error('交货日期修改申请提交失败！')
+        }
+      } else {
+        ElMessage.error(res.msg)
+      }
+    } catch (error) {
+      ElMessage.error('提交审批失败')
+    }
+  }).catch(() => {
+    ElMessage.info('已取消修改')
+  })
+}
+
+//#region 获取逾期交货合同数量
+// 定义接口返回的数据类型
+interface OverdueContract {
+  id: number;
+  receivableDate: string;
+  shipmentTotalAmount: number;
+  // ... 其他需要的字段
+}
+
+// 定义响应式数据
+const overdueContractsData = ref<OverdueContract[]>([])
+const overdueContractsDialogVisible = ref(false)
+const PaymentoverdueCount = ref(0)
+// 获取逾期合同列表
+const getOverdueContracts = async () => {
+  try {
+    const response = await request({
+      url: 'ShippingDeliveries/GetPaymentoverdueShippingContractByUser/GetPaymentOberdueContract',
+      method: 'get'
+    })
+
+    if (response.code === 200) {
+      PaymentoverdueCount.value = response.data.length
+      overdueContractsData.value = response.data
+    } else {
+      ElMessage.error(response.msg || '获取逾期合同列表失败')
+    }
+  } catch (error) {
+    console.error('获取逾期合同列表失败:', error)
+    ElMessage.error('获取逾期合同列表失败')
+  }
+}
+getOverdueContracts();
+
+const PaymentoverdueClick = () => {
+  if (PaymentoverdueCount.value > 0) {
+    overdueContractsDialogVisible.value = true
+  } else {
+    ElMessage.warning('没有逾期合同')
+  }
+}
+
+const selectedNewPaymentDate = ref('')
+const handleModifyPaymentDate = (row) => {
+  // 重置日期
+  selectedNewPaymentDate.value = ''
+  const DatePickerVNode = h(ElDatePicker, {
+    modelValue: selectedDate.value,
+    'onUpdate:modelValue': (val) => {
+      selectedNewPaymentDate.value = val
+      // 强制更新 VNode
+      DatePickerVNode.component.props.modelValue = val
+    },
+    type: 'date',
+    placeholder: '请选择日期',
+    style: 'width: 100%',
+    valueFormat: 'YYYY-MM-DD',
+    locale: zhCn,
+    disabledDate: (time) => time.getTime() < Date.now() - 8.64e7,
+  })
+  ElMessageBox({
+    title: '申请修改收款日期',
+    message: () => DatePickerVNode,
+    showCancelButton: true,
+    confirmButtonText: '提交审批',
+    cancelButtonText: '取消',
+    beforeClose: (action, instance, done) => {
+      if (action === 'confirm' && !selectedDate.value) {
+        ElMessage.warning('请选择日期')
+        return
+      }
+      done()
+    }
+  }).then(async () => {
+    try {
+      const res = await request({
+        url: '',
+        method: 'GET',
+        params: {
+          Id: row.id,  // 出运合同ID
+          ReceivableDate: selectedNewPaymentDate.value  // 新的收款日期
+        }
+      })
+      if (res.code === 200) {
+        if (res.data == true) {
+          // 获取逾期交货合同数量
+          GetOverdueDeliveryContractCount()
+          ElMessage.success('收款日期修改申请已提交！')
+        } else {
+          ElMessage.error('收款日期修改申请提交失败！')
+        }
+      } else {
+        ElMessage.error(res.msg)
+      }
+    } catch (error) {
+      ElMessage.error('提交审批失败')
+    }
+  }).catch(() => {
+    ElMessage.info('已取消修改')
+  })
+}
+
+//#endregion
 </script>
 
 

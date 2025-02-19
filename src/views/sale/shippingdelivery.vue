@@ -276,7 +276,7 @@
 					<el-col :span="8">
 						<el-form-item label="前程运输">
 							<el-select filterable v-model="AddShippingDeliveryform.preCarriageTransport"
-								style="width: 300px" :disabled="IsEditable">
+								style="width: 300px" :disabled="IsEditable" clearable>
 								<el-option v-for="dict in optionss.hr_domestic_transport" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -285,7 +285,7 @@
 					<el-col :span="8">
 						<el-form-item label="船代公司">
 							<el-select filterable v-model="AddShippingDeliveryform.shippingAgent" style="width: 300px"
-								:disabled="IsEditable">
+								:disabled="IsEditable" clearable>
 								<el-option v-for="dict in optionss.hr_freight_forwarding_company" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -335,6 +335,7 @@
 				<el-table-column prop="outerBoxGrossWeight" label="外箱毛重" width="150"></el-table-column>
 				<el-table-column prop="totalNetWeight" label="总净重" width="150"></el-table-column>
 				<el-table-column prop="totalGrossWeight" label="总毛重" width="150"></el-table-column>
+				<el-table-column prop="singlesalesrevenue" label="单个销售收入" width="150" v-if="false"></el-table-column>
 				<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small"
@@ -382,6 +383,53 @@
 					</template>
 				</el-table-column>
 			</el-table>
+			<br><span style="font-size: 20px; font-weight: bold;">其它费用</span>
+			<el-divider></el-divider>
+			<el-button class="mt-4" type="primary" @click="handleAddRow" style="margin-bottom: 10px;"
+				:disabled="IsEditable">添加其它费用</el-button>
+			<el-table :data="shippingDeliveryOtherexpensesTableData" style="width: 100%; ">
+				<el-table-column prop=" expenseName" label="费用名称" width="150">
+					<template #default="{ row }">
+						<el-input v-model="row.expenseName" :disabled="IsEditable" placeholder="输入费用名称"></el-input>
+					</template>
+				</el-table-column>
+				<el-table-column prop="currency" label="币种" width="150">
+					<template #default="{ row }">
+						<el-select filterable v-model="row.currency" :disabled="IsEditable" placeholder="选择币种">
+							<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue" />
+						</el-select>
+					</template>
+				</el-table-column>
+				<el-table-column prop="exchangeRate" label="汇率" width="150">
+					<template #default="{ row }">
+						<el-input v-model="row.exchangeRate" :disabled="IsEditable" placeholder="输入汇率"
+							@change="handleExpenseChange(row)"></el-input>
+					</template>
+				</el-table-column>
+				<el-table-column prop="expense" label="费用" width="150">
+					<template #default="{ row }">
+						<el-input v-model="row.expense" :disabled="IsEditable" placeholder="输入费用"
+							@change="handleExpenseChange(row)"></el-input>
+					</template>
+				</el-table-column>
+				<el-table-column prop="amount" label="金额" width="150">
+					<template #default="{ row }">
+						<el-input v-model="row.amount" disabled placeholder="自动计算" />
+					</template>
+				</el-table-column>
+				<el-table-column prop="remark" label="备注" :disabled="IsEditable" width="150">
+					<template #default="{ row }">
+						<el-input v-model="row.remark" :disabled="IsEditable" placeholder="输入备注"></el-input>
+					</template>
+				</el-table-column>
+				<el-table-column label="操作" width="100" fixed="right">
+					<template #default="scope">
+						<el-button type="text" size="small" @click="handleDelete(scope.$index)"
+							:disabled="IsEditable">删除</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
 			<br><span style="font-size: 20px; font-weight: bold;">备注信息</span>
 			<el-divider></el-divider>
 			<el-form-item label="备注：" style="width: 100%;">
@@ -389,6 +437,8 @@
 					type="textarea" placeholder="输入备注内容" :disabled="IsEditable" />
 			</el-form-item>
 			<template #footer>
+				<el-text class="mx-1" size="large" type="success">出运单总金额：{{ AddShippingDeliveryform.shipmentTotalAmount
+				}}</el-text>&nbsp;&nbsp;&nbsp;&nbsp;
 				<span class="dialog-footer">
 					<el-button v-show="isSaveBtnShow" type="primary" @click="SaveClick()">
 						确定保存
@@ -472,7 +522,8 @@ const AddShippingDeliveryform = ref({
 	isDeposit: 0,
 	preCarriageTransport: '',
 	shippingAgent: '',
-	remark: ''
+	remark: '',
+	shipmentTotalAmount: 0
 })
 
 /*动态下拉框start*/
@@ -529,6 +580,8 @@ const shippingDeliveryTableData = ref([])
 const shippingDeliveryContrctProductTableData = ref([])
 //采购明细表格数据
 const shippingDeliveryPurchaseDetailsTableData = ref([])
+// 其它费用
+const shippingDeliveryOtherexpensesTableData = ref([]);
 
 //客户编号改变
 const customerNumberChange = () => {
@@ -590,7 +643,8 @@ const customerNumberChange = () => {
 					outerBoxNetWeight: element.outerBoxNetWeight,
 					outerBoxGrossWeight: element.outerBoxGrossWeight,
 					totalNetWeight: element.totalNetWeight,
-					totalGrossWeight: element.totalGrossWeight
+					totalGrossWeight: element.totalGrossWeight,
+					singlesalesrevenue: element.singlesalesrevenue
 				});
 			});
 		}).catch(error => {
@@ -701,7 +755,8 @@ const referenceContractNumberChange = () => {
 						outerBoxNetWeight: element.outerBoxNetWeight,
 						outerBoxGrossWeight: element.outerBoxGrossWeight,
 						totalNetWeight: element.totalNetWeight,
-						totalGrossWeight: element.totalGrossWeight
+						totalGrossWeight: element.totalGrossWeight,
+						singlesalesrevenue: element.singlesalesrevenue
 					});
 				});
 			}).catch(error => {
@@ -784,12 +839,19 @@ const OpenCreateshippingdeliveryDialog = () => {
 		documentClerk: '',
 		isDeposit: 0,
 		preCarriageTransport: '',
-		shippingAgent: ''
+		shippingAgent: '',
+		remark: '',
+		shipmentTotalAmount: 0
 	};
 
 	// 清空产品数据
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];
+	shippingDeliveryOtherexpensesTableData.value = [];
+	OriginalShipmentQuantity.value = [];
+	IsEditable.value = false;
+	isCreateMode.value = true;
+
 
 	// 获取新的发票号码
 	getNextShippingNumber();
@@ -826,8 +888,10 @@ const shippingDeliveriesRequest = reactive({
 	ShippingAgent: null,
 	Remark: '',
 	IsDelete: 0,
+	shipmentTotalAmount: 0,
 	ShippingDeliveryProductItems: [],
-	ShippingDeliveryPurchaseDetailsItems: []
+	ShippingDeliveryPurchaseDetailsItems: [],
+	ShippingDeliveriesExpensesItems: []
 });
 
 //保存出运发货单
@@ -886,6 +950,7 @@ const SaveClick = async () => {
 				Number(AddShippingDeliveryform.value.shippingAgent) : null,
 			Remark: AddShippingDeliveryform.value.remark,
 			IsDelete: 0,
+			shipmentTotalAmount: calculateShipmentTotalAmount(),
 
 			// 产品明细
 			ShippingDeliveryProductItems: shippingDeliveryContrctProductTableData.value.map(item => ({
@@ -907,6 +972,15 @@ const SaveClick = async () => {
 				RemainingQuantity: Number(item.contractQuantity) - Number(item.shipmentQuantity),
 				IsDelete: 0,
 				Remark: item.remark || ''
+			})),
+
+			// 其它费用
+			ShippingDeliveriesExpensesItems: shippingDeliveryOtherexpensesTableData.value.map(item => ({
+				expenseName: item.expenseName,
+				currency: item.currency,
+				exchangeRate: item.exchangeRate,
+				expense: item.expense,
+				remark: item.remark
 			}))
 		};
 
@@ -1010,11 +1084,14 @@ const resetForm = () => {
 		documentClerk: '',
 		isDeposit: 0,
 		preCarriageTransport: '',
-		shippingAgent: ''
+		shippingAgent: '',
+		remark: '',
+		shipmentTotalAmount: 0
 	};
 
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];
+	shippingDeliveryOtherexpensesTableData.value = [];
 };
 
 const IsEditShippingDeliveryID = ref(0)
@@ -1051,8 +1128,10 @@ const EditSaveClick = () => {
 		shippingDeliveriesRequest.IsDeposit = AddShippingDeliveryform.value.isDeposit;
 		shippingDeliveriesRequest.PreCarriageTransport = AddShippingDeliveryform.value.preCarriageTransport;
 		shippingDeliveriesRequest.ShippingAgent = AddShippingDeliveryform.value.shippingAgent;
+		shippingDeliveriesRequest.shipmentTotalAmount = Number(calculateShipmentTotalAmount());
 		shippingDeliveriesRequest.ShippingDeliveryProductItems = shippingDeliveryContrctProductTableData.value;
 		shippingDeliveriesRequest.ShippingDeliveryPurchaseDetailsItems = shippingDeliveryPurchaseDetailsTableData.value;
+		shippingDeliveriesRequest.ShippingDeliveriesExpensesItems = shippingDeliveryOtherexpensesTableData.value;
 
 		request.post('ShippingDeliveries/EditShippingDeliveries/Edit', shippingDeliveriesRequest).then(response => {
 			if (response != null) {
@@ -1193,6 +1272,9 @@ const CheckShipingDelivery = (row) => {
 			AddShippingDeliveryform.value.isDeposit = response.data.shippingDeliveries.isDeposit;
 			AddShippingDeliveryform.value.preCarriageTransport = response.data.shippingDeliveries.preCarriageTransport.toString();
 			AddShippingDeliveryform.value.shippingAgent = response.data.shippingDeliveries.shippingAgent.toString();
+			AddShippingDeliveryform.value.remark = response.data.shippingDeliveries.remark;
+			AddShippingDeliveryform.value.shipmentTotalAmount = response.data.shippingDeliveries.shipmentTotalAmount;
+
 		}
 		if (response.data.shippingDeliveryProducts.length > 0) {
 			shippingDeliveryContrctProductTableData.value = response.data.shippingDeliveryProducts;
@@ -1210,31 +1292,44 @@ const CheckShipingDelivery = (row) => {
 							x => x.contractProductId === item.contractProductId
 						);
 						if (index !== -1) {
-							// 更新产品信息
-							const productData = response.data[0];
-							shippingDeliveryContrctProductTableData.value[index] = {
-								...shippingDeliveryContrctProductTableData.value[index], // 保留原有数据
-								contractNumber: productData.contractNumber,
-								productCode: productData.productCode,
-								chineseName: productData.chineseName,
-								contractQuantity: productData.contractQuantity,
-								unit: state.optionss.hr_calculate_unit.find(u => u.dictValue === productData.unit.toString())?.dictLabel || '无',
-								exportUnitPrice: productData.exportUnitPrice,
-								exportTotalPrice: productData.exportTotalPrice,
-								specialRequirements: productData.specialRequirements,
-								outerBoxQuantity: productData.outerBoxQuantity,
-								boxCount: productData.boxCount,
-								outerBoxUnit: state.optionss.hr_outerbox_unit.find(u => u.dictValue === productData.outerboxunit.toString())?.dictLabel || '无',
-								outerBoxLength: productData.outerBoxLength,
-								outerBoxWidth: productData.outerBoxWidth,
-								outerBoxHeight: productData.outerBoxHeight,
-								outerBoxVolume: productData.outerBoxVolume,
-								totalVolume: productData.totalVolume,
-								outerBoxNetWeight: productData.outerBoxNetWeight,
-								outerBoxGrossWeight: productData.outerBoxGrossWeight,
-								totalNetWeight: productData.totalNetWeight,
-								totalGrossWeight: productData.totalGrossWeight
-							};
+							var ShippingQuantity = 0;
+							request({
+								url: 'ShippingDeliveries/GetShippingQuantityByContractIDAndProductID/GetShippingQuantity',
+								method: 'GET',
+								params: {
+									ContractID: item.contractId,
+									ProductID: item.contractProductId
+								}
+							}).then(ShippingQuantityResponse => {
+								ShippingQuantity = ShippingQuantityResponse.data;
+								// 更新产品信息
+								const productData = response.data[0];
+								shippingDeliveryContrctProductTableData.value[index] = {
+									...shippingDeliveryContrctProductTableData.value[index], // 保留原有数据
+									contractNumber: productData.contractNumber,
+									productCode: productData.productCode,
+									chineseName: productData.chineseName,
+									contractQuantity: productData.contractQuantity,
+									unit: state.optionss.hr_calculate_unit.find(u => u.dictValue === productData.unit.toString())?.dictLabel || '无',
+									exportUnitPrice: productData.exportUnitPrice,
+									exportTotalPrice: productData.exportTotalPrice,
+									specialRequirements: productData.specialRequirements,
+									outerBoxQuantity: productData.outerBoxQuantity,
+									boxCount: productData.boxCount,
+									outerBoxUnit: state.optionss.hr_outerbox_unit.find(u => u.dictValue === productData.outerboxunit.toString())?.dictLabel || '无',
+									outerBoxLength: productData.outerBoxLength,
+									outerBoxWidth: productData.outerBoxWidth,
+									outerBoxHeight: productData.outerBoxHeight,
+									outerBoxVolume: productData.outerBoxVolume,
+									totalVolume: productData.totalVolume,
+									outerBoxNetWeight: productData.outerBoxNetWeight,
+									outerBoxGrossWeight: productData.outerBoxGrossWeight,
+									totalNetWeight: productData.totalNetWeight,
+									totalGrossWeight: productData.totalGrossWeight,
+									singlesalesrevenue: item.singlesalesrevenue,
+									RemainingQuantityToBeShipped: productData.contractQuantity - ShippingQuantity
+								};
+							});
 						}
 					}
 				}).catch(error => {
@@ -1283,6 +1378,13 @@ const CheckShipingDelivery = (row) => {
 					console.error('获取采购明细失败:', error);
 					ElMessage.error('获取采购明细失败，请稍后重试');
 				});
+			});
+		}
+		if (response.data.shippingDeliveriesExpenses.length > 0) {
+			shippingDeliveryOtherexpensesTableData.value = response.data.shippingDeliveriesExpenses;
+			shippingDeliveryOtherexpensesTableData.value.forEach(item => {
+				item.currency = state.optionss.hr_export_currency.find(c => c.dictValue === item.currency.toString()).dictValue;
+				item.amount = (item.expense * item.exchangeRate).toFixed(2);
 			});
 		}
 		GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
@@ -1387,62 +1489,44 @@ const DeleteShippingDeliveryPurchaseDetails = (row) => {
 
 // 发货数量变化处理
 const shipmentQuantityChange = (row) => {
-	// // 转换为数字类型
-	// const newQuantity = parseFloat(row.shipmentQuantity);
-	// const contractQuantity = parseFloat(row.contractQuantity);
-
-	// // 数据验证
-	// if (isNaN(newQuantity)) {
-	// 	ElMessage.warning('请输入有效的数字');
-	// 	row.shipmentQuantity = row.contractQuantity;
-	// 	return;
-	// }
-
-	// // 检查是否超过合同数量
-	// if (newQuantity > contractQuantity) {
-	// 	ElMessage.warning('发货数量不能超过合同数量');
-	// 	row.shipmentQuantity = row.contractQuantity;
-	// 	return;
-	// }
-
-	// // 更新对应的采购合同出运数量
-	// const purchaseDetail = shippingDeliveryPurchaseDetailsTableData.value.find(
-	// 	item => item.productNumber === row.productCode
-	// );
-
-	// if (purchaseDetail) {
-	// 	purchaseDetail.shipmentQuantity = row.shipmentQuantity;
-	// } else {
-	// 	ElMessage.warning(`产品 ${row.productCode} 没有关联的采购明细`);
-	// }
 	try {
-		// 转换为数字进行比较
-		const shipmentQty = Number(row.shipmentQuantity);
-		const remainingQty = Number(row.RemainingQuantityToBeShipped);
-
-		// 验证输入是否为有效数字
+		const shipmentQty = Number(row.shipmentQuantity)
+		const remainingQty = Number(row.RemainingQuantityToBeShipped)
+		let originalQty = 0
+		if (isEditable.value) {
+			// 查找对应的原始数据
+			originalQty = OriginalShipmentQuantity.value.find(item =>
+				item.contractProductId.toString() === row.contractProductId.toString() &&
+				item.contractId.toString() === row.contractId.toString()
+			)?.OriginalShipmentQuantity || 0
+		}
+		const maxAllowedQty = remainingQty + originalQty
+		// 验证输入
 		if (isNaN(shipmentQty)) {
-			ElMessage.warning('请输入有效的数字');
-			row.shipmentQuantity = 0;
-			return;
+			ElMessage.warning('请输入有效的数字')
+			row.shipmentQuantity = 0
+			return
 		}
 
 		// 验证是否为正数
 		if (shipmentQty <= 0) {
-			ElMessage.warning('出货数量必须大于0');
-			row.shipmentQuantity = 0;
-			return;
+			ElMessage.warning('出货数量必须大于0')
+			row.shipmentQuantity = 0
+			return
 		}
 
-		// 验证是否超过剩余待出货数量
-		if (shipmentQty > remainingQty) {
-			ElMessage.warning(`出货数量不能大于剩余待出货数量(${remainingQty})`);
-			row.shipmentQuantity = remainingQty;
-			return;
+		// 验证是否超过最大允许数量
+		if (shipmentQty > maxAllowedQty) {
+			ElMessage.warning(`出货数量不能大于${maxAllowedQty}`)
+			row.shipmentQuantity = maxAllowedQty
+			return
 		}
+		// 计算总金额
+		AddShippingDeliveryform.value.shipmentTotalAmount = Number(calculateShipmentTotalAmount())
 
 		// 更新相关计算
-		row.exportTotalPrice = (shipmentQty * Number(row.exportUnitPrice)).toFixed(2);
+		row.exportTotalPrice = (shipmentQty * Number(row.exportUnitPrice)).toFixed(2)
+
 		row.boxCount = Math.ceil(shipmentQty / Number(row.outerBoxQuantity));
 		row.totalVolume = (row.boxCount * Number(row.outerBoxVolume)).toFixed(3);
 		row.totalNetWeight = (shipmentQty * Number(row.outerBoxNetWeight)).toFixed(2);
@@ -1465,8 +1549,28 @@ const shipmentQuantityChange = (row) => {
 	}
 };
 
+// 定义接口
+interface OriginalQuantity {
+	OriginalShipmentQuantity: number;
+	contractProductId: number;
+	contractId: number;
+}
+
+// 数组类型
+const OriginalShipmentQuantity = ref<OriginalQuantity[]>([])
 //编辑
 const EditClick = () => {
+	// 清空之前的数据
+	OriginalShipmentQuantity.value = []
+
+	// 保存所有产品的原始出货数量
+	shippingDeliveryContrctProductTableData.value.forEach(item => {
+		OriginalShipmentQuantity.value.push({
+			OriginalShipmentQuantity: Number(item.shipmentQuantity) || 0,
+			contractProductId: item.contractProductId,
+			contractId: item.contractId
+		})
+	})
 	isReviewBtnShow.value = false;
 	IsEditable.value = false;
 	isEditBtnShow.value = false;
@@ -1521,4 +1625,49 @@ const SubmitReview = () => {
 		});
 	});
 };
+
+const handleAddRow = () => {
+	const newRow = {
+		expenseName: '',
+		currency: '',
+		exchangeRate: '',
+		expense: '',
+		amount: '',
+		remark: ''
+	};
+	shippingDeliveryOtherexpensesTableData.value.push(newRow);
+}
+
+const handleDelete = (index) => {
+	shippingDeliveryOtherexpensesTableData.value.splice(index, 1);
+}
+
+// 计算出运单总金额
+const calculateShipmentTotalAmount = () => {
+	let productTotal = 0
+	let otherExpensesTotal = 0
+
+	// 计算产品金额总和
+	shippingDeliveryContrctProductTableData.value.forEach(item => {
+		productTotal += Number(item.shipmentQuantity) * Number(item.singlesalesrevenue)
+	})
+
+	// 计算其它费用总和
+	shippingDeliveryOtherexpensesTableData.value.forEach(item => {
+		otherExpensesTotal += Number(item.expense) * Number(item.exchangeRate)
+	})
+
+	// 确保返回有效数字
+	const total = productTotal + otherExpensesTotal
+
+	return isNaN(total) ? '0.00' : total.toFixed(3)
+}
+
+// 监听汇率和费用变化，自动计算金额
+const handleExpenseChange = (row) => {
+	const rate = Number(row.exchangeRate) || 0
+	const expense = Number(row.expense) || 0
+	row.amount = (rate * expense).toFixed(3)
+}
+
 </script>
