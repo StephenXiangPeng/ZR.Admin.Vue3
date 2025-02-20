@@ -219,14 +219,14 @@
 						<el-input v-model="row.position" placeholder="输入职务" size="default"></el-input>
 					</template>
 				</el-table-column>
-				<el-table-column prop="telephone" label="电话" width="180" align="left">
+				<el-table-column prop="telePhone" label="电话" width="180" align="left">
 					<template #default="{ row }">
-						<el-input v-model="row.telephone" placeholder="输入电话号码" size="default"></el-input>
+						<el-input v-model="row.telePhone" placeholder="输入电话号码" size="default"></el-input>
 					</template>
 				</el-table-column>
-				<el-table-column prop="cellphone" label="手机" width="180" align="left">
+				<el-table-column prop="cellPhone" label="手机" width="180" align="left">
 					<template #default="{ row }">
-						<el-input v-model="row.cellphone" placeholder="输入手机号码" size="default"></el-input>
+						<el-input v-model="row.cellPhone" placeholder="输入手机号码" size="default"></el-input>
 					</template>
 				</el-table-column>
 				<el-table-column prop="fax" label="传真" width="180" align="left">
@@ -442,8 +442,8 @@
 						<el-table-column prop="name" label="姓名" style="width: 8%;" />
 						<el-table-column prop="sexText" label="性别" style="width: 8%;" />
 						<el-table-column prop="position" label="职务" style="width: 8%;" />
-						<el-table-column prop="telephone" label="电话" style="width: 8%;" />
-						<el-table-column prop="cellphone" label="手机" style="width: 8%;" />
+						<el-table-column prop="telePhone" label="电话" style="width: 8%;" />
+						<el-table-column prop="cellPhone" label="手机" style="width: 8%;" />
 						<el-table-column prop="fax" label="传真" style="width: 8%;" />
 						<el-table-column prop="email" label="邮件" style="width: 8%;" />
 					</el-table>
@@ -1328,19 +1328,21 @@ const OpenCustomerProfileDetailDialog = (row) => {
 	}
 	uploadedFiles.value = fileList.value;
 	//加载联系人信息
-	row.contactPerson.forEach(person => {
-		if (person.sex == null || person.sex == '' || person.sex == undefined) {
-			person.sexText = state.optionss['sys_user_sex'].find(option => "0" && option.dictValue.toString() === "0").dictLabel;
-		} else {
-			person.sexText = state.optionss['sys_user_sex'].find(option => person.sex && option.dictValue.toString() === person.sex.toString()).dictLabel;
-		}
-	});
-	ContactPersonData.value = row.contactPerson;
+	// row.contactPerson.forEach(person => {
+	// 	if (person.sex == null || person.sex == '' || person.sex == undefined) {
+	// 		person.sexText = state.optionss['sys_user_sex'].find(option => "0" && option.dictValue.toString() === "0").dictLabel;
+	// 	} else {
+	// 		person.sexText = state.optionss['sys_user_sex'].find(option => person.sex && option.dictValue.toString() === person.sex.toString()).dictLabel;
+	// 	}
+	// });
+	// ContactPersonData.value = row.contactPerson;
 	//加载联系日志
-	var contactEmailStr = row.contactPerson.map(item => item.email).join(',');
-	if (contactEmailStr != null && contactEmailStr != '') {
-		getContactLogList(contactEmailStr);
-	}
+	// var contactEmailStr = row.contactPerson.map(item => item.email).join(',');
+	// if (contactEmailStr != null && contactEmailStr != '') {
+	// 	getContactLogList(contactEmailStr);
+	// }
+	//加载客户联系人
+	loadCustomerContractPerson(row.id);
 	//加载报价记录
 	loadQuotationHistory(row.id);
 	//加载销售合同记录
@@ -1348,6 +1350,34 @@ const OpenCustomerProfileDetailDialog = (row) => {
 	//加载收寄样历史
 	loadCustomerSendSampleHistory(row.id);
 	CustomerProfileDetailDialog.value = true;
+}
+
+const loadCustomerContractPerson = (customerId) => {
+	request({
+		url: 'CustomerInfoMation/GetCustomerContractPersonListByCustomerID/GetContractPersonData',
+		method: 'GET',
+		params: { CustomerID: customerId }
+	}).then(response => {
+		if (response.data.length > 0) {
+			ContactPersonData.value = response.data;
+			ContactPersonData.value.forEach(item => {
+				if (item.sex == null || item.sex == '' || item.sex == undefined) {
+					item.sexText = state.optionss['sys_user_sex'].find(option => "0" && option.dictValue.toString() === "0").dictLabel;
+				} else {
+					item.sexText = state.optionss['sys_user_sex'].find(option => item.sex && option.dictValue.toString() === item.sex.toString()).dictLabel;
+				}
+				//加载联系日志
+				var contactEmailStr = ContactPersonData.value.map(item => item.email).join(',');
+				if (contactEmailStr != null && contactEmailStr != '') {
+					getContactLogList(contactEmailStr);
+				}
+			});
+		} else {
+			ContactPersonData.value = [];
+		}
+	}).catch(error => {
+		console.error('获取客户联系人失败:', error);
+	});
 }
 
 //日期格式化函数

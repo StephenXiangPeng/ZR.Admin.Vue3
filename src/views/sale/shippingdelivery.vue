@@ -15,7 +15,7 @@
 					:value="dict.dictValue" />
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-select filterable v-model="SearchCustomerID" placeholder="选择客户（可输入查询）" style="width: 15%">
-				<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode" :label="dict.dictLabel"
+				<el-option v-for="dict in optionss.customer_data" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue" />
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-date-picker v-model="SearchShippingDateStart" type="date" placeholder="请选择出运日期"
@@ -116,7 +116,7 @@
 							<el-select filterable v-model="AddShippingDeliveryform.customerNumber"
 								placeholder="选择客户（可输入查询）" style="width: 300px" @change="customerNumberChange()"
 								clearable :disabled="IsEditable">
-								<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
+								<el-option v-for="dict in optionss.customer_data" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
@@ -134,7 +134,7 @@
 							<el-select filterable v-model="AddShippingDeliveryform.referenceContractNumber"
 								placeholder="选择销售合同（可输入查询）" style="width: 300px" clearable
 								@change="referenceContractNumberChange()" :disabled="IsEditable">
-								<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
+								<el-option v-for="dict in optionss.customer_contract_data" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
@@ -549,7 +549,9 @@ const state = reactive({
 		hr_outerbox_unit: [],
 		sql_supplier_info: [],
 		sql_product_name: [],
-		sql_product: []
+		sql_product: [],
+		customer_data: [],  // 用户特定的客户数据
+		customer_contract_data: []  // 用户特定的客户合同数据
 	}
 })
 const { optionss } = toRefs(state)
@@ -572,6 +574,54 @@ async function fetchDataAndExecute() {
 	}
 }
 fetchDataAndExecute();
+
+//获取特定的客户数据
+const getCustomerData = async () => {
+	state.optionss.customer_data = [];
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetCustomerDataByUserId/GetSelectCustomerData',
+			method: 'get'
+		})
+		if (response.code === 200) {
+			// 更新客户数据选项
+			state.optionss.customer_data = response.data.map(item => ({
+				dictValue: item.dictValue,
+				dictLabel: item.dictLabel,
+				// ... 其他需要的字段映射
+			}))
+		} else {
+			ElMessage.error(response.msg || '获取客户数据失败')
+		}
+	} catch (error) {
+		console.error('获取客户数据失败:', error)
+		ElMessage.error('获取客户数据失败')
+	}
+}
+getCustomerData();
+
+//获取特定的客户合同数据
+const getContractData = async (customerId = 0) => {
+	state.optionss.customer_contract_data = [];
+	try {
+		const response = await request({
+			url: 'Contracts/GetContractDataByUserID/GetSelectContractData',
+			method: 'get',
+			params: {
+				CustomerID: customerId
+			}
+		})
+		if (response.code === 200) {
+			state.optionss.customer_contract_data = response.data
+		} else {
+			ElMessage.error(response.msg || '获取销售合同数据失败')
+		}
+	} catch (error) {
+		console.error('获取销售合同数据失败:', error)
+		ElMessage.error('获取销售合同数据失败')
+	}
+}
+getContractData();
 /*动态下拉框end*/
 
 //出运发货表格数据
@@ -585,6 +635,13 @@ const shippingDeliveryOtherexpensesTableData = ref([]);
 
 //客户编号改变
 const customerNumberChange = () => {
+	if (AddShippingDeliveryform.value.customerNumber != null && AddShippingDeliveryform.value.customerNumber != undefined && AddShippingDeliveryform.value.customerNumber != '') {
+		getContractData(AddShippingDeliveryform.value.customerId);
+	} else {
+		getContractData();
+		shippingDeliveryContrctProductTableData.value = [];
+		shippingDeliveryPurchaseDetailsTableData.value = [];
+	}
 	//根据客户编号查询客户简称
 	request({
 		url: 'CustomerInfoMation/getCustomerInfoByID/GetCustomerInfo',
@@ -599,96 +656,96 @@ const customerNumberChange = () => {
 	}).catch(error => {
 		console.log(error)
 	});
-	//根据客户ID获取所有销售合同
-	request({
-		url: 'Contracts/GetCustomerContractByCustomerID/GetAllCotracts',
-		method: 'GET',
-		params: {
-			CustomerID: AddShippingDeliveryform.value.customerNumber
-		}
-	}).then(response => {
-		shippingDeliveryContrctProductTableData.value = [];
-		response.data.forEach((element) => {
-			var ShippingQuantity = 0;
-			request({
-				url: 'ShippingDeliveries/GetShippingQuantityByContractIDAndProductID/GetShippingQuantity',
-				method: 'GET',
-				params: {
-					ContractID: element.contractId,
-					ProductID: element.id
-				}
-			}).then(ShippingQuantityResponse => {
-				ShippingQuantity = ShippingQuantityResponse.data;
-				shippingDeliveryContrctProductTableData.value.push({
-					contractProductID: element.id,
-					contractId: element.contractId,
-					contractNumber: element.contractNumber,
-					productCode: element.productCode,
-					chineseName: element.chineseName,
-					contractQuantity: element.contractQuantity,
-					RemainingQuantityToBeShipped: element.contractQuantity - ShippingQuantity,
-					shipmentQuantity: element.contractQuantity - ShippingQuantity,
-					unit: element.unit,
-					exportUnitPrice: element.exportUnitPrice,
-					exportTotalPrice: element.exportTotalPrice,
-					specialRequirements: element.specialRequirements,
-					outerBoxQuantity: element.outerBoxQuantity,
-					boxCount: element.boxCount,
-					outerBoxUnit: element.outerboxunit,
-					outerBoxLength: element.outerBoxLength,
-					outerBoxWidth: element.outerBoxWidth,
-					outerBoxHeight: element.outerBoxHeight,
-					outerBoxVolume: element.outerBoxVolume,
-					totalVolume: element.totalVolume,
-					outerBoxNetWeight: element.outerBoxNetWeight,
-					outerBoxGrossWeight: element.outerBoxGrossWeight,
-					totalNetWeight: element.totalNetWeight,
-					totalGrossWeight: element.totalGrossWeight,
-					singlesalesrevenue: element.singlesalesrevenue
-				});
-			});
-		}).catch(error => {
-			console.log(error)
-		})
-		shippingDeliveryContrctProductTableData.value.forEach((element) => {
-			element.unit = state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无';
-			element.outerBoxUnit = state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerBoxUnit.toString())?.dictLabel || '无';
-		});
-	}).catch(error => {
-		console.log(error)
-	});
-	//根据客户ID获取所有采购合同
-	request({
-		url: 'PurchaseContracts/GetCustomerPurchasesByCustomerID/GetAllPurchasess',
-		method: 'GET',
-		params: {
-			CustomerID: AddShippingDeliveryform.value.customerNumber
-		}
-	}).then(response => {
-		shippingDeliveryPurchaseDetailsTableData.value = [];
-		response.data.forEach((element) => {
-			shippingDeliveryPurchaseDetailsTableData.value.push({
-				purchaseContractID: element.purchaseContractID,
-				purchaseContractProductID: element.purchaseContractProductID,
-				purchaseContractNumber: element.purchaseContractNumber,
-				shipmentQuantity: element.contractQuantity,
-				vendorAbbreviation: state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictLabel || '无',
-				productNumber: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
-				chineseName: element.chineseName,
-				purchaseCurrency: state.optionss.hr_export_currency.find(item => item.dictValue === element.purchaseCurrency.toString())?.dictLabel || '无',
-				purchaseUnitPrice: element.purchasePrice,
-				purchaseTotalPrice: element.purchaseTotalPrice,
-				measurementUnit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
-				invoice: element.invoice,
-				totalVolume: element.TotalVolume,
-				totalGrossWeight: element.TotalGrossWeight,
-				contractQuantity: element.contractQuantity
-			});
-		});
+	// //根据客户ID获取所有销售合同
+	// request({
+	// 	url: 'Contracts/GetCustomerContractByCustomerID/GetAllCotracts',
+	// 	method: 'GET',
+	// 	params: {
+	// 		CustomerID: AddShippingDeliveryform.value.customerNumber
+	// 	}
+	// }).then(response => {
+	// 	shippingDeliveryContrctProductTableData.value = [];
+	// 	response.data.forEach((element) => {
+	// 		var ShippingQuantity = 0;
+	// 		request({
+	// 			url: 'ShippingDeliveries/GetShippingQuantityByContractIDAndProductID/GetShippingQuantity',
+	// 			method: 'GET',
+	// 			params: {
+	// 				ContractID: element.contractId,
+	// 				ProductID: element.id
+	// 			}
+	// 		}).then(ShippingQuantityResponse => {
+	// 			ShippingQuantity = ShippingQuantityResponse.data;
+	// 			shippingDeliveryContrctProductTableData.value.push({
+	// 				contractProductID: element.id,
+	// 				contractId: element.contractId,
+	// 				contractNumber: element.contractNumber,
+	// 				productCode: element.productCode,
+	// 				chineseName: element.chineseName,
+	// 				contractQuantity: element.contractQuantity,
+	// 				RemainingQuantityToBeShipped: element.contractQuantity - ShippingQuantity,
+	// 				shipmentQuantity: element.contractQuantity - ShippingQuantity,
+	// 				unit: element.unit,
+	// 				exportUnitPrice: element.exportUnitPrice,
+	// 				exportTotalPrice: element.exportTotalPrice,
+	// 				specialRequirements: element.specialRequirements,
+	// 				outerBoxQuantity: element.outerBoxQuantity,
+	// 				boxCount: element.boxCount,
+	// 				outerBoxUnit: element.outerboxunit,
+	// 				outerBoxLength: element.outerBoxLength,
+	// 				outerBoxWidth: element.outerBoxWidth,
+	// 				outerBoxHeight: element.outerBoxHeight,
+	// 				outerBoxVolume: element.outerBoxVolume,
+	// 				totalVolume: element.totalVolume,
+	// 				outerBoxNetWeight: element.outerBoxNetWeight,
+	// 				outerBoxGrossWeight: element.outerBoxGrossWeight,
+	// 				totalNetWeight: element.totalNetWeight,
+	// 				totalGrossWeight: element.totalGrossWeight,
+	// 				singlesalesrevenue: element.singlesalesrevenue
+	// 			});
+	// 		});
+	// 	}).catch(error => {
+	// 		console.log(error)
+	// 	})
+	// 	shippingDeliveryContrctProductTableData.value.forEach((element) => {
+	// 		element.unit = state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无';
+	// 		element.outerBoxUnit = state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerBoxUnit.toString())?.dictLabel || '无';
+	// 	});
+	// }).catch(error => {
+	// 	console.log(error)
+	// });
+	// //根据客户ID获取所有采购合同
+	// request({
+	// 	url: 'PurchaseContracts/GetCustomerPurchasesByCustomerID/GetAllPurchasess',
+	// 	method: 'GET',
+	// 	params: {
+	// 		CustomerID: AddShippingDeliveryform.value.customerNumber
+	// 	}
+	// }).then(response => {
+	// 	shippingDeliveryPurchaseDetailsTableData.value = [];
+	// 	response.data.forEach((element) => {
+	// 		shippingDeliveryPurchaseDetailsTableData.value.push({
+	// 			purchaseContractID: element.purchaseContractID,
+	// 			purchaseContractProductID: element.purchaseContractProductID,
+	// 			purchaseContractNumber: element.purchaseContractNumber,
+	// 			shipmentQuantity: element.contractQuantity,
+	// 			vendorAbbreviation: state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictLabel || '无',
+	// 			productNumber: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
+	// 			chineseName: element.chineseName,
+	// 			purchaseCurrency: state.optionss.hr_export_currency.find(item => item.dictValue === element.purchaseCurrency.toString())?.dictLabel || '无',
+	// 			purchaseUnitPrice: element.purchasePrice,
+	// 			purchaseTotalPrice: element.purchaseTotalPrice,
+	// 			measurementUnit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
+	// 			invoice: element.invoice,
+	// 			totalVolume: element.TotalVolume,
+	// 			totalGrossWeight: element.TotalGrossWeight,
+	// 			contractQuantity: element.contractQuantity
+	// 		});
+	// 	});
 
-	}).catch(error => {
-		console.log(error)
-	});
+	// }).catch(error => {
+	// 	console.log(error)
+	// });
 }
 
 //参考合同号改变
@@ -708,6 +765,8 @@ const referenceContractNumberChange = () => {
 		}
 	}).then(response => {
 		if (response.data != null) {
+			AddShippingDeliveryform.value.customerNumber = state.optionss.customer_data.find(item => item.dictValue === response.data.contract.customerId.toString())?.dictValue || '';
+			customerNumberChange();//改变客户编号
 			AddShippingDeliveryform.value.salesContractNumber = response.data.contract.contractNumber;
 			AddShippingDeliveryform.value.customerContractNumber = response.data.contract.customerContract;
 			AddShippingDeliveryform.value.ourCompany = response.data.contract.ourCompany.toString();

@@ -117,7 +117,7 @@
 						<el-form-item label="客户编号" prop="customerNumber">
 							<el-select filterable v-model="Newcontractform.customerNumber" placeholder="请选择客户编号"
 								:disabled="isDisabled" style="width: 300px" @change="handleCustomerSelection">
-								<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
+								<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
@@ -126,7 +126,7 @@
 						<el-form-item label="客户简称" prop="customerAbbreviation">
 							<el-select v-model="Newcontractform.customerAbbreviation" filterable placeholder="请选择客户简称"
 								:disabled="isDisabled" style="width: 300px;" @change="handleCustomerSelection">
-								<el-option v-for="dict in optionss.sql_hr_customer_abbreviation" :key="dict.dictCode"
+								<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
@@ -1643,7 +1643,8 @@ const state = reactive({
 		sql_product: [],
 		sql_product_name: [],
 		hr_bank: [],
-		funds_type: []
+		funds_type: [],
+		sql_user_customers: []  // 用户特定的客户数据
 	}
 })
 const { optionss } = toRefs(state)
@@ -1669,6 +1670,29 @@ proxy.getDicts(dictParams).then((response) => {
 	});
 	GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
 })
+
+// 获取用户相关的客户数据
+const getUserCustomerData = async () => {
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetCustomerDataByUserID/GetSelectCustomerDataByUserID',
+			method: 'get'
+		})
+
+		if (response.code === 200) {
+			state.optionss.sql_user_customers = response.data.map(item => ({
+				dictValue: item.dictValue,
+				dictLabel: item.dictLabel
+			}))
+		} else {
+			ElMessage.error(response.msg || '获取客户数据失败')
+		}
+	} catch (error) {
+		console.error('获取客户数据失败:', error)
+		ElMessage.error('获取客户数据失败')
+	}
+}
+getUserCustomerData();
 /*动态下拉框end*/
 
 ///销售合同列表

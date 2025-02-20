@@ -1148,7 +1148,7 @@ const ProcurementRequirements = async (pageNum, pageSize) => {
 				unitPrice: element.unitPrice,
 				totalPrice: element.totalPrice,
 				status: element.status,
-				salesperson: optionss.value.sql_hr_sale.find(item => item.dictValue == element.salesperson.toString()).dictLabel,
+				salesperson: element.salesperson,
 				createTime: formatDate(element.createTime),
 				remark: element.remark
 			}))

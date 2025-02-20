@@ -17,10 +17,10 @@
                 <span>超时未处理</span>
               </cl-col>
             </el-row>
-            <span>&nbsp;&nbsp;&nbsp;&nbsp;<el-button type="text"
-                style="font-weight: bold;font-size: 30px; color: black;" @click="WaitingforyouProcessedClick">{{
+            <span>&nbsp;&nbsp;&nbsp;<el-button type="text" style="font-weight: bold;font-size: 30px; color: black;"
+                @click="WaitingforyouProcessedClick">{{
                   pendingCount }}</el-button></span>
-            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<el-button type="text"
+            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<el-button type="text"
                 style="font-weight: bold;font-size: 30px; color: red;" @click="TimeoutNotProcessedClick">{{
                   TimeoutNotProcessedCount }}</el-button></span>
           </div>
