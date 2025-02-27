@@ -1737,9 +1737,7 @@ const pageSize = ref(10);
 const ProductInfoTableData = ref([])
 const handlePageChange = async (newPage) => {
 	currentPage.value = newPage;
-	const start = newPage;
-	const end = pageSize.value;
-	const newData = await GetProductInfoList(start, end);
+	await GetProductInfoList(newPage, pageSize.value);
 };
 const Search_ProductCode = ref('');	// 查询产品编号
 const Search_StartTransactionDate = ref('');	// 查询最近成交日期
@@ -1774,6 +1772,10 @@ function GetProductInfoList(start, end) {
 				ProductInfoTableData.value.forEach((item) => {
 					item.unitOfMeasurement = state.optionss.hr_calculate_unit.find((dict) => dict.dictValue === item.unitOfMeasurement)?.dictLabel;
 				})
+				totalItems.value = response.data.totalNum; // 更新总条数
+				currentPage.value = response.data.pageIndex; // 更新当前页
+				pageSize.value = response.data.pageSize; // 更新每页条数
+
 				resolve(response.data.data);
 			} else {
 				if (response.data.totalNum > 0 && start > 1) {
