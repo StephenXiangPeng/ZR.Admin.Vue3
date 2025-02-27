@@ -75,19 +75,26 @@
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
+						<el-form-item label="客户货号" prop="customerGoodsNumber">
+							<el-input v-model="Productform.customerGoodsNumber" :disabled="isDisabled"
+								placeholder="请输入客户货号" style="width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
 						<el-form-item label="产品条码">
 							<el-input v-model="Productform.productBarcode" :disabled="isDisabled" placeholder="请输入产品条码"
 								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
+
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="中文品名" prop="chineseProductName">
 							<el-input v-model="Productform.chineseProductName" :disabled="isDisabled"
 								placeholder="请输入中文品名" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="英文品名" prop="englishProductName">
 							<el-input v-model="Productform.englishProductName" :disabled="isDisabled"
@@ -101,14 +108,15 @@
 								placeholder="请输入中文规格" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
+
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="英文规格">
 							<el-input v-model="Productform.englishSpecification" :disabled="isDisabled"
 								placeholder="请输入英文规格" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="计量单位" prop="unit">
 							<el-select v-model="Productform.unit" :disabled="isDisabled" placeholder="选择计量单位"
@@ -124,14 +132,14 @@
 								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="报关中文品名" prop="chineseDeclarationProductName">
 							<el-input v-model="Productform.chineseDeclarationProductName" :disabled="isDisabled"
 								placeholder="请输入报关中文品名" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="报关英文品名" prop="englishDeclarationProductName">
 							<el-input v-model="Productform.englishDeclarationProductName" :disabled="isDisabled"
@@ -147,6 +155,8 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="包装方式" prop="PackingMethod">
 							<el-select v-model="Productform.PackingMethod" :disabled="isDisabled" placeholder="选择包装方式"
@@ -156,12 +166,10 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="所属供应商" prop="Supplier">
-							<el-select v-model="Productform.Supplier" :disabled="isDisabled" placeholder="选择供应商"
-								style="width: 300px;">
+							<el-select v-model="Productform.Supplier" multiple clearable filterable
+								:disabled="isDisabled" placeholder="选择供应商" style="width: 300px;">
 								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -173,26 +181,26 @@
 								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
-						<el-form-item label="开发时间日期">
-							<el-date-picker v-model="Productform.developmentEventDate" type="date" disabled
-								style=" width: 300px;" />
-						</el-form-item>
-					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="8">
-						<el-form-item label="最近推荐">
+					<!-- <el-col :span="8">
+						<el-form-item label="最近推荐" v-if="false">
 							<el-select v-model="Productform.recentRecommendation" placeholder="" disabled
 								style="width: 300px;">
 							</el-select>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="最近寄样">
+						<el-form-item label="最近寄样" v-if="false">
 							<el-select v-model="Productform.recentSampleShipment" placeholder="" disabled
 								style="width: 300px;">
 							</el-select>
+						</el-form-item>
+					</el-col> -->
+					<el-col :span="8">
+						<el-form-item label="开发时间日期">
+							<el-date-picker v-model="Productform.developmentEventDate" type="date" disabled
+								style=" width: 300px;" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -202,14 +210,14 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="最近成交日期">
 							<el-date-picker v-model="Productform.recentTransactionDate" type="date" disabled
 								placeholder="" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="所属分类">
 							<el-cascader v-model="Productform.ProductCategories" :disabled="isDisabled"
@@ -252,7 +260,6 @@
 						</el-form-item>
 					</el-col>
 				</el-row>
-
 				<span style="font-size: 20px; font-weight: bold;">产品规格</span>
 				<el-divider></el-divider>
 				<el-row>
@@ -349,6 +356,13 @@
 					<el-table-column prop="mainProductCode" label="主产品编号" width="150" align="center">
 						<template #default="scope">
 							<span>{{ scope.row.mainProductCode }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column prop="subcustomerGoodsNumber" label="子产品货号" width="300" align="center">
+						<template #default="scope">
+							<el-input v-model="scope.row.subcustomerGoodsNumber" style="max-width:200px"
+								:disabled="isDisabled" placeholder="请输入子产品货号">
+							</el-input>
 						</template>
 					</el-table-column>
 					<el-table-column prop="subProductCode" label="子产品编号" width="300" align="center">
@@ -1072,6 +1086,8 @@ const clearProductform = () => {
 	showEditSaveBtn.value = false;
 	showEditBtn.value = false;
 	Productform.productDescription = '';
+	Productform.customerGoodsNumber = '';
+	Productform.Supplier = '';
 }
 
 //  上传主产品图片
@@ -1361,6 +1377,7 @@ interface Productform {
 	PackingMethod: string;
 	Supplier: string;
 	ProductCategories: number[];
+	customerGoodsNumber: string;
 	//产品属性
 	productDescription: string;
 	productLength: string;
@@ -1403,6 +1420,7 @@ const Productform = reactive<Productform>({
 	PackingMethod: '',
 	Supplier: '',
 	ProductCategories: [],
+	customerGoodsNumber: '',
 	//产品属性
 	productLength: '',
 	productwidth: '',
@@ -1542,9 +1560,10 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 					ProductPhotoPath: '',
 					PackingMethod: Productform.PackingMethod,
 					Remark: '',
-					SupplierID: Productform.Supplier,
+					SupplierID: Array.isArray(Productform.Supplier) ? Productform.Supplier.join(',') : Productform.Supplier,
 					ProductDescription: Productform.productDescription,
-					subProductItems: []
+					subProductItems: [],
+					CustomerGoodsNumber: Productform.customerGoodsNumber
 				};
 				// 上传主产品图片
 				let mainProductImageUrls = [];
@@ -1811,7 +1830,7 @@ const OpenProductInfoDetailDialog = (row) => {
 	Productform.productDescription = row.productDescription;
 	showAddSubProductButton.value = false;  // 隐藏添加子产品按钮
 	Productform.ProductCategories = row.productCategoriesID;
-	Productform.Supplier = state.optionss.sql_supplier_info.find((dict) => dict.dictValue === row.supplierId.toString())?.dictValue;
+	Productform.Supplier = row.supplierId ? row.supplierId.split(',').map(id => id.trim()) : []; // filter(Boolean)用于过滤掉undefined值
 	Productform.productCode = row.productCode;
 	Productform.productBarcode = row.productBarcode;
 	Productform.chineseProductName = row.chineseProductName;
@@ -1843,6 +1862,7 @@ const OpenProductInfoDetailDialog = (row) => {
 	Productform.outerboxnetweight = row.outerBoxNetWeight;
 	Productform.outerboxgrossweight = row.outerBoxGrossWeight;
 	Productform.PackingMethod = state.optionss.hr_packing.find((dict) => dict.dictValue === row.packingMethod.toString())?.dictValue;
+	Productform.customerGoodsNumber = row.customerGoodsNumber;
 	if (row.productPhotoPath != null && row.productPhotoPath != '') {
 		row.productPhotoPath.split(',').forEach((url, index) => {
 			if (!fileList.value.some(item => item.url === url)) {
@@ -1968,9 +1988,10 @@ const EditSaveProductinfomation = async () => {
 			OuterBoxGrossWeight: Productform.outerboxgrossweight,
 			PackingMethod: Productform.PackingMethod,
 			Remark: '',
-			SupplierID: Productform.Supplier,
+			SupplierID: Array.isArray(Productform.Supplier) ? Productform.Supplier.join(',') : Productform.Supplier,
 			ProductDescription: Productform.productDescription,
-			subProductItems: []
+			subProductItems: [],
+			CustomerGoodsNumber: Productform.customerGoodsNumber
 		};
 
 		// 处理主产品图片
