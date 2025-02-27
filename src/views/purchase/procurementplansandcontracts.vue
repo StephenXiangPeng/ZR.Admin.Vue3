@@ -38,10 +38,43 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="contractofpurchasetableData" style="width: 100%">
+			<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
 			<el-table-column prop="purchaseContractNumber" label="采购合同号" width="150"></el-table-column>
 			<el-table-column prop="contractStatus" label="合同状态" width="150"></el-table-column>
 			<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="reviewStatusStr" label="审核状态" width="150"></el-table-column>
+			<el-table-column prop="reviewStatusStr" label="审核状态" width="150" align="center">
+				<template #default="{ row }">
+					<template v-if="row.id"> <!-- 有ID才显示popover -->
+						<el-popover placement="right" :width="400" trigger="click">
+							<template #reference>
+								<el-tag :type="getStatusType(row.reviewStatusStr)" @click="getApprovalFlow(row.id)"
+									style="cursor: pointer">
+									{{ row.reviewStatusStr }}
+								</el-tag>
+							</template>
+
+							<!-- 有审批步骤才显示步骤条 -->
+							<template #default>
+								<div v-if="approvalSteps.length > 0" class="status-popover">
+									<el-steps :active="approvalSteps.length" size="small">
+										<el-step v-for="step in approvalSteps" :key="step.stageID"
+											:title="step.approverUserName" :description="getStatusText(step.status)"
+											:status="getStatus(step.status)" />
+									</el-steps>
+								</div>
+								<div v-else>暂无审批流程</div>
+							</template>
+						</el-popover>
+					</template>
+
+					<!-- 没有ID时只显示tag -->
+					<template v-else>
+						<el-tag :type="getStatusType(row.contractReviewStatusStr)">
+							{{ row.contractReviewStatusStr }}
+						</el-tag>
+					</template>
+				</template>
+			</el-table-column>
 			<el-table-column prop="salesContract" label="销售合同" width="150"></el-table-column>
 			<el-table-column prop="customerContract" label="客户订单号" width="150"></el-table-column>
 			<el-table-column prop="deliveryDate" label="交货日期" width="150"></el-table-column>
@@ -1544,5 +1577,63 @@ const clearAll = () => {
 	productinfotableData.value = [];
 	CustomerRelaterExoensesTableData.value = [];
 }
+// 存储审批步骤数据
+const approvalSteps = ref([])
 
+// 获取审批流程
+const getApprovalFlow = async (documentId: number) => {
+	try {
+		const res = await request({
+			url: 'PurchaseContracts/GetPurchaseContractApprovalFlowByPCID/GetApprovalFlow',
+			method: 'get',
+			params: {
+				DocumentID: documentId
+			}
+		})
+
+		if (res.code === 200) {
+			approvalSteps.value = res.data
+		} else {
+			ElMessage.error('获取审批流程失败')
+		}
+	} catch (error) {
+		console.error('获取审批流程失败:', error)
+		ElMessage.error('获取审批流程失败')
+	}
+}
+
+// 获取状态文本
+const getStatusText = (status: number) => {
+	switch (status) {
+		case 0: return '待审批'
+		case 1: return '已通过'
+		case 2: return '已拒绝'
+		case 3: return '等待上一阶段'
+		case 4: return '已终止'
+		default: return '未知状态'
+	}
+}
+
+// 获取状态类型
+const getStatus = (status: number) => {
+	switch (status) {
+		case 0: return 'wait'
+		case 1: return 'success'
+		case 2: return 'error'
+		case 3: return 'danger'
+		case 4: return 'error'
+		default: return 'wait'
+	}
+}
+
+// 获取标签类型
+const getStatusType = (status: string) => {
+	switch (status) {
+		case '待提审': return 'warning'
+		case '审核中': return 'wait'
+		case '已批准': return 'success'
+		case '已拒绝': return 'error'
+		default: return 'info'
+	}
+}
 </script>

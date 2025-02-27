@@ -268,7 +268,7 @@
 														class="tag-item">
 														<div class="tag-checkbox">
 															<el-checkbox :label="tag.value">{{ tag.label
-																}}</el-checkbox>
+															}}</el-checkbox>
 														</div>
 														<div class="tag-actions">
 															<el-button type="danger" link size="small"
@@ -2514,33 +2514,6 @@ const filterRecipients = (query: string) => {
 const fileList = ref([])
 // 文件输入引用
 const fileInput = ref(null)
-
-// 触发文件选择
-// const triggerFileInput = () => {
-// 	fileInput.value.click()
-// }
-
-// 处理文件选择变化
-// const handleFileInputChange = (event) => {
-// 	const files = Array.from(event.target.files)
-// 	files.forEach(file => {
-// 		fileList.value.push({
-// 			name: file.name,
-// 			size: file.size,
-// 			raw: file
-// 		})
-// 	})
-// 	// 清空input，以便可以重复选择同一文件
-// 	event.target.value = ''
-// }
-
-// 处理文件移除
-// const handleFileRemove = (file) => {
-// 	const index = fileList.value.indexOf(file)
-// 	if (index !== -1) {
-// 		fileList.value.splice(index, 1)
-// 	}
-// }
 
 // 格式化文件大小
 const formatFileSize = (bytes) => {

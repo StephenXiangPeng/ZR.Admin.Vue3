@@ -14,9 +14,9 @@
 								<Folder />
 							</el-icon>
 						</span>
-						<el-tooltip :content="node.label" placement="top" style="ellipsis">
-							<span>{{ node.label }}</span>
-						</el-tooltip>
+						<!-- <el-tooltip :content="node.label" placement="top" style="ellipsis"> -->
+						<span>{{ node.label }}</span>
+						<!-- </el-tooltip> -->
 					</template>
 				</el-tree-v2>
 			</el-aside>
@@ -210,10 +210,17 @@
 								placeholder="" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
+					<el-col :span="8">
+						<el-form-item label="所属分类">
+							<el-cascader v-model="Productform.ProductCategories" :disabled="isDisabled"
+								:options="Productoptions" :props="props1" clearable style="width: 300px;"
+								@change="handleCategoryChange" />
+						</el-form-item>
+					</el-col>
 				</el-row>
 				<el-row>
 					<el-col :span="16">
-						<el-form-item label="产品照片：">
+						<el-form-item label="产品照片">
 							<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList"
 								limit="3" :disabled="fileList.length >= 3" @change="handleChange" :action="UploadUrl"
 								:data="formData">
@@ -245,9 +252,18 @@
 						</el-form-item>
 					</el-col>
 				</el-row>
+
 				<span style="font-size: 20px; font-weight: bold;">产品规格</span>
 				<el-divider></el-divider>
 				<el-row>
+					<el-col :span="24">
+						<el-form-item label="产品描述">
+							<el-input v-model="Productform.productDescription" :disabled="isDisabled"
+								style="width: 1200px;" />
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<el-row v-if="false">
 					<el-col :span="8">
 						<el-form-item label="产品长度">
 							<el-input v-model="Productform.productLength" :disabled="isDisabled"
@@ -343,6 +359,29 @@
 							</el-input>
 						</template>
 					</el-table-column>
+					<el-table-column prop="subProductFiles" label="子产品附件" width="200" align="center">
+						<template #default="scope">
+							<el-upload ref="uploadProductFileRef" class="upload-demo" :auto-upload="false" :limit="3"
+								:show-file-list="true" :file-list="scope.row.productFiles || []"
+								:on-change="(file, fileList) => handleSubProductFileChange(file.raw, fileList, scope.$index)"
+								:on-remove="(file) => handleSubProductFileRemove(file, fileList, scope.$index)"
+								:on-preview="handleFileDownload" :disabled="isDisabled">
+								<template #trigger>
+									<el-button type="primary" icon="Plus" size="default"
+										:disabled="isDisabled || (scope.row.productFiles && scope.row.productFiles.length >= 3)"
+										v-if="SelectFileView">
+										选择附件
+									</el-button>
+								</template>
+								<template #tip>
+									<div v-if="scope.row.productFiles && scope.row.productFiles.length >= 3"
+										class="el-upload__tip">
+										已达到最大附件数量
+									</div>
+								</template>
+							</el-upload>
+						</template>
+					</el-table-column>
 					<el-table-column prop="subproductImage" label="产品图片" width="200" align="center">
 						<template #default="scope">
 							<el-upload :id="`upload-${scope.$index}`" ref="uploadRefs" :auto-upload="false"
@@ -351,7 +390,7 @@
 								multiple list-type="text" :file-list="scope.row.subproductImages || []">
 								<el-button
 									v-if="!isViewMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3)"
-									type="primary" icon="Plus" size="small">
+									type="primary" icon="Plus" size="default">
 									选择图片
 								</el-button>
 								<template #tip>
@@ -686,8 +725,99 @@ import useUserStore from '@/store/modules/user';
 import { get } from 'sortablejs';
 import { onMounted } from 'vue'; //初始运行钩子
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { fa } from 'element-plus/es/locale';
 
+//#region 子产品附件
+const SelectFileView = ref(true);
+const handleSubProductFileChange = (file, fileList, index) => {
+	// 检查文件大小
+	const isLt100M = file.size / 1024 / 1024 < 100;
+	if (!isLt100M) {
+		ElMessage.error('文件大小不能超过 100MB!');
+		return false;
+	}
 
+	// 确保 productFiles 数组存在
+	if (!SubProductTableData.value[index].productFiles) {
+		SubProductTableData.value[index].productFiles = [];
+	}
+
+	// 直接使用 fileList 更新整个文件列表
+	SubProductTableData.value[index].productFiles = fileList.map(f => {
+		// 检查是否为已存在的文件（有originalPath属性）
+		const existingFile = SubProductTableData.value[index].productFiles.find(
+			ef => ef.name === f.name && ef.originalPath
+		);
+
+		if (existingFile) {
+			// 返回原有文件
+			return existingFile;
+		}
+
+		// 处理新文件
+		return {
+			name: f.name,
+			raw: f.raw || f,
+			isChanged: true,
+			url: URL.createObjectURL(f.raw || f)
+		};
+	});
+
+	console.log('更新后的文件列表:', SubProductTableData.value[index].productFiles);
+	return true;
+};
+
+// 在编辑保存时处理文件
+const processSubProductFiles = async (subProduct) => {
+	let fileUrls = [];
+
+	// 处理文件
+	if (Array.isArray(subProduct.productFiles)) {
+		// 处理新文件和保留的原有文件
+		fileUrls = await Promise.all(subProduct.productFiles.map(async (file) => {
+			if (file.isChanged) {
+				// 新文件，需要上传
+				const response = await uploadSubProductFile(file.raw);
+				return response.data.downloadurl;
+			} else {
+				// 原有文件，返回原始路径
+				return file.originalPath;
+			}
+		}));
+	}
+
+	// 返回需要删除的文件和新的文件URL列表
+	return {
+		deletedFiles: subProduct.deletedFiles || [],
+		fileUrls: fileUrls
+	};
+};
+
+// 处理子产品文件删除
+const handleSubProductFileRemove = (file, fileList, index) => {
+	if (!SubProductTableData.value[index].productFiles) return;
+
+	const fileIndex = SubProductTableData.value[index].productFiles.findIndex(
+		item => item.name === file.name
+	);
+
+	if (fileIndex > -1) {
+		SubProductTableData.value[index].productFiles.splice(fileIndex, 1);
+	}
+	if (SubProductTableData.value[index].productFiles.length < 3) {
+		SelectFileView.value = true;
+	}
+};
+
+// 检查文件是否在所有子产品中重复的辅助函数
+const isFileExistInSubProducts = (fileName, excludeIndex = -1) => {
+	return SubProductTableData.value.some((subProduct, index) => {
+		if (index === excludeIndex) return false;
+		return subProduct.productFiles?.some(file => file.name === fileName);
+	});
+};
+
+//#endregion
 onMounted(() => {
 	// 这里编写进入页面时要运行的函数
 	runOnPageLoad();
@@ -892,6 +1022,7 @@ const openAddProductDialog = () => {
 		return;
 	}
 	clearProductform();
+	Productform.ProductCategories = SelectNodeId.value;
 	showSaveBtn.value = true;
 	AddProductDialog.value = true;
 	showAddSubProductButton.value = true;
@@ -940,6 +1071,7 @@ const clearProductform = () => {
 	isDisabled.value = false;
 	showEditSaveBtn.value = false;
 	showEditBtn.value = false;
+	Productform.productDescription = '';
 }
 
 //  上传主产品图片
@@ -1047,6 +1179,42 @@ proxy.getDicts(dictParams).then((response) => {
 	GetProductInfoList(currentPage.value, pageSize.value);
 })
 
+const handleCategoryChange = (val: number[]) => {
+	if (val && val.length > 0) {
+		const lastSelected = val[val.length - 1]
+		SelectNodeId.value = lastSelected
+	}
+}
+
+// 定义级联选择器的数据和配置
+const Productoptions = ref([])
+const props1 = {
+	value: 'value',
+	label: 'label',
+	children: 'children',
+	checkStrictly: true,  // 可选，是否严格的遵守父子节点不互相关联
+	emitPath: true       // 可选，是否返回选中节点的完整路径
+}
+
+// 获取产品分类树
+const getProductCategories = async () => {
+	try {
+		const response = await request({
+			url: 'ProductInformation/GetProductCategories/GetAllProductCategories',
+			method: 'get'
+		})
+
+		if (response.code === 200) {
+			Productoptions.value = response.data
+		} else {
+			ElMessage.error(response.msg || '获取产品分类失败')
+		}
+	} catch (error) {
+		console.error('获取产品分类失败:', error)
+		ElMessage.error('获取产品分类失败')
+	}
+}
+getProductCategories();
 
 let SelectedProductCategoriesStr = '';	// 选中的产品分类
 /*添加产品Request*/
@@ -1144,8 +1312,6 @@ const DelproductCategoriesMessageBox = () => {
 	}
 }
 
-
-
 const ProductCategoriesTreeData = ref([]);
 /*获取产品分类*/
 const GetAllParentProductCategoriesList = () => {
@@ -1194,7 +1360,9 @@ interface Productform {
 	ProductPhoto: string;
 	PackingMethod: string;
 	Supplier: string;
+	ProductCategories: number[];
 	//产品属性
+	productDescription: string;
 	productLength: string;
 	productwidth: string;
 	productheight: string;
@@ -1234,6 +1402,7 @@ const Productform = reactive<Productform>({
 	ProductPhoto: '',
 	PackingMethod: '',
 	Supplier: '',
+	ProductCategories: [],
 	//产品属性
 	productLength: '',
 	productwidth: '',
@@ -1248,7 +1417,8 @@ const Productform = reactive<Productform>({
 	outerboxnetweight: 0,
 	outerboxgrossweight: 0,
 	// 新增 subProductItems 数组
-	subProductItems: SubProductTableData.value
+	subProductItems: SubProductTableData.value,
+	productDescription: ''
 })
 
 const ProductformRules = reactive<FormRules<Productform>>({
@@ -1297,7 +1467,8 @@ const createSubProductItem = () => ({
 	subouterBoxVolume: '',
 	subouterBoxNetWeight: '',
 	subouterBoxGrossWeight: '',
-	currentImageIndex: 0
+	currentImageIndex: 0,
+	subProductFiles: []
 })
 
 const filelistUrlStr = ref('');	// 产品图片
@@ -1310,10 +1481,32 @@ const dialogImageUrl = ref('')
 const dialogVisible = ref(false)
 const disabled = ref(false)
 
+// 添加检查产品编号的方法
+const checkProductCode = async (productCode) => {
+	try {
+		const res = await request({
+			url: 'ProductInformation/CheckProductCode/CheckProductCode',
+			method: 'get',
+			params: { ProductCode: productCode }
+		});
+		return res.data > 0; // 返回true表示编号已存在
+	} catch (error) {
+		console.error('检查产品编号失败:', error);
+		return false;
+	}
+};
+
+//新增保存产品信息
 const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
 	await formEl.validate(async (valid, fields) => {
 		if (valid) {
+			// 先检查产品编号是否存在
+			const isExist = await checkProductCode(Productform.productCode);
+			if (isExist) {
+				ElMessage.error('产品编号已存在，请修改后重试');
+				return;
+			}
 			try {
 				const productInfoRequest = {
 					ProductCategoriesID: SelectNodeId.value,
@@ -1350,6 +1543,7 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 					PackingMethod: Productform.PackingMethod,
 					Remark: '',
 					SupplierID: Productform.Supplier,
+					ProductDescription: Productform.productDescription,
 					subProductItems: []
 				};
 				// 上传主产品图片
@@ -1416,7 +1610,18 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 								const response = await uploadProductPhoto(file);
 								return response.data.url;
 							}));
-							console.log(subProduct.subproductImages.value);
+						}
+						//上传子产品附件
+						let subProductFileUrls = [];
+						if (Array.isArray(subProduct.productFiles) && subProduct.productFiles.length > 0) {
+							subProductFileUrls = await Promise.all(subProduct.productFiles.map(async (file) => {
+								if (file.isChanged) {
+									const response = await uploadSubProductFile(file.raw || file);
+									return response.data.downloadurl;
+								} else {
+									return file.url; // 如果文件没有改变，直接使用原有的URL
+								}
+							}));
 						}
 						return {
 							mainProductCode: productInfoRequest.ProductCode,
@@ -1450,7 +1655,8 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 							subOuterBoxVolume: subProduct.subouterBoxVolume,
 							subOuterBoxNetWeight: subProduct.subouterBoxNetWeight,
 							subOuterBoxGrossWeight: subProduct.subouterBoxGrossWeight,
-							subpackingMethod: subProduct.subPackingMethod
+							subpackingMethod: subProduct.subPackingMethod,
+							subProductFiles: subProductFileUrls.join(',')
 						};
 					}));
 				}
@@ -1487,6 +1693,17 @@ const uploadProductPhoto = async (file) => {
 	formData.append('FileNameType', '1');
 	formData.append('File', file.raw || file);
 	formData.append('storeType', '1');
+	const response = await request.postForm(UploadUrl, formData);
+	return response;
+};
+
+const uploadSubProductFile = async (file) => {
+	const formData = new FormData();
+	formData.append('FileName', file.name || '未命名文件');
+	formData.append('FileDir', 'ProductInfo/ProductInfoFile');
+	formData.append('FileNameType', '1');
+	formData.append('File', file.raw || file);
+	formData.append('storeType', '2');
 	const response = await request.postForm(UploadUrl, formData);
 	return response;
 };
@@ -1543,7 +1760,6 @@ function GetProductInfoList(start, end) {
 				} else {
 					ProductInfoTableData.value = [];
 				}
-				reject(new Error('无数据'));  // Reject the promise if the response is null
 			}
 		}).catch(error => {
 			console.error(error);
@@ -1566,7 +1782,11 @@ const DeleteProduct = (row) => {
 				productID: row.id
 			}
 		}).then(response => {
-			alert(response.msg);
+			ElMessage({
+				message: response.data,
+				type: 'success'
+			})
+			GetProductInfoList(currentPage.value, pageSize.value);
 		}).catch(error => {
 			console.error(error);
 		}).finally(() => {
@@ -1588,7 +1808,9 @@ const OpenProductInfoDetailDialog = (row) => {
 	showSaveBtn.value = false;
 	showEditBtn.value = true;
 	isDisabled.value = true;
+	Productform.productDescription = row.productDescription;
 	showAddSubProductButton.value = false;  // 隐藏添加子产品按钮
+	Productform.ProductCategories = row.productCategoriesID;
 	Productform.Supplier = state.optionss.sql_supplier_info.find((dict) => dict.dictValue === row.supplierId.toString())?.dictValue;
 	Productform.productCode = row.productCode;
 	Productform.productBarcode = row.productBarcode;
@@ -1641,6 +1863,21 @@ const OpenProductInfoDetailDialog = (row) => {
 			url: url,
 			isChanged: false
 		})) : [];
+		// 处理子产品附件
+		const subProductFiles = item.subproductFilepath ?
+			item.subproductFilepath.map(fileItem => {
+				// 去除路径中的换行符和多余的空白字符
+				const cleanPath = fileItem.subproductOriginalFilePath.replace(/[\r\n\s]+/g, '');
+				return {
+					name: cleanPath.split('/').pop(), // 获取文件名
+					url: fileItem.subproductFilepath, // 完整的带签名URL
+					originalPath: cleanPath, // 清理后的原始路径
+					isChanged: false
+				};
+			}) : [];
+		if (subProductFiles.length >= 3) {
+			SelectFileView.value = false;
+		}
 		SubProductTableData.value.push({
 			ID: item.id,
 			mainProductCode: item.subProductCode.split('-')[0],
@@ -1675,7 +1912,8 @@ const OpenProductInfoDetailDialog = (row) => {
 			subouterBoxVolume: item.subouterBoxVolume,
 			subouterBoxNetWeight: item.subouterBoxNetWeight,
 			subouterBoxGrossWeight: item.subouterBoxGrossWeight,
-			subPackingMethod: state.optionss.hr_packing.find((dict) => dict.dictValue === item.subPackingMethod.toString())?.dictValue
+			subPackingMethod: state.optionss.hr_packing.find((dict) => dict.dictValue === item.subPackingMethod.toString())?.dictValue,
+			productFiles: subProductFiles
 		});
 	});
 	uploadedFiles.value = fileList.value;
@@ -1692,7 +1930,7 @@ const EditProductinfomation = () => {
 	showAddSubProductButton.value = true;
 }
 
-
+//编辑保存产品信息
 const EditSaveProductinfomation = async () => {
 	try {
 		const editProductInfoRequest = {
@@ -1731,6 +1969,7 @@ const EditSaveProductinfomation = async () => {
 			PackingMethod: Productform.PackingMethod,
 			Remark: '',
 			SupplierID: Productform.Supplier,
+			ProductDescription: Productform.productDescription,
 			subProductItems: []
 		};
 
@@ -1747,7 +1986,6 @@ const EditSaveProductinfomation = async () => {
 			}));
 		}
 		editProductInfoRequest.productPhotoPath = mainProductImageUrls.join(',');
-
 		// 处理子产品
 		if (Array.isArray(SubProductTableData.value) && SubProductTableData.value.length > 0) {
 			// 先进行所有子产品的验证
@@ -1808,7 +2046,24 @@ const EditSaveProductinfomation = async () => {
 						}
 					}));
 				}
-
+				// 处理子产品附件
+				let subProductFileUrls = [];
+				if (Array.isArray(subProduct.productFiles) && subProduct.productFiles.length > 0) {
+					subProductFileUrls = await Promise.all(
+						subProduct.productFiles
+							.filter(file => file && (file.originalPath || file.raw)) // 确保文件有效
+							.map(async (file) => {
+								if (file.isChanged) {
+									// 新上传的文件
+									const response = await uploadSubProductFile(file.raw || file);
+									return response.data.downloadurl;
+								} else {
+									// 保留原有文件的原始路径
+									return file.originalPath;
+								}
+							})
+					);
+				}
 				return {
 					ID: subProduct.ID,
 					mainProductCode: editProductInfoRequest.productCode,
@@ -1842,7 +2097,10 @@ const EditSaveProductinfomation = async () => {
 					subOuterBoxVolume: subProduct.subouterBoxVolume,
 					subOuterBoxNetWeight: subProduct.subouterBoxNetWeight,
 					subOuterBoxGrossWeight: subProduct.subouterBoxGrossWeight,
-					subPackingMethod: subProduct.subPackingMethod
+					subPackingMethod: subProduct.subPackingMethod,
+					subProductFiles: subProductFileUrls
+						.filter(url => url && url.trim()) // 过滤掉空值和空白字符
+						.join(',')
 				};
 			}));
 		}
@@ -1855,6 +2113,7 @@ const EditSaveProductinfomation = async () => {
 			});
 			filelistUrlStr.value = '';
 			AddProductDialog.value = false;
+			getProductCategories();
 			GetProductInfoList(currentPage.value, pageSize.value);
 		} else {
 			throw new Error(response.data.message || '保存失败');
@@ -1868,8 +2127,23 @@ const EditSaveProductinfomation = async () => {
 	}
 };
 
+const handleFileDownload = (file) => {
+	// 创建一个隐藏的 a 标签
+	const link = document.createElement('a');
+	link.style.display = 'none';
+	link.href = file.url;
+	link.setAttribute('download', file.name); // 设置下载的文件名
+
+	// 添加到页面并触发点击
+	document.body.appendChild(link);
+	link.click();
+
+	// 清理 DOM
+	document.body.removeChild(link);
+};
+
 </script>
-<style>
+<style lang="scss" scoped>
 .image-preview-container {
 	display: flex;
 	align-items: center;

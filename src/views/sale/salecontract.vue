@@ -47,8 +47,41 @@
 			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;销售合同表</span>
 			<el-divider></el-divider>
 			<el-table :data="contractsTableData" style="width: 100%">
+				<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
-				<el-table-column prop="contractReviewStatusStr" label="审核状态" width="150"></el-table-column>
+				<el-table-column prop="contractReviewStatusStr" label="审核状态" width="150" align="center">
+					<template #default="{ row }">
+						<template v-if="row.id"> <!-- 有ID才显示popover -->
+							<el-popover placement="right" :width="400" trigger="click">
+								<template #reference>
+									<el-tag :type="getStatusType(row.contractReviewStatusStr)"
+										@click="getApprovalFlow(row.id)" style="cursor: pointer">
+										{{ row.contractReviewStatusStr }}
+									</el-tag>
+								</template>
+
+								<!-- 有审批步骤才显示步骤条 -->
+								<template #default>
+									<div v-if="approvalSteps.length > 0" class="status-popover">
+										<el-steps :active="approvalSteps.length" size="small">
+											<el-step v-for="step in approvalSteps" :key="step.stageID"
+												:title="step.approverUserName" :description="getStatusText(step.status)"
+												:status="getStatus(step.status)" />
+										</el-steps>
+									</div>
+									<div v-else>暂无审批流程</div>
+								</template>
+							</el-popover>
+						</template>
+
+						<!-- 没有ID时只显示tag -->
+						<template v-else>
+							<el-tag :type="getStatusType(row.contractReviewStatusStr)">
+								{{ row.contractReviewStatusStr }}
+							</el-tag>
+						</template>
+					</template>
+				</el-table-column>
 				<el-table-column prop="contractNumber" label="合同编号" width="150"></el-table-column>
 				<el-table-column prop="contractDate" label="合同日期" width="150"></el-table-column>
 				<el-table-column prop="contractStatus" label="合同状态" width="150"></el-table-column>
@@ -70,12 +103,22 @@
 				<el-table-column prop="stockProgress" label="备货进度" width="150"></el-table-column>
 				<el-table-column prop="deliveryProgress" label="交货进度" width="150"></el-table-column>
 				<el-table-column prop="estimatedProfitMargin" label="预估利润率" width="150"></el-table-column>
-				<el-table-column fixed="right" label="操作" width="300">
+				<el-table-column fixed="right" label="操作" width="400">
 					<template #default="scope">
-						<el-button type="text" size="small" icon="Bell"
-							@click="openReminderDialog(scope.row)">设置提醒</el-button>
-						<el-button type="text" size="small" @click="checkContractsDetails(scope.row)">查看详情</el-button>
-						<el-button type="text" size="small" @click="GeneratePDF(scope.row)">生成PDF</el-button>
+						<template v-if="scope.row.salesperson == userId">
+							<el-button type="text" size="small" icon="Bell"
+								@click="openReminderDialog(scope.row)">设置提醒</el-button>
+							<el-button type="text" size="small"
+								@click="checkContractsDetails(scope.row)">查看详情</el-button>
+							<el-button type="text" size="small" @click="GeneratePDF(scope.row)">生成PDF</el-button>
+							<el-button type="text" size="small" icon="Back"
+								v-if="scope.row.contractReviewStatusStr === '审核中'"
+								@click="withdrawalApproval(scope.row)">撤回审批</el-button>
+						</template>
+						<template v-else>
+							<el-button type="text" size="small"
+								@click="checkContractsDetails(scope.row)">查看详情</el-button>
+						</template>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -434,9 +477,9 @@
 					:disabled="isDisabled">添加新产品</el-button>
 				<el-button class="mt-4" type="primary" @click="handleAddRow" style="margin-bottom: 10px;"
 					:disabled="isDisabled">添加相关费用</el-button>
-				<el-tabs v-model="activeTab" tab-position="top" style="height: 350px;" class="demo-tabs">
+				<el-tabs v-model="activeTab" tab-position="top" class="demo-tabs">
 					<el-tab-pane label="产品资料" name="productMaterialtab">
-						<el-table :data="productData" style="width: 100%;margin-bottom: 15px;" max-height="550">
+						<el-table :data="productData" style="width: 100%;margin-bottom: 15px;">
 							<el-table-column prop="productID" label="产品ID" width="120" v-if="false" />
 							<el-table-column prop="productNum" label="产品编号" width="120" />
 							<el-table-column prop="customerNum" label="客户货号" width="120" />
@@ -880,16 +923,19 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="primary" v-show="isSaveBtnShow" @click="SaveContract(NewcontractformRef)">
+					<el-button type="primary" v-show="isSaveBtnShow && isCurrentUserSalesperson"
+						@click="SaveContract(NewcontractformRef)">
 						确定保存
 					</el-button>
-					<el-button type="primary" v-show="showEditBtn" @click="EditContract">
+					<el-button type="primary" v-show="showEditBtn && isCurrentUserSalesperson" @click="EditContract">
 						编辑
 					</el-button>
-					<el-button type="primary" v-show="showEditSaveBtn" @click="EditContractSave(NewcontractformRef)">
+					<el-button type="primary" v-show="showEditSaveBtn && isCurrentUserSalesperson"
+						@click="EditContractSave(NewcontractformRef)">
 						编辑保存
 					</el-button>
-					<el-button type="success" v-show="isAuditBtnShow" @click="SubmitForReview">
+					<el-button type="success" v-show="isAuditBtnShow && isCurrentUserSalesperson"
+						@click="SubmitForReview">
 						提交审核
 					</el-button>
 				</span>
@@ -960,6 +1006,10 @@ import { JsonHubProtocol } from '@microsoft/signalr';
 import { get } from 'sortablejs';
 import useUserStore from "@/store/modules/user";
 import { Row } from 'element-plus/es/components/table-v2/src/components';
+
+const isCurrentUserSalesperson = computed(() => {
+	return Newcontractform.salesperson == userId;
+});
 
 const GeneratePDF = (row) => {
 	// 在这里添加生成PDF的逻辑
@@ -1722,20 +1772,7 @@ function GetContractList(start, end) {
 				contractsTableData.value = response.data.result;
 				for (var i = 0; i < contractsTableData.value.length; i++) {
 					contractsTableData.value[i].reviewStatus;
-					switch (contractsTableData.value[i].reviewStatus) {
-						case 0:
-							contractsTableData.value[i].contractReviewStatusStr = '待提审';
-							break;
-						case 1:
-							contractsTableData.value[i].contractReviewStatusStr = '审核中';
-							break;
-						case 2:
-							contractsTableData.value[i].contractReviewStatusStr = '已批准';
-							break;
-						case 3:
-							contractsTableData.value[i].contractReviewStatusStr = '已拒绝';
-							break;
-					}
+					contractsTableData.value[i].contractReviewStatusStr = GetcontractReviewStatusStr(contractsTableData.value[i].reviewStatus);
 					contractsTableData.value[i].contractStatus = state.optionss.hr_contract_status.find(item => item.dictValue === contractsTableData.value[i].contractStatus.toString()).dictLabel;
 					contractsTableData.value[i].customerNumber = state.optionss.sql_hr_customer.find(item => item.dictValue === contractsTableData.value[i].customerId.toString()).dictLabel;
 					contractsTableData.value[i].customerAbbreviation = state.optionss.sql_hr_customer_abbreviation.find(item => item.dictValue === contractsTableData.value[i].customerId.toString()).dictLabel;
@@ -1769,6 +1806,22 @@ function GetContractList(start, end) {
 	});
 }
 
+const GetcontractReviewStatusStr = (ReviewStatus) => {
+	switch (ReviewStatus) {
+		case 0:
+			return '待提审';
+			break;
+		case 1:
+			return '审核中';
+			break;
+		case 2:
+			return '已批准';
+			break;
+		case 3:
+			return '已拒绝';
+			break;
+	}
+}
 
 //联系人
 const contactpersonSelectOptions = ref([]);
@@ -2798,6 +2851,109 @@ const setReminder = async () => {
 	}
 }
 // endregion 设置提醒
+
+// 存储审批步骤数据
+const approvalSteps = ref([])
+
+// 获取审批流程
+const getApprovalFlow = async (documentId: number) => {
+	try {
+		const res = await request({
+			url: 'Contracts/GetContractApprovalFlowByCID/GetApprovalFlow',
+			method: 'get',
+			params: {
+				DocumentID: documentId
+			}
+		})
+
+		if (res.code === 200) {
+			approvalSteps.value = res.data
+		} else {
+			ElMessage.error('获取审批流程失败')
+		}
+	} catch (error) {
+		console.error('获取审批流程失败:', error)
+		ElMessage.error('获取审批流程失败')
+	}
+}
+
+
+// 获取状态文本
+const getStatusText = (status: number) => {
+	switch (status) {
+		case 0: return '待审批'
+		case 1: return '已通过'
+		case 2: return '已拒绝'
+		case 3: return '等待上一阶段'
+		case 4: return '已终止'
+		default: return '未知状态'
+	}
+}
+
+// 获取状态类型
+const getStatus = (status: number) => {
+	switch (status) {
+		case 0: return 'wait'
+		case 1: return 'success'
+		case 2: return 'error'
+		case 3: return 'danger'
+		case 4: return 'error'
+		default: return 'wait'
+	}
+}
+
+// 获取标签类型
+const getStatusType = (status: string) => {
+	switch (status) {
+		case '待提审': return 'warning'
+		case '审核中': return 'danger'
+		case '已批准': return 'success'
+		case '已拒绝': return 'error'
+		default: return 'info'
+	}
+}
+
+// 撤回审批
+const withdrawalApproval = async (row: any) => {
+	try {
+		// 确认提示
+		await ElMessageBox.confirm(
+			'确定要撤回该合同的审批吗？',
+			'提示',
+			{
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning',
+			}
+		)
+
+		const res = await request({
+			url: 'Contracts/WithdrawalApprovalContract/WithdrawalApproval',
+			method: 'get',
+			params: {
+				documentID: row.id
+			}
+		})
+
+		if (res.code === 200) {
+			ElMessage.success(res.msg)
+			// 刷新表格数据
+			GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+		} else {
+			ElMessage.error(res.msg)
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('撤回审批失败:', error)
+		}
+	}
+}
+
+// 判断是否可以撤回
+const canWithdraw = (row: any) => {
+	// 根据状态判断是否可以撤回
+	return row.contractReviewStatusStr === '待审核'
+}
 </script>
 <style scoped>
 /* 基础红色文本 */
