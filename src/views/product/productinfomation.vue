@@ -867,11 +867,11 @@ const AddSubProduct = () => {
 		subrecentSampleShipment: Productform.recentSampleShipment,
 		subrecentQuotation: Productform.recentQuotation,
 		subrecentTransactionDate: Productform.recentTransactionDate,
-		subproductLength: Productform.productLength,
-		subproductWidth: Productform.productwidth,
-		subproductHeight: Productform.productheight,
-		subproductWeight: Productform.productweight,
-		submediumPackagingVolume: Productform.mediumpackagingvolume,
+		subproductLength: Productform.productLength ? Productform.productLength : 0,
+		subproductWidth: Productform.productwidth ? Productform.productwidth : 0,
+		subproductHeight: Productform.productheight ? Productform.productheight : 0,
+		subproductWeight: Productform.productweight ? Productform.productweight : 0,
+		submediumPackagingVolume: Productform.mediumpackagingvolume ? Productform.mediumpackagingvolume : 0,
 		subouterBoxPackingQuantity: Productform.outerboxpackingquantity,
 		subouterBoxLength: Productform.outerboxlength,
 		subouterBoxWidth: Productform.outerboxwidth,
@@ -884,7 +884,8 @@ const AddSubProduct = () => {
 		subenglishProductName: Productform.englishProductName,
 		subchineseSpecification: Productform.chineseSpecification,
 		subenglishSpecification: Productform.englishSpecification,
-		subPackingMethod: state.optionss.hr_packing.find((dict) => dict.dictValue === Productform.PackingMethod)?.dictValue
+		subPackingMethod: state.optionss.hr_packing.find((dict) => dict.dictValue === Productform.PackingMethod)?.dictValue,
+		subCustomerGoodsNumber: Productform.customerGoodsNumber
 		// 添加其他需要的字段，可以设置默认值
 	})
 }
@@ -1675,7 +1676,8 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 							subOuterBoxNetWeight: subProduct.subouterBoxNetWeight,
 							subOuterBoxGrossWeight: subProduct.subouterBoxGrossWeight,
 							subpackingMethod: subProduct.subPackingMethod,
-							subProductFiles: subProductFileUrls.join(',')
+							subProductFiles: subProductFileUrls.join(','),
+							subCustomerGoodsNumber: productInfoRequest.CustomerGoodsNumber
 						};
 					}));
 				}
@@ -1933,7 +1935,8 @@ const OpenProductInfoDetailDialog = (row) => {
 			subouterBoxNetWeight: item.subouterBoxNetWeight,
 			subouterBoxGrossWeight: item.subouterBoxGrossWeight,
 			subPackingMethod: state.optionss.hr_packing.find((dict) => dict.dictValue === item.subPackingMethod.toString())?.dictValue,
-			productFiles: subProductFiles
+			productFiles: subProductFiles,
+			subcustomerGoodsNumber: item.subCustomerGoodsNumber
 		});
 	});
 	uploadedFiles.value = fileList.value;
@@ -2121,7 +2124,8 @@ const EditSaveProductinfomation = async () => {
 					subPackingMethod: subProduct.subPackingMethod,
 					subProductFiles: subProductFileUrls
 						.filter(url => url && url.trim()) // 过滤掉空值和空白字符
-						.join(',')
+						.join(','),
+					subCustomerGoodsNumber: subProduct.CustomerGoodsNumber
 				};
 			}));
 		}
