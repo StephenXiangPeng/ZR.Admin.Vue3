@@ -1089,7 +1089,10 @@ const SubmitForReview = () => {
 }
 
 //关闭合同窗体
-const handlecontractDialogclose = () => {
+const handlecontractDialogclose = async () => {
+	if (Newcontractform.salesperson.toString() == userId.toString()) {
+		await removeContractEditLock(SelctedContractId.value);
+	}
 	hasChangedProducts.value = false;
 	SelctedContractId.value = 0;
 	isDisabled.value = false;
@@ -1140,10 +1143,8 @@ const SearchProductCurrentPage = ref(1);
 const SearchProductpageSize = ref(10);
 const searchProductNameText = ref('');
 const SearchProducthandlePageChange = async (newPage) => {
-	SearchProductpageSize.value = newPage;
-	const start = newPage;
-	const end = SearchProductpageSize.value;
-	const newData = await GetProductInfoList(start, end);
+	SearchProductCurrentPage.value = newPage; // 修改这里，直接使用newPage作为当前页
+	await GetProductInfoList(newPage, SearchProductpageSize.value);
 };
 GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
 //获取产品信息列表
@@ -1160,6 +1161,8 @@ function GetProductInfoList(start, end) {
 		}).then(response => {
 			if (response.data.data.length > 0) {
 				productDatatwo.value = response.data.data;
+				SearchProducttotalItems.value = response.data.totalNum;
+				SearchProductCurrentPage.value = response.data.pageIndex;
 				resolve(response.data.data);
 			} else {
 				if (response.data.totalNum > 0 && start > 1) {
@@ -1177,6 +1180,7 @@ function GetProductInfoList(start, end) {
 }
 
 const searchProductNameTextChange = () => {
+	SearchProductCurrentPage.value = 1; // 搜索时重置到第一页
 	GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
 }
 
@@ -2352,9 +2356,63 @@ const openContractDialog = () => {
 
 }
 
+
+
+// 获取合同编辑锁状态
+const getContractEditLock = async (contractId) => {
+	try {
+		const res = await request({
+			url: 'Contracts/GetContractEditLock/GetContractEditLock',
+			method: 'get',
+			params: { ContractID: contractId }
+		});
+		return res; // 返回锁定用户名，如果未锁定则为null
+	} catch (error) {
+		console.error('获取合同编辑锁失败:', error);
+		return null;
+	}
+};
+
+// 设置合同编辑锁
+const setContractEditLock = async (contractId) => {
+	try {
+		const res = await request({
+			url: 'Contracts/SettingsContractEditLock/SettingsContractEditLock',
+			method: 'get',
+			params: { ContractID: contractId }
+		});
+		return res.code === 200;
+	} catch (error) {
+		console.error('设置合同编辑锁失败:', error);
+		return false;
+	}
+};
+
+// 移除合同编辑锁
+const removeContractEditLock = async (contractId) => {
+	try {
+		await request({
+			url: 'Contracts/RemoveContractEditLock/RemoveContractEditLock',
+			method: 'get',
+			params: { ContractID: contractId }
+		});
+	} catch (error) {
+		console.error('移除合同编辑锁失败:', error);
+	}
+};
+
 const SelctedContractId = ref(0);
 const contractReviewStatus = ref(null);
-const checkContractsDetails = (row) => {
+const checkContractsDetails = async (row) => {
+	// 先检查编辑锁
+	const lockStatus = await getContractEditLock(row.id);
+	if (lockStatus.data.isEditLock == true) {
+		ElMessageBox.alert(`当前销售合同正在被${lockStatus.data.editUser}编辑中，请稍后再试！`, '提示', {
+			confirmButtonText: '确定',
+			showClose: false
+		});
+		return;
+	}
 	contractReviewStatus.value = row.contractReviewStatusStr;
 	isDisabled.value = true;
 	contractDialog.value = true;
@@ -2521,6 +2579,7 @@ const checkContractsDetails = (row) => {
 }
 
 const EditContract = () => {
+	setContractEditLock(SelctedContractId.value);
 	isSaveBtnShow.value = false;
 	showEditBtn.value = false;
 	showEditSaveBtn.value = true;

@@ -11,15 +11,19 @@
 		</div>
 		<el-divider></el-divider>
 		<div style="width: 100%; margin-top: 30px;">
-			<el-input v-model="Search_CustomerNo_input" clearable style="width: 15%"
-				placeholder="输入客户编号" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-input v-model="Search_CustomerEmail_input" clearable style="width: 15%"
-				placeholder="输入邮箱地址" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-input v-model="Search_CustomerName_input" clearable style="width: 15%"
-				placeholder="输入客户名称" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-input v-model="Search_CustomerContactPerson_input" clearable style="width: 15%"
-				placeholder="输入联系人" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="Search_BusinessScope_Select" placeholder="选择业务范围" style="width: 15%;" filterable>
+			<!-- <el-input v-model="Search_CustomerNo_input" clearable style="width: 15%"
+				placeholder="输入客户编号" size="default" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
+			<el-input v-model="Search_CustomerEmail_input" clearable style="width: 15%" placeholder="输入邮箱地址"
+				size="default" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<el-select v-model="Search_CustomerName_input" placeholder="选择客户名称" style="width: 15%;" filterable
+				size="default">
+				<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode" :label="dict.dictLabel"
+					:value="dict.dictValue"></el-option>
+			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<el-input v-model="Search_CustomerContactPerson_input" clearable style="width: 15%" placeholder="输入联系人"
+				size="default" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<el-select v-model="Search_BusinessScope_Select" placeholder="选择业务范围" style="width: 15%;" filterable
+				size="default">
 				<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -28,20 +32,20 @@
 			<el-select v-model="Search_TradingCountry_Select" class="m-2" placeholder="选择国家" size="default"
 				style="width: 15%;" filterable>
 				<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue"></el-option>
+					:value="dict.dictValue" size="default"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-select filterable v-model="Search_CustomerLevel_Select" class="m-2" placeholder="选择客户等级" size="default"
 				style="width: 15%;">
 				<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue"></el-option>
+					:value="dict.dictValue" size="default"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-select filterable v-model="Search_CustomerSource_Select" class="m-2" placeholder="选择客户来源" size="default"
 				style="width: 15%;">
 				<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue"></el-option>
+					:value="dict.dictValue" size="default"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-date-picker v-model="Search_StartDate_Select" type="date" placeholder="起始日期" size="default"
-				style="width: 15%;" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;------&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				style="width: 15%;" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-date-picker v-model="Search_EndDate_Select" type="date" placeholder="结束日期" size="default"
 				style="width: 15%;" />
 		</div>
@@ -539,7 +543,8 @@ const state = reactive({
 		hr_express_delivery_company: [],
 		hr_express_payment_method: [],
 		hr_contract_status: [],
-		hr_ourcompany: []
+		hr_ourcompany: [],
+		sql_user_customers: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -567,6 +572,27 @@ proxy.getDicts(dictParams).then((response) => {
 	//获取客户基本信息列表
 	GetCustomeInfoList(currentPage.value, pageSize.value);
 })
+
+// 获取用户相关的客户数据
+const getUserCustomerData = async () => {
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetCustomerAllNameDataByUserId/GetSelectCustomerAllNameData',
+			method: 'get'
+		})
+		if (response.code === 200) {
+			state.optionss.sql_user_customers = response.data.map(item => ({
+				dictValue: item.dictValue,
+				dictLabel: item.dictLabel
+			}))
+		} else {
+			ElMessage.error(response.msg || '获取客户数据失败')
+		}
+	} catch (error) {
+		ElMessage.error('获取客户数据失败')
+	}
+}
+getUserCustomerData();//获取用户相关的客户数据
 
 //线索导入窗体
 const LeadImportDialog = ref(false)
@@ -705,7 +731,7 @@ const CustomerDuplicationCheckDialog = ref(false)
 const Search_CustomerBusiness_input = ref('')
 const Search_CustomerContactPerson_input = ref('')
 const Search_CustomerEmail_input = ref('')
-const Search_CustomerName_input = ref('')
+const Search_CustomerName_input = ref(null)
 const Search_CustomerNo_input = ref('')
 const Search_BusinessScope_Select = ref('')
 const Search_TradingCountry_Select = ref('')
@@ -719,7 +745,7 @@ const resetSearch = () => {
 	Search_CustomerBusiness_input.value = ''
 	Search_CustomerContactPerson_input.value = ''
 	Search_CustomerEmail_input.value = ''
-	Search_CustomerName_input.value = ''
+	Search_CustomerName_input.value = null
 	Search_CustomerNo_input.value = ''
 	Search_BusinessScope_Select.value = ''
 	Search_TradingCountry_Select.value = ''
@@ -1246,7 +1272,7 @@ function GetCustomeInfoList(start, end) {
 				PageSize: end,
 				customerNo: Search_CustomerNo_input.value || '',
 				emailAddress: Search_CustomerEmail_input.value || '',
-				customerName: Search_CustomerName_input.value || '',
+				customer: Search_CustomerName_input.value || 0,
 				contactPerson: Search_CustomerContactPerson_input.value || '',
 				BusinessScope: Search_BusinessScope_Select.value || 0,
 				TradingCountry: Search_TradingCountry_Select.value || 0,
@@ -1275,7 +1301,6 @@ function GetCustomeInfoList(start, end) {
 				} else {
 					CunstomeinfotableData.value = [];
 				}
-				reject(new Error('无数据'));  // Reject the promise if the response is null
 			}
 		}).catch(error => {
 			console.error(error);
