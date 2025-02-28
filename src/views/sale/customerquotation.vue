@@ -536,9 +536,9 @@
 						@click="EditSaveQuotation(quotationDialogformRef)">
 						编辑保存
 					</el-button>
-					<el-button type="warning" v-show="isReviewBtnShow" @click="SubmitReview">
+					<!-- <el-button type="warning" v-show="isReviewBtnShow" @click="SubmitReview">
 						提交审核
-					</el-button>
+					</el-button> -->
 				</span>
 			</template>
 		</el-dialog>

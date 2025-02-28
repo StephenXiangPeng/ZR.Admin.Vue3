@@ -358,18 +358,18 @@
 							<span>{{ scope.row.mainProductCode }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subcustomerGoodsNumber" label="子产品货号" width="300" align="center">
-						<template #default="scope">
-							<el-input v-model="scope.row.subcustomerGoodsNumber" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品货号">
-							</el-input>
-						</template>
-					</el-table-column>
 					<el-table-column prop="subProductCode" label="子产品编号" width="300" align="center">
 						<template #default="scope">
 							<el-input v-model="scope.row.subProductCode" style="max-width:250px" placeholder="请输入子产品编号"
 								:disabled="isDisabled">
 								<template #prepend>{{ Productform.productCode + "-" }}</template>
+							</el-input>
+						</template>
+					</el-table-column>
+					<el-table-column prop="subcustomerGoodsNumber" label="客户货号" width="300" align="center">
+						<template #default="scope">
+							<el-input v-model="scope.row.subcustomerGoodsNumber" style="max-width:200px"
+								:disabled="isDisabled" placeholder="客户货号">
 							</el-input>
 						</template>
 					</el-table-column>
@@ -1677,7 +1677,7 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 							subOuterBoxGrossWeight: subProduct.subouterBoxGrossWeight,
 							subpackingMethod: subProduct.subPackingMethod,
 							subProductFiles: subProductFileUrls.join(','),
-							subCustomerGoodsNumber: productInfoRequest.CustomerGoodsNumber
+							subCustomerGoodsNumber: subProduct.subcustomerGoodsNumber ? subProduct.subcustomerGoodsNumber : ''
 						};
 					}));
 				}
@@ -2127,7 +2127,7 @@ const EditSaveProductinfomation = async () => {
 					subProductFiles: subProductFileUrls
 						.filter(url => url && url.trim()) // 过滤掉空值和空白字符
 						.join(','),
-					subCustomerGoodsNumber: subProduct.CustomerGoodsNumber
+					subCustomerGoodsNumber: subProduct.subcustomerGoodsNumber ? subProduct.subcustomerGoodsNumber : ''
 				};
 			}));
 		}
