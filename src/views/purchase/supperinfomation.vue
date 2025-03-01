@@ -38,7 +38,7 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="SupplierInfoTableData">
-			<el-table-column prop="Id" label="供应商ID" width="150"></el-table-column>
+			<el-table-column prop="Id" label="供应商ID" width="150" v-if="false"></el-table-column>
 			<el-table-column prop="supplierId" label="供应商编号" width="150"></el-table-column>
 			<el-table-column prop="shortName" label="供应商简称" width="150"></el-table-column>
 			<el-table-column prop="fullName" label="供应商全称" width="150"></el-table-column>
@@ -122,11 +122,8 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="业务范围">
-							<el-select v-model="Addsupperinfoform.businessScope" filterable placeholder="请选择业务范围"
-								:disabled="isEditable" style="width: 300px;">
-								<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
+							<el-input v-model="Addsupperinfoform.businessScope" placeholder="请输入业务范围"
+								style="width: 300px" :disabled="isEditable" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -308,7 +305,7 @@
 									:disabled="isEditable" />
 							</template>
 						</el-table-column>
-						<el-table-column label="银行地址">
+						<el-table-column label="银行地址" v-if="false">
 							<template #default="{ row }">
 								<el-input v-model="row.bank_address" placeholder="输入银行地址" :disabled="isEditable" />
 							</template>

@@ -373,10 +373,8 @@ const SearchProductCurrentPage = ref(1);
 const SearchProductpageSize = ref(10);
 const searchProductNameText = ref('');
 const SearchProducthandlePageChange = async (newPage) => {
-	SearchProductpageSize.value = newPage;
-	const start = newPage;
-	const end = SearchProductpageSize.value;
-	const newData = await GetProductInfoList(start, end);
+	SearchProductCurrentPage.value = newPage; // 修改这里，直接使用newPage作为当前页
+	await GetProductInfoList(newPage, SearchProductpageSize.value);
 };
 GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
 //获取产品信息列表
@@ -393,6 +391,8 @@ function GetProductInfoList(start, end) {
 		}).then(response => {
 			if (response.data.data.length > 0) {
 				productDatatwo.value = response.data.data;
+				SearchProducttotalItems.value = response.data.totalNum;
+				SearchProductCurrentPage.value = response.data.pageIndex;
 				productDatatwo.value.forEach(item => {
 					item.unitOfMeasurement = state.optionss['hr_calculate_unit'].filter(hr_calculate_unit => hr_calculate_unit.dictValue == item.unitOfMeasurement).map(item => item.dictLabel).values().next().value;
 				});

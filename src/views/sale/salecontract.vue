@@ -515,7 +515,7 @@
 							<el-table-column prop="unitofmeasurement" label="计量单位" width="100">
 								<template #default="scope">
 									<el-select v-model="scope.row.unitofmeasurement" filterable placeholder="单位"
-										style="width: 100%;" :disabled="isDisabled">
+										style="width: 100%;" disabled>
 										<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -948,6 +948,7 @@
 			<el-table :data="productDatatwo" :default-sort="{ prop: 'productCode', order: 'descending' }"
 				style="width: 100%" @row-dblclick="handleRowDblClick" stripe>
 				<el-table-column prop="productCode" label="产品编号" sortable width="120" />
+				<el-table-column prop="customerGoodsNumber" label="客户货号" width="120" />
 				<el-table-column prop="chineseProductName" label="中文品名" width="150" />
 				<el-table-column prop="englishProductName" label="英文品名" width="180" />
 				<el-table-column prop="chineseSpecification" label="中文规格" width="150" />
@@ -1193,13 +1194,13 @@ const handleRowDblClick = (row) => {
 		productData.value.push({
 			productID: row.id,
 			productNum: row.productCode,
-			customerNum: '',
+			customerNum: row.customerGoodsNumber,
 			cproductname: row.chineseProductName,
 			cspecification: row.chineseSpecification,
 			contractQuantity: 0,
 			exportunitprice: 0,
 			exporttotalprice: 0,
-			unitofmeasurement: state.optionss['hr_calculate_unit'].filter(hr_calculate_unit => hr_calculate_unit.dictLabel == row.unitOfMeasurement).map(item => item.dictValue).values().next().value,
+			unitofmeasurement: state.optionss['hr_calculate_unit'].filter(hr_calculate_unit => hr_calculate_unit.dictValue == row.unitOfMeasurement).map(item => item.dictLabel).values().next().value,
 			purchaseinquiry: 0,
 			purchaseunitprice: 0,
 			onepacking: 0,
