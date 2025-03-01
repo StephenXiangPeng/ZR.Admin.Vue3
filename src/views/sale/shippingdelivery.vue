@@ -440,16 +440,20 @@
 				<el-text class="mx-1" size="large" type="success">出运单总金额：{{ AddShippingDeliveryform.shipmentTotalAmount
 				}}</el-text>&nbsp;&nbsp;&nbsp;&nbsp;
 				<span class="dialog-footer">
-					<el-button v-show="isSaveBtnShow" type="primary" @click="SaveClick()">
+					<el-button v-show="isSaveBtnShow && userId.toString() === CreateByUser" type="primary"
+						@click="SaveClick()">
 						确定保存
 					</el-button>
-					<el-button type="primary" v-show="isEditBtnShow" @click="EditClick()">
+					<el-button type="primary" v-show="isEditBtnShow && userId.toString() === CreateByUser"
+						@click="EditClick()">
 						编辑
 					</el-button>
-					<el-button type="primary" v-show="isEditSaveBtnShow" @click="EditSaveClick()">
+					<el-button type="primary" v-show="isEditSaveBtnShow && userId.toString() === CreateByUser"
+						@click="EditSaveClick()">
 						编辑保存
 					</el-button>
-					<el-button type="warning" v-show="isReviewBtnShow" @click="SubmitReview">
+					<el-button type="warning" v-show="isReviewBtnShow && userId.toString() === CreateByUser"
+						@click="SubmitReview">
 						提交审核
 					</el-button>
 				</span>
@@ -466,7 +470,10 @@ import { el } from 'element-plus/es/locale';
 import { get } from 'sortablejs';
 import Supperinfomation from '../purchase/supperinfomation.vue';
 import dayjs from 'dayjs';
+import useUserStore from "@/store/modules/user";
 
+//获取当前登录用户ID
+var userId = useUserStore().userId;
 //是否可编辑
 const IsEditable = ref(false) //是否可编辑
 const isReviewBtnShow = ref(false) //提交审核按钮是否显示
@@ -1278,8 +1285,63 @@ function GetShippingDeliveriesList(start, end) {
 	});
 }
 
+// 	获取出运发货单编辑锁状态
+const GetShippingDeliveriesContractEditLock = async (contractId) => {
+	try {
+		const res = await request({
+			url: 'ShippingDeliveries/GetShippingDeliveriesContractEditLock/GetShippingDeliveriesContractEditLock',
+			method: 'get',
+			params: { ShippingDeliveriesContractID: contractId }
+		});
+		return res; // 返回锁定用户名，如果未锁定则为null
+	} catch (error) {
+		console.error('获取出运发货单编辑锁失败:', error);
+		return null;
+	}
+};
+
+// 设置出运发货单编辑锁
+const SettingsShippingDeliveriesContractEditLock = async (contractId) => {
+	try {
+		const res = await request({
+			url: 'ShippingDeliveries/SettingsShippingDeliveriesContractEditLock/SettingsShippingDeliveriesContractEditLock',
+			method: 'get',
+			params: { ShippingDeliveriesContractID: contractId }
+		});
+		return res.code === 200;
+	} catch (error) {
+		console.error('设置出运发货单编辑锁失败:', error);
+		return false;
+	}
+};
+
+// 移除出运发货单编辑锁
+const RemoveShippingDeliveriesContractEditLock = async (contractId) => {
+	try {
+		await request({
+			url: 'ShippingDeliveries/RemoveShippingDeliveriesContractEditLock/RemoveShippingDeliveriesContractEditLock',
+			method: 'get',
+			params: { ShippingDeliveriesContractID: contractId }
+		});
+	} catch (error) {
+		console.error('移除出运发货单编辑锁失败:', error);
+	}
+};
+
+// 单据创建人
+var CreateByUser;
 //检查出运发货单
-const CheckShipingDelivery = (row) => {
+const CheckShipingDelivery = async (row) => {
+	CreateByUser = row.createBy;
+	// 先检查编辑锁
+	const lockStatus = await GetShippingDeliveriesContractEditLock(row.id);
+	if (lockStatus.data.isEditLock == true) {
+		ElMessageBox.alert(`当前出运发货单正在被${lockStatus.data.editUser}编辑中，请稍后再试！`, '提示', {
+			confirmButtonText: '确定',
+			showClose: false
+		});
+		return;
+	}
 	// 根据审核状态设置按钮显示
 	const reviewStatus = row.reviewStatus;
 	// 如果是审核中(1)或已批准(2),所有按钮都不显示
@@ -1454,7 +1516,11 @@ const CheckShipingDelivery = (row) => {
 };
 
 //关闭弹窗
-const CreateshippingdeliveryDialogClose = () => {
+const CreateshippingdeliveryDialogClose = async () => {
+	if (CreateByUser.toString() == userId.toString()) {
+		// 移除编辑锁
+		await RemoveShippingDeliveriesContractEditLock(IsEditShippingDeliveryID.value);
+	}
 	CreateshippingdeliveryDialog.value = false;
 	isEditSaveBtnShow.value = false;
 	isSaveBtnShow.value = true;
@@ -1619,6 +1685,7 @@ interface OriginalQuantity {
 const OriginalShipmentQuantity = ref<OriginalQuantity[]>([])
 //编辑
 const EditClick = () => {
+	SettingsShippingDeliveriesContractEditLock(IsEditShippingDeliveryID.value);
 	// 清空之前的数据
 	OriginalShipmentQuantity.value = []
 

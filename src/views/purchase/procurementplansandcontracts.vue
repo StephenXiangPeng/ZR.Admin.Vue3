@@ -21,7 +21,7 @@
 			<!-- 操作 -->
 			<el-table-column label="操作" width="150">
 				<template #default="scope">
-					<!-- 合并的“生成采购合同”按钮 -->
+					<!-- 合并的"生成采购合同"按钮 -->
 					<div v-if="isFirstRow(scope.row)">
 						<el-button type="primary" size="small" @click="ViewDetails(scope.row)">
 							需求详情
@@ -93,7 +93,8 @@
 			:total="purchasecontractsTableDatatotalItems" background layout="prev, pager, next"
 			style="margin-top: 5px;" />
 
-		<el-dialog v-model="Addcontractofpurchasedialog" title="新增采购合同" :close-on-click-modal=false style="width: 70%;">
+		<el-dialog v-model="Addcontractofpurchasedialog" title="新增采购合同" :close-on-click-modal=false style="width: 70%;"
+			@close="handleAddcontractofpurchasedialogclose">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="Addcontractofpurchaseform" label-width="120px">
@@ -397,18 +398,22 @@
 			<template #footer>
 				<span class="dialog-footer">
 					<!-- 新增时的保存按钮 -->
-					<el-button type="primary" v-show="isSaveBtnShow" @click="SavePurchaseContract">
+					<el-button type="primary" v-show="isSaveBtnShow && userId.toString() === CheckUser"
+						@click="SavePurchaseContract">
 						确定保存
 					</el-button>
 					<!-- 编辑时的保存按钮 -->
-					<el-button type="primary" v-show="showEditSaveBtn" @click="saveEditContract">
+					<el-button type="primary" v-show="showEditSaveBtn && userId.toString() === CheckUser"
+						@click="saveEditContract">
 						编辑保存
 					</el-button>
 					<!-- 查看详情时的编辑按钮 -->
-					<el-button type="primary" v-show="showEditBtn" @click="editContract">
+					<el-button type="primary" v-show="showEditBtn && userId.toString() === CheckUser"
+						@click="editContract">
 						编辑
 					</el-button>
-					<el-button type="success" v-show="showSubmitReviewBtn" @click="submitForReview">
+					<el-button type="success" v-show="showSubmitReviewBtn && userId.toString() === CheckUser"
+						@click="submitForReview">
 						提交审核
 					</el-button>
 				</span>
@@ -651,6 +656,7 @@ const updateTotalValues = () => {
 }
 
 var userId = useUserStore().userId;
+var CheckUser = ref();
 
 // 按钮显示控制
 const isSaveBtnShow = ref(false);        // 确定保存按钮(新增时使用)
@@ -699,11 +705,6 @@ var dictParams = [{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' }
 { dictType: 'hr_supplier_level' }, { dictType: 'hr_business_scope' }, { dictType: 'hr_china_provinces' }, { dictType: 'hr_china_city' }, { dictType: 'sql_sale_contracts' },
 { dictType: 'sql_supplier_info' }, { dictType: 'sql_hr_purchase' }, { dictType: 'hr_packing' }, { dictType: 'sql_product' }]
 
-// proxy.getDicts(dictParams).then((response) => {
-// 	response.data.forEach((element) => {
-// 		state.optionss[element.dictType] = element.list
-// 	})
-// })
 
 async function fetchDataAndExecute() {
 	try {
@@ -968,7 +969,7 @@ const Totalvalueofgoodsform = ref({
 })
 
 const editContract = () => {
-
+	setPurchaseContractEditLock(currentContractId.value);
 	showEditBtn.value = false;
 	showEditSaveBtn.value = true;
 	showSubmitReviewBtn.value = false;
@@ -1432,10 +1433,72 @@ function GetpurchaseContractList(start, end) {
 	});
 }
 
+
+// 获取合同编辑锁状态
+const getPurchaseContractEditLock = async (contractId) => {
+	try {
+		const res = await request({
+			url: 'PurchaseContracts/GetPurchaseContractEditLock/GetPurchaseContractEditLock',
+			method: 'get',
+			params: { PurchaseContractID: contractId }
+		});
+		return res; // 返回锁定用户名，如果未锁定则为null
+	} catch (error) {
+		console.error('获取采购合同编辑锁失败:', error);
+		return null;
+	}
+};
+
+// 设置采购合同编辑锁
+const setPurchaseContractEditLock = async (contractId) => {
+	try {
+		const res = await request({
+			url: 'PurchaseContracts/SettingsPurchaseContractEditLock/SettingsPurchaseContractEditLock',
+			method: 'get',
+			params: { PurchaseContractID: contractId }
+		});
+		return res.code === 200;
+	} catch (error) {
+		console.error('设置采购合同编辑锁失败:', error);
+		return false;
+	}
+};
+
+// 移除采购合同编辑锁
+const removePurchaseContractEditLock = async (contractId) => {
+	try {
+		await request({
+			url: 'PurchaseContracts/RemovePurchaseContractEditLock/RemovePurchaseContractEditLock',
+			method: 'get',
+			params: { PurchaseContractID: contractId }
+		});
+	} catch (error) {
+		console.error('移除采购合同编辑锁失败:', error);
+	}
+};
+
+// 采购合同窗体关闭
+const handleAddcontractofpurchasedialogclose = async () => {
+	if (CheckUser.toString() == userId.toString()) {
+		await removePurchaseContractEditLock(currentContractId.value);
+	}
+	clearAll();
+}
+
 // 查看详情
-const CheckDetails = (row) => {
+const CheckDetails = async (row) => {
+	// 先检查编辑锁
+	const lockStatus = await getPurchaseContractEditLock(row.id);
+	if (lockStatus.data.isEditLock == true) {
+		ElMessageBox.alert(`当前采购合同正在被${lockStatus.data.editUser}编辑中，请稍后再试！`, '提示', {
+			confirmButtonText: '确定',
+			showClose: false
+		});
+		return;
+	}
 	isFormDisabled.value = true;
 	currentContractId.value = row.id;  // 存储当前合同ID
+	CheckUser = state.optionss.sql_hr_purchase.find(p => p.dictLabel === row.purchaser.toString())?.dictValue;
 	// 重置所有按钮状态
 	isSaveBtnShow.value = false;
 	// 根据合同状态设置按钮显示
@@ -1473,6 +1536,7 @@ const CheckDetails = (row) => {
 	Totalvalueofgoodsform.value.availablePayment = row.availablePayment;
 	Totalvalueofgoodsform.value.paidAmount = row.paidAmount;
 	Totalvalueofgoodsform.value.unpaidAmount = row.unpaidAmount;
+
 
 	/*采购合同产品信息与相关费用*/
 	return new Promise((resolve, reject) => {

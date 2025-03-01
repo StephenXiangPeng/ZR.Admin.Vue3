@@ -4,8 +4,10 @@
 			<el-aside width="300px">
 				<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;产品分类</span>
 				<el-divider></el-divider>
-				<el-button size="small" plain @click="openAddproductCategoriesMessageBox()">添加分类</el-button>
-				<el-button size="small" plain @click="DelproductCategoriesMessageBox()">删除分类</el-button>
+				<el-button size="small" plain @click="openAddproductCategoriesMessageBox()"
+					v-if="userId.toString() === '1'">添加分类</el-button>
+				<el-button size="small" plain @click="DelproductCategoriesMessageBox()"
+					v-if="userId.toString() === '1'">删除分类</el-button>
 				<el-tree-v2 :data="ProductCategoriesTreeData" style="font-size: 15px;" :height="700"
 					@node-click="handleNodeClick">
 					<template #default="{ node }">
@@ -39,7 +41,8 @@
 					<div style="margin-top: 30px;"></div>
 					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;产品列表</span>
 					<el-divider></el-divider>
-					<el-button type="primary" @click="openAddProductDialog()">添加产品</el-button>
+					<el-button type="primary" @click="openAddProductDialog()"
+						v-if="userId.toString() === '1'">添加产品</el-button>
 					<el-table :data="ProductInfoTableData">
 						<el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
 						<el-table-column prop="chineseProductName" label="中文品名" width="150"></el-table-column>
@@ -52,7 +55,8 @@
 							<template v-slot:default="scope">
 								<el-button link type="primary" size="small"
 									@click=OpenProductInfoDetailDialog(scope.row)>查看详情</el-button>
-								<el-button link type="primary" size="small" v-if="isDelteBtnShow"
+								<el-button link type="primary" size="small"
+									v-if="isDelteBtnShow && userId.toString() === '1'"
 									@click=DeleteProduct(scope.row)>删除产品</el-button>
 							</template>
 						</el-table-column>
@@ -350,8 +354,8 @@
 				</el-row>
 				<span style="font-size: 20px; font-weight: bold;">子产品</span>
 				<el-divider></el-divider>
-				<el-button type="primary" @click="AddSubProduct()" v-if="showAddSubProductButton"
-					:disabled="isDisabled">添加子产品</el-button>
+				<el-button type="primary" @click="AddSubProduct()"
+					v-if="showAddSubProductButton && userId.toString() === '1'" :disabled="isDisabled">添加子产品</el-button>
 				<el-table :data="SubProductTableData" style="width: 100%; height: 550px;">
 					<el-table-column prop="mainProductCode" label="主产品编号" width="150" align="center">
 						<template #default="scope">
@@ -383,7 +387,7 @@
 								<template #trigger>
 									<el-button type="primary" icon="Plus" size="default"
 										:disabled="isDisabled || (scope.row.productFiles && scope.row.productFiles.length >= 3)"
-										v-if="SelectFileView">
+										v-if="SelectFileView && userId.toString() === '1'">
 										选择附件
 									</el-button>
 								</template>
@@ -403,7 +407,7 @@
 								:on-remove="(file) => handleImageRemove(file, scope.$index)" :limit="3" accept="image/*"
 								multiple list-type="text" :file-list="scope.row.subproductImages || []">
 								<el-button
-									v-if="!isViewMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3)"
+									v-if="!isViewMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3) && userId.toString() === '1'"
 									type="primary" icon="Plus" size="default">
 									选择图片
 								</el-button>
@@ -713,13 +717,16 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="primary" v-if="showSaveBtn" @click="SaveProductinfomation(ProductformRef)">
+					<el-button type="primary" v-if="showSaveBtn && userId.toString() === '1'"
+						@click="SaveProductinfomation(ProductformRef)">
 						确定保存
 					</el-button>
-					<el-button type="primary" v-if="showEditBtn" @click="EditProductinfomation()">
+					<el-button type="primary" v-if="showEditBtn && userId.toString() === '1'"
+						@click="EditProductinfomation()">
 						编辑
 					</el-button>
-					<el-button type="primary" v-if="showEditSaveBtn" @click="EditSaveProductinfomation()">
+					<el-button type="primary" v-if="showEditSaveBtn && userId.toString() === '1'"
+						@click="EditSaveProductinfomation()">
 						编辑保存
 					</el-button>
 				</span>
@@ -740,7 +747,10 @@ import { get } from 'sortablejs';
 import { onMounted } from 'vue'; //初始运行钩子
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { fa } from 'element-plus/es/locale';
+import UserInfo from '../system/user/profile/userInfo.vue';
 
+//获取当前登录用户信息
+const userId = useUserStore().userId;
 //#region 子产品附件
 const SelectFileView = ref(true);
 const handleSubProductFileChange = (file, fileList, index) => {
@@ -1043,7 +1053,10 @@ const openAddProductDialog = () => {
 	showAddSubProductButton.value = true;
 }
 
-const closeAddProductDialog = () => {
+const closeAddProductDialog = async () => {
+	if (userId.toString() === '1') {
+		await removeProductEditLock(EditProductID.value);
+	}
 	clearProductform();
 	SelectNodeId.value = 0;
 }
@@ -1823,10 +1836,63 @@ const DeleteProduct = (row) => {
 	});
 }
 
+
+// 获取产品编辑锁状态
+const getProductEditLock = async (productId) => {
+	try {
+		const res = await request({
+			url: 'ProductInformation/GetProductInfoEditLock/GetProductInfoEditLock',
+			method: 'get',
+			params: { ProductID: productId }
+		});
+		return res; // 返回锁定用户名，如果未锁定则为null
+	} catch (error) {
+		console.error('获取产品编辑锁失败:', error);
+		return null;
+	}
+};
+
+// 设置产品编辑锁
+const setProductEditLock = async (productId) => {
+	try {
+		const res = await request({
+			url: 'ProductInformation/SettingsProductInfoEditLock/SettingsProductInfoEditLock',
+			method: 'get',
+			params: { ProductID: productId }
+		});
+		return res.code === 200;
+	} catch (error) {
+		console.error('设置产品编辑锁失败:', error);
+		return false;
+	}
+};
+
+// 移除产品编辑锁
+const removeProductEditLock = async (productId) => {
+	try {
+		await request({
+			url: 'ProductInformation/RemoveProductInfoEditLock/RemoveProductInfoEditLock',
+			method: 'get',
+			params: { ProductID: productId }
+		});
+	} catch (error) {
+		console.error('移除产品编辑锁失败:', error);
+	}
+};
+
 const isViewMode = ref(false);
 const showAddSubProductButton = ref(true);
 //查看详情
-const OpenProductInfoDetailDialog = (row) => {
+const OpenProductInfoDetailDialog = async (row) => {
+	// 先检查编辑锁
+	const lockStatus = await getProductEditLock(row.id);
+	if (lockStatus.data.isEditLock == true) {
+		ElMessageBox.alert(`当前产品正在被${lockStatus.data.editUser}编辑中，请稍后再试！`, '提示', {
+			confirmButtonText: '确定',
+			showClose: false
+		});
+		return;
+	}
 	isViewMode.value = true;
 	showSaveBtn.value = false;
 	showEditBtn.value = true;
@@ -1948,6 +2014,7 @@ const OpenProductInfoDetailDialog = (row) => {
 }
 const EditProductID = ref(0);
 const EditProductinfomation = () => {
+	setProductEditLock(EditProductID.value);
 	isViewMode.value = false;
 	showEditSaveBtn.value = true;
 	showEditBtn.value = false;
