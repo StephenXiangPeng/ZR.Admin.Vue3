@@ -276,7 +276,7 @@
 					<el-table-column prop="unitofmeasurement" label="计量单位" width="100">
 						<template #default="scope">
 							<el-select v-model="scope.row.unitofmeasurement" filterable placeholder="单位"
-								style="width: 100%;" :disabled="isDisabled">
+								style="width: 100%;" :disabled="true">
 								<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -296,24 +296,24 @@
 							<el-input v-model="row.purchaseunitprice" @change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
-					<el-table-column prop="inlandfreightprice" label="内陆运费(m³)" width="110">
+					<el-table-column prop="inlandfreightprice" label="内陆运费(m³)" width="130">
 						<template #default="{ row }">
 							<el-input v-model="row.inlandfreightprice" @change="calculateTotal"
 								:disabled="isDisabled" />
 						</template>
 					</el-table-column>
-					<el-table-column prop="additionalpackagingcosts" label="单个产品额外包装费用" width="165">
+					<el-table-column prop="additionalpackagingcosts" label="单个产品额外包装费用" width="180">
 						<template #default="{ row }">
 							<el-input v-model="row.additionalpackagingcosts" @change="calculateTotal"
 								:disabled="isDisabled" />
 						</template>
 					</el-table-column>
-					<el-table-column prop="singleProductGrossProfit" label="单个产品毛利" width="110">
+					<el-table-column prop="singleProductGrossProfit" label="单个产品毛利" width="130">
 						<template #default="scope">
 							<span>{{ scope.row.singleProductGrossProfit }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="140">
+					<el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="160">
 						<template #default="scope">
 							<span>{{ scope.row.singleProductGrossProfitTotal }}</span>
 						</template>
@@ -417,37 +417,37 @@
 							<span>{{ scope.row.NumberOfBoxes }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="totalNetWeight" label="总净重(KG)" width="100">
+					<el-table-column prop="totalNetWeight" label="总净重(KG)" width="130">
 						<template #default="scope">
 							<span>{{ scope.row.totalNetWeight }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="totalGrossWeight" label="总毛重(KG)" width="100">
+					<el-table-column prop="totalGrossWeight" label="总毛重(KG)" width="130">
 						<template #default="scope">
 							<span>{{ scope.row.totalGrossWeight }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="totalVolume" label="总体积(m³)" width="100">
+					<el-table-column prop="totalVolume" label="总体积(m³)" width="130">
 						<template #default="scope">
 							<span>{{ scope.row.totalVolume }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="OtherFees" label="单个产品其它费用" width="140">
+					<el-table-column prop="OtherFees" label="单个产品其它费用" width="170">
 						<template #default="{ row }">
 							<el-input v-model="row.OtherFees" @change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
-					<el-table-column prop="SinglesalesrevenueA" label="单个销售收入A" width="120" v-if="true">
+					<el-table-column prop="SinglesalesrevenueA" label="单个销售收入A" width="170" v-if="true">
 						<template #default="scope">
 							<span>{{ scope.row.SinglesalesrevenueA }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="Singleproductvolume" label="单个产品体积(m³)" width="135" v-if="true">
+					<el-table-column prop="Singleproductvolume" label="单个产品体积(m³)" width="170" v-if="true">
 						<template #default="scope">
 							<span>{{ scope.row.Singleproductvolume }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="Portchargesforindividualproducts" label="单个产品的港杂费" width="140" v-if="true">
+					<el-table-column prop="Portchargesforindividualproducts" label="单个产品的港杂费" width="170" v-if="true">
 						<template #default="scope">
 							<span>{{ scope.row.Portchargesforindividualproducts }}</span>
 						</template>
@@ -457,7 +457,7 @@
 							<span>{{ scope.row.Oceanfreightforasingleproduct }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="Inlandfreightforasingleproduct" label="单个产品内陆运费" width="140" v-if="true">
+					<el-table-column prop="Inlandfreightforasingleproduct" label="单个产品内陆运费" width="170" v-if="true">
 						<template #default="scope">
 							<span>{{ scope.row.Inlandfreightforasingleproduct }}</span>
 						</template>
@@ -549,6 +549,7 @@
 			<el-table :data="productDatatwo" style="width: 100%"
 				:default-sort="{ prop: 'productCode', order: 'descending' }" @row-dblclick="handleRowDblClick" stripe>
 				<el-table-column prop="productCode" label="产品编号" sortable width="120" />
+				<el-table-column prop="customerGoodsNumber" label="客户货号" width="120" />
 				<el-table-column prop="chineseProductName" label="中文品名" width="150" />
 				<el-table-column prop="englishProductName" label="英文品名" width="180" />
 				<el-table-column prop="chineseSpecification" label="中文规格" width="150" />
@@ -1017,7 +1018,7 @@ const handleRowDblClick = (row) => {
 	} else {
 		productData.value.push({
 			productNum: row.productCode,
-			customerNum: '',
+			customerNum: row.customerGoodsNumber,
 			cproductname: row.chineseProductName,
 			cspecification: row.chineseSpecification,
 			quotationnum: 0,
@@ -1178,7 +1179,7 @@ const calculateTotal = () => {
 		item.SinglesalesrevenueA = (item.purchaseunitprice / (1 + item.rebaterate / 100) * (item.rebaterate / 100) + item.exportunitprice * Number(quotationDialogform.exchangerate));
 		item.SinglesalesrevenueA = item.SinglesalesrevenueA.toFixed(3);//单个销售收入A保留3位小数
 		//单个产品体积=外箱体积/外箱装量
-		item.Singleproductvolume = (item.outerboxvolume / item.outerboxloading).toFixed(4).toString().replace(/(\.\d*?[1-9])0+$/, '$1');
+		item.Singleproductvolume = (item.outerboxvolume / item.outerboxloading).toFixed(6).toString().replace(/(\.\d*?[1-9])0+$/, '$1');
 		//单个产品的港杂费=港杂费 x 单个产品体积
 		item.Portchargesforindividualproducts = (Number(quotationDialogform.portMiscellaneousFees) * Number(item.Singleproductvolume)).toFixed(3);
 		console.log('单个产品的港杂费：' + item.Portchargesforindividualproducts);

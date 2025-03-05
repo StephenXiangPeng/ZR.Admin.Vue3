@@ -540,25 +540,25 @@
 									</el-input>
 								</template>
 							</el-table-column>
-							<el-table-column prop=" inlandfreightprice" label="内陆运费(m³)" width="110">
+							<el-table-column prop=" inlandfreightprice" label="内陆运费(m³)" width="130">
 								<template #default="{ row }">
 									<el-input v-model="row.inlandfreightprice" @change="calculateTotal"
 										:disabled="isDisabled" />
 								</template>
 							</el-table-column>
-							<el-table-column prop="AdditionalPackagingCosts" label="单个产品额外包装费用" width="165">
+							<el-table-column prop="AdditionalPackagingCosts" label="单个产品额外包装费用" width="185">
 								<template #default="{ row }">
 									<el-input v-model="row.AdditionalPackagingCosts" @change="calculateTotal"
 										:disabled="isDisabled" />
 								</template>
 							</el-table-column>
-							<el-table-column prop="singleProductGrossProfit" label="单个产品毛利" width="110">
+							<el-table-column prop="singleProductGrossProfit" label="单个产品毛利" width="130">
 								<template #default="scope">
 									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
 										scope.row.singleProductGrossProfit }}</span>
 								</template>
 							</el-table-column>
-							<el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="140">
+							<el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="160">
 								<template #default="scope">
 									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
 										scope.row.singleProductGrossProfitTotal }}</span>
@@ -662,38 +662,38 @@
 									<span>{{ scope.row.NumberOfBoxes }}</span>
 								</template>
 							</el-table-column>
-							<el-table-column prop="totalNetWeight" label="总净重(KG)" width="100">
+							<el-table-column prop="totalNetWeight" label="总净重(KG)" width="130">
 								<template #default="scope">
 									<span>{{ scope.row.totalNetWeight }}</span>
 								</template>
 							</el-table-column>
-							<el-table-column prop="totalGrossWeight" label="总毛重(KG)" width="100">
+							<el-table-column prop="totalGrossWeight" label="总毛重(KG)" width="130">
 								<template #default="scope">
 									<span>{{ scope.row.totalGrossWeight }}</span>
 								</template>
 							</el-table-column>
-							<el-table-column prop="totalVolume" label="总体积(m³)" width="100">
+							<el-table-column prop="totalVolume" label="总体积(m³)" width="130">
 								<template #default="scope">
 									<span>{{ scope.row.totalVolume }}</span>
 								</template>
 							</el-table-column>
-							<el-table-column prop="OtherFees" label="单个产品其它费用" width="140">
+							<el-table-column prop="OtherFees" label="单个产品其它费用" width="160">
 								<template #default="{ row }">
 									<el-input v-model="row.OtherFees" @change="calculateTotal" :disabled="isDisabled" />
 								</template>
 							</el-table-column>
-							<el-table-column prop="SinglesalesrevenueA" label="单个销售收入A" width="120" v-if="true">
+							<el-table-column prop="SinglesalesrevenueA" label="单个销售收入A" width="160" v-if="true">
 								<template #default="scope">
 									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
 										scope.row.SinglesalesrevenueA }}</span>
 								</template>
 							</el-table-column>
-							<el-table-column prop="Singleproductvolume" label="单个产品体积(m³)" width="135" v-if="true">
+							<el-table-column prop="Singleproductvolume" label="单个产品体积(m³)" width="160" v-if="true">
 								<template #default="scope">
 									<span>{{ scope.row.Singleproductvolume }}</span>
 								</template>
 							</el-table-column>
-							<el-table-column prop="Portchargesforindividualproducts" label="单个产品的港杂费" width="140"
+							<el-table-column prop="Portchargesforindividualproducts" label="单个产品的港杂费" width="160"
 								v-if="true">
 								<template #default="scope">
 									<span>{{ scope.row.Portchargesforindividualproducts }}</span>
@@ -705,7 +705,7 @@
 									<span>{{ scope.row.Oceanfreightforasingleproduct }}</span>
 								</template>
 							</el-table-column>
-							<el-table-column prop="Inlandfreightforasingleproduct" label="单个产品内陆运费" width="140"
+							<el-table-column prop="Inlandfreightforasingleproduct" label="单个产品内陆运费" width="160"
 								v-if="true">
 								<template #default="scope">
 									<span>{{ scope.row.Inlandfreightforasingleproduct }}</span>
@@ -1285,7 +1285,7 @@ const calculateTotal = () => {
 		item.SinglesalesrevenueA = (item.purchaseunitprice / (1 + item.rebaterate / 100) * (item.rebaterate / 100) + item.exportunitprice * Number(Newcontractform.exchangeRate));
 		item.SinglesalesrevenueA = item.SinglesalesrevenueA.toFixed(3);//单个销售收入A保留3位小数
 		//单个产品体积=外箱体积/外箱装量
-		item.Singleproductvolume = (item.outerboxvolume / item.outerboxloading).toFixed(4).toString().replace(/(\.\d*?[1-9])0+$/, '$1');
+		item.Singleproductvolume = (item.outerboxvolume / item.outerboxloading).toFixed(6).toString().replace(/(\.\d*?[1-9])0+$/, '$1');
 		//单个产品的港杂费=港杂费 x 单个产品体积
 		item.Portchargesforindividualproducts = (Number(Newcontractform.portMiscellaneousFees) * Number(item.Singleproductvolume)).toFixed(3);
 		console.log('单个产品的港杂费：' + item.Portchargesforindividualproducts);
@@ -1298,11 +1298,11 @@ const calculateTotal = () => {
 		//item.Oceanfreightforasingleproduct = (Number(quotationDialogform.oceanFreight) * item.Singleproductvolume).toFixed(3);
 		//单个产品内陆运费=内陆运费 x 单个产品体积
 		item.Inlandfreightforasingleproduct = (Number(item.inlandfreightprice) * item.Singleproductvolume).toFixed(3);
-		if (isNaN(item.SinglesalesrevenueA - item.Portchargesforindividualproducts - item.Inlandfreightforasingleproduct - item.Oceanfreightforasingleproduct - item.purchaseunitprice - item.additionalpackagingcosts - item.OtherFees)) {
+		if (isNaN(item.SinglesalesrevenueA - item.Portchargesforindividualproducts - item.Inlandfreightforasingleproduct - item.Oceanfreightforasingleproduct - item.purchaseunitprice - item.AdditionalPackagingCosts - item.OtherFees)) {
 			item.singleProductGrossProfit = 0.000;
 		} else {
 			//单个产品毛利=单个销售收入A - 单个港杂费 -单个产品内陆运费 - 单个海运费 - 采购价 - 额外包装费用 - 其他费用
-			item.singleProductGrossProfit = (item.SinglesalesrevenueA - item.Portchargesforindividualproducts - item.Inlandfreightforasingleproduct - item.Oceanfreightforasingleproduct - item.purchaseunitprice - item.additionalpackagingcosts - item.OtherFees).toFixed(3);
+			item.singleProductGrossProfit = (item.SinglesalesrevenueA - item.Portchargesforindividualproducts - item.Inlandfreightforasingleproduct - item.Oceanfreightforasingleproduct - item.purchaseunitprice - item.AdditionalPackagingCosts - item.OtherFees).toFixed(3);
 			//单个产品毛利合计=单个产品毛利 x 合同数量
 			item.singleProductGrossProfitTotal = (item.singleProductGrossProfit * item.contractQuantity).toFixed(3);
 		}
@@ -1379,7 +1379,7 @@ const calculateTotal = () => {
 	Newcontractform.TotalVolume = TotalVolume || 0;
 	Newcontractform.TotalPurchases = TotalPurchases || 0;
 	Newcontractform.TotalOtherFees = TotalOtherFees || 0;
-	Newcontractform.TotalTaxRefund = TotalTaxRefund || 0;
+	Newcontractform.TotalTaxRefund = Number(TotalTaxRefund.toFixed(3)) || 0;
 	//利润金额=货值合计+退税总额-采购合计-其它费用
 	Newcontractform.ProfitAmount = Number(Number((TotalvalueOfGoods * Newcontractform.exchangeRate + TotalTaxRefund) - Number(TotalPurchases) - Number(TotalOtherFees)).toFixed(2)) || 0;
 	Newcontractform.Totalgrossprofit = Totalgrossprofit || 0;
@@ -1387,7 +1387,7 @@ const calculateTotal = () => {
 	//金额合计
 	Newcontractform.amountTotal = TotalvalueOfGoods;
 	//美金换算
-	Newcontractform.usdConversion = Number(Newcontractform.amountTotal / Newcontractform.exchangeRate);
+	Newcontractform.usdConversion = Number((Newcontractform.amountTotal / Newcontractform.exchangeRate).toFixed(3));
 }
 
 const deleteRow = (index: number) => {
