@@ -196,7 +196,7 @@
 						</template>
 					</el-upload>
 					<el-dialog v-model="dialogVisible">
-						<img style="max-width: 100%; max-height: 100%; width: auto; height: auto;" w-full
+						<img style="max-width: 100%; max-height: 80vh; object-fit: contain; display: block; margin: 0 auto;"
 							:src="dialogImageUrl" alt="Preview Image" />
 					</el-dialog>
 				</el-form-item>
@@ -434,8 +434,8 @@
 							</div>
 						</template>
 					</el-upload>
-					<el-dialog v-model="dialogVisible">
-						<img style="max-width: 100%; max-height: 100%; width: auto; height: auto;" w-full
+					<el-dialog v-model="dialogVisible" append-to-body>
+						<img style="max-width: 100%; max-height: 80vh; object-fit: contain; display: block; margin: 0 auto;"
 							:src="dialogImageUrl" alt="Preview Image" />
 					</el-dialog>
 				</el-form-item>
@@ -453,12 +453,35 @@
 					</el-table>
 				</el-tab-pane>
 				<el-tab-pane label="联系日志" name="ContactLogTable">
-					<el-table :data="ContactLogData" height="300" style="width: 100%">
-						<el-table-column prop="EmailDate" label="联系日期" />
-						<el-table-column prop="Contact" label="联系人" />
-						<el-table-column prop="OurPersonnel" label="我方人员" />
-						<el-table-column prop="ContactDetails" label="联系内容" show-overflow-tooltip />
+					<el-button type="primary" @click="AddContactLog">添加联系日志</el-button>
+					<el-table :data="ContactLogData" height="200" style="width: 100%">
+						<el-table-column prop="emailDate" label="联系日期" width="130" />
+						<el-table-column prop="logSouce" label="来源" width="150" />
+						<el-table-column prop="contact" label="联系人" width="180" />
+						<el-table-column prop="ourPersonnel" label="我方人员" width="180" />
+						<el-table-column prop="contactDetails" label="联系内容" show-overflow-tooltip />
+						<el-table-column label="图片" width="100">
+							<template #default="{ row }">
+								<el-image v-if="row.images && row.images.length > 0" style="width: 50px; height: 50px;"
+									:src="row.images.split(',')[0]" :preview-src-list="row.images.split(',')"
+									fit="cover" :preview-teleported="true" :initial-index="0" />
+								<span v-else>无图片</span>
+							</template>
+						</el-table-column>
+						<el-table-column label="附件" width="100">
+							<template #default="{ row }">
+								<el-button v-if="row.attachments && row.attachments.length > 0" type="primary" link
+									@click="downloadAttachment(row.attachments)">
+									下载附件
+								</el-button>
+								<span v-else>无附件</span>
+							</template>
+						</el-table-column>
 					</el-table>
+					<el-pagination @current-change="ContactLogTablehandlePageChange"
+						:current-page="ContactLogTablecurrentPage" :page-size="ContactLogTablepageSize"
+						:total="ContactLogTabletotalItems" background layout="prev, pager, next"
+						style="margin-top: 5px;" />
 				</el-tab-pane>
 				<el-tab-pane label="报价记录" name="QuoteRecordTable">
 					<el-table :data="QuotationRecordData">
@@ -511,6 +534,61 @@
 				<span class="dialog-footer">
 					<el-button type="warning" @click="EditCustomerInfoClick">编辑</el-button>
 					<!-- <el-button type="primary">保存</el-button> -->
+				</span>
+			</template>
+		</el-dialog>
+		<!-- 添加联系日志对话框 -->
+		<el-dialog v-model="contactLogDialogVisible" title="添加联系日志" width="600px" :close-on-click-modal="false">
+			<el-form ref="contactLogFormRef" :model="contactLogForm" :rules="contactLogRules" label-width="100px">
+				<el-form-item label="联系日期" prop="contactDate">
+					<el-date-picker v-model="contactLogForm.contactDate" type="date" placeholder="选择联系日期"
+						style="width: 100%;" />
+				</el-form-item>
+				<el-form-item label="联系人" prop="contactPerson">
+					<el-select v-model="contactLogForm.contactPerson" filterable placeholder="选择联系人"
+						style="width: 100%;">
+						<el-option v-for="item in ContactPersonData" :key="item.id" :label="item.name"
+							:value="item.id" />
+					</el-select>
+				</el-form-item>
+				<el-form-item label="我方人员" prop="ourStaff">
+					<el-select v-model="contactLogForm.ourStaff" filterable placeholder="选择我方人员" style="width: 100%;">
+						<el-option v-for="item in state.optionss.sql_hr_sale" :key="item.dictValue"
+							:label="item.dictLabel" :value="item.dictValue" />
+					</el-select>
+				</el-form-item>
+				<el-form-item label="联系内容" prop="contactContent">
+					<el-input v-model="contactLogForm.contactContent" type="textarea" :rows="4" placeholder="请输入联系内容" />
+				</el-form-item>
+				<el-form-item label="图片">
+					<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="contactLogImages"
+						:action="UploadUrl" accept="image/*" @preview="handleImagePreview">
+						<el-icon>
+							<Plus />
+						</el-icon>
+					</el-upload>
+					<el-dialog v-model="dialogVisible" append-to-body>
+						<img style="max-width: 100%; max-height: 80vh; object-fit: contain; display: block; margin: 0 auto;"
+							:src="dialogImageUrl" alt="Preview Image" />
+					</el-dialog>
+				</el-form-item>
+				<el-form-item label="附件">
+					<el-upload :auto-upload="false" v-model:file-list="contactLogAttachments" :action="UploadUrl"
+						style="width: 100%">
+						<el-button type="primary">选择文件</el-button>
+						<template #tip>
+							<div class="el-upload__tip">可上传任意类型文件</div>
+						</template>
+					</el-upload>
+				</el-form-item>
+				<el-form-item label="备注">
+					<el-input v-model="contactLogForm.remark" type="textarea" :rows="2" placeholder="请输入备注信息" />
+				</el-form-item>
+			</el-form>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button @click="contactLogDialogVisible = false">取 消</el-button>
+					<el-button type="primary" @click="submitContactLog(contactLogFormRef)">确 定</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -1314,13 +1392,17 @@ const ContactPersonData = ref([]);
 const ContactLogData = ref([]);
 //报价记录
 const QuotationRecordData = ref([]);
+//选择客户ID
+const selectCustomerID = ref(0);
 //双击查看详情
 const CunstomeinfotableDatahandleRowDblClick = (row) => {
+	selectCustomerID.value = row.id;
 	OpenCustomerProfileDetailDialog(row);
 }
 
 //打开客户详情窗体并加载数据
 const OpenCustomerProfileDetailDialog = (row) => {
+	selectCustomerID.value = row.id;
 	clearUploadfile();
 	CustomerProfileDetailDialogform.id = row.id;
 	CustomerProfileDetailDialogform.customerStatus = state.optionss['hr_customer_status'].filter(item => item.dictLabel == row.customerStatus).map(item => item.dictValue).values().next().value;
@@ -1352,20 +1434,6 @@ const OpenCustomerProfileDetailDialog = (row) => {
 		});
 	}
 	uploadedFiles.value = fileList.value;
-	//加载联系人信息
-	// row.contactPerson.forEach(person => {
-	// 	if (person.sex == null || person.sex == '' || person.sex == undefined) {
-	// 		person.sexText = state.optionss['sys_user_sex'].find(option => "0" && option.dictValue.toString() === "0").dictLabel;
-	// 	} else {
-	// 		person.sexText = state.optionss['sys_user_sex'].find(option => person.sex && option.dictValue.toString() === person.sex.toString()).dictLabel;
-	// 	}
-	// });
-	// ContactPersonData.value = row.contactPerson;
-	//加载联系日志
-	// var contactEmailStr = row.contactPerson.map(item => item.email).join(',');
-	// if (contactEmailStr != null && contactEmailStr != '') {
-	// 	getContactLogList(contactEmailStr);
-	// }
 	//加载客户联系人
 	loadCustomerContractPerson(row.id);
 	//加载报价记录
@@ -1383,6 +1451,7 @@ const loadCustomerContractPerson = (customerId) => {
 		method: 'GET',
 		params: { CustomerID: customerId }
 	}).then(response => {
+		ContactLogData.value = [];//清空联系日志
 		if (response.data.length > 0) {
 			ContactPersonData.value = response.data;
 			ContactPersonData.value.forEach(item => {
@@ -1394,7 +1463,8 @@ const loadCustomerContractPerson = (customerId) => {
 				//加载联系日志
 				var contactEmailStr = ContactPersonData.value.map(item => item.email).join(',');
 				if (contactEmailStr != null && contactEmailStr != '') {
-					getContactLogList(contactEmailStr);
+					//getContactLogList(contactEmailStr);
+					loadCustomerContactLogs(selectCustomerID.value, contactEmailStr);
 				}
 			});
 		} else {
@@ -1417,6 +1487,7 @@ const formatDateTime = (dateTimeStr) => {
 	const seconds = String(date.getSeconds()).padStart(2, '0');
 	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
+
 // 获取联系日志数据的方法
 const getContactLogList = (emailAddress) => {
 	ContactLogData.value = [];
@@ -1638,4 +1709,294 @@ const loadCustomerSendSampleHistory = async (customerId) => {
 		ElMessage.error('获取收寄样历史失败，请稍后重试');
 	}
 };
+
+// 联系日志相关
+const contactLogDialogVisible = ref(false)
+const contactLogFormRef = ref<FormInstance>()
+const contactLogAttachments = ref<any[]>([])
+const contactLogImages = ref<any[]>([])
+const previewImageVisible = ref(false)
+const previewImageUrl = ref('')
+
+interface ContactLogForm {
+	contactDate: string | Date
+	contactPerson: string | number
+	ourStaff: string | number
+	contactContent: string
+	remark: string
+	attachmentURLs: string
+	imageURLs: string
+}
+
+const contactLogForm = reactive<ContactLogForm>({
+	contactDate: new Date(),
+	contactPerson: '',
+	ourStaff: '',
+	contactContent: '',
+	remark: '',
+	attachmentURLs: '',
+	imageURLs: ''
+})
+
+const contactLogRules = reactive<FormRules>({
+	contactDate: [{ required: true, message: '请选择联系日期', trigger: 'change' }],
+	contactPerson: [{ required: true, message: '请选择联系人', trigger: 'change' }],
+	ourStaff: [{ required: true, message: '请选择我方人员', trigger: 'change' }],
+	contactContent: [{ required: true, message: '请输入联系内容', trigger: 'blur' }]
+})
+
+// 打开添加联系日志对话框
+const AddContactLog = () => {
+	// 重置表单
+	contactLogForm.contactDate = new Date()
+	contactLogForm.contactPerson = ''
+	contactLogForm.ourStaff = ''
+	contactLogForm.contactContent = ''
+	contactLogForm.remark = ''
+	contactLogForm.attachmentURLs = ''
+	contactLogForm.imageURLs = ''
+	contactLogAttachments.value = []
+	contactLogImages.value = []
+	previewImageUrl.value = ''
+
+	// 显示对话框
+	contactLogDialogVisible.value = true
+}
+
+// 图片预览
+const handleImagePreview = (file) => {
+	previewImageUrl.value = file.url || URL.createObjectURL(file.raw)
+	previewImageVisible.value = true
+}
+
+// 提交联系日志
+const submitContactLog = async (formEl: FormInstance | undefined) => {
+	if (!formEl) return
+	await formEl.validate(async (valid) => {
+		if (valid) {
+			try {
+				// 处理附件上传
+				let attachmentUrlStr = ''
+				let imageUrlStr = ''
+
+				// 上传附件
+				if (contactLogAttachments.value.length > 0) {
+					const uploadPromises = contactLogAttachments.value.map(file => {
+						const formData = new FormData()
+						formData.append('FileName', file.name)
+						formData.append('FileDir', 'CustomerInfo/ContactLogAttachments')
+						formData.append('FileNameType', '1')
+						formData.append('File', file.raw)
+						formData.append('storeType', '2');
+						return request.postForm(UploadUrl, formData);
+					})
+
+					const uploadResults = await Promise.all(uploadPromises)
+
+					// 收集上传后的URL
+					uploadResults.forEach(response => {
+						if (response && response.code === 200) {
+							if (attachmentUrlStr) {
+								attachmentUrlStr += ','
+							}
+							attachmentUrlStr += response.data.downloadurl
+						}
+					})
+				}
+
+				// 上传图片
+				if (contactLogImages.value.length > 0) {
+					const uploadPromises = contactLogImages.value.map(file => {
+						const formData = new FormData()
+						formData.append('FileName', file.name)
+						formData.append('FileDir', 'CustomerInfo/ContactLogImages')
+						formData.append('FileNameType', '1')
+						formData.append('File', file.raw)
+						formData.append('storeType', '1');
+						return request.postForm(UploadUrl, formData);
+					})
+
+					const uploadResults = await Promise.all(uploadPromises)
+
+					// 收集上传后的URL
+					uploadResults.forEach(response => {
+						if (response && response.code === 200) {
+							if (imageUrlStr) {
+								imageUrlStr += ','
+							}
+							imageUrlStr += response.data.url
+						}
+					})
+				}
+
+				// 准备提交的数据
+				const contactLogData = {
+					CustomerID: selectCustomerID.value,
+					ContactDate: contactLogForm.contactDate instanceof Date
+						? contactLogForm.contactDate.toISOString().split('T')[0]
+						: contactLogForm.contactDate,
+					ContactPerson: contactLogForm.contactPerson,
+					ContactContent: contactLogForm.contactContent,
+					OurStaff: contactLogForm.ourStaff,
+					AttachmentURLs: attachmentUrlStr,
+					ImageURLs: imageUrlStr,
+					Remark: contactLogForm.remark
+				}
+
+				// 发送请求保存联系日志
+				const response = await request({
+					url: 'CustomerInfoMation/AddCustomerContractLog/AddCustomerContractLog',
+					method: 'post',
+					data: contactLogData
+				})
+
+				if (response && response.code === 200) {
+					ElMessage({
+						message: '添加联系日志成功',
+						type: 'success'
+					})
+
+					// 关闭对话框
+					contactLogDialogVisible.value = false
+
+					// 刷新联系日志列表
+					const emailAddresses = ContactPersonData.value
+						.filter(person => person.email && person.email.trim() !== '')
+						.map(person => person.email)
+						.join(',')
+					loadCustomerContactLogs(selectCustomerID.value, emailAddresses)
+				} else {
+					ElMessage.error(response.msg || '添加联系日志失败')
+				}
+			} catch (error) {
+				console.error('添加联系日志失败:', error)
+				ElMessage.error('添加联系日志失败')
+			}
+		}
+	})
+}
+
+
+const ContactLogTablecurrentPage = ref(1)
+const ContactLogTablepageSize = ref(2)
+const ContactLogTabletotalItems = ref(0)
+const ContactLogTablehandlePageChange = async (newPage: number) => {
+	// Get email addresses from contact persons
+	const emailAddresses = ContactPersonData.value
+		.filter(person => person.email && person.email.trim() !== '')
+		.map(person => person.email)
+		.join(',')
+	ContactLogTablecurrentPage.value = newPage;
+	const start = newPage;
+	const end = ContactLogTablepageSize.value;
+	loadCustomerContactLogs(selectCustomerID.value, emailAddresses, start, end)
+}
+
+// 加载客户联系日志
+const loadCustomerContactLogs = async (customerId: number, emailaddress: string = '', pageNum: number = 1, pageSize: number = 2) => {
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetContactLogsByCustomerID/GetContactLogs',
+			method: 'get',
+			params: {
+				customerid: customerId,
+				emailaddress: emailaddress,
+				pageNum: pageNum,
+				pageSize: pageSize
+			}
+		})
+		if (response && response.code === 200) {
+			// 设置分页信息
+			ContactLogTablecurrentPage.value = response.data.pageIndex
+			if (response.data.pageSize && response.data.pageSize !== ContactLogTablepageSize.value) {
+				ContactLogTablepageSize.value = response.data.pageSize
+			}
+			ContactLogTabletotalItems.value = response.data.totalNum || 0
+			// 使用返回的统一格式数据
+			ContactLogData.value = response.data.result || []
+			// 使用返回的统一格式数据，但需要转换联系人和我方人员的ID为名称
+			ContactLogData.value = (response.data.result || []).map(item => {
+				if (item.logSouce == "人工记录") {
+					// 查找联系人名称 - 将ID转换为名称
+					let contactName = item.contact;
+					if (!isNaN(Number(item.contact))) {
+						const contactPerson = ContactPersonData.value.find(contact => contact.id === Number(item.contact));
+						if (contactPerson) {
+							contactName = contactPerson.name;
+						}
+					}
+					// 查找我方人员名称 - 将ID转换为名称
+					let ourStaffName = item.ourPersonnel;
+					if (!isNaN(Number(item.ourPersonnel))) {
+						const staff = state.optionss.sql_hr_sale.find(staff => staff.dictValue === item.ourPersonnel);
+						if (staff) {
+							ourStaffName = staff.dictLabel;
+						}
+					}
+					return {
+						...item,
+						contact: contactName,
+						ourPersonnel: ourStaffName
+					};
+				} else {
+					return item;
+				}
+			})
+		} else {
+			ElMessage.error(response.msg || '获取联系日志失败')
+		}
+	} catch (error) {
+		console.error('获取联系日志失败:', error)
+	}
+}
+
+// 下载附件
+const downloadAttachment = (attachmentUrls: string) => {
+	if (!attachmentUrls) return
+
+	const urls = attachmentUrls.split(',')
+	if (urls.length === 1) {
+		// 单个附件直接下载
+		window.open(urls[0], '_blank')
+	} else {
+		// 多个附件，显示选择列表
+		ElMessageBox.confirm(
+			'<div style="max-height: 300px; overflow-y: auto;">' +
+			urls.map((url, index) => {
+				const fileName = url.split('/').pop()
+				return `<div style="margin: 10px 0;"><a href="${url}" target="_blank">${index + 1}. ${fileName}</a></div>`
+			}).join('') +
+			'</div>',
+			'选择要下载的附件',
+			{
+				dangerouslyUseHTMLString: true,
+				confirmButtonText: '关闭',
+				showCancelButton: false,
+				type: 'info',
+			}
+		)
+	}
+}
+
+// 在加载客户详情时加载联系日志
+const loadCustomerDetail = async (customerId: number) => {
+	try {
+		// ... existing code ...
+
+		// 加载联系人信息
+		loadCustomerContractPerson(customerId)
+
+		// 加载联系日志 - 先加载联系人信息，然后在回调中加载联系日志
+		// 这里不传递邮箱参数，因为此时联系人数据可能还没加载完成
+		// 联系人加载完成后会自动调用 loadCustomerContactLogs 并传递邮箱
+		loadCustomerContactLogs(customerId, '')
+
+		// 加载报价历史
+		loadQuotationHistory(customerId)
+
+		// ... existing code ...
+	} catch (error) {
+		// ... existing code ...
+	}
+}
 </script>

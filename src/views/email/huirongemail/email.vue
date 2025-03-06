@@ -919,6 +919,7 @@ const editDraft = async () => {
 
 		await GetEmailContract()
 		showEmailDetail.value = false
+		showEmailDialog.value = true
 	} catch (error) {
 		console.error('编辑草稿失败:', error)
 		ElMessage.error('编辑草稿失败，请重试')
