@@ -51,6 +51,23 @@
 						</el-form-item>
 					</el-col>
 				</el-row>
+				<!-- 添加主任务附件上传 -->
+				<el-row>
+					<el-col :span="24">
+						<el-form-item label="附件上传" prop="attachments">
+							<el-upload action="#" :auto-upload="false" :on-change="handleMainTaskFileChange"
+								:on-remove="handleMainTaskFileRemove" :file-list="mainTaskFileList" multiple
+								style="width: 785px">
+								<el-button type="primary">选择文件</el-button>
+								<template #tip>
+									<div class="el-upload__tip">
+										支持任意类型文件
+									</div>
+								</template>
+							</el-upload>
+						</el-form-item>
+					</el-col>
+				</el-row>
 				<el-row>
 					<el-col :span="24">
 						<el-form-item label="总阶段数" prop="TotalStageNumber">
@@ -106,6 +123,25 @@
 								<el-button type="danger" @click="removeItem(stageIndex, itemIndex)">删除事项</el-button>
 							</el-col>
 						</el-row>
+						<!-- 添加事项附件上传 -->
+						<el-row>
+							<el-col :span="24">
+								<el-form-item :label="'附件上传'"
+									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.attachments'">
+									<el-upload action="#" :auto-upload="false"
+										:on-change="(file, fileList) => handleItemFileChange(stageIndex, itemIndex, file, fileList)"
+										:on-remove="(file) => handleItemFileRemove(stageIndex, itemIndex, file)"
+										:file-list="item.fileList || []" multiple style="width: 600px">
+										<el-button type="primary">选择文件</el-button>
+										<template #tip>
+											<div class="el-upload__tip">
+												支持任意类型文件
+											</div>
+										</template>
+									</el-upload>
+								</el-form-item>
+							</el-col>
+						</el-row>
 					</div>
 				</div>
 			</el-form>
@@ -124,7 +160,7 @@
 		<!-- 任务列表 -->
 		<el-row :gutter="20">
 			<el-col v-for="item in dataPlanTasks" :key="item.id" :lg="8" :span="24">
-				<el-card v-loading="loading" :body-style="{ padding: '15px 15px 0', height: '330px' }" class="mb-20">
+				<el-card v-loading="loading" :body-style="{ padding: '15px 15px 0', height: '360px' }" class="mb-20">
 					<el-descriptions :column="1" :title="item.taskName" size="small" border>
 						<el-descriptions-item label="计划任务名称">
 							{{ item.taskName }}
@@ -147,6 +183,19 @@
 						<el-descriptions-item label="当前进度">
 							<el-progress :text-inside="true" :stroke-width="24" :percentage="item.completionRate"
 								:status="item.completionRate >= 1 ? 'success' : ''" />
+						</el-descriptions-item>
+						<!-- 添加附件列表 -->
+						<el-descriptions-item label="附件">
+							<div class="task-attachments">
+								<el-button v-if="item.attachmentUrls" type="primary" link
+									@click="showAttachmentsDialog(item)">
+									<el-icon>
+										<Document />
+									</el-icon>
+									查看附件
+								</el-button>
+								<span v-else>无</span>
+							</div>
 						</el-descriptions-item>
 					</el-descriptions>
 					<div style="text-align: right; margin-top: 15px;">
@@ -184,6 +233,42 @@
 								<p>{{ item?.realTimePoint ? `实际完成时间: ${formatDate(item?.realTimePoint)}` : '状态: 未完成' }}
 								</p>
 								<p>{{ item?.remark ? `备注: ${item?.remark}` : '' }}</p>
+								<!-- 显示附件列表 -->
+								<div class="item-attachments">
+									<p class="attachments-title">附件:</p>
+									<ul v-if="item?.attachmentUrls" class="attachments-list">
+										<li v-for="(url, index) in item.attachmentUrls.split(',')" :key="index"
+											class="attachment-item">
+											<span class="file-name">{{ getFileNameFromUrl(url) }}</span>
+											<el-button type="primary" link
+												@click="downloadFile(url, getFileNameFromUrl(url))">
+												<el-icon>
+													<Download />
+												</el-icon>
+												下载
+											</el-button>
+										</li>
+									</ul>
+									<span v-else>无</span>
+								</div>
+								<!-- 显示完成附件列表 -->
+								<div class="item-attachments">
+									<p class="attachments-title">完成附件:</p>
+									<ul v-if="item?.finishattachmentUrls" class="attachments-list">
+										<li v-for="(url, index) in item.finishattachmentUrls.split(',')" :key="index"
+											class="attachment-item">
+											<span class="file-name">{{ getFileNameFromUrl(url) }}</span>
+											<el-button type="primary" link
+												@click="downloadFile(url, getFileNameFromUrl(url))">
+												<el-icon>
+													<Download />
+												</el-icon>
+												下载
+											</el-button>
+										</li>
+									</ul>
+									<span v-else>无</span>
+								</div>
 							</el-timeline-item>
 						</el-card>
 					</el-timeline-item>
@@ -199,105 +284,169 @@
 			<div class="completion-dialog">
 				<p>确认完成任务：{{ currentTask?.itemName }}？</p>
 				<el-input v-model="completionNote" type="textarea" rows="3" placeholder="请输入备注（选填）"></el-input>
+				<!-- 添加附件上传组件 -->
+				<div class="completion-attachments">
+					<p class="upload-label">上传附件（选填）：</p>
+					<el-upload action="#" :auto-upload="false" :on-change="handleCompletionFileChange"
+						:on-remove="handleCompletionFileRemove" :file-list="completionFileList" multiple
+						style="width: 100%">
+						<el-button type="primary">选择文件</el-button>
+						<template #tip>
+							<div class="el-upload__tip">
+								支持任意类型文件
+							</div>
+						</template>
+					</el-upload>
+				</div>
 			</div>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button @click="confirmDialogVisible = false">取消</el-button>
+					<el-button @click="cancelTaskCompletion">取消</el-button>
 					<el-button type="primary" @click="confirmTaskCompletion">
 						确认完成
 					</el-button>
 				</span>
 			</template>
 		</el-dialog>
+
+		<!-- 附件查看对话框 -->
+		<el-dialog v-model="attachmentsDialogVisible" title="附件列表" width="40%">
+			<div class="attachments-dialog">
+				<el-empty v-if="!currentAttachments || currentAttachments.length === 0" description="无附件" />
+				<ul v-else class="attachments-list">
+					<li v-for="(url, index) in currentAttachments" :key="index" class="attachment-item">
+						<span class="file-name">{{ getFileNameFromUrl(url) }}</span>
+						<el-button type="primary" link @click="downloadFile(url, getFileNameFromUrl(url))">
+							<el-icon>
+								<Download />
+							</el-icon>
+							下载
+						</el-button>
+					</li>
+				</ul>
+			</div>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button @click="attachmentsDialogVisible = false">关闭</el-button>
+				</span>
+			</template>
+		</el-dialog>
 	</div>
 </template>
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, getCurrentInstance } from 'vue'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElMessage, DrawerProps, ElDrawer,
-	ElMessageBox, ElTimeline, ElTimelineItem, FormInstance
+	ElMessageBox, ElTimeline, ElTimelineItem, FormInstance, FormRules, ElLoading
 } from 'element-plus'
+import { Document, Download } from '@element-plus/icons-vue'
 import request from '@/utils/request';
 import useUserStore from '@/store/modules/user'
+
+// 定义API响应类型
+interface ApiResponse<T = any> {
+	code: number;
+	msg: string;
+	data: T;
+}
+
 const userStore = useUserStore()
 const currentUser = ref(userStore.userId)
 // 添加确认对话框相关的响应式变量
 const confirmDialogVisible = ref(false)
 const currentTask = ref(null)
 const completionNote = ref('')
+// 添加任务完成附件相关变量
+const completionFileList = ref([])
 
-// 添加获取阶段状态的函数
-const getPhaseStatus = (items: any[]) => {
-	if (!items || items.length === 0) return 'info';
+// 附件对话框相关变量
+const attachmentsDialogVisible = ref(false)
+const currentAttachments = ref<string[]>([])
 
-	const completedCount = items.filter(item => item.realTimePoint).length;
-	const totalCount = items.length;
-
-	if (completedCount === totalCount) {
-		return 'success';  // 全部完成 - 绿色
-	} else if (completedCount === 0) {
-		return 'danger';   // 全部未完成 - 红色
-	} else {
-		return 'warning';  // 部分完成 - 黄色
+// 文件上传相关
+const mainTaskFileList = ref([])
+const handleMainTaskFileChange = (file, fileList) => {
+	mainTaskFileList.value = fileList
+}
+const handleMainTaskFileRemove = (file) => {
+	const index = mainTaskFileList.value.indexOf(file)
+	if (index !== -1) {
+		mainTaskFileList.value.splice(index, 1)
 	}
-};
-
-// 处理任务完成勾选
-const handleTaskComplete = (task) => {
-	currentTask.value = task
-	confirmDialogVisible.value = true
 }
 
-// 确认完成任务
-const confirmTaskCompletion = async () => {
+// 处理事项文件变更
+const handleItemFileChange = (stageIndex, itemIndex, file, fileList) => {
+	if (!stages.value[stageIndex].items[itemIndex].fileList) {
+		stages.value[stageIndex].items[itemIndex].fileList = []
+	}
+	stages.value[stageIndex].items[itemIndex].fileList = fileList
+}
+
+// 处理事项文件移除
+const handleItemFileRemove = (stageIndex, itemIndex, file) => {
+	const fileList = stages.value[stageIndex].items[itemIndex].fileList
+	if (fileList) {
+		const index = fileList.indexOf(file)
+		if (index !== -1) {
+			fileList.splice(index, 1)
+		}
+	}
+}
+
+// 将文件转换为FormData附件格式
+const prepareFileForUpload = (file) => {
+	return {
+		fileName: file.name,
+		fileType: file.type || getFileExtension(file.name),
+		fileSize: file.size,
+		fileUrl: file.url || '' // 添加URL字段
+	}
+}
+
+// 获取文件扩展名
+const getFileExtension = (filename) => {
+	return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2) || ''
+}
+
+// 定义上传URL
+const UploadUrl = 'Common/UploadFile' // 根据实际API调整
+
+// 上传单个文件并返回URL
+const uploadSingleFile = async (file) => {
 	try {
-		const res = await request.get(`PlanTasks/ConfirmationOfCompletion/ConfirmItem`, {
-			params: {
-				ID: currentTask.value.id,
-				remark: completionNote.value
-			}
-		});
-		if (res.code === 200) {
-			ElMessage.success('任务完成确认成功');
-			// 刷新任务详情
-			await showTaskDetail(selectedTask.value);
+		const formData = new FormData()
+		formData.append('FileName', file.name)
+		formData.append('FileDir', 'PlanTask/Attachments')
+		formData.append('FileNameType', '1')
+		formData.append('File', file.raw || file)
+		formData.append('storeType', '2')
+
+		const response = await request.postForm(UploadUrl, formData) as unknown as { data: ApiResponse };
+
+		if (response.code === 200) {
+			return response.data.downloadurl
 		} else {
-			ElMessage.error(res.msg || '确认失败');
+			console.error('文件上传失败:', file.name)
+			ElMessage.warning(`文件 ${file.name} 上传失败`)
+			return null
 		}
 	} catch (error) {
-		console.error('确认失败:', error);
-		ElMessage.error('确认失败：' + (error.message || '未知错误'));
-	} finally {
-		confirmDialogVisible.value = false;
-		completionNote.value = '';
-		currentTask.value = null;
+		console.error('文件上传错误:', error)
+		ElMessage.error(`文件 ${file.name} 上传出错: ${error.message || '未知错误'}`)
+		return null
 	}
 }
 
-const selectedTask = ref(null);
-const selectedTaskPhases = ref([]);
-const drawer = ref(false);
-const direction = ref<DrawerProps['direction']>('rtl')
-const handleClose = () => {
-	drawer.value = false;
-}
+// 批量上传文件并返回URL字符串（逗号分隔）
+const uploadFilesAndGetUrlString = async (files) => {
+	if (!files || files.length === 0) return ''
 
-// 修改查看详情按钮的点击事件
-const showTaskDetail = async (task) => {
-	selectedTask.value = task;
-	try {
-		const res = await request.get(`PlanTasks/GetPlanTaskDetails/GetDetails?ID=${task.id}`);
-		if (res.code === 200 && res.data.code === 200) {
-			// 确保数据存在且是数组
-			selectedTaskPhases.value = Array.isArray(res.data.data) ? res.data.data : [];
-			console.log('任务详情数据:', selectedTaskPhases.value); // 用于调试
-		}
-	} catch (error) {
-		console.error('获取任务详情失败:', error);
-		ElMessage.error('获取任务详情失败');
-		selectedTaskPhases.value = []; // 出错时清空数据
-	}
-	drawer.value = true;
+	const uploadPromises = files.map(file => uploadSingleFile(file))
+	const results = await Promise.all(uploadPromises)
+
+	// 过滤掉上传失败的文件，并用逗号连接URL
+	return results.filter(downloadurl => downloadurl !== null).join(',')
 }
 
 // 获取用户名的辅助函数
@@ -316,44 +465,225 @@ const formatDate = (dateStr: string) => {
 	return `${year}-${month}-${day}`;
 };
 
-//提交任务计划表单
+// 处理任务完成勾选
+const handleTaskComplete = (task) => {
+	currentTask.value = task
+	confirmDialogVisible.value = true
+}
+
+// 确认完成任务
+const confirmTaskCompletion = async () => {
+	try {
+		// 显示加载状态
+		const loadingInstance = ElLoading.service({
+			lock: true,
+			text: '正在上传附件并保存...',
+			background: 'rgba(0, 0, 0, 0.7)'
+		})
+
+		try {
+			// 1. 先上传附件并获取URL字符串
+			const attachmentUrlsStr = await uploadFilesAndGetUrlString(completionFileList.value)
+
+			// 2. 构建请求数据
+			const requestData = {
+				ID: currentTask.value.id,
+				remark: completionNote.value || '',
+				finishattachmentUrls: attachmentUrlsStr // 使用字符串格式的URL
+			}
+
+			// 3. 发送请求
+			const res = await request.get(`PlanTasks/ConfirmationOfCompletion/ConfirmItem`, {
+				params: requestData
+			}) as unknown as { data: ApiResponse };
+
+			if (res.code === 200) {
+				ElMessage.success('任务完成确认成功');
+				// 刷新任务详情
+				await showTaskDetail(selectedTask.value);
+				await getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
+			} else {
+				ElMessage.error(res.data.msg || '确认失败');
+			}
+		} finally {
+			// 关闭加载状态
+			loadingInstance.close()
+
+			// 重置表单
+			confirmDialogVisible.value = false;
+			completionNote.value = '';
+			completionFileList.value = [];
+			currentTask.value = null;
+		}
+	} catch (error) {
+		console.error('确认失败:', error);
+		ElMessage.error('确认失败：' + (error.message || '未知错误'));
+	}
+}
+
+const selectedTask = ref(null);
+const selectedTaskPhases = ref([]);
+const drawer = ref(false);
+const direction = ref<DrawerProps['direction']>('rtl')
+const handleClose = () => {
+	drawer.value = false;
+}
+
+// 修改查看详情按钮的点击事件
+const showTaskDetail = async (task) => {
+	selectedTask.value = task;
+	try {
+		const res = await request.get(`PlanTasks/GetPlanTaskDetails/GetDetails?ID=${task.id}`) as unknown as { data: ApiResponse };
+		console.log('任务详情原始响应:', res); // 添加调试日志
+
+		if (res.data.code === 200) {
+			// 处理嵌套的响应结构
+			const responseData = res.data.data;
+			console.log('任务详情数据结构:', responseData); // 添加调试日志
+
+			// 确保数据存在且是数组
+			selectedTaskPhases.value = Array.isArray(responseData) ? responseData :
+				(responseData && responseData.data && Array.isArray(responseData.data)) ? responseData.data : [];
+
+			console.log('处理后的任务详情数据:', selectedTaskPhases.value); // 用于调试
+		}
+	} catch (error) {
+		console.error('获取任务详情失败:', error);
+		ElMessage.error('获取任务详情失败');
+		selectedTaskPhases.value = []; // 出错时清空数据
+	}
+	drawer.value = true;
+}
+
+// 从URL中提取文件名并清理敏感信息
+const getFileNameFromUrl = (url) => {
+	if (!url) return '';
+
+	// 从URL中提取文件名
+	const parts = url.split('/');
+	let fileName = parts[parts.length - 1];
+
+	// 处理文件名中的查询参数
+	if (fileName.includes('?')) {
+		// 只保留问号前面的部分
+		fileName = fileName.split('?')[0];
+	}
+
+	// 处理URL编码
+	fileName = decodeURIComponent(fileName);
+
+	// 处理特殊字符，如括号等
+	fileName = fileName.replace(/%28/g, '(').replace(/%29/g, ')').replace(/%20/g, ' ');
+
+	return fileName;
+}
+
+// 处理任务完成附件变更
+const handleCompletionFileChange = (file, fileList) => {
+	completionFileList.value = fileList
+}
+
+// 处理任务完成附件移除
+const handleCompletionFileRemove = (file) => {
+	const index = completionFileList.value.indexOf(file)
+	if (index !== -1) {
+		completionFileList.value.splice(index, 1)
+	}
+}
+
+// 取消任务完成
+const cancelTaskCompletion = () => {
+	confirmDialogVisible.value = false
+	completionNote.value = ''
+	completionFileList.value = []
+	currentTask.value = null
+}
+
+// 添加获取阶段状态的函数
+const getPhaseStatus = (items: any[]) => {
+	if (!items || items.length === 0) return 'info';
+
+	const completedCount = items.filter(item => item.realTimePoint).length;
+	const totalCount = items.length;
+
+	if (completedCount === totalCount) {
+		return 'success';  // 全部完成 - 绿色
+	} else if (completedCount === 0) {
+		return 'danger';   // 全部未完成 - 红色
+	} else {
+		return 'warning';  // 部分完成 - 黄色
+	}
+};
+
+// 提交任务计划表单
 const SubmitPlanTaskForm = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
 	await formEl.validate(async (valid, fields) => {
 		if (valid) {
 			try {
-				// 构建请求数据，使用与后端 JsonPropertyName 匹配的命名
-				const requestData = {
-					taskName: PlanTaskForm.plantaskname.trim(),
-					taskDescription: PlanTaskForm.plantaskdescription?.trim() || '',
-					startTime: PlanTaskForm.starttime ? new Date(PlanTaskForm.starttime).toISOString() : new Date().toISOString(),
-					endTime: PlanTaskForm.endtime ? new Date(PlanTaskForm.endtime).toISOString() : new Date().toISOString(),
-					totalLeaderIds: Array.isArray(PlanTaskForm.participants)
-						? PlanTaskForm.participants.join(',')
-						: PlanTaskForm.participants || '',
-					planTask_Phases: stages.value.map(stage => ({
-						phaseName: stage.name?.trim() || '',
-						planTask_Items: stage.items.map(item => ({
-							itemName: item.name?.trim() || '',
-							executorId: Number(item.executor) || 0,
-							timePoint: item.deadline ? new Date(item.deadline).toISOString() : null
-						}))
-					}))
-				};
-				// 验证关键字段
-				if (!requestData.taskName) {
-					ElMessage.error('任务名称不能为空');
-					return;
-				}
-				console.log('发送的数据:', JSON.stringify(requestData, null, 2));
-				const res = await request.post('PlanTasks/AddPlanTasks/Add', requestData);
-				if (res.code === 200) {
-					ElMessage.success('保存成功');
-					PlanTaskDialogVisible.value = false;
-					ResetPlanTaskForm(formEl);
-					getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
-				} else {
-					ElMessage.error(res.msg || '保存失败');
+				// 显示加载状态
+				const loadingInstance = ElLoading.service({
+					lock: true,
+					text: '正在上传附件并保存...',
+					background: 'rgba(0, 0, 0, 0.7)'
+				})
+
+				try {
+					// 1. 先上传主任务附件并获取URL字符串
+					const mainTaskUrlsStr = await uploadFilesAndGetUrlString(mainTaskFileList.value)
+
+					// 2. 构建请求数据，使用与后端 JsonPropertyName 匹配的命名
+					const requestData = {
+						taskName: PlanTaskForm.plantaskname.trim(),
+						taskDescription: PlanTaskForm.plantaskdescription?.trim() || '',
+						startTime: PlanTaskForm.starttime ? new Date(PlanTaskForm.starttime).toISOString() : new Date().toISOString(),
+						endTime: PlanTaskForm.endtime ? new Date(PlanTaskForm.endtime).toISOString() : new Date().toISOString(),
+						totalLeaderIds: Array.isArray(PlanTaskForm.participants)
+							? PlanTaskForm.participants.join(',')
+							: PlanTaskForm.participants || '',
+						attachmentUrls: mainTaskUrlsStr, // 使用字符串格式的URL
+						planTask_Phases: []
+					};
+					// 3. 处理各阶段和事项
+					for (let stageIndex = 0; stageIndex < stages.value.length; stageIndex++) {
+						const stage = stages.value[stageIndex]
+						const phaseData = {
+							phaseName: stage.name?.trim() || '',
+							planTask_Items: []
+						}
+						for (let itemIndex = 0; itemIndex < stage.items.length; itemIndex++) {
+							const item = stage.items[itemIndex]
+							// 上传该事项的附件
+							const itemUrlsStr = await uploadFilesAndGetUrlString(item.fileList || [])
+
+							phaseData.planTask_Items.push({
+								itemName: item.name?.trim() || '',
+								executorId: Number(item.executor) || 0,
+								timePoint: item.deadline ? new Date(item.deadline).toISOString() : null,
+								attachmentUrls: itemUrlsStr, // 使用字符串格式的URL
+								finishattachmentUrls: '' // 初始为空，完成时才会有值
+							})
+						}
+						requestData.planTask_Phases.push(phaseData)
+					}
+					// 验证关键字段
+					if (!requestData.taskName) {
+						ElMessage.error('任务名称不能为空');
+						return;
+					}
+					console.log('发送的数据:', JSON.stringify(requestData, null, 2));
+					const res = await request.post('PlanTasks/AddPlanTasks/Add', requestData) as unknown as { data: ApiResponse };
+					if (res.code === 200) {
+						ElMessage.success(res.data);
+						PlanTaskDialogVisible.value = false;
+						ResetPlanTaskForm(formEl);
+						getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
+					} else {
+						ElMessage.error(res.data.msg || '保存失败');
+					}
+				} finally {
+					// 关闭加载状态
+					loadingInstance.close()
 				}
 			} catch (error) {
 				console.error('保存失败:', error);
@@ -369,6 +699,10 @@ const SubmitPlanTaskForm = async (formEl: FormInstance | undefined) => {
 const PlanTaskDialogVisible = ref(false);
 
 const OpenPlanTaskDialog = () => {
+	// 添加检查，确保 PlanTaskFormRef.value 存在
+	if (PlanTaskFormRef.value) {
+		PlanTaskFormRef.value.resetFields()
+	}
 	PlanTaskDialogVisible.value = true;
 	// 确保打开对话框时有一个默认阶段
 	if (stages.value.length === 0) {
@@ -387,6 +721,9 @@ interface StageItem {
 	name: string;
 	executor: string;
 	deadline: string;
+	fileList?: any[]; // 添加文件列表属性
+	attachments?: { fileName: string; fileUrl: string }[]; // 添加附件属性
+	finishAttachments?: { fileName: string; fileUrl: string }[]; // 添加完成附件属性
 }
 
 interface Stage {
@@ -400,7 +737,8 @@ const stages = ref<Stage[]>([{
 	items: [{
 		name: '',
 		executor: '',
-		deadline: ''
+		deadline: '',
+		fileList: [] // 初始化文件列表
 	}]
 }]);
 
@@ -415,7 +753,8 @@ const handleStageNumberChange = (value: number) => {
 				items: [{
 					name: '',
 					executor: '',
-					deadline: ''
+					deadline: '',
+					fileList: [] // 初始化文件列表
 				}]
 			});
 		}
@@ -429,7 +768,8 @@ const addItem = (stageIndex: number) => {
 	stages.value[stageIndex].items.push({
 		name: '',
 		executor: '',
-		deadline: ''
+		deadline: '',
+		fileList: [] // 初始化文件列表
 	});
 }
 
@@ -441,7 +781,7 @@ const removeItem = (stageIndex: number, itemIndex: number) => {
 interface PlanTaskForm {
 	plantaskname: string,
 	participants: string,
-	TotalStageNumber: 1,
+	TotalStageNumber: number,
 	starttime: string,
 	endtime: string,
 	plantaskdescription: string
@@ -451,7 +791,7 @@ const PlanTaskFormRef = ref<FormInstance>()
 const PlanTaskForm = reactive<PlanTaskForm>({
 	plantaskname: '',
 	participants: '',
-	TotalStageNumber: 0,
+	TotalStageNumber: 1,
 	starttime: '',
 	endtime: '',
 	plantaskdescription: ''
@@ -475,7 +815,7 @@ const rules = reactive<FormRules<PlanTaskForm>>({
 	],
 	plantaskdescription: [
 		{ required: true, message: '请输入计划/任务描述', trigger: 'change,blur' }
-	],
+	]
 	// ... existing rules ...
 	// 'stages.*.name': [
 	// 	{ required: true, message: '请输入阶段名称', trigger: 'blur' }
@@ -501,19 +841,22 @@ const ResetPlanTaskForm = (formEl: FormInstance | undefined) => {
 	PlanTaskForm.starttime = ''
 	PlanTaskForm.endtime = ''
 	PlanTaskForm.plantaskdescription = ''
+	// 重置文件列表
+	mainTaskFileList.value = []
 	// 重置阶段为一个默认阶段
 	stages.value = [{
 		name: '',
 		items: [{
 			name: '',
 			executor: '',
-			deadline: ''
+			deadline: '',
+			fileList: [] // 重置文件列表
 		}]
 	}];
 }
 
 /*动态下拉框start*/
-const proxy = getCurrentInstance().proxy
+const proxy = getCurrentInstance().proxy as any
 const state = reactive({
 	optionss: {
 		// 选项列表(动态字典将会从后台获取数据)
@@ -541,6 +884,7 @@ interface PlanTask {
 	create_by: string;
 	create_time: string;
 	completionRate: number;
+	attachmentUrls?: string; // 添加附件URL字段
 }
 
 interface PaginationData {
@@ -596,10 +940,10 @@ const getPlanTasksList = async (pageNum: number, pageSize: number) => {
 				pageSize: pageSize,
 				TaskName: queryParams.queryText?.trim() || ''
 			}
-		});
+		}) as unknown as { data: ApiResponse<PlanTask[]> };
 
 		if (res.code === 200) {
-			// 直接使用 res.data 作为数组
+			// 直接使用 res.data.data 作为数组
 			dataPlanTasks.value = res.data || [];
 			// 更新总数为数组长度
 			total.value = res.data.length;
@@ -622,6 +966,38 @@ const getPlanTasksList = async (pageNum: number, pageSize: number) => {
 	}
 };
 
+// 显示附件对话框
+const showAttachmentsDialog = (item) => {
+	if (item.attachmentUrls) {
+		// 将逗号分隔的URL字符串转换为数组
+		currentAttachments.value = item.attachmentUrls.split(',').filter(url => url.trim() !== '')
+		attachmentsDialogVisible.value = true
+	} else {
+		ElMessage.info('该任务没有附件')
+	}
+}
+
+// 下载文件
+const downloadFile = (url: string, fileName: string) => {
+	try {
+		// 创建一个隐藏的a标签
+		const link = document.createElement('a')
+		link.href = url
+		link.download = fileName
+		link.target = '_blank'
+
+		// 添加到文档中并触发点击
+		document.body.appendChild(link)
+		link.click()
+
+		// 清理
+		document.body.removeChild(link)
+	} catch (error) {
+		console.error('下载文件失败:', error)
+		ElMessage.error('下载文件失败，请稍后重试')
+	}
+}
+
 </script>
 
 <style scoped>
@@ -639,6 +1015,66 @@ const getPlanTasksList = async (pageNum: number, pageSize: number) => {
 	display: flex;
 	flex-direction: column;
 	gap: 15px;
+}
+
+.completion-attachments {
+	margin-top: 10px;
+}
+
+.upload-label {
+	margin-bottom: 8px;
+	font-weight: 500;
+}
+
+.item-attachments {
+	margin-top: 10px;
+	border-top: 1px dashed #e0e0e0;
+	padding-top: 8px;
+}
+
+.attachments-title {
+	font-weight: 500;
+	margin-bottom: 5px;
+}
+
+.attachments-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.attachment-item {
+	margin-bottom: 5px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 5px 10px;
+	border-radius: 4px;
+	background-color: #f5f7fa;
+}
+
+.attachment-item:hover {
+	background-color: #ecf5ff;
+}
+
+.file-name {
+	font-size: 14px;
+	color: #606266;
+	word-break: break-all;
+	max-width: 70%;
+}
+
+.attachment-item .el-icon {
+	margin-right: 5px;
+}
+
+.task-attachments {
+	display: flex;
+	align-items: center;
+}
+
+.attachments-dialog {
+	min-height: 100px;
 }
 
 .el-timeline-item {

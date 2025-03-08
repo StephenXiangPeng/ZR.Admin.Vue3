@@ -2148,6 +2148,19 @@
       <div class="completion-dialog">
         <p>确认完成任务：{{ currentTask?.itemName }}？</p>
         <el-input v-model="completionNote" type="textarea" rows="3" placeholder="请输入备注（选填）"></el-input>
+        <!-- 添加附件上传组件 -->
+        <div class="completion-attachments">
+          <p class="upload-label">上传附件（选填）：</p>
+          <el-upload action="#" :auto-upload="false" :on-change="handleCompletionFileChange"
+            :on-remove="handleCompletionFileRemove" :file-list="completionFileList" multiple style="width: 100%">
+            <el-button type="primary">选择文件</el-button>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持任意类型文件
+              </div>
+            </template>
+          </el-upload>
+        </div>
       </div>
       <template #footer>
         <span class="dialog-footer">
@@ -2203,7 +2216,7 @@
 
 <script lang="ts" setup>
 import { getCurrentInstance, reactive, toRefs, ref, onMounted, h } from 'vue'
-import { ElMessage, ElMessageBox, ElDatePicker } from "element-plus";
+import { ElMessage, ElMessageBox, ElDatePicker, ElLoading } from "element-plus";
 import request from '@/utils/request';
 import dayjs from 'dayjs';
 import useUserStore from '@/store/modules/user'
@@ -4051,31 +4064,125 @@ const handleTaskClick = (task) => {
   confirmDialogVisible.value = true
 }
 
+
+// 定义API响应类型
+interface ApiResponse<T = any> {
+  code: number;
+  msg: string;
+  data: T;
+}
+// 定义上传URL
+const UploadUrl = 'Common/UploadFile' // 根据实际API调整
+// 上传单个文件并返回URL
+const uploadSingleFile = async (file) => {
+  try {
+    const formData = new FormData()
+    formData.append('FileName', file.name)
+    formData.append('FileDir', 'PlanTask/Attachments')
+    formData.append('FileNameType', '1')
+    formData.append('File', file.raw || file)
+    formData.append('storeType', '2')
+
+    const response = await request.postForm(UploadUrl, formData) as unknown as { data: ApiResponse };
+
+    if (response.code === 200) {
+      return response.data.downloadurl
+    } else {
+      console.error('文件上传失败:', file.name)
+      ElMessage.warning(`文件 ${file.name} 上传失败`)
+      return null
+    }
+  } catch (error) {
+    console.error('文件上传错误:', error)
+    ElMessage.error(`文件 ${file.name} 上传出错: ${error.message || '未知错误'}`)
+    return null
+  }
+}
+
+// 批量上传文件并返回URL字符串（逗号分隔）
+const uploadFilesAndGetUrlString = async (files) => {
+  if (!files || files.length === 0) return ''
+
+  const uploadPromises = files.map(file => uploadSingleFile(file))
+  const results = await Promise.all(uploadPromises)
+
+  // 过滤掉上传失败的文件，并用逗号连接URL
+  return results.filter(downloadurl => downloadurl !== null).join(',')
+}
 // 确认完成任务
 const confirmTaskCompletion = async () => {
+  // try {
+  //   const res = await request.get(`PlanTasks/ConfirmationOfCompletion/ConfirmItem`, {
+  //     params: {
+  //       ID: currentTask.value.id,
+  //       remark: completionNote.value,
+  //       finishattachmentUrls: completionFileList.value.map(file => file.url).join(',')
+  //     }
+  //   });
+  //   if (res.code === 200) {
+  //     ElMessage.success('任务完成确认成功');
+  //     // 刷新当前日历数据
+  //     const startDate = formatDate(calendarDates.value[0].date)
+  //     const endDate = formatDate(calendarDates.value[calendarDates.value.length - 1].date)
+  //     await getPlanTaskItems(startDate, endDate)
+  //   } else {
+  //     ElMessage.error(res.msg || '确认失败');
+  //   }
+  // } catch (error) {
+  //   console.error('确认失败:', error);
+  //   ElMessage.error('确认失败：' + (error.message || '未知错误'));
+  // } finally {
+  //   confirmDialogVisible.value = false;
+  //   completionNote.value = '';
+  //   currentTask.value = null;
+  // }
+
   try {
-    const res = await request.get(`PlanTasks/ConfirmationOfCompletion/ConfirmItem`, {
-      params: {
+    // 显示加载状态
+    const loadingInstance = ElLoading.service({
+      lock: true,
+      text: '正在上传附件并保存...',
+      background: 'rgba(0, 0, 0, 0.7)'
+    })
+
+    try {
+      // 1. 先上传附件并获取URL字符串
+      const attachmentUrlsStr = await uploadFilesAndGetUrlString(completionFileList.value)
+
+      // 2. 构建请求数据
+      const requestData = {
         ID: currentTask.value.id,
-        remark: completionNote.value
+        remark: completionNote.value || '',
+        finishattachmentUrls: attachmentUrlsStr // 使用字符串格式的URL
       }
-    });
-    if (res.code === 200) {
-      ElMessage.success('任务完成确认成功');
-      // 刷新当前日历数据
-      const startDate = formatDate(calendarDates.value[0].date)
-      const endDate = formatDate(calendarDates.value[calendarDates.value.length - 1].date)
-      await getPlanTaskItems(startDate, endDate)
-    } else {
-      ElMessage.error(res.msg || '确认失败');
+
+      // 3. 发送请求
+      const res = await request.get(`PlanTasks/ConfirmationOfCompletion/ConfirmItem`, {
+        params: requestData
+      }) as unknown as { data: ApiResponse };
+
+      if (res.code === 200) {
+        ElMessage.success('任务完成确认成功');
+        // 刷新当前日历数据
+        const startDate = formatDate(calendarDates.value[0].date)
+        const endDate = formatDate(calendarDates.value[calendarDates.value.length - 1].date)
+        await getPlanTaskItems(startDate, endDate)
+      } else {
+        ElMessage.error(res.data.msg || '确认失败');
+      }
+    } finally {
+      // 关闭加载状态
+      loadingInstance.close()
+
+      // 重置表单
+      confirmDialogVisible.value = false;
+      completionNote.value = '';
+      completionFileList.value = [];
+      currentTask.value = null;
     }
   } catch (error) {
     console.error('确认失败:', error);
     ElMessage.error('确认失败：' + (error.message || '未知错误'));
-  } finally {
-    confirmDialogVisible.value = false;
-    completionNote.value = '';
-    currentTask.value = null;
   }
 }
 //#endregion
@@ -4284,6 +4391,20 @@ const handleModifyPaymentDate = (row) => {
   })
 }
 
+// 添加任务完成附件相关变量
+const completionFileList = ref([])
+// 处理任务完成附件变更
+const handleCompletionFileChange = (file, fileList) => {
+  completionFileList.value = fileList
+}
+
+// 处理任务完成附件移除
+const handleCompletionFileRemove = (file) => {
+  const index = completionFileList.value.indexOf(file)
+  if (index !== -1) {
+    completionFileList.value.splice(index, 1)
+  }
+}
 //#endregion
 </script>
 
