@@ -154,7 +154,7 @@
 							</el-select>
 						</template>
 					</el-table-column>
-					<el-table-column prop="taxincluded" label="含税+/-" width="120" align="center">
+					<el-table-column prop="taxincluded" label="含税+/-(%)" width="120" align="center">
 						<template #default="{ row }">
 							<el-input v-model="row.taxincluded" :disabled="isEditable" />
 						</template>
