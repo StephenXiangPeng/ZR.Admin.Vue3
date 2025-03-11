@@ -364,8 +364,6 @@ const inquiryList = ref([]);
 // 选中的询价单
 const selectedInquiry = ref(null);
 
-// 销售员选项
-const salesOptions = ref([]);
 // 供应商选项
 const supplierOptions = ref([]);
 
@@ -445,63 +443,6 @@ const getInquiryList = async () => {
 	}
 };
 
-// 格式化日期时间
-const formatDateTime = (dateTime) => {
-	if (!dateTime) return '';
-	const date = new Date(dateTime);
-	return date.toLocaleString('zh-CN', {
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit',
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit'
-	});
-};
-
-// 获取销售员列表
-const getSalesList = async () => {
-	try {
-		// 这里替换为实际的API调用
-		// const res = await api.getSalesList();
-		// salesOptions.value = res.data.map(item => ({
-		//   value: item.id,
-		//   label: item.name
-		// }));
-
-		// 模拟数据
-		salesOptions.value = [
-			{ value: 1, label: '销售员A' },
-			{ value: 2, label: '销售员B' },
-			{ value: 3, label: '销售员C' }
-		];
-	} catch (error) {
-		console.error('获取销售员列表失败', error);
-		ElMessage.error('获取销售员列表失败');
-	}
-};
-
-// 获取供应商列表
-const getSupplierList = async () => {
-	try {
-		// 这里替换为实际的API调用
-		// const res = await api.getSupplierList();
-		// supplierOptions.value = res.data.map(item => ({
-		//   value: item.id,
-		//   label: item.name
-		// }));
-
-		// 模拟数据
-		supplierOptions.value = [
-			{ value: 1, label: '供应商A' },
-			{ value: 2, label: '供应商B' },
-			{ value: 3, label: '供应商C' }
-		];
-	} catch (error) {
-		console.error('获取供应商列表失败', error);
-		ElMessage.error('获取供应商列表失败');
-	}
-};
 
 // 查询询价单
 const searchInquiries = () => {
@@ -600,12 +541,7 @@ const getSupplierListByProduct = async (productID: number) => {
 // 获取询价单详情
 const getInquiryDetail = async (inquiryId: string) => {
 	try {
-		// 这里替换为实际的API调用
-		// const res = await api.getInquiryDetail(inquiryId);
-		// 将询价单详情填充到表单中
-		// Object.assign(formData, res.data);
-
-		// 模拟数据 - 实际应用中应该从API获取
+		// 获取询价单详情
 		formData.InquiryID = inquiryId;
 		formData.ProductID = selectedInquiry.value.productID;
 		formData.productnumber = selectedInquiry.value.productCode;
@@ -643,16 +579,6 @@ const getInquiryDetail = async (inquiryId: string) => {
 		console.error('获取询价单详情失败', error);
 		ElMessage.error('获取询价单详情失败');
 	}
-};
-
-// 处理图片上传成功
-const handleUploadSuccess = (response: any, file: any) => {
-	formData.productimage = response.url;
-};
-
-// 处理图片移除
-const handleRemove = () => {
-	formData.productimage = '';
 };
 
 // 提交表单
@@ -719,8 +645,6 @@ const handleRowButtonClick = (row, index) => {
 // 页面加载时获取数据
 onMounted(() => {
 	getInquiryList();
-	getSalesList();
-	getSupplierList();
 });
 </script>
 
