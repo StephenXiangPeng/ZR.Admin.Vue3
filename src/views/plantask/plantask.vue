@@ -175,7 +175,9 @@
 							{{ formatDate(item.endTime) }}
 						</el-descriptions-item>
 						<el-descriptions-item label="任务描述">
-							{{ item.taskDescription }}
+							<el-tooltip :content="item.taskDescription" placement="top" :show-after="200">
+								<div class="truncated-text">{{ item.taskDescription }}</div>
+							</el-tooltip>
 						</el-descriptions-item>
 						<el-descriptions-item label="创建日期">
 							{{ formatDate(item.create_time) }}
@@ -1091,5 +1093,13 @@ const downloadFile = (url: string, fileName: string) => {
 
 .el-timeline-item__node--danger {
 	background-color: var(--el-color-danger) !important;
+}
+
+.truncated-text {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 200px;
+	/* Adjust as needed */
 }
 </style>
