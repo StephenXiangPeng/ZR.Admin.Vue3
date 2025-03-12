@@ -27,14 +27,14 @@
 					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
 					<el-divider></el-divider>
 					<div style="width: 100%; margin-top: 30px;">
-						<el-input v-model="Search_ProductCode" clearable style="width: 15%"
+						<el-input v-model="Search_ProductCode" clearable style="width: 20%" size="large"
 							placeholder="输入产品编号" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 						<el-date-picker v-model="Search_StartTransactionDate" type="date" placeholder="请选择最近成交日期"
-							size="Default"
-							style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+							size="large"
+							style="width: 20%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 						<el-date-picker v-model="Search_EndTransactionDate" type="date" placeholder="请选择最近成交日期"
-							size="Default"
-							style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+							size="large"
+							style="width: 20%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 						<el-button type="primary" @click="Search_ProductInfo()" plain>查询</el-button>
 						<el-button @click="Search_Reset()">重置</el-button>
 					</div>
@@ -43,21 +43,35 @@
 					<el-divider></el-divider>
 					<el-button type="primary" @click="openAddProductDialog()"
 						v-if="userId.toString() === '1'">添加产品</el-button>
-					<el-table :data="ProductInfoTableData">
-						<el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
-						<el-table-column prop="chineseProductName" label="中文品名" width="150"></el-table-column>
-						<el-table-column prop="chineseSpecification" label="中文规格" width="150"></el-table-column>
-						<el-table-column prop="englishProductName" label="英文品名" width="150"></el-table-column>
-						<el-table-column prop="unitOfMeasurement" label="计量单位" width="150"></el-table-column>
-						<el-table-column prop="TBproductImage" label="产品图片" width="150"></el-table-column>
-						<el-table-column prop="TBlastTransaction" label="最近成交" width="150"></el-table-column>
-						<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
-							<template v-slot:default="scope">
+					<el-table :data="ProductInfoTableData" row-key="id"
+						:tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
+						<el-table-column prop="productCode" label="产品编号" width="200" sortable></el-table-column>
+						<el-table-column prop="chineseProductName" label="中文品名" width="200"></el-table-column>
+						<el-table-column prop="chineseSpecification" label="中文规格" width="200"></el-table-column>
+						<el-table-column prop="englishProductName" label="英文品名" width="200"></el-table-column>
+						<el-table-column prop="unitOfMeasurement" label="计量单位" width="200"></el-table-column>
+						<el-table-column label="产品图片" width="200">
+							<template #default="scope">
+								<el-image v-if="scope.row.productPhotoPath"
+									:src="getFirstImageUrl(scope.row.productPhotoPath)"
+									style="width: 50px; height: 50px; object-fit: cover;"
+									:preview-src-list="getImageUrlList(scope.row.productPhotoPath)" :initial-index="0"
+									fit="cover" :preview-teleported="true">
+								</el-image>
+							</template>
+						</el-table-column>
+						<el-table-column label="最近成交" width="200">
+							<template #default="scope">
+								{{ formatDate(scope.row.recentTransactionDate) }}
+							</template>
+						</el-table-column>
+						<el-table-column fixed="right" label="操作" width="200">
+							<template #default="scope">
+								<el-button link type="primary" size="small" v-if="!scope.row.isSubProduct"
+									@click="OpenProductInfoDetailDialog(scope.row)">查看详情</el-button>
 								<el-button link type="primary" size="small"
-									@click=OpenProductInfoDetailDialog(scope.row)>查看详情</el-button>
-								<el-button link type="primary" size="small"
-									v-if="isDelteBtnShow && userId.toString() === '1'"
-									@click=DeleteProduct(scope.row)>删除产品</el-button>
+									v-if="isDelteBtnShow && userId.toString() === '1' && !scope.row.isSubProduct"
+									@click="DeleteProduct(scope.row)">删除产品</el-button>
 							</template>
 						</el-table-column>
 					</el-table>
@@ -357,14 +371,14 @@
 				<el-button type="primary" @click="AddSubProduct()"
 					v-if="showAddSubProductButton && userId.toString() === '1'" :disabled="isDisabled">添加子产品</el-button>
 				<el-table :data="SubProductTableData" style="width: 100%; height: 550px;">
-					<el-table-column prop="mainProductCode" label="主产品编号" width="150" align="center">
+					<el-table-column prop="mainProductCode" label="主产品编号" width="150" align="center" v-if="false">
 						<template #default="scope">
 							<span>{{ scope.row.mainProductCode }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subProductCode" label="子产品编号" width="300" align="center">
+					<el-table-column prop="subProductCode" label="产品编号" width="300" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subProductCode" style="max-width:250px" placeholder="请输入子产品编号"
+							<el-input v-model="scope.row.subProductCode" style="max-width:250px" placeholder="请输入产品编号"
 								:disabled="isDisabled">
 								<template #prepend>{{ Productform.productCode + "-" }}</template>
 							</el-input>
@@ -483,28 +497,30 @@
 							</el-select>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subcustomsCode" label="海关编码" width="200" align="center">
+					<el-table-column prop="subcustomsCode" label="海关编码" width="200" align="center" v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subcustomsCode" style="max-width:200px" :disabled="isDisabled"
 								placeholder="请输入子产品海关编码">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subchineseDeclarationProductName" label="报关中文品名" width="200" align="center">
+					<el-table-column prop="subchineseDeclarationProductName" label="报关中文品名" width="200" align="center"
+						v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subchineseDeclarationProductName" style="max-width:200px"
 								:disabled="isDisabled" placeholder="请输入子产品报关中文品名">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subenglishDeclarationProductName" label="报关英文品名" width="200" align="center">
+					<el-table-column prop="subenglishDeclarationProductName" label="报关英文品名" width="200" align="center"
+						v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subenglishDeclarationProductName" style="max-width:200px"
 								:disabled="isDisabled" placeholder="请输入子产品报关英文品名">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subinspectionMark" label="商检标志" width="120" align="center">
+					<el-table-column prop="subinspectionMark" label="商检标志" width="120" align="center" v-if="false">
 						<template #default="scope">
 							<el-select v-model="scope.row.subinspectionMark" :disabled="isDisabled" placeholder="请选择"
 								style="width: 90px;">
@@ -535,14 +551,16 @@
 								placeholder="请选择" style="width: 140px;" />
 						</template>
 					</el-table-column>
-					<el-table-column prop="subrecentRecommendation" label="最近推荐" width="200" align="center">
+					<el-table-column prop="subrecentRecommendation" label="最近推荐" width="200" align="center"
+						v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subrecentRecommendation" style="max-width:200px" disabled
 								placeholder="请输入子产品最近推荐">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subrecentSampleShipment" label="最近寄样" width="150" align="center">
+					<el-table-column prop="subrecentSampleShipment" label="最近寄样" width="150" align="center"
+						v-if="false">
 						<template #default="scope">
 							<el-select v-model="scope.row.subrecentSampleShipment" disabled placeholder="请选择"
 								style="width: 90px;">
@@ -667,7 +685,7 @@
 					<el-tab-pane label="工厂报价" name="FactoryQuotationTab">
 						<el-table :data="FactoryQuotationTableData" style="width: 100%">
 							<el-table-column prop="" label="报价日期" width="150"></el-table-column>
-							<el-table-column prop="" label="供应商编号" width="150"></el-table-column>
+							<el-table-column prop="" label="供应商编号" width="150" v-if="false"></el-table-column>
 							<el-table-column prop="" label="供应商简称" width="150"></el-table-column>
 							<el-table-column prop="" label="产品图片" width="150"></el-table-column>
 							<el-table-column prop="" label="名称型号及规格" width="150"></el-table-column>
@@ -748,6 +766,19 @@ import { onMounted } from 'vue'; //初始运行钩子
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { fa } from 'element-plus/es/locale';
 import UserInfo from '../system/user/profile/userInfo.vue';
+
+// 获取第一张图片URL
+const getFirstImageUrl = (imagePathString) => {
+	if (!imagePathString) return '';
+	const urls = imagePathString.split(',');
+	return urls[0] || '';
+};
+
+// 获取所有图片URL列表
+const getImageUrlList = (imagePathString) => {
+	if (!imagePathString) return [];
+	return imagePathString.split(',').filter(url => url.trim() !== '');
+};
 
 //获取当前登录用户信息
 const userId = useUserStore().userId;
@@ -1746,11 +1777,13 @@ const uploadSubProductFile = async (file) => {
 const totalItems = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(10);
+
 //产品信息表格
 const ProductInfoTableData = ref([])
 const handlePageChange = async (newPage) => {
 	currentPage.value = newPage;
 	await GetProductInfoList(newPage, pageSize.value);
+
 };
 const Search_ProductCode = ref('');	// 查询产品编号
 const Search_StartTransactionDate = ref('');	// 查询最近成交日期
@@ -1764,6 +1797,43 @@ const Search_Reset = () => {
 	Search_EndTransactionDate.value = '';
 	GetProductInfoList(currentPage.value, pageSize.value);
 }
+
+// 格式化日期
+const formatDate = (dateString) => {
+	if (!dateString || dateString.includes('1900-01-01')) {
+		return '暂无记录';
+	}
+	return dateString.split(' ')[0]; // 只显示日期部分
+}
+
+// 处理API返回的数据，转换为树形结构
+const processProductData = (data) => {
+	return data.map(product => {
+		const mainProduct = { ...product, isSubProduct: false };
+		// 如果有子产品，将其添加为children
+		if (product.subProductItems && product.subProductItems.length > 0) {
+			mainProduct.children = product.subProductItems.map(subItem => {
+				return {
+					...subItem,
+					isSubProduct: true,
+					// 确保子产品有唯一ID
+					id: subItem.id,
+					productCode: subItem.subProductCode,
+					chineseProductName: subItem.subchineseProductName,
+					englishProductName: subItem.subenglishProductName,
+					chineseSpecification: subItem.subchineseSpecification,
+					unitOfMeasurement: state.optionss.hr_calculate_unit.find((dict) => dict.dictValue === subItem.subunit)?.dictLabel,
+					productPhotoPath: subItem.subProductImages,
+					recentTransactionDate: subItem.subrecentTransactionDate
+				};
+			});
+		}
+		// 删除原始子产品数组，避免数据重复
+		delete mainProduct.subProductItems;
+
+		return mainProduct;
+	});
+};
 
 //获取产品信息列表
 function GetProductInfoList(start, end) {
@@ -1781,14 +1851,13 @@ function GetProductInfoList(start, end) {
 			}
 		}).then(response => {
 			if (response.data.data.length > 0) {
-				ProductInfoTableData.value = response.data.data;
+				ProductInfoTableData.value = processProductData(response.data.data);
 				ProductInfoTableData.value.forEach((item) => {
 					item.unitOfMeasurement = state.optionss.hr_calculate_unit.find((dict) => dict.dictValue === item.unitOfMeasurement)?.dictLabel;
 				})
 				totalItems.value = response.data.totalNum; // 更新总条数
 				currentPage.value = response.data.pageIndex; // 更新当前页
 				pageSize.value = response.data.pageSize; // 更新每页条数
-
 				resolve(response.data.data);
 			} else {
 				if (response.data.totalNum > 0 && start > 1) {
@@ -1882,10 +1951,14 @@ const removeProductEditLock = async (productId) => {
 
 const isViewMode = ref(false);
 const showAddSubProductButton = ref(true);
+
 //查看详情
 const OpenProductInfoDetailDialog = async (row) => {
+	// 确定是否为子产品，并获取正确的产品ID
+	const isSubProduct = row.isSubProduct;
+	const productId = isSubProduct ? row.mainProductId : row.id;
 	// 先检查编辑锁
-	const lockStatus = await getProductEditLock(row.id);
+	const lockStatus = await getProductEditLock(productId);
 	if (lockStatus.data.isEditLock == true) {
 		ElMessageBox.alert(`当前产品正在被${lockStatus.data.editUser}编辑中，请稍后再试！`, '提示', {
 			confirmButtonText: '确定',
@@ -1893,48 +1966,102 @@ const OpenProductInfoDetailDialog = async (row) => {
 		});
 		return;
 	}
+	// 如果是子产品，需要先获取主产品信息
+	if (isSubProduct) {
+		try {
+			const response = await request({
+				url: 'ProductInformation/GetProductInfo/GetProductInfo',
+				method: 'get',
+				params: { ID: productId }
+			});
+
+			if (response.code === 200) {
+				// 使用主产品信息填充表单
+				const mainProduct = response.data;
+				fillProductForm(mainProduct);
+
+				// 处理子产品列表
+				processSubProducts(mainProduct);
+
+				// 设置当前选中的子产品
+				const currentSubIndex = mainProduct.subProductItems.findIndex(item => item.id === row.id);
+				if (currentSubIndex !== -1) {
+					// 可以在这里添加代码，滚动到或高亮显示当前子产品
+					// 例如：currentSubProductIndex.value = currentSubIndex;
+				}
+			} else {
+				ElMessage.error(response.msg || '获取产品详情失败');
+				return;
+			}
+		} catch (error) {
+			ElMessage.error('获取产品详情失败');
+			return;
+		}
+	} else {
+		// 直接使用当前行数据填充表单
+		fillProductForm(row);
+		processSubProducts(row);
+	}
+
+	// 设置编辑ID和显示对话框
+	EditProductID.value = productId;
+	AddProductDialog.value = true;
+	runOnPageLoad();
+}
+
+// 辅助函数：填充产品表单
+const fillProductForm = (product) => {
 	isViewMode.value = true;
 	showSaveBtn.value = false;
 	showEditBtn.value = true;
 	isDisabled.value = true;
-	Productform.productDescription = row.productDescription;
 	showAddSubProductButton.value = false;  // 隐藏添加子产品按钮
-	Productform.ProductCategories = row.productCategoriesID;
-	Productform.Supplier = row.supplierId ? row.supplierId.split(',').map(id => id.trim()) : []; // filter(Boolean)用于过滤掉undefined值
-	Productform.productCode = row.productCode;
-	Productform.productBarcode = row.productBarcode;
-	Productform.chineseProductName = row.chineseProductName;
-	Productform.englishProductName = row.englishProductName;
-	Productform.chineseSpecification = row.chineseSpecification;
-	Productform.englishSpecification = row.englishSpecification;
-	Productform.unit = state.optionss.hr_calculate_unit.find((dict) => dict.dictLabel === row.unitOfMeasurement)?.dictValue;
-	Productform.customsCode = row.customsCode;
-	Productform.chineseDeclarationProductName = row.chineseDeclarationProductName;
-	Productform.englishDeclarationProductName = row.englishDeclarationProductName;
-	Productform.inspectionMark = row.inspectionMark;
-	Productform.stockQuantity = row.stockQuantity;
-	Productform.developmentEventDate = row.developmentEventDate;
-	Productform.recentRecommendation = row.recentRecommendation;
-	Productform.recentSampleShipment = row.recentSampleShipment;
-	Productform.recentQuotation = row.recentQuotation;
-	Productform.recentTransactionDate = row.recentTransactionDate;
-	Productform.ProductPhoto = row.productPhotoPath;
-	Productform.productLength = row.productLength;
-	Productform.productwidth = row.productWidth;
-	Productform.productheight = row.productHeight;
-	Productform.productweight = row.productWeight;
-	Productform.mediumpackagingvolume = row.mediumPackagingVolume;
-	Productform.outerboxpackingquantity = row.outerBoxPackingQuantity;
-	Productform.outerboxlength = row.outerBoxLength;
-	Productform.outerboxwidth = row.outerBoxWidth;
-	Productform.outerboxheight = row.outerBoxHeight;
-	Productform.outerboxvolume = row.outerBoxVolume;
-	Productform.outerboxnetweight = row.outerBoxNetWeight;
-	Productform.outerboxgrossweight = row.outerBoxGrossWeight;
-	Productform.PackingMethod = state.optionss.hr_packing.find((dict) => dict.dictValue === row.packingMethod.toString())?.dictValue;
-	Productform.customerGoodsNumber = row.customerGoodsNumber;
-	if (row.productPhotoPath != null && row.productPhotoPath != '') {
-		row.productPhotoPath.split(',').forEach((url, index) => {
+
+	Productform.productDescription = product.productDescription;
+	Productform.ProductCategories = product.productCategoriesID;
+	Productform.Supplier = product.supplierId ? product.supplierId.split(',').map(id => id.trim()) : [];
+	Productform.productCode = product.productCode;
+	Productform.productBarcode = product.productBarcode;
+	Productform.chineseProductName = product.chineseProductName;
+	Productform.englishProductName = product.englishProductName;
+	Productform.chineseSpecification = product.chineseSpecification;
+	Productform.englishSpecification = product.englishSpecification;
+	Productform.unit = product.unitOfMeasurement == 0 || product.unitOfMeasurement == null || product.unitOfMeasurement == undefined ?
+		product.unitOfMeasurement :
+		state.optionss.hr_calculate_unit.find((dict) => dict.dictLabel === product.unitOfMeasurement)?.dictValue;
+	Productform.customsCode = product.customsCode;
+	Productform.chineseDeclarationProductName = product.chineseDeclarationProductName;
+	Productform.englishDeclarationProductName = product.englishDeclarationProductName;
+	Productform.inspectionMark = product.inspectionMark;
+	Productform.stockQuantity = product.stockQuantity;
+	Productform.developmentEventDate = product.developmentEventDate;
+	Productform.recentRecommendation = product.recentRecommendation;
+	Productform.recentSampleShipment = product.recentSampleShipment;
+	Productform.recentQuotation = product.recentQuotation;
+	Productform.recentTransactionDate = product.recentTransactionDate;
+	Productform.ProductPhoto = product.productPhotoPath;
+	Productform.productLength = product.productLength;
+	Productform.productwidth = product.productWidth;
+	Productform.productheight = product.productHeight;
+	Productform.productweight = product.productWeight;
+	Productform.mediumpackagingvolume = product.mediumPackagingVolume;
+	Productform.outerboxpackingquantity = product.outerBoxPackingQuantity;
+	Productform.outerboxlength = product.outerBoxLength;
+	Productform.outerboxwidth = product.outerBoxWidth;
+	Productform.outerboxheight = product.outerBoxHeight;
+	Productform.outerboxvolume = product.outerBoxVolume;
+	Productform.outerboxnetweight = product.outerBoxNetWeight;
+	Productform.outerboxgrossweight = product.outerBoxGrossWeight;
+	Productform.PackingMethod = product.packingMethod == 0 || product.packingMethod == null || product.packingMethod == undefined ?
+		product.packingMethod :
+		state.optionss.hr_packing.find((dict) => dict.dictValue === product.packingMethod.toString())?.dictValue;
+	Productform.customerGoodsNumber = product.customerGoodsNumber;
+
+	// 处理产品图片
+	fileList.value = [];
+	filelistUrlStr.value = '';
+	if (product.productPhotoPath != null && product.productPhotoPath != '') {
+		product.productPhotoPath.split(',').forEach((url, index) => {
 			if (!fileList.value.some(item => item.url === url)) {
 				let name = url.split('/').pop();
 				fileList.value.push({
@@ -1946,13 +2073,22 @@ const OpenProductInfoDetailDialog = async (row) => {
 			}
 		});
 	}
+}
+
+// 辅助函数：处理子产品
+const processSubProducts = (product) => {
 	SubProductTableData.value = [];
-	row.subProductItems.forEach((item) => {
+
+	// 确保使用正确的子产品数据源
+	const subProducts = product.children || product.subProductItems || [];
+
+	subProducts.forEach((item) => {
 		const subProductImages = item.subProductImages ? item.subProductImages.split(',').map((url, index) => ({
 			name: `Image ${index + 1}`,
 			url: url,
 			isChanged: false
 		})) : [];
+
 		// 处理子产品附件
 		const subProductFiles = item.subproductFilepath ?
 			item.subproductFilepath.map(fileItem => {
@@ -1965,13 +2101,21 @@ const OpenProductInfoDetailDialog = async (row) => {
 					isChanged: false
 				};
 			}) : [];
+
 		if (subProductFiles.length >= 3) {
 			SelectFileView.value = false;
 		}
+
+		// 安全地获取子产品编码
+		const fullCode = item.subProductCode || '';
+		const codeParts = fullCode.split('-');
+		const mainCode = codeParts.length > 0 ? codeParts[0] : '';
+		const subCode = codeParts.length > 1 ? codeParts[1] : '';
+
 		SubProductTableData.value.push({
 			ID: item.id,
-			mainProductCode: item.subProductCode.split('-')[0],
-			subProductCode: item.subProductCode.split('-')[1], // 只保留 "-" 后面的部分
+			mainProductCode: mainCode,
+			subProductCode: subCode,
 			subproductImages: subProductImages,
 			currentImageIndex: 0,
 			subproductBarcode: item.subProductBarcode,
@@ -1979,7 +2123,9 @@ const OpenProductInfoDetailDialog = async (row) => {
 			subenglishProductName: item.subenglishProductName,
 			subchineseSpecification: item.subchineseSpecification,
 			subenglishSpecification: item.subenglishSpecification,
-			subunit: state.optionss.hr_calculate_unit.find((dict) => dict.dictValue === item.subunit.toString())?.dictValue,
+			subunit: item.subunit == 0 || item.subunit == null || item.subunit == undefined ?
+				item.subunit :
+				state.optionss.hr_calculate_unit.find((dict) => dict.dictValue === item.subunit.toString())?.dictValue,
 			subcustomsCode: item.subcustomsCode,
 			subchineseDeclarationProductName: item.subchineseDeclarationProductName,
 			subenglishDeclarationProductName: item.subenglishDeclarationProductName,
@@ -2002,16 +2148,17 @@ const OpenProductInfoDetailDialog = async (row) => {
 			subouterBoxVolume: item.subouterBoxVolume,
 			subouterBoxNetWeight: item.subouterBoxNetWeight,
 			subouterBoxGrossWeight: item.subouterBoxGrossWeight,
-			subPackingMethod: state.optionss.hr_packing.find((dict) => dict.dictValue === item.subPackingMethod.toString())?.dictValue,
+			subPackingMethod: item.subpackingMethod == 0 || item.subpackingMethod == null || item.subpackingMethod == undefined ?
+				item.subPackingMethod :
+				state.optionss.hr_packing.find((dict) => dict.dictValue === item.subPackingMethod.toString())?.dictValue,
 			productFiles: subProductFiles,
 			subcustomerGoodsNumber: item.subCustomerGoodsNumber
 		});
 	});
+
 	uploadedFiles.value = fileList.value;
-	EditProductID.value = row.id;
-	AddProductDialog.value = true;
-	runOnPageLoad();
 }
+
 const EditProductID = ref(0);
 const EditProductinfomation = () => {
 	setProductEditLock(EditProductID.value);
@@ -2297,5 +2444,26 @@ const handleFileDownload = (file) => {
 	justify-content: center;
 	height: 100%;
 	right: 20px;
+}
+
+/* 添加以下样式 */
+:deep(.el-image-viewer__wrapper) {
+	z-index: 3000 !important;
+	/* 使用更高的z-index值 */
+}
+
+:deep(.el-image-viewer__mask) {
+	z-index: 2999 !important;
+}
+
+/* 确保图片在表格中正常显示 */
+.el-table .el-image {
+	position: relative;
+	z-index: 1;
+}
+
+/* 当图片被点击预览时，提高其z-index */
+.el-table .el-image:hover {
+	z-index: 2;
 }
 </style>

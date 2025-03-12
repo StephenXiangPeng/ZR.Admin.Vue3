@@ -89,13 +89,20 @@
 							<el-input v-model="row.productId" :disabled="isEditable" />
 						</template>
 					</el-table-column>
+					<el-table-column prop="status" label="状态" width="100">
+						<template #default="scope">
+							<el-tag :type="scope.row.status === 0 ? 'warning' : 'success'">
+								{{ scope.row.status === 0 ? '待报价' : '已报价' }}
+							</el-tag>
+						</template>
+					</el-table-column>
 					<el-table-column prop="date" label="日期" width="150" align="center" />
 					<el-table-column prop="productimage" label="询价产品图片" width="150" align="center">
 						<template #default="scope">
 							<!-- 如果没有图片，显示上传按钮 -->
-							<el-upload v-if="!scope.row.productimage && !isEditable" :auto-upload="false"
-								:show-file-list="false" :on-change="(file) => handleImageSelect(file, scope.$index)"
-								accept="image/*">
+							<el-upload v-if="!scope.row.productimage && !isEditable && scope.row.status !== 1"
+								:auto-upload="false" :show-file-list="false"
+								:on-change="(file) => handleImageSelect(file, scope.$index)" accept="image/*">
 								<el-button type="primary" icon="UploadFilled">选择图片</el-button>
 							</el-upload>
 							<!-- 如果有图片，显示预览和删除按钮 -->
@@ -103,7 +110,7 @@
 								<el-image style="width: 100px; height: 100px" :src="scope.row.productimage"
 									:preview-src-list="[scope.row.productimage]" :zoom-rate="1.2" :max-scale="7"
 									:min-scale="0.2" fit="cover" preview-teleported="true" />
-								<div v-if="!isEditable">
+								<div v-if="!isEditable && scope.row.status !== 1">
 									<el-button type="danger" @click="handleImageDelete(scope.$index)">删除</el-button>
 								</div>
 							</div>
@@ -111,133 +118,134 @@
 					</el-table-column>
 					<el-table-column prop="productnumber" label="编号" width="150" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.productnumber" :disabled="isEditable" />
+							<el-input v-model="row.productnumber" :disabled="isEditable || row.status == 1" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="productspecifications" label="规格" width="150" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.productspecifications" :disabled="isEditable" />
+							<el-input v-model="row.productspecifications" :disabled="isEditable || row.status == 1" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="mainmaterials" label="主要材料" width="150" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.mainmaterials" :disabled="isEditable" />
+							<el-input v-model="row.mainmaterials" :disabled="isEditable || row.status == 1" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="smallpackagingmethod" label="小包装方式" width="150" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.smallpackagingmethod" :disabled="isEditable" />
+							<el-input v-model="row.smallpackagingmethod" :disabled="isEditable || row.status == 1" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="variousminimumorderquantities" label="各种起订量" width="120" align="center">
 						<el-table-column prop="moq" label="MOQ" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.moq" :disabled="isEditable" />
+								<el-input v-model="row.moq" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="negotiateprice" label="议价" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.negotiateprice" :disabled="isEditable" />
+								<el-input v-model="row.negotiateprice" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="custommade" label="定制" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.custommade" :disabled="isEditable" />
+								<el-input v-model="row.custommade" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 					</el-table-column>
 					<el-table-column prop="priceterms" label="价格条款" width="170" align="center">
 						<template #default="{ row }">
-							<el-select v-model="row.priceterms" filterable placeholder="选择价格条款" :disabled="isEditable">
-								<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
+							<el-select v-model="row.priceterms" filterable placeholder="选择价格条款"
+								:disabled="isEditable || row.status == 1">
+								<el-option v-for="dict in optionss.
+									hr_purchase_pricing_term" :key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</template>
 					</el-table-column>
 					<el-table-column prop="taxincluded" label="含税+/-(%)" width="120" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.taxincluded" :disabled="isEditable" />
+							<el-input v-model="row.taxincluded" :disabled="isEditable || row.status == 1" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="QuoteQuantity" label="报价数量" width="120" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.QuoteQuantity" :disabled="isEditable" />
+							<el-input v-model="row.QuoteQuantity" :disabled="isEditable || row.status == 1" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="price" label="价格" width="120" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.price" :disabled="isEditable" />
+							<el-input v-model="row.price" :disabled="isEditable || row.status == 1" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="singleproductsalessize" label="单个产品销售尺寸(CM)" width="120" align="center">
 						<el-table-column prop="productlength" label="长" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.productlength" :disabled="isEditable" />
+								<el-input v-model="row.productlength" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="productwidth" label="宽" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.productwidth" :disabled="isEditable" />
+								<el-input v-model="row.productwidth" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="productheight" label="高" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.productheight" :disabled="isEditable" />
+								<el-input v-model="row.productheight" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="productweight" label="克重" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.productweight" :disabled="isEditable" />
+								<el-input v-model="row.productweight" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 					</el-table-column>
 					<el-table-column prop="boxing" label="装箱" width="120" align="center">
 						<el-table-column prop="mediumpackaging" label="中包装" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.mediumpackaging" :disabled="isEditable" />
+								<el-input v-model="row.mediumpackaging" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerbox" label="外箱" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerbox" :disabled="isEditable" />
+								<el-input v-model="row.outerbox" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="middlebagorouterbox" label="中包/外箱" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.middlebagorouterbox" :disabled="isEditable" />
+								<el-input v-model="row.middlebagorouterbox" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 					</el-table-column>
 					<el-table-column prop="outerboxdata" label="外箱数据(CM)" width="120" align="center">
 						<el-table-column prop="outerboxlength" label="长" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerboxlength" :disabled="isEditable" />
+								<el-input v-model="row.outerboxlength" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxwidth" label="宽" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerboxwidth" :disabled="isEditable" />
+								<el-input v-model="row.outerboxwidth" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxheight" label="高" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerboxheight" :disabled="isEditable" />
+								<el-input v-model="row.outerboxheight" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxvolume" label="体积m³" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerboxvolume" :disabled="isEditable" />
+								<el-input v-model="row.outerboxvolume" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxgrossweight" label="毛重KGS" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerboxgrossweight" :disabled="isEditable" />
+								<el-input v-model="row.outerboxgrossweight" :disabled="isEditable || row.status == 1" />
 							</template>
 						</el-table-column>
 					</el-table-column>
 					<el-table-column fixed="right" label="操作" min-width="120">
 						<template #default="scope">
-							<el-button type="danger" size="small"
+							<el-button v-if="scope.row.status !== 1" type="danger" size="small"
 								@click.prevent="deleteProduct(scope.row, scope.$index)" :disabled="isEditable">
 								删除
 							</el-button>
@@ -449,7 +457,8 @@ const handleRowDblClick = (row) => {
 			outerboxwidth: row.outerBoxWidth ?? 0,
 			outerboxheight: row.outerBoxHeight ?? 0,
 			outerboxvolume: row.outerBoxVolume ?? 0,
-			outerboxgrossweight: row.outerBoxGrossWeight ?? 0
+			outerboxgrossweight: row.outerBoxGrossWeight ?? 0,
+			status: row.status
 		});
 		SearchProcutDialog.value = false;
 	}
@@ -534,7 +543,8 @@ const onAddInquiryProductItem = () => {
 		outerboxwidth: 0,
 		outerboxheight: 0,
 		outerboxvolume: 0,
-		outerboxgrossweight: 0
+		outerboxgrossweight: 0,
+		status: 0
 	})
 }
 const selectedImages = ref([]); // 存储用户选择的图片文件
@@ -597,7 +607,8 @@ const state = reactive({
 		hr_outerbox_unit: [],
 		hr_calculate_unit: [],
 		sql_product: [],
-		hr_packing: []
+		hr_packing: [],
+		hr_purchase_pricing_term: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -605,7 +616,7 @@ var dictParams = [{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' }
 { dictType: 'hr_settlement_way' }, { dictType: 'hr_pricing_term' }, { dictType: 'hr_nation' }, { dictType: 'sql_hr_sale' }, { dictType: 'hr_transport_port' },
 { dictType: 'hr_transportation_method' }, { dictType: 'sys_yes_no' }, { dictType: 'hr_calculate_unit' }, { dictType: 'hr_contract_status' },
 { dictType: 'hr_customer_level' }, { dictType: 'hr_signing_place' }, { dictType: 'hr_quotation_basis' }, { dictType: 'hr_outerbox_unit' }, { dictType: 'sql_product' },
-{ dictType: 'hr_packing' }]
+{ dictType: 'hr_packing' }, { dictType: 'hr_purchase_pricing_term' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -897,7 +908,7 @@ const ChcekDetails = (row) => {
 					moq: item.moq,
 					negotiateprice: item.negotiateprice,
 					custommade: item.customMade,
-					priceterms: item.priceTerms == 0 ? 0 : state.optionss.hr_pricing_term.find(option => option.dictValue === item.priceTerms.toString()).dictValue,
+					priceterms: item.priceTerms == 0 ? 0 : state.optionss.hr_purchase_pricing_term.find(option => option.dictValue === item.priceTerms.toString()).dictValue,
 					taxincluded: item.taxIncluded,
 					price: item.price,
 					QuoteQuantity: item.quoteQuantity,
@@ -912,7 +923,8 @@ const ChcekDetails = (row) => {
 					outerboxwidth: item.outerBoxWidth,
 					outerboxheight: item.outerBoxHeight,
 					outerboxvolume: item.outerBoxVolume,
-					outerboxgrossweight: item.outerBoxGrossWeight
+					outerboxgrossweight: item.outerBoxGrossWeight,
+					status: item.status
 				}))
 			} else {
 				inquryProductTableData.value = [];
@@ -1340,7 +1352,7 @@ const loadProductList = async (inquiryId) => {
 					moq: item.moq,
 					negotiateprice: item.negotiateprice,
 					custommade: item.customMade,
-					priceterms: state.optionss.hr_pricing_term.find(option => option.dictValue === item.priceTerms.toString())?.dictLabel,
+					priceterms: item.priceTerms == 0 ? 0 : state.optionss.hr_purchase_pricing_term.find(option => option.dictValue === item.priceTerms.toString())?.dictValue,
 					taxincluded: item.taxIncluded,
 					price: item.price,
 					QuoteQuantity: item.quoteQuantity,
@@ -1355,7 +1367,8 @@ const loadProductList = async (inquiryId) => {
 					outerboxwidth: item.outerBoxWidth,
 					outerboxheight: item.outerBoxHeight,
 					outerboxvolume: item.outerBoxVolume,
-					outerboxgrossweight: item.outerBoxGrossWeight
+					outerboxgrossweight: item.outerBoxGrossWeight,
+					status: item.status
 				}));
 			} else {
 				inquryProductTableData.value = [];

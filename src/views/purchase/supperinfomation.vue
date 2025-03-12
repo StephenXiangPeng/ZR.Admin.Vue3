@@ -1014,6 +1014,7 @@ const isEditable = ref(false);
 const SelctedSupplierId = ref('')
 //查看供应商详情
 const checkSupplierDetails = async (row) => {
+	SelctedSupplierId.value = row.id;
 	loadSupplierProductList(row.id)// 加载供应商产品列表
 	loadBankAccountList();// 加载银行账号列表
 	isEditBtnVisible.value = true;
@@ -1022,7 +1023,6 @@ const checkSupplierDetails = async (row) => {
 	await loadSupplierSendSampleHistory(row.id);
 	// 获取供应商信息
 	isEditable.value = true;
-	SelctedSupplierId.value = row.id;
 	Addsupperinfoform.Id = row.id;
 	Addsupperinfoform.supplierId = row.supplierId;
 	Addsupperinfoform.shortName = row.shortName;

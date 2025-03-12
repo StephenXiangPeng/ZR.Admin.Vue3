@@ -220,8 +220,8 @@
 				<el-form-item label="价格条款">
 					<el-select v-model="formData.priceterms" filterable placeholder="请选择价格条款"
 						:disabled="selectedInquiry && selectedInquiry.status !== 0">
-						<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode" :label="dict.dictLabel"
-							:value="dict.dictValue" />
+						<el-option v-for="dict in optionss.hr_purchase_pricing_term" :key="dict.dictCode"
+							:label="dict.dictLabel" :value="dict.dictValue" />
 					</el-select>
 				</el-form-item>
 
@@ -331,12 +331,12 @@ const proxy = getCurrentInstance().proxy
 const state = reactive({
 	optionss: {
 		// 选项列表(动态字典将会从后台获取数据)
-		hr_pricing_term: [], // 价格条款
+		hr_purchase_pricing_term: [], // 价格条款
 		sql_hr_sale: [] // 销售员
 	}
 })
 const { optionss } = toRefs(state)
-var dictParams = [{ dictType: 'hr_pricing_term' }, { dictType: 'sql_hr_sale' }]
+var dictParams = [{ dictType: 'hr_purchase_pricing_term' }, { dictType: 'sql_hr_sale' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -555,7 +555,7 @@ const getInquiryDetail = async (inquiryId: string) => {
 		formData.moq = Number(selectedInquiry.value.moq);
 		formData.negotiateprice = Number(selectedInquiry.value.negotiateprice);
 		formData.custommade = Number(selectedInquiry.value.custommade);
-		formData.priceterms = state.optionss.hr_pricing_term.find(item => item.dictValue === selectedInquiry.value.priceterms.toString())?.dictValue;
+		formData.priceterms = state.optionss.hr_purchase_pricing_term.find(item => item.dictValue === selectedInquiry.value.priceterms.toString())?.dictValue;
 		formData.taxincluded = Number(selectedInquiry.value.taxincluded);
 		formData.QuoteQuantity = Number(selectedInquiry.value.quoteQuantity);
 		formData.price = Number(selectedInquiry.value.price);
