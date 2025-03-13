@@ -89,7 +89,7 @@
 					<el-col :span="8">
 						<el-form-item label="产品编号" prop="productCode">
 							<el-input v-model="Productform.productCode" :disabled="isDisabled" placeholder="请输入产品编号"
-								style="width: 300px;" />
+								style="width: 300px;" ref="productCodeInput" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -201,24 +201,19 @@
 					</el-col>
 				</el-row>
 				<el-row>
-					<!-- <el-col :span="8">
-						<el-form-item label="最近推荐" v-if="false">
-							<el-select v-model="Productform.recentRecommendation" placeholder="" disabled
-								style="width: 300px;">
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="最近寄样" v-if="false">
-							<el-select v-model="Productform.recentSampleShipment" placeholder="" disabled
-								style="width: 300px;">
-							</el-select>
-						</el-form-item>
-					</el-col> -->
 					<el-col :span="8">
 						<el-form-item label="开发时间日期">
 							<el-date-picker v-model="Productform.developmentEventDate" type="date" disabled
 								style=" width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="开发人员">
+							<el-select v-model="Productform.developmentPersonnel" placeholder="" :disabled="isDisabled"
+								style="width: 300px;">
+								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -237,7 +232,7 @@
 				</el-row>
 				<el-row>
 					<el-col :span="8">
-						<el-form-item label="所属分类">
+						<el-form-item label="所属分类" prop="ProductCategories">
 							<el-cascader v-model="Productform.ProductCategories" :disabled="isDisabled"
 								:options="Productoptions" :props="props1" clearable style="width: 300px;"
 								@change="handleCategoryChange" />
@@ -671,6 +666,13 @@
 							</el-input>
 						</template>
 					</el-table-column>
+					<el-table-column prop="subProductRemark" label="备注" width="200" align="center">
+						<template #default="scope">
+							<el-input v-model="scope.row.subProductRemark" style="max-width:200px"
+								:disabled="isDisabled" placeholder="请输入子产品备注">
+							</el-input>
+						</template>
+					</el-table-column>
 					<el-table-column label="操作" width="150" align="center" fixed="right">
 						<template #default="scope">
 							<el-button :disabled="isDisabled" link type="danger"
@@ -754,7 +756,7 @@
 </template>
 <script setup lang="ts">
 
-import { createApp, getCurrentInstance, reactive, toRefs, ref, callWithAsyncErrorHandling } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, callWithAsyncErrorHandling, nextTick } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, FormInstance, UploadUserFile, UploadFile, subMenuProps, FormRules } from 'element-plus'
 import { FOCUSABLE_CHILDREN } from 'element-plus/es/directives/trap-focus';
 import request from '@/utils/request';
@@ -766,6 +768,8 @@ import { onMounted } from 'vue'; //初始运行钩子
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { fa } from 'element-plus/es/locale';
 import UserInfo from '../system/user/profile/userInfo.vue';
+
+
 
 // 获取第一张图片URL
 const getFirstImageUrl = (imagePathString) => {
@@ -1070,15 +1074,9 @@ const runOnPageLoad = () => {
 };
 
 const openAddProductDialog = () => {
-	if (SelectNodeId.value == 0) {
-		ElMessage({
-			type: 'warning',
-			message: '请先在左侧选择产品分类！'
-		})
-		return;
-	}
 	clearProductform();
-	Productform.ProductCategories = SelectNodeId.value;
+	Productform.ProductCategories = [SelectNodeId.value];
+	Productform.developmentEventDate = new Date().toISOString().split('T')[0];
 	showSaveBtn.value = true;
 	AddProductDialog.value = true;
 	showAddSubProductButton.value = true;
@@ -1227,12 +1225,13 @@ const state = reactive({
 		hr_packing: [],
 		hr_calculate_unit: [],
 		hr_inspectionmark: [],
-		sql_supplier_info: []
+		sql_supplier_info: [],
+		sql_all_user: []
 	}
 })
 const { optionss } = toRefs(state)
 var dictParams = [{ dictType: 'hr_packing' }, { dictType: 'hr_calculate_unit' },
-{ dictType: 'hr_inspectionmark' }, { dictType: 'sql_supplier_info' }]
+{ dictType: 'hr_inspectionmark' }, { dictType: 'sql_supplier_info' }, { dictType: 'sql_all_user' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -1240,10 +1239,14 @@ proxy.getDicts(dictParams).then((response) => {
 	GetProductInfoList(currentPage.value, pageSize.value);
 })
 
-const handleCategoryChange = (val: number[]) => {
-	if (val && val.length > 0) {
-		const lastSelected = val[val.length - 1]
-		SelectNodeId.value = lastSelected
+const handleCategoryChange = (value) => {
+	// 如果是数组，取最后一个值（通常是叶子节点）
+	if (Array.isArray(value)) {
+		Productform.ProductCategories = value[value.length - 1];
+		SelectNodeId.value = value[value.length - 1];
+	} else {
+		Productform.ProductCategories = value;
+		SelectNodeId.value = value;
 	}
 }
 
@@ -1414,6 +1417,7 @@ interface Productform {
 	inspectionMark: string;
 	stockQuantity: number;
 	developmentEventDate: string;
+	developmentPersonnel: number | null;
 	recentRecommendation: string;
 	recentSampleShipment: string;
 	recentQuotation: string;
@@ -1421,7 +1425,7 @@ interface Productform {
 	ProductPhoto: string;
 	PackingMethod: string;
 	Supplier: string;
-	ProductCategories: number[];
+	ProductCategories: number;
 	customerGoodsNumber: string;
 	//产品属性
 	productDescription: string;
@@ -1457,6 +1461,7 @@ const Productform = reactive<Productform>({
 	inspectionMark: '',
 	stockQuantity: 0,
 	developmentEventDate: '',
+	developmentPersonnel: null,
 	recentRecommendation: '',
 	recentSampleShipment: '',
 	recentQuotation: '',
@@ -1464,7 +1469,7 @@ const Productform = reactive<Productform>({
 	ProductPhoto: '',
 	PackingMethod: '',
 	Supplier: '',
-	ProductCategories: [],
+	ProductCategories: 0,
 	customerGoodsNumber: '',
 	//产品属性
 	productLength: '',
@@ -1484,8 +1489,42 @@ const Productform = reactive<Productform>({
 	productDescription: ''
 })
 
+// 保存原始产品编号，用于编辑时比较
+const originalProductCode = ref('');
+
+// 添加产品编号验证器
+const validateProductCode = (rule, value, callback) => {
+	if (!value) {
+		callback(new Error('请输入产品编号'));
+		return;
+	}
+
+	// 如果是编辑状态且产品编号未修改，则直接通过验证
+	if (showEditSaveBtn.value && value === originalProductCode.value) {
+		callback();
+		return;
+	}
+
+	// 返回一个Promise而不是使用async/await
+	return new Promise<void>((resolve, reject) => {
+		checkProductCode(value).then(isExist => {
+			if (isExist) {
+				callback(new Error('产品编号已存在，请修改'));
+			} else {
+				callback();
+			}
+			resolve();
+		}).catch(error => {
+			console.error('验证产品编号时出错:', error);
+			callback(new Error('验证产品编号时出错'));
+			resolve();
+		});
+	});
+};
+
 const ProductformRules = reactive<FormRules<Productform>>({
-	productCode: [{ required: true, message: '请输入产品编号', trigger: ['blur', 'change'] }],
+	productCode: [{ required: true, message: '请输入产品编号', trigger: ['blur', 'change'] },
+	{ validator: validateProductCode, trigger: 'blur' }],
 	chineseProductName: [{ required: true, message: '请输入中文品名', trigger: ['blur', 'change'] }],
 	englishProductName: [{ required: true, message: '请输入英文品名', trigger: ['blur', 'change'] }],
 	chineseSpecification: [{ required: true, message: '请输入中文规格', trigger: ['blur', 'change'] }],
@@ -1495,7 +1534,8 @@ const ProductformRules = reactive<FormRules<Productform>>({
 	englishDeclarationProductName: [{ required: true, message: '请输入英文申报品名', trigger: ['blur', 'change'] }],
 	inspectionMark: [{ required: true, message: '请选择检验标志', trigger: ['blur', 'change'] }],
 	PackingMethod: [{ required: true, message: '请选择包装方式', trigger: ['blur', 'change'] }],
-	Supplier: [{ required: true, message: '请选择供应商', trigger: ['blur', 'change'] }]
+	Supplier: [{ required: true, message: '请选择供应商', trigger: ['blur', 'change'] }],
+	ProductCategories: [{ required: true, message: '请选择产品分类', trigger: ['blur', 'change'] }]
 })
 
 const createSubProductItem = () => ({
@@ -1559,17 +1599,34 @@ const checkProductCode = async (productCode) => {
 	}
 };
 
+
+
+const productCodeInput = ref(null);
+
+const checkProductCodeDuplicate = async () => {
+	if (!Productform.productCode) return;
+	try {
+		const isExist = await checkProductCode(Productform.productCode);
+		if (isExist) {
+			// 聚焦输入框
+			nextTick(() => {
+				if (productCodeInput.value) {
+					productCodeInput.value.focus();
+				}
+			});
+		} else {
+
+		}
+	} catch (error) {
+		console.error('验证产品编号时出错:', error);
+	}
+}
+
 //新增保存产品信息
 const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
 	await formEl.validate(async (valid, fields) => {
 		if (valid) {
-			// 先检查产品编号是否存在
-			const isExist = await checkProductCode(Productform.productCode);
-			if (isExist) {
-				ElMessage.error('产品编号已存在，请修改后重试');
-				return;
-			}
 			try {
 				const productInfoRequest = {
 					ProductCategoriesID: SelectNodeId.value,
@@ -1608,7 +1665,8 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 					SupplierID: Array.isArray(Productform.Supplier) ? Productform.Supplier.join(',') : Productform.Supplier,
 					ProductDescription: Productform.productDescription,
 					subProductItems: [],
-					CustomerGoodsNumber: Productform.customerGoodsNumber
+					CustomerGoodsNumber: Productform.customerGoodsNumber == null || Productform.customerGoodsNumber == undefined ? '无' : Productform.customerGoodsNumber,
+					developers: Productform.developmentPersonnel
 				};
 				// 上传主产品图片
 				let mainProductImageUrls = [];
@@ -1721,7 +1779,9 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
 							subOuterBoxGrossWeight: subProduct.subouterBoxGrossWeight,
 							subpackingMethod: subProduct.subPackingMethod,
 							subProductFiles: subProductFileUrls.join(','),
-							subCustomerGoodsNumber: subProduct.subcustomerGoodsNumber ? subProduct.subcustomerGoodsNumber : ''
+							subCustomerGoodsNumber: subProduct.subcustomerGoodsNumber == null || subProduct.subcustomerGoodsNumber == undefined ? '无' : subProduct.subcustomerGoodsNumber,
+							developers: subProduct.developers,
+							subProductRemark: subProduct.subProductRemark == null || subProduct.subProductRemark == undefined ? '无' : subProduct.subProductRemark
 						};
 					}));
 				}
@@ -2011,6 +2071,8 @@ const OpenProductInfoDetailDialog = async (row) => {
 
 // 辅助函数：填充产品表单
 const fillProductForm = (product) => {
+	// 保存原始产品编号
+	originalProductCode.value = product.productCode;
 	isViewMode.value = true;
 	showSaveBtn.value = false;
 	showEditBtn.value = true;
@@ -2056,6 +2118,7 @@ const fillProductForm = (product) => {
 		product.packingMethod :
 		state.optionss.hr_packing.find((dict) => dict.dictValue === product.packingMethod.toString())?.dictValue;
 	Productform.customerGoodsNumber = product.customerGoodsNumber;
+	Productform.developmentPersonnel = product.developers == null || product.developers == undefined ? 0 : state.optionss.sql_all_user.find((dict) => dict.dictValue === product.developers.toString())?.dictValue;
 
 	// 处理产品图片
 	fileList.value = [];
@@ -2152,7 +2215,9 @@ const processSubProducts = (product) => {
 				item.subPackingMethod :
 				state.optionss.hr_packing.find((dict) => dict.dictValue === item.subPackingMethod.toString())?.dictValue,
 			productFiles: subProductFiles,
-			subcustomerGoodsNumber: item.subCustomerGoodsNumber
+			subcustomerGoodsNumber: item.subCustomerGoodsNumber,
+			developers: item.developers == null || item.developers == undefined ? 0 : state.optionss.sql_all_user.find((dict) => dict.dictValue === item.developers.toString())?.dictValue,
+			subProductRemark: item.subProductRemark
 		});
 	});
 
@@ -2172,9 +2237,22 @@ const EditProductinfomation = () => {
 //编辑保存产品信息
 const EditSaveProductinfomation = async () => {
 	try {
+		// 添加表单验证
+		if (!ProductformRef.value) return;
+
+		// 验证主产品表单
+		let isValid = false;
+		let validationFields = null;
+
+		await ProductformRef.value.validate((valid, fields) => {
+			if (!valid) {
+				console.error('表单验证失败:', fields);
+				throw new Error('请完善表单信息');
+			}
+		});
 		const editProductInfoRequest = {
 			id: EditProductID.value,
-			productCategoriesID: SelectNodeId.value,
+			ProductCategoriesID: Productform.ProductCategories,
 			productCode: Productform.productCode,
 			productBarcode: Productform.productBarcode,
 			chineseProductName: Productform.chineseProductName,
@@ -2210,7 +2288,8 @@ const EditSaveProductinfomation = async () => {
 			SupplierID: Array.isArray(Productform.Supplier) ? Productform.Supplier.join(',') : Productform.Supplier,
 			ProductDescription: Productform.productDescription,
 			subProductItems: [],
-			CustomerGoodsNumber: Productform.customerGoodsNumber
+			CustomerGoodsNumber: Productform.customerGoodsNumber == null || Productform.customerGoodsNumber == undefined ? '无' : Productform.customerGoodsNumber,
+			developers: Productform.developmentPersonnel
 		};
 
 		// 处理主产品图片
@@ -2341,11 +2420,12 @@ const EditSaveProductinfomation = async () => {
 					subProductFiles: subProductFileUrls
 						.filter(url => url && url.trim()) // 过滤掉空值和空白字符
 						.join(','),
-					subCustomerGoodsNumber: subProduct.subcustomerGoodsNumber ? subProduct.subcustomerGoodsNumber : ''
+					subCustomerGoodsNumber: subProduct.subcustomerGoodsNumber == null || subProduct.subcustomerGoodsNumber == undefined ? '无' : subProduct.subcustomerGoodsNumber,
+					developers: subProduct.developers,
+					subProductRemark: subProduct.subProductRemark == null || subProduct.subProductRemark == undefined ? '无' : subProduct.subProductRemark
 				};
 			}));
 		}
-
 		const response = await request.post('ProductInformation/UpdateProductInfo/Edit', editProductInfoRequest);
 		if (response != null) {
 			ElMessage({
