@@ -103,7 +103,7 @@
 								<el-form-item :label="'执行人'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.executor'">
 									<el-select v-model="item.executor" filterable placeholder="选择执行人"
-										style="width: 300px">
+										style="width: 300px" @change="getsalePersonCustomerData(item.executor)">
 										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue">
 										</el-option>
@@ -113,25 +113,33 @@
 						</el-row>
 						<el-row>
 							<el-col :span="12">
+								<el-form-item :label="'关联客户'"
+									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.customer'">
+									<el-select v-model="item.customer" filterable placeholder="选择关联客户"
+										style="width: 300px" clearable>
+										<el-option v-for="dict in optionss.salePersonCustomer" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue">
+										</el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
 								<el-form-item :label="'时间节点'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.deadline'">
 									<el-date-picker v-model="item.deadline" type="date" placeholder="选择时间节点"
 										style="width: 300px" />
 								</el-form-item>
 							</el-col>
-							<el-col :span="12">
-								<el-button type="danger" @click="removeItem(stageIndex, itemIndex)">删除事项</el-button>
-							</el-col>
 						</el-row>
 						<!-- 添加事项附件上传 -->
 						<el-row>
-							<el-col :span="24">
+							<el-col :span="12">
 								<el-form-item :label="'附件上传'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.attachments'">
 									<el-upload action="#" :auto-upload="false"
 										:on-change="(file, fileList) => handleItemFileChange(stageIndex, itemIndex, file, fileList)"
 										:on-remove="(file) => handleItemFileRemove(stageIndex, itemIndex, file)"
-										:file-list="item.fileList || []" multiple style="width: 600px">
+										:file-list="item.fileList || []" multiple style="width: 300px">
 										<el-button type="primary">选择文件</el-button>
 										<template #tip>
 											<div class="el-upload__tip">
@@ -141,7 +149,11 @@
 									</el-upload>
 								</el-form-item>
 							</el-col>
+							<el-col :span="12">
+								<el-button type="danger" @click="removeItem(stageIndex, itemIndex)">删除事项</el-button>
+							</el-col>
 						</el-row>
+
 					</div>
 				</div>
 			</el-form>
@@ -231,6 +243,7 @@
 										@click="handleTaskComplete(item)">确认完成</el-link>
 								</div>
 								<p>执行人: {{ getUserName(item?.executorId) }}</p>
+								<p>关联客户: {{ getCustomerName(item?.relatedCustomers) }}</p>
 								<p>计划完成时间: {{ formatDate(item?.timePoint) }}</p>
 								<p>{{ item?.realTimePoint ? `实际完成时间: ${formatDate(item?.realTimePoint)}` : '状态: 未完成' }}
 								</p>
@@ -345,6 +358,7 @@ import { Document, Download } from '@element-plus/icons-vue'
 import request from '@/utils/request';
 import useUserStore from '@/store/modules/user'
 
+
 // 定义API响应类型
 interface ApiResponse<T = any> {
 	code: number;
@@ -455,6 +469,11 @@ const uploadFilesAndGetUrlString = async (files) => {
 const getUserName = (executorId) => {
 	const user = optionss.value.sql_all_user.find(u => u.dictValue === executorId.toString());
 	return user ? user.dictLabel : executorId;
+}
+
+const getCustomerName = (customerId) => {
+	const customer = optionss.value.sql_hr_customer.find(c => c.dictValue === customerId.toString());
+	return customer == null ? '无' : customer.dictLabel;
 }
 
 // 日期格式化函数
@@ -663,7 +682,8 @@ const SubmitPlanTaskForm = async (formEl: FormInstance | undefined) => {
 								executorId: Number(item.executor) || 0,
 								timePoint: item.deadline ? new Date(item.deadline).toISOString() : null,
 								attachmentUrls: itemUrlsStr, // 使用字符串格式的URL
-								finishattachmentUrls: '' // 初始为空，完成时才会有值
+								finishattachmentUrls: '', // 初始为空，完成时才会有值
+								relatedCustomers: item.customer || null//关联客户
 							})
 						}
 						requestData.planTask_Phases.push(phaseData)
@@ -713,6 +733,7 @@ const OpenPlanTaskDialog = () => {
 			items: [{
 				name: '',
 				executor: '',
+				customer: '',
 				deadline: ''
 			}]
 		}];
@@ -722,6 +743,7 @@ const OpenPlanTaskDialog = () => {
 interface StageItem {
 	name: string;
 	executor: string;
+	customer: string;
 	deadline: string;
 	fileList?: any[]; // 添加文件列表属性
 	attachments?: { fileName: string; fileUrl: string }[]; // 添加附件属性
@@ -739,6 +761,7 @@ const stages = ref<Stage[]>([{
 	items: [{
 		name: '',
 		executor: '',
+		customer: '',
 		deadline: '',
 		fileList: [] // 初始化文件列表
 	}]
@@ -755,6 +778,7 @@ const handleStageNumberChange = (value: number) => {
 				items: [{
 					name: '',
 					executor: '',
+					customer: '',
 					deadline: '',
 					fileList: [] // 初始化文件列表
 				}]
@@ -770,6 +794,7 @@ const addItem = (stageIndex: number) => {
 	stages.value[stageIndex].items.push({
 		name: '',
 		executor: '',
+		customer: '',
 		deadline: '',
 		fileList: [] // 初始化文件列表
 	});
@@ -851,6 +876,7 @@ const ResetPlanTaskForm = (formEl: FormInstance | undefined) => {
 		items: [{
 			name: '',
 			executor: '',
+			customer: '',
 			deadline: '',
 			fileList: [] // 重置文件列表
 		}]
@@ -862,11 +888,13 @@ const proxy = getCurrentInstance().proxy as any
 const state = reactive({
 	optionss: {
 		// 选项列表(动态字典将会从后台获取数据)
-		sql_all_user: []
+		sql_all_user: [],
+		salePersonCustomer: [],
+		sql_hr_customer: []
 	}
 })
 const { optionss } = toRefs(state)
-var dictParams = [{ dictType: 'sql_all_user' }]
+var dictParams = [{ dictType: 'sql_all_user' }, { dictType: 'sql_hr_customer' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -874,6 +902,31 @@ proxy.getDicts(dictParams).then((response) => {
 	getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
 })
 /*动态下拉框end*/
+
+// 获取用户相关的客户数据
+const getsalePersonCustomerData = async (salesPersonID: string) => {
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetCustomerDataBysalesPersonID/GetSelectCustomerDataBysalesPersonID',
+			method: 'get',
+			params: {
+				salesPersonID: salesPersonID
+			}
+		})
+
+		if (response.code === 200) {
+			state.optionss.salePersonCustomer = response.data.map(item => ({
+				dictValue: item.dictValue,
+				dictLabel: item.dictLabel
+			}))
+		} else {
+			ElMessage.error(response.msg || '获取客户数据失败')
+		}
+	} catch (error) {
+		console.error('获取客户数据失败:', error)
+		ElMessage.error('获取客户数据失败')
+	}
+}
 
 // 定义返回数据的接口
 interface PlanTask {
@@ -946,9 +999,9 @@ const getPlanTasksList = async (pageNum: number, pageSize: number) => {
 
 		if (res.code === 200) {
 			// 直接使用 res.data.data 作为数组
-			dataPlanTasks.value = res.data || [];
+			dataPlanTasks.value = res.data.result || [];
 			// 更新总数为数组长度
-			total.value = res.data.length;
+			total.value = res.data.totalNum;
 
 			// 转换用户ID为用户名
 			dataPlanTasks.value.forEach(item => {

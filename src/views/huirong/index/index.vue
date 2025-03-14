@@ -123,7 +123,7 @@
     </el-calendar>
 
     <!-- 工作任务 -->
-    <span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;工作任务</span>
+    <span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;提醒事项</span>
     <el-divider></el-divider>
     <el-table :data="TaskReminderTableData" style="width: 50%;">
       <el-table-column prop="taskName" label="项目分类" style="width: 25%;" />

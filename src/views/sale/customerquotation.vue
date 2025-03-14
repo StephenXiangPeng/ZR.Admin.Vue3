@@ -91,7 +91,7 @@
 							:label="dict.dictLabel" :value="dict.dictValue" />
 					</el-select>
 				</el-form-item>
-				<el-form-item label="客户编号" prop="customernum">
+				<el-form-item label="客户编号" prop="customernum" v-if="false">
 					<el-select v-model="quotationDialogform.customernum" filterable placeholder="选择客户编号"
 						:disabled="isDisabled" style="width: 250px;" @change="handleCustomerSelection">
 						<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode" :label="dict.dictLabel"
@@ -930,8 +930,6 @@ const handleCustomerSelection = (value) => {
 			quotationDialogform.customernum = value.toString();
 			quotationDialogform.customername = value.toString();
 			quotationDialogform.customerlevel = state.optionss['hr_customer_level'].filter(item => item.dictValue == response.customerLevel).map(item => item.dictValue).values().next().value;
-			quotationDialogform.pricingterm = state.optionss['hr_pricing_term'].filter(item => item.dictValue == response.pricingTerm).map(item => item.dictValue).values().next().value;
-			quotationDialogform.settlementway = state.optionss['hr_settlement_way'].filter(item => item.dictValue == response.settlementWay).map(item => item.dictValue).values().next().value;
 			quotationDialogform.tradingcountry = state.optionss['hr_nation'].filter(item => item.dictValue == response.tradingCountry).map(item => item.dictValue).values().next().value;
 			if (response.contactPerson != null) {
 				contactpersonSelectOptions.value = response.contactPerson.map(item => ({
@@ -1526,23 +1524,23 @@ const ChcekDetails = (row) => {
 	quotationDialogform.quorationstatus = optionss.value.hr_quotation_status.find(item => item.dictLabel === row.quotationStatus)?.dictValue || '0';
 	quotationDialogform.contactperson = row.contactPerson;
 	quotationDialogform.contactpersonEmail = row.contactPersonEmail;
-	quotationDialogform.customerlevel = state.optionss['hr_customer_level'].filter(hr_customer_level => hr_customer_level.dictValue == row.customerLevel).map(item => item.dictValue).values().next().value;
-	quotationDialogform.ourcompany = state.optionss['hr_ourcompany'].filter(hr_ourcompany => hr_ourcompany.dictValue == row.ourCompany).map(item => item.dictValue).values().next().value;
-	quotationDialogform.settlementcategory = state.optionss['hr_settlementcategory'].filter(hr_settlementcategory => hr_settlementcategory.dictValue == row.settlementCategory).map(item => item.dictValue).values().next().value;
-	quotationDialogform.exportcurrency = state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == row.exportCurrency).map(item => item.dictValue).values().next().value;
+	quotationDialogform.customerlevel = state.optionss.hr_customer_level.find(item => item.dictValue == row.customerLevel)?.dictValue;
+	quotationDialogform.ourcompany = state.optionss.hr_ourcompany.find(item => item.dictValue == row.ourCompany)?.dictValue;
+	quotationDialogform.settlementcategory = state.optionss.hr_settlementcategory.find(item => item.dictValue == row.settlementCategory)?.dictValue;
+	quotationDialogform.exportcurrency = state.optionss.hr_export_currency.find(item => item.dictValue == row.exportCurrency)?.dictValue;
 	quotationDialogform.exchangerate = row.exchangeRate;
 	quotationDialogform.uniformprofitmargin = row.uniformProfitMargin;
-	quotationDialogform.settlementway = state.optionss['hr_settlement_way'].filter(hr_settlement_way => hr_settlement_way.dictValue == row.settlementWay).map(item => item.dictValue).values().next().value;
-	quotationDialogform.pricingterm = state.optionss['hr_pricing_term'].filter(hr_pricing_term => hr_pricing_term.dictValue == row.pricingTerm).map(item => item.dictValue).values().next().value;
-	quotationDialogform.shippingport = state.optionss['hr_transport_port'].filter(hr_transport_port => hr_transport_port.dictValue == row.shippingPort).map(item => item.dictValue).values().next().value;
+	quotationDialogform.settlementway = state.optionss.hr_settlement_way.find(item => item.dictValue == row.settlementWay)?.dictValue;
+	quotationDialogform.pricingterm = state.optionss.hr_pricing_term.find(item => item.dictValue == row.pricingTerm)?.dictValue;
+	quotationDialogform.shippingport = state.optionss.hr_transport_port.find(item => item.dictValue == row.shippingPort)?.dictValue;
 	quotationDialogform.destinationport = row.destinationPort;
-	quotationDialogform.tradingcountry = state.optionss['hr_nation'].filter(hr_nation => hr_nation.dictValue == row.tradingCountry).map(item => item.dictValue).values().next().value;
-	quotationDialogform.transportationmethod = state.optionss['hr_transportation_method'].filter(hr_transportation_method => hr_transportation_method.dictValue == row.transportationMethod).map(item => item.dictValue).values().next().value;
-	quotationDialogform.shippingcurrency = state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == row.shippingCurrency).map(item => item.dictValue).values().next().value;
+	quotationDialogform.tradingcountry = state.optionss.hr_nation.find(item => item.dictValue == row.tradingCountry)?.dictValue;
+	quotationDialogform.transportationmethod = state.optionss.hr_transportation_method.find(item => item.dictValue == row.transportationMethod)?.dictValue;
+	quotationDialogform.shippingcurrency = state.optionss.hr_export_currency.find(item => item.dictValue == row.shippingCurrency)?.dictValue;
 	quotationDialogform.shippingrate = row.shippingRate;
 	quotationDialogform.unitfreight = row.unitFreight;
 	quotationDialogform.commissionrate = row.commissionRate;
-	quotationDialogform.seller = state.optionss['sql_all_user'].filter(sql_all_user => sql_all_user.dictValue == row.seller).map(item => item.dictValue).values().next().value;
+	quotationDialogform.seller = state.optionss.sql_all_user.find(item => item.dictValue == row.seller)?.dictValue;
 	quotationDialogform.TotalValueOfGoods = row.totalValueOfGoods;
 	quotationDialogform.TotalQuantity = row.totalQuantity;
 	quotationDialogform.TotalNumberOfBoxes = row.totalNumberOfBoxes.toFixed(1);
@@ -1663,6 +1661,7 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 			addQuotationRequest.contactPersonEmail = quotationDialogform.contactpersonEmail;
 			addQuotationRequest.customerLevel = quotationDialogform.customerlevel;
 			addQuotationRequest.ourCompany = quotationDialogform.ourcompany;
+			addQuotationRequest.settlementWay = quotationDialogform.settlementway;
 			addQuotationRequest.settlementCategory = quotationDialogform.settlementcategory;
 			addQuotationRequest.exportCurrency = quotationDialogform.exportcurrency;
 			addQuotationRequest.exchangeRate = quotationDialogform.exchangerate;
