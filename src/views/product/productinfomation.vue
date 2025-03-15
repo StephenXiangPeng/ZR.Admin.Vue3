@@ -8,6 +8,8 @@
 					v-if="userId.toString() === '1'">添加分类</el-button>
 				<el-button size="small" plain @click="DelproductCategoriesMessageBox()"
 					v-if="userId.toString() === '1'">删除分类</el-button>
+				<el-button size="small" plain @click="moveToTopLevel()"
+					v-if="userId.toString() === '1' && SelectNodeId.value !== 0">移至顶级</el-button>
 				<el-tree-v2 :data="ProductCategoriesTreeData" style="font-size: 15px;" :height="700"
 					@node-click="handleNodeClick" @node-contextmenu="handleRightClick" draggable :allow-drop="allowDrop"
 					@node-drag-start="handleDragStart" @node-drag-enter="handleDragEnter"
@@ -44,6 +46,12 @@
 							<Delete />
 						</el-icon>
 						删除分类
+					</li>
+					<li @click="moveToTopLevel" v-if="userId.toString() === '1'">
+						<el-icon>
+							<TopRight />
+						</el-icon>
+						移至顶级
 					</li>
 				</ul>
 			</el-aside>
@@ -783,7 +791,7 @@
 
 import { createApp, getCurrentInstance, reactive, toRefs, ref, callWithAsyncErrorHandling, nextTick, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox, ElForm, ElTable, ElDialog, ElDivider, ElButton, ElInput, ElSelect, ElOption, ElDatePicker, ElCascader, ElRow, ElCol, ElFormItem, ElTableColumn, ElImage, ElPagination, ElTabs, ElTabPane, ElUpload, ElIcon, ElTree, ElTreeV2 } from 'element-plus'
-import { Plus, Delete, Edit, Folder, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { Plus, Delete, Edit, Folder, ArrowLeft, ArrowRight, TopRight } from '@element-plus/icons-vue'
 import useUserStore from '@/store/modules/user'
 import { useDict } from '@/utils/dict'
 import request from '@/utils/request'
@@ -1442,6 +1450,15 @@ const SelectNodeId = ref(0);
 const handleNodeClick = (node) => {
 	SelectNodeId.value = node.id;
 	SelectedProductCategoriesStr = '【' + node.label + '】';
+
+	// 保存当前选中的节点信息到全局变量
+	window.currentSelectedNode = {
+		id: node.id,
+		label: node.label,
+		parentId: node.parentID
+	};
+	console.log('当前选中的节点:', window.currentSelectedNode);
+
 	GetProductInfoList(currentPage.value, pageSize.value);
 }
 const ResetSelectNode = () => {
@@ -1624,7 +1641,7 @@ const createSubProductItem = () => ({
 
 const filelistUrlStr = ref('');	// 产品图片
 const AddProductDialog = ref(false)	// 添加产品对话框
-const UploadUrl = '/api/File/UploadFile'	// 上传图片地址
+const UploadUrl = 'Common/UploadFile'	// 上传图片地址
 const fileList = ref<UploadUserFile[]>([]);
 const uploadedFiles = ref([]);  // 用于存储已上传的文件
 const formData = { filePath: 'product' }; // 上传文件的附加数据
@@ -2594,100 +2611,227 @@ const renameProductCategory = () => {
 // 拖拽相关方法
 // 判断是否允许放置
 const allowDrop = (draggingNode, dropNode, type) => {
-	// 不允许拖放到自己下面
-	if (draggingNode.id === dropNode.id) {
+	// 1. 允许拖放到节点内部或者前后（前后表示同级）
+	if (type !== 'inner' && type !== 'before' && type !== 'after') {
 		return false;
 	}
 
-	// 不允许拖放到自己的子节点下面
-	const isChild = isChildOf(dropNode, draggingNode);
-	if (isChild) {
+	// 2. 确保已选择节点
+	if (!window.currentSelectedNode) {
 		return false;
 	}
 
-	// 只允许拖放到其他节点内部，不允许拖放到前后
-	return type === 'inner';
+	// 如果是拖放到前后位置，表示要改变顺序或移动到顶级
+	if (type === 'before' || type === 'after') {
+		return true;
+	}
+
+	// 3. 获取目标节点ID
+	const dropId = dropNode.data ? dropNode.data.id : dropNode.id;
+
+	// 4. 不允许拖放到自己下面
+	if (window.currentSelectedNode.id === dropId) {
+		return false;
+	}
+
+	// 5. 允许放置
+	return true;
 }
 
 // 判断一个节点是否是另一个节点的子节点
 const isChildOf = (child, parent) => {
-	if (!child || !parent) return false;
-
-	let currentNode = child;
-	while (currentNode.parentId) {
-		if (currentNode.parentId === parent.id) {
-			return true;
-		}
-		// 查找父节点
-		const parentNode = findNodeById(ProductCategoriesTreeData.value, currentNode.parentId);
-		if (!parentNode) break;
-		currentNode = parentNode;
-	}
+	// 这个函数已经在 allowDrop 中直接实现了
 	return false;
 }
 
 // 根据ID查找节点
 const findNodeById = (nodes, id) => {
-	if (!nodes || nodes.length === 0) return null;
-
-	for (const node of nodes) {
-		if (node.id === id) {
-			return node;
-		}
-		if (node.children && node.children.length > 0) {
-			const found = findNodeById(node.children, id);
-			if (found) return found;
-		}
-	}
+	// 这个函数不再需要
 	return null;
+}
+
+// 打印节点结构，用于调试
+const logNodeStructure = (node) => {
+	// 这个函数不再需要
+	return {};
 }
 
 // 开始拖拽
 const handleDragStart = (node) => {
-	console.log('开始拖拽:', node);
+	console.log('开始拖拽，当前选中的节点:', window.currentSelectedNode);
 }
 
 // 拖拽进入目标节点
 const handleDragEnter = (draggingNode, dropNode, ev) => {
-	console.log('拖拽进入:', dropNode);
+	// 不需要特殊处理
 }
 
 // 拖拽离开目标节点
 const handleDragLeave = (draggingNode, dropNode, ev) => {
-	console.log('拖拽离开:', dropNode);
+	// 不需要特殊处理
 }
 
 // 拖拽结束
 const handleDragEnd = (draggingNode, dropNode, dropType, ev) => {
-	console.log('拖拽结束:', draggingNode, dropNode, dropType);
+	// 不需要特殊处理
 }
 
 // 放置节点
 const handleDrop = (draggingNode, dropNode, dropType, ev) => {
-	console.log('放置节点:', draggingNode, dropNode, dropType);
+	try {
+		// 使用全局变量中保存的当前选中节点作为拖拽节点
+		if (!window.currentSelectedNode) {
+			ElMessage.warning('请先选择要移动的分类');
+			return;
+		}
 
-	// 如果不是管理员，不允许拖拽
-	if (userId.toString() !== '1') {
-		ElMessage.warning('您没有权限移动分类');
+		// 处理拖放到空白区域或同级的情况
+		if (dropType === 'before' || dropType === 'after') {
+			// 获取目标节点的父节点ID，如果没有则为0（顶级）
+			const targetParentId = dropNode.data && dropNode.data.parentID !== undefined ?
+				dropNode.data.parentID : (dropNode.parentID !== undefined ? dropNode.parentID : 0);
+
+			console.log('拖放到同级，目标父节点ID:', targetParentId);
+
+			// 确认是否要移动分类
+			ElMessageBox.confirm(`确认将分类【${window.currentSelectedNode.label}】移动到顶级分类吗？`, '移动分类', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning'
+			}).then(() => {
+				// 构建更新请求
+				const updateRequest = {
+					"id": window.currentSelectedNode.id,
+					"parentID": targetParentId,
+					"name": window.currentSelectedNode.label,
+					"isDelete": 0
+				};
+
+				// 发送更新请求
+				request.put('ProductCategories/MoveProductCategories/MoveProductCategories', updateRequest).then(response => {
+					if (response != null) {
+						ElMessage({
+							message: response.msg || '移动分类成功',
+							type: 'success'
+						});
+						// 刷新产品分类列表
+						GetAllParentProductCategoriesList();
+					} else {
+						console.error('移动产品分类出错');
+					}
+				}).catch(error => {
+					console.error('移动产品分类出错！😔错误内容：', error);
+					// 刷新产品分类列表，恢复原状
+					GetAllParentProductCategoriesList();
+				});
+			}).catch(() => {
+				// 取消移动，刷新产品分类列表，恢复原状
+				GetAllParentProductCategoriesList();
+				ElMessage({
+					type: 'info',
+					message: '已取消移动'
+				});
+			});
+
+			return;
+		}
+
+		// 获取目标节点信息
+		const dropNodeInfo = {
+			id: dropNode.data ? dropNode.data.id : dropNode.id,
+			label: dropNode.data ? dropNode.data.label : dropNode.label
+		};
+
+		console.log('使用当前选中的节点作为拖拽节点:', window.currentSelectedNode);
+		console.log('目标节点信息:', dropNodeInfo);
+
+		// 检查是否是同一个节点
+		if (window.currentSelectedNode.id === dropNodeInfo.id) {
+			ElMessage.warning('不能将分类移动到自身下');
+			return;
+		}
+
+		// 检查是否是将父节点拖到子节点下（防止循环引用）
+		// 这需要后端支持或者完整的树结构数据
+
+		// 如果不是管理员，不允许拖拽
+		if (userId.toString() !== '1') {
+			ElMessage.warning('您没有权限移动分类');
+			return;
+		}
+
+		// 确认是否要移动分类
+		ElMessageBox.confirm(`确认将分类【${window.currentSelectedNode.label}】移动到【${dropNodeInfo.label}】下吗？`, '移动分类', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		}).then(() => {
+			// 构建更新请求
+			const updateRequest = {
+				"id": window.currentSelectedNode.id,
+				"parentID": dropNodeInfo.id,
+				"name": window.currentSelectedNode.label,
+				"isDelete": 0
+			};
+
+			// 发送更新请求
+			request.put('ProductCategories/MoveProductCategories/MoveProductCategories', updateRequest).then(response => {
+				if (response != null) {
+					ElMessage({
+						message: response.msg || '移动分类成功',
+						type: 'success'
+					});
+					// 刷新产品分类列表
+					GetAllParentProductCategoriesList();
+				} else {
+					console.error('移动产品分类出错');
+				}
+			}).catch(error => {
+				console.error('移动产品分类出错！😔错误内容：', error);
+				// 刷新产品分类列表，恢复原状
+				GetAllParentProductCategoriesList();
+			});
+		}).catch(() => {
+			// 取消移动，刷新产品分类列表，恢复原状
+			GetAllParentProductCategoriesList();
+			ElMessage({
+				type: 'info',
+				message: '已取消移动'
+			});
+		});
+	} catch (error) {
+		console.error('处理拖拽事件时出错:', error);
+		ElMessage({
+			type: 'error',
+			message: '处理拖拽事件时出错'
+		});
+	}
+}
+
+// 将当前选中的分类移动到顶级
+const moveToTopLevel = () => {
+	// 确保已选择节点
+	if (SelectNodeId.value === 0 || !window.currentSelectedNode) {
+		ElMessage.warning('请先选择要移动的分类');
 		return;
 	}
 
 	// 确认是否要移动分类
-	ElMessageBox.confirm(`确认将分类【${draggingNode.label}】移动到【${dropNode.label}】下吗？`, '移动分类', {
+	ElMessageBox.confirm(`确认将分类【${window.currentSelectedNode.label}】移动到顶级分类吗？`, '移动分类', {
 		confirmButtonText: '确定',
 		cancelButtonText: '取消',
 		type: 'warning'
 	}).then(() => {
 		// 构建更新请求
 		const updateRequest = {
-			"id": draggingNode.id,
-			"parentID": dropNode.id,
-			"name": draggingNode.label,
+			"id": window.currentSelectedNode.id,
+			"parentID": 0,  // 顶级分类的parentID为0
+			"name": window.currentSelectedNode.label,
 			"isDelete": 0
 		};
 
 		// 发送更新请求
-		request.put('ProductCategories/UpdateProductCategories/Update', updateRequest).then(response => {
+		request.put('ProductCategories/MoveProductCategories/MoveProductCategories', updateRequest).then(response => {
 			if (response != null) {
 				ElMessage({
 					message: response.msg || '移动分类成功',
@@ -2704,8 +2848,6 @@ const handleDrop = (draggingNode, dropNode, dropType, ev) => {
 			GetAllParentProductCategoriesList();
 		});
 	}).catch(() => {
-		// 取消移动，刷新产品分类列表，恢复原状
-		GetAllParentProductCategoriesList();
 		ElMessage({
 			type: 'info',
 			message: '已取消移动'
