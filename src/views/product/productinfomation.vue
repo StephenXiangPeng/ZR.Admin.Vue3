@@ -9,7 +9,9 @@
 				<el-button size="small" plain @click="DelproductCategoriesMessageBox()"
 					v-if="userId.toString() === '1'">删除分类</el-button>
 				<el-tree-v2 :data="ProductCategoriesTreeData" style="font-size: 15px;" :height="700"
-					@node-click="handleNodeClick">
+					@node-click="handleNodeClick" @node-contextmenu="handleRightClick" draggable :allow-drop="allowDrop"
+					@node-drag-start="handleDragStart" @node-drag-enter="handleDragEnter"
+					@node-drag-leave="handleDragLeave" @node-drag-end="handleDragEnd" @node-drop="handleDrop">
 					<template #default="{ node }">
 						<span class="prefix" :class="{ 'is-leaf': node.isLeaf }">
 							<el-icon>
@@ -21,6 +23,29 @@
 						<!-- </el-tooltip> -->
 					</template>
 				</el-tree-v2>
+
+				<!-- 右键菜单 -->
+				<ul v-show="contextMenuVisible" :style="{ left: contextMenuLeft + 'px', top: contextMenuTop + 'px' }"
+					class="context-menu">
+					<li @click="renameProductCategory" v-if="userId.toString() === '1'">
+						<el-icon>
+							<Edit />
+						</el-icon>
+						重命名
+					</li>
+					<li @click="openAddproductCategoriesMessageBox" v-if="userId.toString() === '1'">
+						<el-icon>
+							<Plus />
+						</el-icon>
+						添加子分类
+					</li>
+					<li @click="DelproductCategoriesMessageBox" v-if="userId.toString() === '1'">
+						<el-icon>
+							<Delete />
+						</el-icon>
+						删除分类
+					</li>
+				</ul>
 			</el-aside>
 			<el-container>
 				<el-main>
@@ -243,7 +268,7 @@
 					<el-col :span="16">
 						<el-form-item label="产品照片">
 							<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList"
-								limit="3" :disabled="fileList.length >= 3" @change="handleChange" :action="UploadUrl"
+								:limit="3" :disabled="fileList.length >= 3" @change="handleChange" :action="UploadUrl"
 								:data="formData">
 								<el-icon>
 									<Plus />
@@ -756,18 +781,15 @@
 </template>
 <script setup lang="ts">
 
-import { createApp, getCurrentInstance, reactive, toRefs, ref, callWithAsyncErrorHandling, nextTick } from 'vue'
-import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, FormInstance, UploadUserFile, UploadFile, subMenuProps, FormRules } from 'element-plus'
-import { FOCUSABLE_CHILDREN } from 'element-plus/es/directives/trap-focus';
-import request from '@/utils/request';
-import { number } from 'echarts';
-import { Edit } from '@element-plus/icons-vue/dist/types';
-import useUserStore from '@/store/modules/user';
-import { get } from 'sortablejs';
-import { onMounted } from 'vue'; //初始运行钩子
-import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
-import { fa } from 'element-plus/es/locale';
-import UserInfo from '../system/user/profile/userInfo.vue';
+import { createApp, getCurrentInstance, reactive, toRefs, ref, callWithAsyncErrorHandling, nextTick, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { ElMessage, ElMessageBox, ElForm, ElTable, ElDialog, ElDivider, ElButton, ElInput, ElSelect, ElOption, ElDatePicker, ElCascader, ElRow, ElCol, ElFormItem, ElTableColumn, ElImage, ElPagination, ElTabs, ElTabPane, ElUpload, ElIcon, ElTree, ElTreeV2 } from 'element-plus'
+import { Plus, Delete, Edit, Folder, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import useUserStore from '@/store/modules/user'
+import { useDict } from '@/utils/dict'
+import request from '@/utils/request'
+import { FormInstance, FormRules, UploadProps, UploadUserFile, UploadRawFile, UploadFile, UploadFiles } from 'element-plus'
+import { ElNotification } from 'element-plus'
+//初始运行钩子
 
 
 
@@ -880,6 +902,30 @@ const isFileExistInSubProducts = (fileName, excludeIndex = -1) => {
 onMounted(() => {
 	// 这里编写进入页面时要运行的函数
 	runOnPageLoad();
+
+	// 添加点击事件监听，关闭右键菜单
+	const closeContextMenuOnClick = () => {
+		contextMenuVisible.value = false;
+	};
+
+	// 防止在页面其他区域显示默认右键菜单
+	const preventDefaultContextMenu = (e) => {
+		if (contextMenuVisible.value) {
+			e.preventDefault();
+		}
+	};
+
+	// 添加点击事件监听，关闭右键菜单
+	document.addEventListener('click', closeContextMenuOnClick);
+
+	// 添加右键点击事件监听，防止在页面其他区域显示默认右键菜单
+	document.addEventListener('contextmenu', preventDefaultContextMenu);
+
+	// 在组件卸载前移除事件监听
+	onBeforeUnmount(() => {
+		document.removeEventListener('click', closeContextMenuOnClick);
+		document.removeEventListener('contextmenu', preventDefaultContextMenu);
+	});
 });
 
 const SubProductTableData = ref([])
@@ -1048,7 +1094,10 @@ const handleImageRemove = (file, index) => {
 };
 
 
-const activeTab = ref('FactoryQuotationTab')
+const activeTab = ref('FactoryQuotationTab');
+const FactoryQuotationTableData = ref([]);
+const SaleHistoryTableData = ref([]);
+const PurchaseHistoryTableData = ref([]);
 const isDelteBtnShow = ref(false);
 const isDisabled = ref(false);
 const showSaveBtn = ref(true);
@@ -1075,11 +1124,10 @@ const runOnPageLoad = () => {
 
 const openAddProductDialog = () => {
 	clearProductform();
-	Productform.ProductCategories = [SelectNodeId.value];
+	Productform.ProductCategories = SelectNodeId.value;
 	Productform.developmentEventDate = new Date().toISOString().split('T')[0];
 	showSaveBtn.value = true;
 	AddProductDialog.value = true;
-	showAddSubProductButton.value = true;
 }
 
 const closeAddProductDialog = async () => {
@@ -1442,7 +1490,7 @@ interface Productform {
 	outerboxnetweight: number;
 	outerboxgrossweight: number;
 	//子产品
-	subProductItems: SubProductTableData[];
+	subProductItems: typeof SubProductTableData.value;
 }
 
 const ProductformRef = ref<FormInstance>()
@@ -1576,9 +1624,10 @@ const createSubProductItem = () => ({
 
 const filelistUrlStr = ref('');	// 产品图片
 const AddProductDialog = ref(false)	// 添加产品对话框
-const UploadUrl = 'Common/UploadFile'	// 上传图片地址
+const UploadUrl = '/api/File/UploadFile'	// 上传图片地址
 const fileList = ref<UploadUserFile[]>([]);
 const uploadedFiles = ref([]);  // 用于存储已上传的文件
+const formData = { filePath: 'product' }; // 上传文件的附加数据
 const TableData = ref([])	// 产品列表
 const dialogImageUrl = ref('')
 const dialogVisible = ref(false)
@@ -2463,6 +2512,207 @@ const handleFileDownload = (file) => {
 	document.body.removeChild(link);
 };
 
+// 右键菜单相关变量和方法
+const contextMenuVisible = ref(false);
+const contextMenuLeft = ref(0);
+const contextMenuTop = ref(0);
+const rightClickedNode = ref(null);
+
+// 处理右键点击事件
+const handleRightClick = (event, node) => {
+	// 阻止默认右键菜单
+	event.preventDefault();
+	// 保存当前右键点击的节点
+	rightClickedNode.value = node;
+	// 设置选中的节点ID和名称
+	SelectNodeId.value = node.id;
+	SelectedProductCategoriesStr = '【' + node.label + '】';
+
+	// 计算右键菜单的位置
+	contextMenuLeft.value = event.clientX;
+	contextMenuTop.value = event.clientY;
+	// 显示右键菜单
+	contextMenuVisible.value = true;
+
+	// 阻止事件冒泡，防止立即触发document的click事件
+	event.stopPropagation();
+}
+
+// 关闭右键菜单
+const closeContextMenu = () => {
+	contextMenuVisible.value = false;
+}
+
+// 重命名产品分类
+const renameProductCategory = () => {
+	if (SelectNodeId.value === 0) {
+		ElMessage({
+			type: 'warning',
+			message: '请选择要重命名的产品分类'
+		});
+		return;
+	}
+
+	ElMessageBox.prompt(`请输入新的分类名称`, '重命名分类', {
+		confirmButtonText: '保存',
+		cancelButtonText: '取消',
+		inputValue: rightClickedNode.value ? rightClickedNode.value.label : '',
+		inputPattern: /^[a-zA-Z0-9\u4e00-\u9fa5]{1,10000000000000}$/,
+		inputErrorMessage: '分类名称不能为空,可以是数字、汉字、字母组合,最多个10000000000000字符!😒',
+	})
+		.then(({ value }) => {
+			// 构建更新请求
+			const updateRequest = {
+				"id": SelectNodeId.value,
+				"name": value
+			};
+
+			// 发送更新请求
+			request.put('ProductCategories/UpdateProductCategories/UpdateProductCategoriesName', updateRequest).then(response => {
+				if (response != null) {
+					ElMessage({
+						message: response.msg || '重命名成功',
+						type: 'success'
+					});
+					// 刷新产品分类列表
+					GetAllParentProductCategoriesList();
+				} else {
+					console.error('重命名产品分类出错');
+				}
+			}).catch(error => {
+				console.error('重命名产品分类出错！😔错误内容：', error);
+			});
+		})
+		.catch(() => {
+			ElMessage({
+				type: 'info',
+				message: '已取消重命名',
+			});
+		});
+}
+
+// 拖拽相关方法
+// 判断是否允许放置
+const allowDrop = (draggingNode, dropNode, type) => {
+	// 不允许拖放到自己下面
+	if (draggingNode.id === dropNode.id) {
+		return false;
+	}
+
+	// 不允许拖放到自己的子节点下面
+	const isChild = isChildOf(dropNode, draggingNode);
+	if (isChild) {
+		return false;
+	}
+
+	// 只允许拖放到其他节点内部，不允许拖放到前后
+	return type === 'inner';
+}
+
+// 判断一个节点是否是另一个节点的子节点
+const isChildOf = (child, parent) => {
+	if (!child || !parent) return false;
+
+	let currentNode = child;
+	while (currentNode.parentId) {
+		if (currentNode.parentId === parent.id) {
+			return true;
+		}
+		// 查找父节点
+		const parentNode = findNodeById(ProductCategoriesTreeData.value, currentNode.parentId);
+		if (!parentNode) break;
+		currentNode = parentNode;
+	}
+	return false;
+}
+
+// 根据ID查找节点
+const findNodeById = (nodes, id) => {
+	if (!nodes || nodes.length === 0) return null;
+
+	for (const node of nodes) {
+		if (node.id === id) {
+			return node;
+		}
+		if (node.children && node.children.length > 0) {
+			const found = findNodeById(node.children, id);
+			if (found) return found;
+		}
+	}
+	return null;
+}
+
+// 开始拖拽
+const handleDragStart = (node) => {
+	console.log('开始拖拽:', node);
+}
+
+// 拖拽进入目标节点
+const handleDragEnter = (draggingNode, dropNode, ev) => {
+	console.log('拖拽进入:', dropNode);
+}
+
+// 拖拽离开目标节点
+const handleDragLeave = (draggingNode, dropNode, ev) => {
+	console.log('拖拽离开:', dropNode);
+}
+
+// 拖拽结束
+const handleDragEnd = (draggingNode, dropNode, dropType, ev) => {
+	console.log('拖拽结束:', draggingNode, dropNode, dropType);
+}
+
+// 放置节点
+const handleDrop = (draggingNode, dropNode, dropType, ev) => {
+	console.log('放置节点:', draggingNode, dropNode, dropType);
+
+	// 如果不是管理员，不允许拖拽
+	if (userId.toString() !== '1') {
+		ElMessage.warning('您没有权限移动分类');
+		return;
+	}
+
+	// 确认是否要移动分类
+	ElMessageBox.confirm(`确认将分类【${draggingNode.label}】移动到【${dropNode.label}】下吗？`, '移动分类', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		// 构建更新请求
+		const updateRequest = {
+			"id": draggingNode.id,
+			"parentID": dropNode.id,
+			"name": draggingNode.label,
+			"isDelete": 0
+		};
+
+		// 发送更新请求
+		request.put('ProductCategories/UpdateProductCategories/Update', updateRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.msg || '移动分类成功',
+					type: 'success'
+				});
+				// 刷新产品分类列表
+				GetAllParentProductCategoriesList();
+			} else {
+				console.error('移动产品分类出错');
+			}
+		}).catch(error => {
+			console.error('移动产品分类出错！😔错误内容：', error);
+			// 刷新产品分类列表，恢复原状
+			GetAllParentProductCategoriesList();
+		});
+	}).catch(() => {
+		// 取消移动，刷新产品分类列表，恢复原状
+		GetAllParentProductCategoriesList();
+		ElMessage({
+			type: 'info',
+			message: '已取消移动'
+		});
+	});
+}
+
 </script>
 <style lang="scss" scoped>
 .image-preview-container {
@@ -2545,5 +2795,46 @@ const handleFileDownload = (file) => {
 /* 当图片被点击预览时，提高其z-index */
 .el-table .el-image:hover {
 	z-index: 2;
+}
+
+/* 右键菜单样式 */
+.context-menu {
+	margin: 0;
+	background: #fff;
+	z-index: 3000;
+	position: fixed;
+	list-style-type: none;
+	padding: 5px 0;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 400;
+	color: #333;
+	box-shadow: 2px 2px 3px 0 rgba(0, 0, 0, 0.3);
+
+	li {
+		margin: 0;
+		padding: 7px 16px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+
+		.el-icon {
+			margin-right: 5px;
+		}
+
+		&:hover {
+			background: #f5f7fa;
+		}
+	}
+}
+
+/* 拖拽相关样式 */
+:deep(.is-dragging) {
+	opacity: 0.5;
+}
+
+:deep(.is-drop-inner) {
+	background-color: #f0f9eb;
+	border: 1px dashed #67c23a;
 }
 </style>
