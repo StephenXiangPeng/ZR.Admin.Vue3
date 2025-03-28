@@ -62,12 +62,8 @@
 					<div style="width: 100%; margin-top: 30px;">
 						<el-input v-model="Search_ProductCode" clearable style="width: 20%" size="large"
 							placeholder="输入产品编号" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-						<el-date-picker v-model="Search_StartTransactionDate" type="date" placeholder="请选择最近成交日期"
-							size="large"
-							style="width: 20%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-						<el-date-picker v-model="Search_EndTransactionDate" type="date" placeholder="请选择最近成交日期"
-							size="large"
-							style="width: 20%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+						<el-input v-model="Search_ProductName" clearable style="width: 20%" size="large"
+							placeholder="输入产品名称" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 						<el-button type="primary" @click="Search_ProductInfo()" plain>查询</el-button>
 						<el-button @click="Search_Reset()">重置</el-button>
 					</div>
@@ -1914,6 +1910,7 @@ const handlePageChange = async (newPage) => {
 const Search_ProductCode = ref('');	// 查询产品编号
 const Search_StartTransactionDate = ref('');	// 查询最近成交日期
 const Search_EndTransactionDate = ref('');	// 查询最近成交日期
+const Search_ProductName = ref('');	// 查询产品名称
 const Search_ProductInfo = () => {
 	GetProductInfoList(currentPage.value, pageSize.value);
 }
@@ -1921,6 +1918,7 @@ const Search_Reset = () => {
 	Search_ProductCode.value = '';
 	Search_StartTransactionDate.value = '';
 	Search_EndTransactionDate.value = '';
+	Search_ProductName.value = '';
 	GetProductInfoList(currentPage.value, pageSize.value);
 }
 
@@ -1948,7 +1946,7 @@ const processProductData = (data) => {
 					chineseProductName: subItem.subchineseProductName,
 					englishProductName: subItem.subenglishProductName,
 					chineseSpecification: subItem.subchineseSpecification,
-					unitOfMeasurement: state.optionss.hr_calculate_unit.find((dict) => dict.dictValue === subItem.subunit)?.dictLabel,
+					unitOfMeasurement: state.optionss.hr_calculate_unit.find((dict) => dict.dictValue === subItem.subunit.toString())?.dictLabel,
 					productPhotoPath: subItem.subProductImages,
 					recentTransactionDate: subItem.subrecentTransactionDate
 				};
@@ -1973,7 +1971,8 @@ function GetProductInfoList(start, end) {
 				ProductCode: Search_ProductCode.value,
 				startDate: Search_StartTransactionDate.value,
 				endDate: Search_EndTransactionDate.value,
-				ProductCategoriesID: SelectNodeId.value
+				ProductCategoriesID: SelectNodeId.value,
+				ProductName: Search_ProductName.value
 			}
 		}).then(response => {
 			if (response.data.data.length > 0) {
@@ -2253,7 +2252,7 @@ const processSubProducts = (product) => {
 			subchineseSpecification: item.subchineseSpecification,
 			subenglishSpecification: item.subenglishSpecification,
 			subunit: item.subunit == 0 || item.subunit == null || item.subunit == undefined ?
-				item.subunit :
+				'' :
 				state.optionss.hr_calculate_unit.find((dict) => dict.dictValue === item.subunit.toString())?.dictValue,
 			subcustomsCode: item.subcustomsCode,
 			subchineseDeclarationProductName: item.subchineseDeclarationProductName,
@@ -2277,8 +2276,8 @@ const processSubProducts = (product) => {
 			subouterBoxVolume: item.subouterBoxVolume,
 			subouterBoxNetWeight: item.subouterBoxNetWeight,
 			subouterBoxGrossWeight: item.subouterBoxGrossWeight,
-			subPackingMethod: item.subpackingMethod == 0 || item.subpackingMethod == null || item.subpackingMethod == undefined ?
-				item.subPackingMethod :
+			subPackingMethod: item.subPackingMethod == 0 || item.subPackingMethod == null || item.subPackingMethod == undefined ?
+				'' :
 				state.optionss.hr_packing.find((dict) => dict.dictValue === item.subPackingMethod.toString())?.dictValue,
 			productFiles: subProductFiles,
 			subcustomerGoodsNumber: item.subCustomerGoodsNumber,

@@ -1017,7 +1017,10 @@ const GeneratePDF = (row) => {
 	console.log('正在为以下数据生成PDF:', row);
 	request({
 		url: 'Contracts/CreatePDF/CreatePDF',
-		method: 'GET'
+		method: 'GET',
+		params: {
+			ContractID: row.id
+		}
 	}).then(response => {
 		console.log(response);
 	}).catch(error => {

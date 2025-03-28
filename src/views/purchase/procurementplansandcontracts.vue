@@ -82,9 +82,10 @@
 			<el-table-column prop="salesperson" label="销售员" width="150"></el-table-column>
 			<el-table-column prop="purchaser" label="采购员" width="150"></el-table-column>
 			<el-table-column prop="createTime" label="创建日期" width="150"></el-table-column>
-			<el-table-column fixed="right" label="操作" width="100">
+			<el-table-column fixed="right" label="操作" width="250">
 				<template #default="scope">
 					<el-button type="text" size="small" @click="CheckDetails(scope.row)">查看详情</el-button>
+					<el-button type="text" size="small" @click="GeneratePurchaseContract(scope.row)">生成采购合同</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -477,6 +478,23 @@ import { el } from 'element-plus/es/locale';
 import useUserStore from "@/store/modules/user";
 import { FormInstance } from 'element-plus'
 import { invoke } from '@vueuse/core';
+
+
+const GeneratePurchaseContract = (row) => {
+	// 在这里添加生成PDF的逻辑
+	console.log('正在为以下数据生成PDF:', row);
+	request({
+		url: 'PurchaseContracts/CreatePurchaseContentsPDF/CreatePDF',
+		method: 'GET',
+		params: {
+			PurchaseContractID: row.id
+		}
+	}).then(response => {
+		console.log(response);
+	}).catch(error => {
+		console.error('生成PDF失败:', error);
+	});
+}
 
 // 添加新的响应式变量
 const viewDetailsDialog = ref(false)
