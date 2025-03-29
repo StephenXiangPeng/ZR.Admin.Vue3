@@ -37,21 +37,21 @@
 		<el-divider></el-divider>
 		<el-table :data="quotationData" stripe>
 			<el-table-column prop="quotationNum" label="报价单号" :width="150" />
-			<el-table-column prop="inquiryDate" label="询价日期" :width="180" />
-			<el-table-column prop="realQuotationDate" label="实际报价日期" :width="180" />
-			<el-table-column prop="quotationStatus" label="报价状态" :width="150" />
+			<el-table-column prop="inquiryDate" label="询价日期" :width="180" :formatter="formatDate" />
+			<el-table-column prop="realQuotationDate" label="实际报价日期" :width="180" :formatter="formatDate" />
+			<el-table-column prop="quotationStatus" label="报价状态" :width="150" v-if="false" />
 			<el-table-column prop="validityPeriod" label="有效期限" :width="150" />
 			<el-table-column prop="customerNum" label="客户编号" :width="150" />
 			<el-table-column prop="customerName" label="客户简称" :width="150" />
 			<el-table-column prop="totalValueOfGoods" label="货值合计" :width="150" />
-			<el-table-column prop="totalQuantity" label="数量合计" :width="150" />
-			<el-table-column prop="totalNumberOfBoxes" label="箱数合计" :width="150" />
-			<el-table-column prop="totalGrossWeight" label="毛重合计" :width="150" />
-			<el-table-column prop="totalNetWeight" label="净重合计" :width="150" />
-			<el-table-column prop="totalVolume" label="体积合计" :width="150" />
-			<el-table-column prop="totalPurchases" label="采购合计" :width="150" />
-			<el-table-column prop="totalOtherFees" label="其它费用合计" :width="150" />
-			<el-table-column prop="totalTaxRefund" label="退税总额" :width="150" />
+			<el-table-column prop="totalQuantity" label="数量合计" :width="150" v-if="false" />
+			<el-table-column prop="totalNumberOfBoxes" label="箱数合计" :width="150" v-if="false" />
+			<el-table-column prop="totalGrossWeight" label="毛重合计" :width="150" v-if="false" />
+			<el-table-column prop="totalNetWeight" label="净重合计" :width="150" v-if="false" />
+			<el-table-column prop="totalVolume" label="体积合计" :width="150" v-if="false" />
+			<el-table-column prop="totalPurchases" label="采购合计" :width="150" v-if="false" />
+			<el-table-column prop="totalOtherFees" label="其它费用合计" :width="150" v-if="false" />
+			<el-table-column prop="totalTaxRefund" label="退税总额" :width="150" v-if="false" />
 			<el-table-column prop="profitAmount" label="利润金额" :width="150" />
 			<el-table-column prop="createBy" label="创建人" :width="150" />
 			<el-table-column fixed="right" prop="operate" label="操作" :width="150">
@@ -1474,7 +1474,7 @@ const handlePageChange = async (newPage) => {
 	const newData = await GetQuotationList(start, end);
 };
 function GetQuotationList(start, end) {
-	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
+	return new Promise((resolve, reject) => {
 		request({
 			url: 'Quotation/GetQuotaionList/GetList',
 			method: 'GET',
@@ -1488,7 +1488,11 @@ function GetQuotationList(start, end) {
 			}
 		}).then(response => {
 			if (response.data.result.length > 0) {
-				quotationData.value = response.data.result;
+				quotationData.value = response.data.result.map(item => ({
+					...item,
+					inquiryDate: item.inquiryDate?.split('T')[0] || '',
+					realQuotationDate: item.realQuotationDate?.split('T')[0] || ''
+				}));
 				quotationData.value.forEach((item) => {
 					item.quotationStatus = state.optionss['hr_quotation_status'].filter(hr_quotation_status => hr_quotation_status.dictValue == item.quotationStatus).map(item => item.dictLabel).values().next().value;
 					item.createBy = optionss.value.sql_all_user.find(sql_all_user => sql_all_user.dictValue === item.createBy)?.dictLabel;
@@ -1787,4 +1791,14 @@ const SubmitReview = (row) => {
 
 	});
 }
+
+// 添加日期格式化函数
+const formatDate = (row, column) => {
+	const date = row[column.property];
+	if (date) {
+		// 使用正则表达式只保留年月日
+		return date.replace(/^(\d{4}-\d{2}-\d{2}).*$/, '$1');
+	}
+	return '';
+};
 </script>

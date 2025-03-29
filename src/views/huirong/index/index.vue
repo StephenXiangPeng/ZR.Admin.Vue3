@@ -79,8 +79,8 @@
                 <span>超时未处理</span>
               </cl-col>
             </el-row>
-            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;10</span>
-            <span style="color: red; font-weight: bold;font-size: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8</span>
+            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;0</span>
+            <span style="color: red; font-weight: bold;font-size: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0</span>
           </div>
         </el-card>
       </el-col>
@@ -235,7 +235,7 @@
         </div>
       </div>
     </div>
-    <el-row :gutter="15" style=" margin-top: 30px; font-size: 25px;">
+    <!-- <el-row :gutter="15" style=" margin-top: 30px; font-size: 25px;">
       <el-col :lg="8" class="mb10">
         <el-card style="height: 100%">
           <div class="text-warning mb10">国际时区&nbsp;&nbsp;&nbsp;&nbsp;
@@ -270,9 +270,7 @@
           </div>
         </el-card>
       </el-col>
-
-
-    </el-row>
+    </el-row> -->
     <el-dialog v-model="AgencyProcessdialogTableVisible" title="待办流程" width="800">
       <el-table :data="AgencyProcesstableData">
         <el-table-column prop="documentType" label="单据类型ID" width="150" align="center" v-if="false" />

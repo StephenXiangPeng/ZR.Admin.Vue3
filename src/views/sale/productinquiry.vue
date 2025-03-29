@@ -26,12 +26,12 @@
 		<div style="margin-top: 30px;">
 			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;客户询价表</span>
 			<el-divider></el-divider>
-			<el-table :data="InquityTableData" style="width: 100%">
+			<el-table :data="InquityTableData" style="width: 100%" stripe :size="small">
 				<el-table-column prop="inquiry_number" label="询价单号"></el-table-column>
 				<el-table-column prop="date" label="询价日期"></el-table-column>
 				<el-table-column prop="subject" label="询价主题"></el-table-column>
 				<el-table-column prop="inquirer" label="询价人"></el-table-column>
-				<el-table-column prop="shippingDestination" label="送货目的地"></el-table-column>
+				<el-table-column prop="shippingDestination" label="送货目的地" v-if="false"></el-table-column>
 				<el-table-column fixed="right" prop="operate" label="操作" :width="200">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small" @click="ChcekDetails(scope.row)">查看详情</el-button>
@@ -68,7 +68,7 @@
 					<el-col :span="6">
 						<el-form-item label="询价人员">
 							<el-select filterable v-model="NewprudctInquityDetailsform.Inquirer" placeholder="请选择询价人员"
-								:disabled="isEditable" style="width: 290px">
+								:disabled="true" style="width: 290px">
 								<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -99,21 +99,32 @@
 					<el-table-column prop="date" label="日期" width="150" align="center" />
 					<el-table-column prop="productimage" label="询价产品图片" width="150" align="center">
 						<template #default="scope">
-							<!-- 如果没有图片，显示上传按钮 -->
-							<el-upload v-if="!scope.row.productimage && !isEditable && scope.row.status !== 1"
-								:auto-upload="false" :show-file-list="false"
-								:on-change="(file) => handleImageSelect(file, scope.$index)" accept="image/*">
-								<el-button type="primary" icon="UploadFilled">选择图片</el-button>
-							</el-upload>
+							<!-- 如果没有图片且可编辑，显示上传按钮 -->
+							<template v-if="!scope.row.productimage && !isEditable && scope.row.status !== 1">
+								<el-upload :auto-upload="false" :show-file-list="false"
+									:on-change="(file) => handleImageSelect(file, scope.$index)" accept="image/*">
+									<el-button type="primary" icon="UploadFilled">选择图片</el-button>
+								</el-upload>
+							</template>
+							<!-- 如果没有图片且不可编辑，显示无图片文本 -->
+							<template v-else-if="!scope.row.productimage">
+								<span>无图片</span>
+							</template>
 							<!-- 如果有图片，显示预览和删除按钮 -->
-							<div v-else>
-								<el-image style="width: 100px; height: 100px" :src="scope.row.productimage"
-									:preview-src-list="[scope.row.productimage]" :zoom-rate="1.2" :max-scale="7"
-									:min-scale="0.2" fit="cover" preview-teleported="true" />
-								<div v-if="!isEditable && scope.row.status !== 1">
-									<el-button type="danger" @click="handleImageDelete(scope.$index)">删除</el-button>
+							<template v-else>
+								<div>
+									<el-image style="width: 100px; height: 100px" :src="scope.row.productimage"
+										:preview-src-list="[scope.row.productimage]" :zoom-rate="1.2" :max-scale="7"
+										:min-scale="0.2" fit="cover" preview-teleported="true">
+										<template #error>
+											<span>加载失败</span>
+										</template>
+									</el-image>
+									<div v-if="!isEditable && scope.row.status !== 1">
+										<el-button type="danger" @click="handleImageDelete(scope.$index)">删除</el-button>
+									</div>
 								</div>
-							</div>
+							</template>
 						</template>
 					</el-table-column>
 					<el-table-column prop="productnumber" label="编号" width="150" align="center">
@@ -365,7 +376,10 @@ import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from
 import request from '@/utils/request';
 import { create, get } from 'sortablejs';
 import dayjs from 'dayjs';
+import useUserStore from "@/store/modules/user";
 
+//获取当前登录用户ID
+var userId = useUserStore().userId;
 
 //查找产品窗体
 const SearchProcutDialog = ref(false)
@@ -482,7 +496,7 @@ const OpenCreateInquiryDialog = () => {
 	NewprudctInquityDetailsform.inquiry_number = '';
 	NewprudctInquityDetailsform.Subject = '';
 	NewprudctInquityDetailsform.Date = dayjs().format('YYYY-MM-DD');
-	NewprudctInquityDetailsform.Inquirer = '';
+	NewprudctInquityDetailsform.Inquirer = userId.toString();
 	NewprudctInquityDetailsform.Description = '';
 	NewprudctInquityDetailsform.InquiryProducts = [];
 	NewprudctInquityDetailsform.InquirySupplementaryDocuments = [];
@@ -621,6 +635,7 @@ proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
 	})
+	GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
 })
 /*动态下拉框end*/
 const CreateInquiryDialog = ref(false)
@@ -835,7 +850,7 @@ const SearchInquiryhandlePageChange = async (newPage) => {
 	const end = SearchInquirypageSize.value;
 	const newData = await GetInquiryList(start, end);
 };
-GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
+//GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
 function GetInquiryList(start, end) {
 	return new Promise((resolve, reject) => {
 		request({
@@ -851,6 +866,9 @@ function GetInquiryList(start, end) {
 		}).then(response => {
 			if (response.data.result.length) {
 				InquityTableData.value = response.data.result;
+				InquityTableData.value.forEach(item => {
+					item.inquirer = state.optionss.sql_hr_sale.find(option => option.dictValue === item.inquirer.toString()).dictLabel;
+				});
 				resolve(response.data.data);
 			} else {
 				if (response.data.totalNum > 0 && start > 1) {

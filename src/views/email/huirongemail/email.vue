@@ -2210,6 +2210,7 @@ const handleCcList = (ccList) => {
 }
 // 处理回复邮件
 const handleReply = async (replyAll = false) => {
+	alert(SelectEmailID.value);
 	emailType.value = replyAll ? 'replyAll' : 'reply'
 	dialogTitle.value = replyAll ? '回复全部' : '回复'
 	await GetEmailContract() // 获取联系人数据
@@ -2377,9 +2378,10 @@ const GetEmailAttachment = async (emailId) => {
 	console.log(response.data);
 	return response.data;
 }
-
+const SelectEmailID = ref('');
 // 处理行点击，显示邮件详情
 const handleRowClick = async (row) => {
+	SelectEmailID.value = row.EmailID;
 	// 保存当前状态
 	const attachmentsList = await GetEmailAttachment(row.EmailID);
 	currentEmail.value = {
