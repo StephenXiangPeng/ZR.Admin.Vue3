@@ -44,6 +44,67 @@ import dateOptions from '@/utils/dateOptions'
 // Dialog组件
 import Dialog from '@/components/Dialog'
 
+// 创建全局错误处理函数
+window.onerror = function (message, source, lineno, colno, error) {
+	console.error('全局错误:', message, source, error);
+
+	// 如果是模块加载错误，自动尝试刷新
+	if (message.includes('Loading chunk') || message.includes('failed')) {
+		console.log('检测到资源加载失败，正在尝试刷新...');
+		localStorage.setItem('app_reload_attempt', (parseInt(localStorage.getItem('app_reload_attempt') || '0') + 1).toString());
+		if (parseInt(localStorage.getItem('app_reload_attempt')) < 3) {
+			window.location.reload();
+		}
+	}
+
+	return false;
+};
+
+// 检查是否为刷新后的加载
+if (localStorage.getItem('app_reload_attempt')) {
+	console.log(`应用刷新尝试次数: ${localStorage.getItem('app_reload_attempt')}`);
+}
+
+// 确保CSS和其他资源加载完成
+document.addEventListener('DOMContentLoaded', () => {
+	console.log('DOM已加载完成，准备初始化应用...');
+	startApp();
+});
+
+// 如果DOMContentLoaded事件已经触发，直接初始化
+if (document.readyState === 'interactive' || document.readyState === 'complete') {
+	console.log('DOM已就绪，直接初始化应用...');
+	startApp();
+}
+
+// 定义应用启动函数
+function startApp() {
+	// 防止重复初始化
+	if (window.appInitialized) return;
+	window.appInitialized = true;
+
+	console.log('开始初始化应用...');
+
+	// 创建并挂载Vue应用
+	const app = createApp(App);
+
+	// 添加全局错误处理
+	app.config.errorHandler = (err, vm, info) => {
+		console.error('Vue错误:', err, info);
+	};
+
+	// 使用路由和其他插件
+	app.use(router);
+	// 其他插件...
+
+	// 标记成功加载
+	localStorage.setItem('app_reload_attempt', '0');
+
+	// 挂载应用
+	app.mount('#app');
+	console.log('应用挂载完成');
+}
+
 const app = createApp(App)
 signalR.init(import.meta.env.VITE_APP_SOCKET_API)
 app.config.globalProperties.signalr = signalR

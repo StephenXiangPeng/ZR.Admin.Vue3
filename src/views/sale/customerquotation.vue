@@ -258,6 +258,11 @@
 							<el-input v-else v-model="row.cspecification" :disabled="isDisabled"></el-input>
 						</template>
 					</el-table-column>
+					<el-table-column prop="ProfitMargin" label="利润率%" width="100">
+						<template #default="{ row }">
+							<el-input v-model="row.ProfitMargin" @change="calculateTotal" :disabled="isDisabled" />
+						</template>
+					</el-table-column>
 					<el-table-column prop="quotationnum" label="报价数量" width="110">
 						<template #default="{ row }">
 							<el-input v-model="row.quotationnum" @change="calculateTotal" :disabled="isDisabled" />
@@ -265,7 +270,7 @@
 					</el-table-column>
 					<el-table-column prop="exportunitprice" label="外销单价" width="110">
 						<template #default="{ row }">
-							<el-input v-model="row.exportunitprice" @change="calculateTotal" :disabled="isDisabled" />
+							<el-input v-model="row.exportunitprice" @change="calculateTotal" :disabled="true" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="exporttotalprice" label="外销总价" width="110">
@@ -358,6 +363,7 @@
 							<el-input v-model="row.rebaterate" @change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
+
 					<el-table-column prop="innerBoxLoading" label="内盒装量" width="100">
 						<template #default="{ row }">
 							<el-input v-model="row.innerBoxLoading" @change="calculateTotal" :disabled="isDisabled" />
@@ -1138,7 +1144,6 @@ const shippingcurrencyChange = (value) => {
 }
 ///计算外销总价、计算外箱体积、计算总货值
 const calculateTotal = () => {
-
 	quotationDialogform.TotalValueOfGoods = 0;
 	quotationDialogform.TotalQuantity = 0;
 	quotationDialogform.TotalNumberOfBoxes = 0;
@@ -1162,69 +1167,75 @@ const calculateTotal = () => {
 	let OtherFees = 0;
 	let TotalTaxRefund = 0;
 	let ProfitAmount = 0;
-	let TotalSinglesalesrevenueA = 0;//总和单个销售收入A
-	let Totalgrossprofit = 0;//总毛利合计
-	let Totalprofitmargin = 0;//总利润率
-	let TotalOtherFees = 0;//其它费用合计
+	let TotalSinglesalesrevenueA = 0; // 总和单个销售收入A
+	let Totalgrossprofit = 0; // 总毛利合计
+	let Totalprofitmargin = 0; // 总利润率
+	let TotalOtherFees = 0; // 其它费用合计
+
 	productData.value.forEach((item) => {
-		//箱数 = 报价数量/外箱装量
+		// 计算退税率相关的变量，避免退税率为0导致除以零
+		const effectiveRebate = Number(item.rebaterate) || 0; // 退税率百分比，如13代表13%
+		// 当退税率为0时，分母直接取1，否则取 (1+rebate/100)
+		const rebateDivisor = effectiveRebate === 0 ? 1 : (1 + effectiveRebate / 100);
+
+		// 箱数 = 报价数量 / 外箱装量
 		item.NumberOfBoxes = (item.quotationnum / item.outerboxloading);
-		item.NumberOfBoxes = Number(item.NumberOfBoxes.toFixed(1));//箱数保留一位小数
-		//外箱体积 =（外箱长度 x 外箱宽度 x 外箱高度）/1000000
+		item.NumberOfBoxes = Number(item.NumberOfBoxes.toFixed(1)); // 保留一位小数
+
+		// 外箱体积 = (外箱长度 x 外箱宽度 x 外箱高度) / 1000000
 		item.outerboxvolume = (item.outerboxlength * item.outerboxwidth * item.outerboxheight / 1000000);
-		item.outerboxvolume = item.outerboxvolume.toFixed(4);//外箱体积保留4位小数
-		//单个销售收入A =	（采购单价 / (1+退税率）x 13% + 销售单价 x 汇率）
-		item.SinglesalesrevenueA = (item.purchaseunitprice / (1 + item.rebaterate / 100) * (item.rebaterate / 100) + item.exportunitprice * Number(quotationDialogform.exchangerate));
-		item.SinglesalesrevenueA = item.SinglesalesrevenueA.toFixed(3);//单个销售收入A保留3位小数
-		//单个产品体积=外箱体积/外箱装量
+		item.outerboxvolume = item.outerboxvolume.toFixed(4); // 保留4位小数
+
+		// 单个销售收入A = (采购单价 / rebateDivisor * (rebate/100) + 销售单价 x 汇率)
+		item.SinglesalesrevenueA = (item.purchaseunitprice / rebateDivisor * (effectiveRebate / 100) + item.exportunitprice * Number(quotationDialogform.exchangerate));
+		item.SinglesalesrevenueA = item.SinglesalesrevenueA.toFixed(3);
+
+		// 单个产品体积 = 外箱体积 / 外箱装量
 		item.Singleproductvolume = (item.outerboxvolume / item.outerboxloading).toFixed(6).toString().replace(/(\.\d*?[1-9])0+$/, '$1');
-		//单个产品的港杂费=港杂费 x 单个产品体积
+
+		// 单个产品的港杂费 = 港杂费 x 单个产品体积
 		item.Portchargesforindividualproducts = (Number(quotationDialogform.portMiscellaneousFees) * Number(item.Singleproductvolume)).toFixed(3);
 		console.log('单个产品的港杂费：' + item.Portchargesforindividualproducts);
-		//单个产品海运费=海运费 x 单个产品体积(如果非人民币，还需要乘以汇率)
-		if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == quotationDialogform.shippingcurrency).map(item => item.dictLabel).values().next().value == '人民币') {
+
+		// 单个产品海运费 = 海运费 x 单个产品体积 (如果非人民币，还需乘以汇率)
+		if (state.optionss['hr_export_currency']
+			.filter(hr_export_currency => hr_export_currency.dictValue == quotationDialogform.shippingcurrency)
+			.map(i => i.dictLabel).values().next().value == '人民币') {
 			item.Oceanfreightforasingleproduct = (Number(quotationDialogform.oceanFreight) * item.Singleproductvolume).toFixed(3);
 		} else {
 			item.Oceanfreightforasingleproduct = (Number(quotationDialogform.oceanFreight) * item.Singleproductvolume * Number(quotationDialogform.shippingrate)).toFixed(3);
 		}
-		//item.Oceanfreightforasingleproduct = (Number(quotationDialogform.oceanFreight) * item.Singleproductvolume).toFixed(3);
-		//单个产品内陆运费=内陆运费 x 单个产品体积
+
+		// 单个产品内陆运费 = 内陆运费 x 单个产品体积
 		item.Inlandfreightforasingleproduct = (Number(item.inlandfreightprice) * item.Singleproductvolume).toFixed(3);
+
+		// 计算单个产品毛利
 		if (isNaN(item.SinglesalesrevenueA - item.Portchargesforindividualproducts - item.Inlandfreightforasingleproduct - item.Oceanfreightforasingleproduct - item.purchaseunitprice - item.additionalpackagingcosts - item.OtherFees)) {
 			item.singleProductGrossProfit = 0.000;
 		} else {
-			//单个产品毛利=单个销售收入A - 单个港杂费 -单个产品内陆运费 - 单个海运费 - 采购价 - 额外包装费用 - 其他费用
+			// 单个产品毛利 = 单个销售收入A - 港杂费 - 内陆运费 - 海运费 - 采购价 - 额外包装费用 - 其他费用
 			item.singleProductGrossProfit = (item.SinglesalesrevenueA - item.Portchargesforindividualproducts - item.Inlandfreightforasingleproduct - item.Oceanfreightforasingleproduct - item.purchaseunitprice - item.additionalpackagingcosts - item.OtherFees).toFixed(3);
-			//单个产品毛利合计=单个产品毛利 x 报价数量
+			// 单个产品毛利合计 = 单个产品毛利 x 报价数量
 			item.singleProductGrossProfitTotal = (item.singleProductGrossProfit * item.quotationnum).toFixed(3);
 		}
+
 		if (isNaN(item.singleProductGrossProfit / item.SinglesalesrevenueA)) {
 			item.grossProfitRate = 0.000;
 		} else {
-			//毛利率=单个产品毛利/单个销售收入A
+			// 毛利率 = 单个产品毛利 / 单个销售收入A x 100
 			item.grossProfitRate = (item.singleProductGrossProfit / item.SinglesalesrevenueA * 100).toFixed(3);
 		}
-		if (isNaN(item.outerboxnetweight * item.NumberOfBoxes)) {
-			item.totalNetWeight = 0.000;
-		} else {
-			//总净重 = 外箱净重 x 箱数
-			item.totalNetWeight = (item.outerboxnetweight * item.NumberOfBoxes).toFixed(1);
-		}
-		if (isNaN(item.outerboxgrossweight * item.NumberOfBoxes)) {
-			item.totalGrossWeight = 0.000;
-		} else {
-			//总毛重 = 外箱毛重 x 箱数
-			item.totalGrossWeight = (item.outerboxgrossweight * item.NumberOfBoxes).toFixed(1);
-		}
-		if (isNaN(item.outerboxvolume * item.NumberOfBoxes)) {
-			item.totalVolume = 0.000;
-		} else {
-			//总体积 = 外箱体积 x 箱数
-			item.totalVolume = (item.outerboxvolume * item.NumberOfBoxes).toFixed(1);
-		}
-		//外销总价=报价数量 x 报价单价
-		item.exporttotalprice = Number(item.quotationnum * item.exportunitprice);
-		item.exporttotalprice = item.exporttotalprice.toFixed(2);//外销总价保留2位小数
+
+		// 总净重 = 外箱净重 x 箱数
+		item.totalNetWeight = isNaN(item.outerboxnetweight * item.NumberOfBoxes) ? 0.000 : (item.outerboxnetweight * item.NumberOfBoxes).toFixed(1);
+		// 总毛重 = 外箱毛重 x 箱数
+		item.totalGrossWeight = isNaN(item.outerboxgrossweight * item.NumberOfBoxes) ? 0.000 : (item.outerboxgrossweight * item.NumberOfBoxes).toFixed(1);
+		// 总体积 = 外箱体积 x 箱数
+		item.totalVolume = isNaN(item.outerboxvolume * item.NumberOfBoxes) ? 0.000 : (item.outerboxvolume * item.NumberOfBoxes).toFixed(1);
+
+		// 外销总价 = 报价数量 x 报价单价
+		item.exporttotalprice = Number(item.quotationnum * item.exportunitprice).toFixed(2);
+
 		TotalSinglesalesrevenueA += Number(item.SinglesalesrevenueA * item.quotationnum);
 		TotalvalueOfGoods += Number(item.exporttotalprice);
 		TotalQuantity += Number(item.quotationnum);
@@ -1234,35 +1245,59 @@ const calculateTotal = () => {
 		TotalVolume += Number(item.totalVolume);
 		TotalPurchases += Number(item.purchaseunitprice) * Number(item.quotationnum);
 		OtherFees += Number(item.OtherFees);
-		TotalTaxRefund += Number((item.purchaseunitprice / (1 + item.rebaterate / 100) * 0.13 * item.quotationnum).toFixed(3));//采购单价*13%*报价数量
+		// 退税总额 = (采购单价 / rebateDivisor * 0.13 * 报价数量)
+		TotalTaxRefund += Number((item.purchaseunitprice / rebateDivisor * 0.13 * item.quotationnum).toFixed(3));
 		ProfitAmount += Number(item.ProfitAmount);
-		//总毛利合计=单个产品毛利 x 报价数量 - 其他费用
+		// 总毛利合计 = 单个产品毛利 x 报价数量 - 其他费用
 		Totalgrossprofit += Number(item.singleProductGrossProfit * item.quotationnum - item.OtherFees);
 		console.log('总毛利合计' + item.singleProductGrossProfit + '/' + item.quotationnum + '=' + Totalgrossprofit);
-		//总利润率=总毛利合计/单个销售收入A总和
+		// 总利润率 = 总毛利合计 / 单个销售收入A总和 x 100
 		Totalprofitmargin = Number((Totalgrossprofit / TotalSinglesalesrevenueA * 100).toFixed(3));
 		console.log('总利润率' + Totalgrossprofit + '/' + TotalSinglesalesrevenueA + '=' + Totalprofitmargin);
+
 		//#region 其它费用合计计算
-		//海运费合计=单个产品海运费*运费汇率*报价数量
+		// 海运费合计 = 单个产品海运费 * 运费汇率 * 报价数量
 		let oceanFreightTotal = item.Oceanfreightforasingleproduct * quotationDialogform.shippingrate * item.quotationnum;
-		console.log('海运费合计：' + oceanFreightTotal)
-		//内陆运费合计=单个产品内陆运费*报价数量
+		console.log('海运费合计：' + oceanFreightTotal);
+		// 内陆运费合计 = 单个产品内陆运费 * 报价数量
 		let inlandAndPortChargesTotal = Number(item.Inlandfreightforasingleproduct * item.quotationnum);
 		console.log('内陆运费合计：' + inlandAndPortChargesTotal);
 		let PortchargesforindividualproductsTotal = Number(item.Portchargesforindividualproducts * item.quotationnum);
 		console.log('港杂费合计：' + PortchargesforindividualproductsTotal);
-		//银行费用合计=银行费用*汇率
+		// 银行费用合计 = 银行费用 * 汇率
 		let bankFeeTotal = (quotationDialogform.BankFee * quotationDialogform.exchangerate);
-		console.log('银行费用合计：' + bankFeeTotal)
-		//文件费用
+		console.log('银行费用合计：' + bankFeeTotal);
+		// 文件费用
 		let documentationFees = quotationDialogform.DocumentationFees;
-		console.log('文件费用：' + documentationFees)
-		//其它费用合计=海运费合计+内陆运费+港杂费合计+银行费用合计+文件费用+其它费用
-		console.log('其它费用：' + OtherFees)
+		console.log('文件费用：' + documentationFees);
+		// 其它费用合计 = 海运费合计 + 内陆运费 + 港杂费合计 + 银行费用合计 + 文件费用 + 其它费用
+		console.log('其它费用：' + OtherFees);
 		TotalOtherFees = Number(oceanFreightTotal) + Number(inlandAndPortChargesTotal) + Number(PortchargesforindividualproductsTotal) + Number(bankFeeTotal) + Number(documentationFees) + Number(OtherFees);
-		console.log('其它费用合计：' + TotalOtherFees)
+		console.log('其它费用合计：' + TotalOtherFees);
 		//#endregion 其它费用合计计算
+
+		// -------------------------- 修改处：采用成本加成定价法计算外销单价 --------------------------
+		// 计算退税部分：如果退税率为0，则结果为0
+		const taxRefundComponent = effectiveRebate === 0
+			? 0
+			: Number((item.purchaseunitprice / rebateDivisor) * (effectiveRebate / 100));
+		// 国内成本 = 采购单价 + (内陆运费 x 单个产品体积) + 额外包装费用 + 其它费用 + 退税金额
+		const domesticCostComponents = Number(item.purchaseunitprice) +
+			(Number(item.inlandfreightprice) * Number(item.Singleproductvolume)) +
+			Number(item.additionalpackagingcosts) +
+			Number(item.OtherFees) +
+			taxRefundComponent;
+		// 海运费（已在 item.Oceanfreightforasingleproduct 中计算，转换为数字）
+		const oceanFreightCost = Number(item.Oceanfreightforasingleproduct);
+		// 总国内成本
+		const totalDomesticCost = domesticCostComponents + oceanFreightCost;
+		// 转换为外币成本（除以汇率）
+		const costForeign = totalDomesticCost / Number(quotationDialogform.exchangerate);
+		// 最终外销单价 = 外币成本 * (1 + 利润率/100)
+		item.exportunitprice = Number((costForeign * (1 + item.ProfitMargin / 100)).toFixed(3));
+		// -------------------------------------------------------------------------------------
 	});
+
 	quotationDialogform.TotalValueOfGoods = TotalvalueOfGoods || 0;
 	quotationDialogform.TotalQuantity = TotalQuantity || 0;
 	quotationDialogform.TotalNumberOfBoxes = TotalNumberOfBoxes || 0;
@@ -1272,11 +1307,12 @@ const calculateTotal = () => {
 	quotationDialogform.TotalPurchases = TotalPurchases || 0;
 	quotationDialogform.TotalOtherFees = TotalOtherFees || 0;
 	quotationDialogform.TotalTaxRefund = TotalTaxRefund || 0;
-	//利润金额=货值合计+退税总额-采购合计-其它费用
+	// 利润金额 = 货值合计 + 退税总额 - 采购合计 - 其它费用
 	quotationDialogform.ProfitAmount = Number(Number((TotalvalueOfGoods * quotationDialogform.exchangerate + TotalTaxRefund) - Number(TotalPurchases) - Number(TotalOtherFees)).toFixed(2)) || 0;
 	quotationDialogform.Totalgrossprofit = Totalgrossprofit || 0;
 	quotationDialogform.Totalprofitmargin = Totalprofitmargin || 0;
-}
+};
+
 
 
 const addQuotationRequest = reactive({

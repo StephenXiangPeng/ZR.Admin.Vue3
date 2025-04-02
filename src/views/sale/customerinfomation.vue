@@ -79,7 +79,6 @@
 		</el-table>
 		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
 			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-
 		<el-dialog v-model="CustomerProfileDialog" title="客户建档" :close-on-click-modal=false style="width: 70%;"
 			@close="resetCustomerProfileDialog()">
 			<span style="font-size: 20px; font-weight: bold;">客户基本信息</span>
@@ -596,12 +595,14 @@
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance, reactive, toRefs, ref } from 'vue'
+import { getCurrentInstance, reactive, toRefs, ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessageBox, UploadUserFile, ElMessage, UploadFile, FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/request';
 import useUserStore from "@/store/modules/user";
 import { number } from 'echarts';
 import { fa } from 'element-plus/es/locale';
+import { start } from 'nprogress';
 
 const activeTab = ref('ContactInfoTable');
 const isEditCustomerInfo = ref(false);
@@ -996,7 +997,6 @@ const resetCustomerProfileDialog = () => {
 
 }
 
-
 const filelistUrlStr = ref('')
 const UploadUrl = 'Common/UploadFile'
 const dialogImageUrl = ref('')
@@ -1341,7 +1341,7 @@ const handlePageChange = async (newPage) => {
 
 //获取客户信息列表
 function GetCustomeInfoList(start, end) {
-	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
+	return new Promise((resolve, reject) => {
 		request({
 			url: 'CustomerInfoMation/GetCustomerInfoList/GetList',
 			method: 'GET',
@@ -1378,11 +1378,12 @@ function GetCustomeInfoList(start, end) {
 					GetCustomeInfoList(start - 1, end);
 				} else {
 					CunstomeinfotableData.value = [];
+					resolve([]); // 确保在没有数据时也会 resolve
 				}
 			}
 		}).catch(error => {
 			console.error(error);
-			reject(error);  // Reject the promise if an error occurs
+			reject(error);
 		});
 	});
 }
@@ -1998,5 +1999,61 @@ const loadCustomerDetail = async (customerId: number) => {
 	} catch (error) {
 		// ... existing code ...
 	}
+}
+
+const route = useRoute()
+onMounted(() => {
+	// 初始化加载客户信息列表
+	GetCustomeInfoList(currentPage.value, pageSize.value);
+
+	// 如果路由中包含 openDetail 参数，则打开详情弹窗
+	if (route.query.openDetail === 'true' && route.query.id) {
+		OpenCustomerProfileDetailDialog(route.query.id);
+	}
+});
+//打开客户详情窗体并加载数据
+const OpenDetailDialog = async (customerId) => {
+	const customerInfo = CunstomeinfotableData.value.find(item => item.id === customerId);
+	selectCustomerID.value = customerId;
+	clearUploadfile();
+	CustomerProfileDetailDialogform.id = customerId;
+	CustomerProfileDetailDialogform.customerStatus = state.optionss['hr_customer_status'].filter(item => item.dictLabel == row.customerStatus).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.customerLevel = state.optionss['hr_customer_level'].filter(item => item.dictLabel == row.customerLevel).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.customerNo = customerInfo.customerNo;
+	CustomerProfileDetailDialogform.customerAbbreviation = customerInfo.customerAbbreviation;
+	CustomerProfileDetailDialogform.customerName = customerInfo.customerName;
+	CustomerProfileDetailDialogform.tradingCountry = state.optionss['hr_nation'].filter(item => item.dictLabel == row.tradingCountry).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.compantWebsite = customerInfo.compantWebsite;
+	CustomerProfileDetailDialogform.customerSource = state.optionss['sys_customer_source'].filter(item => item.dictLabel == row.customerSource).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.businessScope = state.optionss['hr_business_scope'].filter(item => item.dictLabel == row.businessScope).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.pricingTerm = state.optionss['hr_pricing_term'].filter(item => item.dictValue == row.pricingTerm).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.settlementWay = state.optionss['hr_settlement_way'].filter(item => item.dictValue == row.settlementWay).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.collectionPeriod = customerInfo.collectionPeriod;
+	CustomerProfileDetailDialogform.customerTaxNumber = customerInfo.customerTaxNumber;
+	CustomerProfileDetailDialogform.salesPerson = state.optionss['sql_hr_sale'].filter(item => item.dictLabel == row.salesPerson).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.address1 = customerInfo.address1;
+	if (customerInfo.customerPhoto != null && customerInfo.customerPhoto != '') {
+		//NewCustomerleadsform.compantPhotoStr = row.compantPhotoStr;
+		customerInfo.customerPhoto.split(',').forEach((url, index) => {
+			if (!fileList.value.some(item => item.url === url)) {
+				let name = url.split('/').pop();
+				fileList.value.push({
+					name: name,
+					url: url,
+					isChanged: false
+				});
+			}
+		});
+	}
+	uploadedFiles.value = fileList.value;
+	//加载客户联系人
+	loadCustomerContractPerson(customerInfo.id);
+	//加载报价记录
+	loadQuotationHistory(customerInfo.id);
+	//加载销售合同记录
+	loadContractHistory(customerInfo.id);
+	//加载收寄样历史
+	loadCustomerSendSampleHistory(customerInfo.id);
+	CustomerProfileDetailDialog.value = true;
 }
 </script>

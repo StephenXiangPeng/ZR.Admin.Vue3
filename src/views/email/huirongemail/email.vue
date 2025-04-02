@@ -937,7 +937,8 @@ const emailForm = reactive({
 	bcc: [],
 	subject: '',
 	content: '',
-	emailTags: []
+	emailTags: [],
+	originalMessageId: null
 })
 
 // 添加暂存相关的状态
@@ -2210,7 +2211,7 @@ const handleCcList = (ccList) => {
 }
 // 处理回复邮件
 const handleReply = async (replyAll = false) => {
-	alert(SelectEmailID.value);
+	emailForm.originalMessageId = SelectEmailID;
 	emailType.value = replyAll ? 'replyAll' : 'reply'
 	dialogTitle.value = replyAll ? '回复全部' : '回复'
 	await GetEmailContract() // 获取联系人数据
@@ -2381,7 +2382,7 @@ const GetEmailAttachment = async (emailId) => {
 const SelectEmailID = ref('');
 // 处理行点击，显示邮件详情
 const handleRowClick = async (row) => {
-	SelectEmailID.value = row.EmailID;
+	SelectEmailID.value = row.id;
 	// 保存当前状态
 	const attachmentsList = await GetEmailAttachment(row.EmailID);
 	currentEmail.value = {
@@ -2605,6 +2606,7 @@ const sendNewEmail = async () => {
 			})
 		).then(results => results.filter(Boolean))
 
+		alert(emailForm.originalMessageId);
 		// 构建发送数据
 		const emailData = {
 			ToEmail: emailForm.ToEmail,
@@ -2614,7 +2616,8 @@ const sendNewEmail = async () => {
 			EmailContent: emailForm.content,
 			Attachments: attachments,
 			EmailTags: emailForm.emailTags,
-			EmailTagNames: EmailTagcheckboxoptions.value.find(option => option.value === emailForm.emailTags).label
+			EmailTagNames: EmailTagcheckboxoptions.value.find(option => option.value === emailForm.emailTags).label,
+			originalMessageId: Number(emailForm.originalMessageId)
 		}
 
 		const loading = ElLoading.service({

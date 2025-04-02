@@ -28,7 +28,7 @@ export default defineConfig(({ mode, command }) => {
     css: {
       devSourcemap: true //开发模式时启用
     },
-    base: env.VITE_APP_ROUTER_PREFIX,
+    base: '/',
     // 打包配置
     build: {
       sourcemap: command === 'build' ? false : 'inline',

@@ -1,5 +1,6 @@
 import { createWebHistory, createRouter } from 'vue-router'
 import Layout from '@/layout'
+import { ElLoading } from 'element-plus'
 
 /**
  * Note: 路由配置项
@@ -99,4 +100,36 @@ const router = createRouter({
     }
   }
 })
+
+router.onError((error) => {
+  console.error('路由错误:', error);
+  // 可以在这里添加重试逻辑或显示错误提示
+  const failedChunk = /Loading chunk (\d)+ failed/gi.test(error.message);
+  const failedToResolve = /Failed to resolve/gi.test(error.message);
+  const componentError = /Failed to resolve component/gi.test(error.message);
+
+  if (failedChunk || failedToResolve || componentError) {
+    console.log('检测到资源加载失败，正在尝试刷新页面...');
+    window.location.reload(); // 自动刷新页面
+  }
+});
+
+// 添加全局导航守卫
+router.beforeEach((to, from, next) => {
+  // 显示加载指示器
+  const loading = ElLoading.service({
+    lock: true,
+    text: '页面加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
+
+  // 继续导航
+  next();
+
+  // 页面渲染后关闭加载指示器
+  router.afterEach(() => {
+    loading.close();
+  });
+});
+
 export default router

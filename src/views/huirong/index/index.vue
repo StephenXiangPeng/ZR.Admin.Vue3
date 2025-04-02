@@ -79,8 +79,12 @@
                 <span>超时未处理</span>
               </cl-col>
             </el-row>
-            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;0</span>
-            <span style="color: red; font-weight: bold;font-size: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0</span>
+            <span style="font-weight: bold;font-size: 30px; cursor: pointer;"
+              @click="showPendingEmails">&nbsp;&nbsp;&nbsp;&nbsp;{{
+                pendingEmailCount }}</span>
+            <span style="color: red; font-weight: bold;font-size: 30px; cursor: pointer;"
+              @click="showOverdueEmails">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{
+                overdueEmailCount }}</span>
           </div>
         </el-card>
       </el-col>
@@ -1799,7 +1803,7 @@
     </el-dialog>
     <!-- 沟通逾期 -->
     <el-dialog v-model="communicationOverdueDialogVisible" title="沟通逾期" width="500px" :close-on-click-modal="false">
-      <el-table :data="communicationOverdueData">
+      <el-table :data="communicationOverdueData" @row-dblclick="handleCommunicationRowDblClick">
         <el-table-column prop="ID" label="客户编号" width="150" v-if="false"></el-table-column>
         <el-table-column prop="customerNo" label="客户编号" width="150"></el-table-column>
         <el-table-column prop="customerName" label="客户名称" width="150"></el-table-column>
@@ -1824,6 +1828,30 @@
       </el-table>
     </el-dialog>
   </div>
+  <el-dialog v-model="pendingEmailDialogVisible" title="待处理邮件" :close-on-click-modal="false" class="custom-dialog"
+    width="700px">
+    <el-table :data="pendingEmailList" :height="400" style="width: 100%">
+      <el-table-column prop="customerName" label="客户名称" width="200"></el-table-column>
+      <el-table-column prop="emailsubject" label="邮件标题" width="200"></el-table-column>
+      <el-table-column prop="create_time" label="时间" width="250">
+        <template #default="scope">
+          {{ scope.row.createTime }}
+        </template>
+      </el-table-column>
+    </el-table>
+  </el-dialog>
+  <el-dialog v-model="overdueEmailDialogVisible" title="超时未处理邮件" :close-on-click-modal="false" class="custom-dialog"
+    width="700px">
+    <el-table :data="overdueEmailList" :height="400" style="width: 100%">
+      <el-table-column prop="customerName" label="客户名称" width="200"></el-table-column>
+      <el-table-column prop="emailsubject" label="邮件标题" width="200"></el-table-column>
+      <el-table-column prop="create_time" label="时间" width="250">
+        <template #default="scope">
+          {{ scope.row.createTime }}
+        </template>
+      </el-table-column>
+    </el-table>
+  </el-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -1837,6 +1865,7 @@ import useSocketStore from '@/store/modules/socket'
 import duration from 'dayjs/plugin/duration'
 import { Picture } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
+import { useRouter } from 'vue-router'
 
 // #region 商机看板
 
@@ -4013,10 +4042,113 @@ const handleCompletionFileRemove = (file) => {
   }
 }
 //#endregion
+
+const pendingEmailList = ref([])
+const overdueEmailList = ref([])
+const pendingEmailCount = ref(0)
+const overdueEmailCount = ref(0)
+const pendingEmailDialogVisible = ref(false)
+const overdueEmailDialogVisible = ref(false)
+const userStore = useUserStore()
+
+// 获取24小时内需要回复的邮件数量
+const getWithin24hoursEmailCount = async () => {
+  try {
+    const response = await request({
+      url: 'Email/GetWithin24hoursEmail/GetWithin24hoursEmail',
+      method: 'GET',
+      params: {
+        UserID: userStore.userId
+      }
+    })
+    if (response.code === 200) {
+      pendingEmailCount.value = response.data.length
+      pendingEmailList.value = response.data
+    } else {
+      console.error('获取待处理邮件数量失败:', response.msg)
+    }
+  } catch (error) {
+    console.error('获取待处理邮件数量出错:', error)
+  }
+}
+const getOutside24hoursEmailCount = async () => {
+  try {
+    const response = await request({
+      url: 'Email/GetOutside24hoursEmail/GetOutside24hoursEmail',
+      method: 'GET',
+      params: {
+        UserID: userStore.userId
+      }
+    })
+    if (response.code === 200) {
+      overdueEmailCount.value = response.data.length
+      overdueEmailList.value = response.data
+    }
+  } catch (error) {
+    console.error('获取超时未处理邮件数量出错:', error)
+  }
+}
+
+onMounted(() => {
+  getWithin24hoursEmailCount()
+  getOutside24hoursEmailCount()
+})
+
+const showPendingEmails = async () => {
+  if (pendingEmailCount.value === 0) {
+    ElMessage.warning('没有待处理邮件')
+    return;
+  } else {
+    await getWithin24hoursEmailCount();
+    pendingEmailDialogVisible.value = true
+  }
+}
+
+const showOverdueEmails = async () => {
+  if (overdueEmailCount.value === 0) {
+    ElMessage.warning('没有超时未处理邮件')
+    return;
+  } else {
+    await getOutside24hoursEmailCount();
+    overdueEmailDialogVisible.value = true
+  }
+}
+
+// 获取路由实例
+const router = useRouter()
+
+// 沟通逾期列表双击处理函数
+const handleCommunicationRowDblClick = (row) => {
+  // 如果数据中没有客户ID，添加相应的错误处理
+  if (!row.customerId) {
+    ElMessage.warning('该记录没有关联客户信息')
+    return
+  }
+
+  // 关闭当前对话框
+  communicationOverdueDialogVisible.value = false
+
+  // 跳转到客户资料页面
+  router.push({
+    path: 'sale/customerinfomation',  // 客户资料页面的路由路径
+    query: {
+      id: row.customerId,       // 传递客户ID作为查询参数
+      tabActive: 'basic',
+      openDetail: 'true'
+    }
+  })
+
+  // 可选：添加消息提示
+  ElMessage.success('正在打开客户资料')
+}
 </script>
 
 
 <style lang="scss" scoped>
+.work-wrap span {
+  cursor: pointer;
+}
+
 //财务任务 图片预览样式开始
 .image-error {
   display: flex;
@@ -4359,5 +4491,21 @@ const handleCompletionFileRemove = (file) => {
 
 .tasks-container::-webkit-scrollbar-track {
   background-color: transparent;
+}
+
+/* 自定义对话框样式 */
+.custom-dialog :deep(.el-dialog) {
+  margin-top: 8vh !important;
+}
+
+.custom-dialog :deep(.el-dialog__body) {
+  padding: 10px 20px;
+  height: 450px;
+  overflow-y: auto;
+}
+
+/* 表格样式优化 */
+.custom-dialog :deep(.el-table) {
+  border-radius: 4px;
 }
 </style>
