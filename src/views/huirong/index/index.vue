@@ -1827,31 +1827,33 @@
         <!-- 其他需要显示的列 -->
       </el-table>
     </el-dialog>
+    <el-dialog v-model="pendingEmailDialogVisible" title="待处理邮件" :close-on-click-modal="false" class="custom-dialog"
+      width="700px">
+      <el-table :data="pendingEmailList" :height="400" style="width: 100%">
+        <el-table-column prop="customerName" label="客户名称" width="200"></el-table-column>
+        <el-table-column prop="emailsubject" label="邮件标题" width="200"></el-table-column>
+        <el-table-column prop="create_time" label="时间" width="250">
+          <template #default="scope">
+            {{ scope.row.createTime }}
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+    <el-dialog v-model="overdueEmailDialogVisible" title="超时未处理邮件" :close-on-click-modal="false" class="custom-dialog"
+      width="700px">
+      <el-table :data="overdueEmailList" :height="400" style="width: 100%"
+        @row-dblclick="handleOverdueEmailRowDblClick">
+        <el-table-column prop="customerName" label="客户名称" width="200"></el-table-column>
+        <el-table-column prop="emailsubject" label="邮件标题" width="200"></el-table-column>
+        <el-table-column prop="create_time" label="时间" width="250">
+          <template #default="scope">
+            {{ scope.row.createTime }}
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
-  <el-dialog v-model="pendingEmailDialogVisible" title="待处理邮件" :close-on-click-modal="false" class="custom-dialog"
-    width="700px">
-    <el-table :data="pendingEmailList" :height="400" style="width: 100%">
-      <el-table-column prop="customerName" label="客户名称" width="200"></el-table-column>
-      <el-table-column prop="emailsubject" label="邮件标题" width="200"></el-table-column>
-      <el-table-column prop="create_time" label="时间" width="250">
-        <template #default="scope">
-          {{ scope.row.createTime }}
-        </template>
-      </el-table-column>
-    </el-table>
-  </el-dialog>
-  <el-dialog v-model="overdueEmailDialogVisible" title="超时未处理邮件" :close-on-click-modal="false" class="custom-dialog"
-    width="700px">
-    <el-table :data="overdueEmailList" :height="400" style="width: 100%">
-      <el-table-column prop="customerName" label="客户名称" width="200"></el-table-column>
-      <el-table-column prop="emailsubject" label="邮件标题" width="200"></el-table-column>
-      <el-table-column prop="create_time" label="时间" width="250">
-        <template #default="scope">
-          {{ scope.row.createTime }}
-        </template>
-      </el-table-column>
-    </el-table>
-  </el-dialog>
+
 </template>
 
 <script lang="ts" setup>
@@ -1938,9 +1940,6 @@ const fetchDashboardData = async () => {
   }
 }
 
-onMounted(() => {
-  fetchDashboardData()
-})
 // #endregion
 
 // 添加当前日期的响应式引用
@@ -3405,8 +3404,6 @@ const handleClick = () => {
   var num = 24700000000000 / 510000;
 }
 
-
-
 const UnpaidDetailsTbaleData = ref([])
 const CostDetailsTbaleData = ref([])
 const PaymentrequestDialog = ref(false)
@@ -3747,32 +3744,6 @@ const uploadFilesAndGetUrlString = async (files) => {
 }
 // 确认完成任务
 const confirmTaskCompletion = async () => {
-  // try {
-  //   const res = await request.get(`PlanTasks/ConfirmationOfCompletion/ConfirmItem`, {
-  //     params: {
-  //       ID: currentTask.value.id,
-  //       remark: completionNote.value,
-  //       finishattachmentUrls: completionFileList.value.map(file => file.url).join(',')
-  //     }
-  //   });
-  //   if (res.code === 200) {
-  //     ElMessage.success('任务完成确认成功');
-  //     // 刷新当前日历数据
-  //     const startDate = formatDate(calendarDates.value[0].date)
-  //     const endDate = formatDate(calendarDates.value[calendarDates.value.length - 1].date)
-  //     await getPlanTaskItems(startDate, endDate)
-  //   } else {
-  //     ElMessage.error(res.msg || '确认失败');
-  //   }
-  // } catch (error) {
-  //   console.error('确认失败:', error);
-  //   ElMessage.error('确认失败：' + (error.message || '未知错误'));
-  // } finally {
-  //   confirmDialogVisible.value = false;
-  //   completionNote.value = '';
-  //   currentTask.value = null;
-  // }
-
   try {
     // 显示加载状态
     const loadingInstance = ElLoading.service({
@@ -3853,9 +3824,6 @@ const TaskReminderTableshandlePageChange = (page) => {
 }
 
 // Load data when component mounts
-onMounted(() => {
-  fetchTaskReminderData()
-})
 
 const getTaskReminderList = (params) => {
   return request({
@@ -4089,9 +4057,18 @@ const getOutside24hoursEmailCount = async () => {
   }
 }
 
-onMounted(() => {
-  getWithin24hoursEmailCount()
-  getOutside24hoursEmailCount()
+onMounted(async () => {
+  try {
+    await Promise.all([
+      getWithin24hoursEmailCount(),
+      getOutside24hoursEmailCount(),
+      fetchTaskReminderData(),
+      fetchDashboardData()
+    ])
+  } catch (error) {
+    console.error('数据加载失败:', error)
+    ElMessage.error('数据加载失败，请刷新页面重试')
+  }
 })
 
 const showPendingEmails = async () => {
@@ -4114,33 +4091,31 @@ const showOverdueEmails = async () => {
   }
 }
 
-// 获取路由实例
+
 const router = useRouter()
-
-// 沟通逾期列表双击处理函数
 const handleCommunicationRowDblClick = (row) => {
-  // 如果数据中没有客户ID，添加相应的错误处理
-  if (!row.customerId) {
-    ElMessage.warning('该记录没有关联客户信息')
-    return
-  }
-
   // 关闭当前对话框
   communicationOverdueDialogVisible.value = false
-
   // 跳转到客户资料页面
   router.push({
-    path: 'sale/customerinfomation',  // 客户资料页面的路由路径
+    path: '/sale/customerinfomation',
     query: {
-      id: row.customerId,       // 传递客户ID作为查询参数
-      tabActive: 'basic',
-      openDetail: 'true'
+      customerId: row.customerId
     }
   })
-
-  // 可选：添加消息提示
-  ElMessage.success('正在打开客户资料')
 }
+const handleOverdueEmailRowDblClick = (row) => {
+  // 关闭当前对话框
+  overdueEmailDialogVisible.value = false
+  // 跳转到email页面
+  router.push({
+    path: '/email',
+    query: {
+      id: row.id
+    }
+  })
+}
+
 </script>
 
 

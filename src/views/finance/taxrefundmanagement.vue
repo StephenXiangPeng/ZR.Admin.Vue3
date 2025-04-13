@@ -183,7 +183,7 @@
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="primary" @click="SaveClick()" v-if="isSaveBtnShow">
-						确定保存
+						保存
 					</el-button>
 					<el-button type="primary" @click="EditBtnClick()" v-if="isEdit">
 						编辑

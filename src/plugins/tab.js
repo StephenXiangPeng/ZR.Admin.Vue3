@@ -14,13 +14,21 @@ export default {
         }
       });
     }
-    return useTagsViewStore().delCachedView(obj).then(() => {
-      const { path, query } = obj
+
+    // 使用更可靠的刷新方法 - 先删除缓存，然后重定向刷新
+    return Promise.resolve().then(() => {
+      // 确保先删除缓存
+      if (obj && obj.name) {
+        useTagsViewStore().delCachedView(obj);
+      }
+
+      // 然后进行路由重定向
+      const { path, query } = obj || router.currentRoute.value;
       router.replace({
         path: '/redirect' + path,
         query: query
-      })
-    })
+      });
+    });
   },
   // 关闭当前tab页签，打开新页签
   closeOpenPage(obj) {

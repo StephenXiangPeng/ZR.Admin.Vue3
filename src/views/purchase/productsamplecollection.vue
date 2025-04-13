@@ -38,6 +38,13 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="ProductSampleTableData">
+			<el-table-column prop="isDraft" label="是否草稿" width="100">
+				<template #default="scope">
+					<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
+						{{ scope.row.isDraft === 0 ? '否' : '是' }}
+					</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column prop="type" label="寄样/收样" width="150"></el-table-column>
 			<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="150"></el-table-column>
 			<el-table-column prop="customer_ID" label="寄样对象" width="150"></el-table-column>
@@ -242,7 +249,7 @@
 			<template #footer>
 				<span class="dialog-footer">
 					<!-- 新建时显示的保存按钮 -->
-					<el-button v-if="isViewMode" type="primary" :loading="loading" @click="handleSave">确定保存</el-button>
+					<el-button v-if="isViewMode" type="primary" :loading="loading" @click="handleSave">保存</el-button>
 					<!-- 查看时显示的编辑按钮 -->
 					<el-button v-if="!isViewMode && IsEditDisabled" type="primary" @click="handleEdit">编辑</el-button>
 					<!-- 编辑时显示的保存按钮 -->

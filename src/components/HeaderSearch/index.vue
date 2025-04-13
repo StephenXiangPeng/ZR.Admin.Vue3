@@ -2,25 +2,16 @@
   <div class="header-search">
     <svg-icon class-name="search-icon" name="search" @click.stop="click" />
     <el-dialog v-model="open" width="500" @close="close">
-      <el-select
-        style="width: 100%"
-        ref="headerSearchSelectRef"
-        size="large"
-        v-model="search"
-        :remote-method="querySearch"
-        filterable
-        default-first-option
-        remote
-        popper-class="header-search-select"
-        placement="bottom"
-        placeholder="菜单搜索，支持标题、URL模糊查询"
-        @change="change">
+      <el-select style="width: 100%" ref="headerSearchSelectRef" size="large" v-model="search"
+        :remote-method="querySearch" filterable default-first-option remote popper-class="header-search-select"
+        placement="bottom" placeholder="菜单搜索，支持标题、URL模糊查询" @change="change">
         <template #prefix>
           <el-icon color="#409EFC" class="no-inherit">
             <Search />
           </el-icon>
         </template>
-        <el-option v-for="option in options" :key="option.item.path" :value="option.item" :label="option.item.title.join(' > ')">
+        <el-option v-for="option in options" :key="option.item.path" :value="option.item"
+          :label="option.item.title.join(' > ')">
           <span style="float: left">
             <div>
               {{ option.item.title.join(' > ') }}
@@ -200,11 +191,14 @@ watch(searchPool, (list) => {
   align-items: center;
 
   :deep(.el-dialog) {
+    margin-top: 5vh;
+
     .el-dialog__header {
       display: none !important;
     }
 
     --el-dialog-bg-color: #00000;
+
     .el-dialog__body {
       padding: 0;
     }
@@ -216,6 +210,7 @@ watch(searchPool, (list) => {
     vertical-align: middle;
   }
 }
+
 .path {
   color: #ccc;
   font-size: 10px;

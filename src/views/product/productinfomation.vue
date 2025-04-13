@@ -74,6 +74,14 @@
 						v-if="userId.toString() === '1'">添加产品</el-button>
 					<el-table :data="ProductInfoTableData" row-key="id"
 						:tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
+						<el-table-column prop="isDraft" label="是否草稿" width="100">
+							<template #default="scope">
+								<el-tag v-if="!scope.row.isSubProduct"
+									:type="scope.row.isDraft === 0 ? 'warning' : 'success'">
+									{{ scope.row.isDraft === 0 ? '否' : '是' }}
+								</el-tag>
+							</template>
+						</el-table-column>
 						<el-table-column prop="productCode" label="产品编号" width="200" sortable></el-table-column>
 						<el-table-column prop="chineseProductName" label="中文品名" width="200"></el-table-column>
 						<el-table-column prop="chineseSpecification" label="中文规格" width="200"></el-table-column>
@@ -766,17 +774,24 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
+					<el-button type="info" v-if="showSaveBtn && userId.toString() === '1'"
+						@click="SaveProductinfomation(ProductformRef, true)">
+						保存草稿
+					</el-button>
 					<el-button type="primary" v-if="showSaveBtn && userId.toString() === '1'"
 						@click="SaveProductinfomation(ProductformRef)">
-						确定保存
+						提交
 					</el-button>
 					<el-button type="primary" v-if="showEditBtn && userId.toString() === '1'"
 						@click="EditProductinfomation()">
 						编辑
 					</el-button>
+					<el-button type="info" v-if="showEditSaveBtn && userId.toString() === '1'" @click="EditSaveDraft()">
+						保存草稿
+					</el-button>
 					<el-button type="primary" v-if="showEditSaveBtn && userId.toString() === '1'"
 						@click="EditSaveProductinfomation()">
-						编辑保存
+						提交
 					</el-button>
 				</span>
 			</template>
@@ -955,7 +970,7 @@ const AddSubProduct = () => {
 		subcustomsCode: Productform.customsCode,
 		subchineseDeclarationProductName: Productform.chineseDeclarationProductName,
 		subenglishDeclarationProductName: Productform.englishDeclarationProductName,
-		subinspectionMark: state.optionss.hr_inspectionmark.find((dict) => dict.dictValue === Productform.inspectionMark)?.dictValue,
+		subinspectionMark: state.optionss.hr_inspectionmark.find((dict) => dict.dictValue === Productform.inspectionMark)?.dictValue || '0', // 确保始终有默认值'0'
 		substockQuantity: Productform.stockQuantity,
 		subdevelopmentEventDate: Productform.developmentEventDate,
 		subrecentRecommendation: Productform.recentRecommendation,
@@ -1183,6 +1198,7 @@ const clearProductform = () => {
 	Productform.productDescription = '';
 	Productform.customerGoodsNumber = '';
 	Productform.Supplier = '';
+	Productform.isDraft = 0; // 默认不是草稿
 }
 
 //  上传主产品图片
@@ -1504,6 +1520,7 @@ interface Productform {
 	outerboxgrossweight: number;
 	//子产品
 	subProductItems: typeof SubProductTableData.value;
+	isDraft: number;  // 添加isDraft字段，0表示否，1表示是
 }
 
 const ProductformRef = ref<FormInstance>()
@@ -1547,7 +1564,8 @@ const Productform = reactive<Productform>({
 	outerboxgrossweight: 0,
 	// 新增 subProductItems 数组
 	subProductItems: SubProductTableData.value,
-	productDescription: ''
+	productDescription: '',
+	isDraft: 0 // 添加isDraft字段，0表示非草稿
 })
 
 // 保存原始产品编号，用于编辑时比较
@@ -1685,193 +1703,215 @@ const checkProductCodeDuplicate = async () => {
 }
 
 //新增保存产品信息
-const SaveProductinfomation = async (formEl: FormInstance | undefined) => {
+const SaveProductinfomation = async (formEl: FormInstance | undefined, isDraftMode: boolean = false) => {
+	// 如果是草稿模式，直接保存，不需要表单验证
+	if (isDraftMode) {
+		await saveProductInfo(true);
+		return;
+	}
+
+	// 如果是正式提交，需要验证表单
 	if (!formEl) return
+
 	await formEl.validate(async (valid, fields) => {
 		if (valid) {
-			try {
-				const productInfoRequest = {
-					ProductCategoriesID: SelectNodeId.value,
-					ProductCode: Productform.productCode,
-					ProductBarcode: Productform.productBarcode,
-					ChineseProductName: Productform.chineseProductName,
-					EnglishProductName: Productform.englishProductName,
-					ChineseSpecification: Productform.chineseSpecification,
-					EnglishSpecification: Productform.englishSpecification,
-					UnitOfMeasurement: Productform.unit,
-					CustomsCode: Productform.customsCode,
-					ChineseDeclarationProductName: Productform.chineseDeclarationProductName,
-					EnglishDeclarationProductName: Productform.englishDeclarationProductName,
-					InspectionMark: Productform.inspectionMark,
-					StockQuantity: Productform.stockQuantity,
-					DevelopmentEventDate: Productform.developmentEventDate,
-					RecentRecommendation: Productform.recentRecommendation,
-					RecentSampleShipment: Productform.recentSampleShipment,
-					RecentQuotation: Productform.recentQuotation,
-					RecentTransactionDate: Productform.recentTransactionDate,
-					ProductLength: Productform.productLength,
-					ProductWidth: Productform.productwidth,
-					ProductHeight: Productform.productheight,
-					ProductWeight: Productform.productweight,
-					MediumPackagingVolume: Productform.mediumpackagingvolume,
-					OuterBoxPackingQuantity: Productform.outerboxpackingquantity,
-					OuterBoxLength: Productform.outerboxlength,
-					OuterBoxWidth: Productform.outerboxwidth,
-					OuterBoxHeight: Productform.outerboxheight,
-					OuterBoxVolume: Productform.outerboxvolume,
-					OuterBoxNetWeight: Productform.outerboxnetweight,
-					OuterBoxGrossWeight: Productform.outerboxgrossweight,
-					ProductPhotoPath: '',
-					PackingMethod: Productform.PackingMethod,
-					Remark: '',
-					SupplierID: Array.isArray(Productform.Supplier) ? Productform.Supplier.join(',') : Productform.Supplier,
-					ProductDescription: Productform.productDescription,
-					subProductItems: [],
-					CustomerGoodsNumber: Productform.customerGoodsNumber == null || Productform.customerGoodsNumber == undefined ? '无' : Productform.customerGoodsNumber,
-					developers: Productform.developmentPersonnel
-				};
-				// 上传主产品图片
-				let mainProductImageUrls = [];
-				if (Array.isArray(fileList.value) && fileList.value.length > 0) {
-					mainProductImageUrls = await Promise.all(fileList.value.map(async (file) => {
-						const response = await uploadProductPhoto(file);
-						return response.data.url;
-					}));
-				}
-				productInfoRequest.ProductPhotoPath = mainProductImageUrls.join(',');
-				// 处理子产品
-				if (Array.isArray(SubProductTableData.value) && SubProductTableData.value.length > 0) {
-					// 先进行所有子产品的验证
-					const validationErrors = SubProductTableData.value.flatMap((subProduct, index) => {
-						const errors = [];
-						if (subProduct.subProductCode == '' || subProduct.subProductCode == null || subProduct.subProductCode == undefined) {
-							errors.push(`子产品 ${index + 1}: 请输入子产品编号;`);
-						}
-						if (subProduct.subchineseProductName == '' || subProduct.subchineseProductName == null || subProduct.subchineseProductName == undefined) {
-							errors.push(`子产品 ${index + 1}: 请输入中文品名;`);
-						}
-						if (subProduct.subenglishProductName == '' || subProduct.subenglishProductName == null || subProduct.subenglishProductName == undefined) {
-							errors.push(`子产品 ${index + 1}: 请输入英文品名;`);
-						}
-						if (subProduct.subchineseSpecification == '' || subProduct.subchineseSpecification == null || subProduct.subchineseSpecification == undefined) {
-							errors.push(`子产品 ${index + 1}: 请输入中文规格;`);
-						}
-						if (subProduct.subunit == '' || subProduct.subunit == null || subProduct.subunit == undefined) {
-							errors.push(`子产品 ${index + 1}: 请选择计量单位;`);
-						}
-						if (subProduct.subPackingMethod == '' || subProduct.subPackingMethod == null || subProduct.subPackingMethod == undefined) {
-							errors.push(`子产品 ${index + 1}: 请选择包装方式;`);
-						}
-						if (subProduct.subcustomsCode == '' || subProduct.subcustomsCode == null || subProduct.subcustomsCode == undefined) {
-							errors.push(`子产品 ${index + 1}: 请输入海关编码;`);
-						}
-						if (subProduct.subchineseDeclarationProductName == '' || subProduct.subchineseDeclarationProductName == null || subProduct.subchineseDeclarationProductName == undefined) {
-							errors.push(`子产品 ${index + 1}: 请输入中文报关品名;`);
-						}
-						if (subProduct.subenglishDeclarationProductName == '' || subProduct.subenglishDeclarationProductName == null || subProduct.subenglishDeclarationProductName == undefined) {
-							errors.push(`子产品 ${index + 1}: 请输入英文报关品名;`);
-						}
-						if (subProduct.subinspectionMark == '' || subProduct.subinspectionMark == null || subProduct.subinspectionMark == undefined) {
-							errors.push(`子产品 ${index + 1}: 请选择商检标志;`);
-						}
-						return errors;
-					});
-					// 如果有验证错误，显示错误信息并中断保存过程
-					if (validationErrors.length > 0) {
-						ElMessage({
-							message: validationErrors.join('\r\n'),
-							type: 'warning',
-							duration: 5000,
-							showClose: true
-						});
-						return; // 中断保存过程
-					}
-					productInfoRequest.subProductItems = await Promise.all(SubProductTableData.value.map(async subProduct => {
-						// 上传子产品图片
-						let subProductImageUrls = [];
-						if (Array.isArray(subProduct.subproductImages) && subProduct.subproductImages.length > 0) {
-							subProductImageUrls = await Promise.all(subProduct.subproductImages.map(async (file) => {
-								const response = await uploadProductPhoto(file);
-								return response.data.url;
-							}));
-						}
-						//上传子产品附件
-						let subProductFileUrls = [];
-						if (Array.isArray(subProduct.productFiles) && subProduct.productFiles.length > 0) {
-							subProductFileUrls = await Promise.all(subProduct.productFiles.map(async (file) => {
-								if (file.isChanged) {
-									const response = await uploadSubProductFile(file.raw || file);
-									return response.data.downloadurl;
-								} else {
-									return file.url; // 如果文件没有改变，直接使用原有的URL
-								}
-							}));
-						}
-						return {
-							mainProductCode: productInfoRequest.ProductCode,
-							subProductCode: productInfoRequest.ProductCode + '-' + subProduct.subProductCode,
-							subProductImages: subProductImageUrls.join(','),
-							subProductBarcode: subProduct.subproductBarcode,
-							subChineseProductName: subProduct.subchineseProductName,
-							subEnglishProductName: subProduct.subenglishProductName,
-							subChineseSpecification: subProduct.subchineseSpecification,
-							subEnglishSpecification: subProduct.subenglishSpecification,
-							subUnit: subProduct.subunit,
-							subCustomsCode: subProduct.subcustomsCode,
-							subChineseDeclarationProductName: subProduct.subchineseDeclarationProductName,
-							subEnglishDeclarationProductName: subProduct.subenglishDeclarationProductName,
-							subInspectionMark: subProduct.subinspectionMark,
-							subStockQuantity: subProduct.substockQuantity,
-							subDevelopmentEventDate: subProduct.subdevelopmentEventDate,
-							subRecentRecommendation: subProduct.subrecentRecommendation,
-							subRecentSampleShipment: subProduct.subrecentSampleShipment,
-							subRecentQuotation: subProduct.subrecentQuotation,
-							subRecentTransactionDate: subProduct.subrecentTransactionDate,
-							subProductLength: subProduct.subproductLength,
-							subProductWidth: subProduct.subproductWidth,
-							subProductHeight: subProduct.subproductHeight,
-							subProductWeight: subProduct.subproductWeight,
-							subMediumPackagingVolume: subProduct.submediumPackagingVolume,
-							subOuterBoxPackingQuantity: subProduct.subouterBoxPackingQuantity,
-							subOuterBoxLength: subProduct.subouterBoxLength,
-							subOuterBoxWidth: subProduct.subouterBoxWidth,
-							subOuterBoxHeight: subProduct.subouterBoxHeight,
-							subOuterBoxVolume: subProduct.subouterBoxVolume,
-							subOuterBoxNetWeight: subProduct.subouterBoxNetWeight,
-							subOuterBoxGrossWeight: subProduct.subouterBoxGrossWeight,
-							subpackingMethod: subProduct.subPackingMethod,
-							subProductFiles: subProductFileUrls.join(','),
-							subCustomerGoodsNumber: subProduct.subcustomerGoodsNumber == null || subProduct.subcustomerGoodsNumber == undefined ? '无' : subProduct.subcustomerGoodsNumber,
-							developers: subProduct.developers,
-							subProductRemark: subProduct.subProductRemark == null || subProduct.subProductRemark == undefined ? '无' : subProduct.subProductRemark
-						};
-					}));
-				}
-				console.log(productInfoRequest);
-				const response = await request.post('ProductInformation/AddProductInformation/Add', productInfoRequest);
-				if (response != null) {
-					ElMessage({
-						message: response.msg,
-						type: 'success'
-					})
-					filelistUrlStr.value = '';
-					GetProductInfoList(currentPage.value, pageSize.value);
-					AddProductDialog.value = false
-				} else {
-					throw new Error(response.data.message || '保存失败');
-				}
-			} catch (error) {
-				console.error('保存产品信息时出错：', error);
-				ElMessage({
-					message: '保存产品信息失败: ' + error.message,
-					type: 'error'
-				});
-			}
+			await saveProductInfo(false);
 		} else {
 			console.log('error submit!', fields)
 		}
 	})
 };
+
+// 提取公共的保存产品信息逻辑
+const saveProductInfo = async (isDraftMode: boolean) => {
+	try {
+		const productInfoRequest = {
+			ProductCategoriesID: SelectNodeId.value,
+			ProductCode: Productform.productCode,
+			ProductBarcode: Productform.productBarcode,
+			ChineseProductName: Productform.chineseProductName,
+			EnglishProductName: Productform.englishProductName,
+			ChineseSpecification: Productform.chineseSpecification,
+			EnglishSpecification: Productform.englishSpecification,
+			UnitOfMeasurement: Productform.unit,
+			CustomsCode: Productform.customsCode,
+			ChineseDeclarationProductName: Productform.chineseDeclarationProductName,
+			EnglishDeclarationProductName: Productform.englishDeclarationProductName,
+			InspectionMark: Productform.inspectionMark,
+			StockQuantity: Productform.stockQuantity,
+			DevelopmentEventDate: Productform.developmentEventDate,
+			RecentRecommendation: Productform.recentRecommendation,
+			RecentSampleShipment: Productform.recentSampleShipment,
+			RecentQuotation: Productform.recentQuotation,
+			RecentTransactionDate: Productform.recentTransactionDate,
+			ProductLength: Productform.productLength,
+			ProductWidth: Productform.productwidth,
+			ProductHeight: Productform.productheight,
+			ProductWeight: Productform.productweight,
+			MediumPackagingVolume: Productform.mediumpackagingvolume,
+			OuterBoxPackingQuantity: Productform.outerboxpackingquantity,
+			OuterBoxLength: Productform.outerboxlength,
+			OuterBoxWidth: Productform.outerboxwidth,
+			OuterBoxHeight: Productform.outerboxheight,
+			OuterBoxVolume: Productform.outerboxvolume,
+			OuterBoxNetWeight: Productform.outerboxnetweight,
+			OuterBoxGrossWeight: Productform.outerboxgrossweight,
+			ProductPhotoPath: '',
+			PackingMethod: Productform.PackingMethod,
+			Remark: '',
+			SupplierID: Array.isArray(Productform.Supplier) ? Productform.Supplier.join(',') : Productform.Supplier,
+			ProductDescription: Productform.productDescription,
+			subProductItems: [],
+			CustomerGoodsNumber: Productform.customerGoodsNumber == null || Productform.customerGoodsNumber == undefined ? '无' : Productform.customerGoodsNumber,
+			developers: Productform.developmentPersonnel,
+			IsDraft: isDraftMode ? 1 : 0, // 设置草稿状态
+		};
+		// 上传主产品图片
+		let mainProductImageUrls = [];
+		if (Array.isArray(fileList.value) && fileList.value.length > 0) {
+			mainProductImageUrls = await Promise.all(fileList.value.map(async (file) => {
+				const response = await uploadProductPhoto(file);
+				return response.data.url;
+			}));
+		}
+		productInfoRequest.ProductPhotoPath = mainProductImageUrls.join(',');
+
+		// 处理子产品
+		if (Array.isArray(SubProductTableData.value) && SubProductTableData.value.length > 0) {
+			// 如果不是草稿模式，需要验证子产品
+			if (!isDraftMode) {
+				// 先进行所有子产品的验证
+				const validationErrors = SubProductTableData.value.flatMap((subProduct, index) => {
+					const errors = [];
+					if (subProduct.subProductCode == '' || subProduct.subProductCode == null || subProduct.subProductCode == undefined) {
+						errors.push(`子产品 ${index + 1}: 请输入子产品编号;`);
+					}
+					if (subProduct.subchineseProductName == '' || subProduct.subchineseProductName == null || subProduct.subchineseProductName == undefined) {
+						errors.push(`子产品 ${index + 1}: 请输入中文品名;`);
+					}
+					if (subProduct.subenglishProductName == '' || subProduct.subenglishProductName == null || subProduct.subenglishProductName == undefined) {
+						errors.push(`子产品 ${index + 1}: 请输入英文品名;`);
+					}
+					if (subProduct.subchineseSpecification == '' || subProduct.subchineseSpecification == null || subProduct.subchineseSpecification == undefined) {
+						errors.push(`子产品 ${index + 1}: 请输入中文规格;`);
+					}
+					if (subProduct.subunit == '' || subProduct.subunit == null || subProduct.subunit == undefined) {
+						errors.push(`子产品 ${index + 1}: 请选择计量单位;`);
+					}
+					if (subProduct.subPackingMethod == '' || subProduct.subPackingMethod == null || subProduct.subPackingMethod == undefined) {
+						errors.push(`子产品 ${index + 1}: 请选择包装方式;`);
+					}
+					if (subProduct.subcustomsCode == '' || subProduct.subcustomsCode == null || subProduct.subcustomsCode == undefined) {
+						errors.push(`子产品 ${index + 1}: 请输入海关编码;`);
+					}
+					if (subProduct.subchineseDeclarationProductName == '' || subProduct.subchineseDeclarationProductName == null || subProduct.subchineseDeclarationProductName == undefined) {
+						errors.push(`子产品 ${index + 1}: 请输入中文报关品名;`);
+					}
+					if (subProduct.subenglishDeclarationProductName == '' || subProduct.subenglishDeclarationProductName == null || subProduct.subenglishDeclarationProductName == undefined) {
+						errors.push(`子产品 ${index + 1}: 请输入英文报关品名;`);
+					}
+					if (subProduct.subinspectionMark == '' || subProduct.subinspectionMark == null || subProduct.subinspectionMark == undefined) {
+						errors.push(`子产品 ${index + 1}: 请选择商检标志;`);
+					}
+					return errors;
+				});
+
+				// 如果有验证错误，显示错误信息并中断保存过程
+				if (validationErrors.length > 0) {
+					ElMessage({
+						message: validationErrors.join('\r\n'),
+						type: 'warning',
+						duration: 5000,
+						showClose: true
+					});
+					return; // 中断保存过程
+				}
+			}
+
+			productInfoRequest.subProductItems = await Promise.all(SubProductTableData.value.map(async subProduct => {
+				// 上传子产品图片
+				let subProductImageUrls = [];
+				if (Array.isArray(subProduct.subproductImages) && subProduct.subproductImages.length > 0) {
+					subProductImageUrls = await Promise.all(subProduct.subproductImages.map(async (file) => {
+						const response = await uploadProductPhoto(file);
+						return response.data.url;
+					}));
+				}
+				//上传子产品附件
+				let subProductFileUrls = [];
+				if (Array.isArray(subProduct.productFiles) && subProduct.productFiles.length > 0) {
+					subProductFileUrls = await Promise.all(subProduct.productFiles.map(async (file) => {
+						if (file.isChanged) {
+							const response = await uploadSubProductFile(file.raw || file);
+							return response.data.downloadurl;
+						} else {
+							return file.url; // 如果文件没有改变，直接使用原有的URL
+						}
+					}));
+				}
+				return {
+					mainProductCode: productInfoRequest.ProductCode,
+					subProductCode: productInfoRequest.ProductCode + '-' + subProduct.subProductCode,
+					subProductImages: subProductImageUrls.join(','),
+					subProductBarcode: subProduct.subproductBarcode,
+					subChineseProductName: subProduct.subchineseProductName,
+					subEnglishProductName: subProduct.subenglishProductName,
+					subChineseSpecification: subProduct.subchineseSpecification,
+					subEnglishSpecification: subProduct.subenglishSpecification,
+					subUnit: subProduct.subunit,
+					subCustomsCode: subProduct.subcustomsCode,
+					subChineseDeclarationProductName: subProduct.subchineseDeclarationProductName,
+					subEnglishDeclarationProductName: subProduct.subenglishDeclarationProductName,
+					subInspectionMark: subProduct.subinspectionMark,
+					subStockQuantity: subProduct.substockQuantity,
+					subDevelopmentEventDate: subProduct.subdevelopmentEventDate,
+					subRecentRecommendation: subProduct.subrecentRecommendation,
+					subRecentSampleShipment: subProduct.subrecentSampleShipment,
+					subRecentQuotation: subProduct.subrecentQuotation,
+					subRecentTransactionDate: subProduct.subrecentTransactionDate,
+					subProductLength: subProduct.subproductLength,
+					subProductWidth: subProduct.subproductWidth,
+					subProductHeight: subProduct.subproductHeight,
+					subProductWeight: subProduct.subproductWeight,
+					subMediumPackagingVolume: subProduct.submediumPackagingVolume,
+					subOuterBoxPackingQuantity: subProduct.subouterBoxPackingQuantity,
+					subOuterBoxLength: subProduct.subouterBoxLength,
+					subOuterBoxWidth: subProduct.subouterBoxWidth,
+					subOuterBoxHeight: subProduct.subouterBoxHeight,
+					subOuterBoxVolume: subProduct.subouterBoxVolume,
+					subOuterBoxNetWeight: subProduct.subouterBoxNetWeight,
+					subOuterBoxGrossWeight: subProduct.subouterBoxGrossWeight,
+					subpackingMethod: subProduct.subPackingMethod,
+					subProductFiles: subProductFileUrls.join(','),
+					subCustomerGoodsNumber: subProduct.subcustomerGoodsNumber == null || subProduct.subcustomerGoodsNumber == undefined ? '无' : subProduct.subcustomerGoodsNumber,
+					developers: subProduct.developers,
+					subProductRemark: subProduct.subProductRemark == null || subProduct.subProductRemark == undefined ? '无' : subProduct.subProductRemark
+				};
+			}));
+		}
+
+		console.log(productInfoRequest);
+		const response = await request.post('ProductInformation/AddProductInformation/Add', productInfoRequest);
+		if (response != null) {
+			ElMessage({
+				message: isDraftMode ? '草稿保存成功' : '产品提交成功',
+				type: 'success'
+			})
+			filelistUrlStr.value = '';
+			GetProductInfoList(currentPage.value, pageSize.value);
+			AddProductDialog.value = false
+		} else {
+			throw new Error(response.data.message || (isDraftMode ? '保存草稿失败' : '提交失败'));
+		}
+	} catch (error) {
+		console.error(isDraftMode ? '保存草稿时出错：' : '提交产品信息时出错：', error);
+		ElMessage({
+			message: isDraftMode ? '保存草稿失败: ' + error.message : '提交产品信息失败: ' + error.message,
+			type: 'error'
+		});
+	}
+};
+
 // 辅助函数：上传产品图片
 const uploadProductPhoto = async (file) => {
 	const formData = new FormData();
@@ -2354,7 +2394,8 @@ const EditSaveProductinfomation = async () => {
 			ProductDescription: Productform.productDescription,
 			subProductItems: [],
 			CustomerGoodsNumber: Productform.customerGoodsNumber == null || Productform.customerGoodsNumber == undefined ? '无' : Productform.customerGoodsNumber,
-			developers: Productform.developmentPersonnel
+			developers: Productform.developmentPersonnel,
+			IsDraft: 0 // 设置为正式保存，不是草稿
 		};
 
 		// 处理主产品图片
@@ -2481,7 +2522,7 @@ const EditSaveProductinfomation = async () => {
 					subOuterBoxVolume: subProduct.subouterBoxVolume,
 					subOuterBoxNetWeight: subProduct.subouterBoxNetWeight,
 					subOuterBoxGrossWeight: subProduct.subouterBoxGrossWeight,
-					subPackingMethod: subProduct.subPackingMethod,
+					subpackingMethod: subProduct.subPackingMethod,
 					subProductFiles: subProductFileUrls
 						.filter(url => url && url.trim()) // 过滤掉空值和空白字符
 						.join(','),
@@ -2854,6 +2895,169 @@ const moveToTopLevel = () => {
 	});
 }
 
+const hasSubProducts = computed(() => {
+	return ProductInfoTableData.value.some(item => item.subProductItems && item.subProductItems.length > 0);
+});
+
+// 编辑保存草稿功能
+const EditSaveDraft = async () => {
+	try {
+		const editProductInfoRequest = {
+			id: EditProductID.value,
+			ProductCategoriesID: Productform.ProductCategories,
+			productCode: Productform.productCode,
+			productBarcode: Productform.productBarcode,
+			chineseProductName: Productform.chineseProductName,
+			englishProductName: Productform.englishProductName,
+			chineseSpecification: Productform.chineseSpecification,
+			englishSpecification: Productform.englishSpecification,
+			unitOfMeasurement: Productform.unit,
+			customsCode: Productform.customsCode,
+			chineseDeclarationProductName: Productform.chineseDeclarationProductName,
+			englishDeclarationProductName: Productform.englishDeclarationProductName,
+			inspectionMark: Productform.inspectionMark,
+			stockQuantity: Number(Productform.stockQuantity),
+			developmentEventDate: Productform.developmentEventDate,
+			RecentRecommendation: Productform.recentRecommendation || '',
+			RecentSampleShipment: Productform.recentSampleShipment || '',
+			RecentQuotation: Productform.recentQuotation || '',
+			recentTransactionDate: Productform.recentTransactionDate,
+			productPhotoPath: '',
+			ProductLength: Productform.productLength,
+			ProductWidth: Productform.productwidth,
+			ProductHeight: Productform.productheight,
+			ProductWeight: Productform.productweight,
+			MediumPackagingVolume: Productform.mediumpackagingvolume,
+			OuterBoxPackingQuantity: Productform.outerboxpackingquantity,
+			OuterBoxLength: Productform.outerboxlength,
+			OuterBoxWidth: Productform.outerboxwidth,
+			OuterBoxHeight: Productform.outerboxheight,
+			OuterBoxVolume: Productform.outerboxvolume,
+			OuterBoxNetWeight: Productform.outerboxnetweight,
+			OuterBoxGrossWeight: Productform.outerboxgrossweight,
+			PackingMethod: Productform.PackingMethod,
+			Remark: '',
+			SupplierID: Array.isArray(Productform.Supplier) ? Productform.Supplier.join(',') : Productform.Supplier,
+			ProductDescription: Productform.productDescription,
+			subProductItems: [],
+			CustomerGoodsNumber: Productform.customerGoodsNumber == null || Productform.customerGoodsNumber == undefined ? '无' : Productform.customerGoodsNumber,
+			developers: Productform.developmentPersonnel,
+			IsDraft: 1 // 设置为草稿
+		};
+
+		// 处理主产品图片
+		let mainProductImageUrls = [];
+		if (Array.isArray(fileList.value) && fileList.value.length > 0) {
+			mainProductImageUrls = await Promise.all(fileList.value.map(async (file) => {
+				if (file.isChanged) {
+					const response = await uploadProductPhoto(file);
+					return response.data.url;
+				} else {
+					return file.url; // 如果图片没有变动，直接使用原有的 URL
+				}
+			}));
+		}
+		editProductInfoRequest.productPhotoPath = mainProductImageUrls.join(',');
+
+		// 处理子产品
+		if (Array.isArray(SubProductTableData.value) && SubProductTableData.value.length > 0) {
+			// 草稿模式不需要验证子产品
+			editProductInfoRequest.subProductItems = await Promise.all(SubProductTableData.value.map(async subProduct => {
+				// 上传子产品图片
+				let subProductImageUrls = [];
+				if (Array.isArray(subProduct.subproductImages) && subProduct.subproductImages.length > 0) {
+					subProductImageUrls = await Promise.all(subProduct.subproductImages.map(async (file) => {
+						if (file.isChanged) {
+							const response = await uploadProductPhoto(file);
+							return response.data.url;
+						} else {
+							return file.url; // 如果图片没有变动，直接使用原有的 URL
+						}
+					}));
+				}
+				// 处理子产品附件
+				let subProductFileUrls = [];
+				if (Array.isArray(subProduct.productFiles) && subProduct.productFiles.length > 0) {
+					subProductFileUrls = await Promise.all(
+						subProduct.productFiles
+							.filter(file => file && (file.originalPath || file.raw)) // 确保文件有效
+							.map(async (file) => {
+								if (file.isChanged) {
+									// 新上传的文件
+									const response = await uploadSubProductFile(file.raw || file);
+									return response.data.downloadurl;
+								} else {
+									// 保留原有文件的原始路径
+									return file.originalPath;
+								}
+							})
+					);
+				}
+				return {
+					ID: subProduct.ID,
+					mainProductCode: editProductInfoRequest.productCode,
+					subProductCode: editProductInfoRequest.productCode + '-' + subProduct.subProductCode,
+					subProductImages: subProductImageUrls.join(','),
+					subProductBarcode: subProduct.subproductBarcode,
+					subChineseProductName: subProduct.subchineseProductName,
+					subEnglishProductName: subProduct.subenglishProductName,
+					subChineseSpecification: subProduct.subchineseSpecification,
+					subEnglishSpecification: subProduct.subenglishSpecification,
+					subUnit: subProduct.subunit,
+					subCustomsCode: subProduct.subcustomsCode,
+					subChineseDeclarationProductName: subProduct.subchineseDeclarationProductName,
+					subEnglishDeclarationProductName: subProduct.subenglishDeclarationProductName,
+					subInspectionMark: subProduct.subinspectionMark || '0', // 为隐藏字段提供默认值'0'
+					subStockQuantity: subProduct.substockQuantity,
+					subDevelopmentEventDate: subProduct.subdevelopmentEventDate,
+					subRecentRecommendation: subProduct.subrecentRecommendation,
+					subRecentSampleShipment: subProduct.subrecentSampleShipment,
+					subRecentQuotation: subProduct.subrecentQuotation,
+					subRecentTransactionDate: subProduct.subrecentTransactionDate,
+					subProductLength: subProduct.subproductLength,
+					subProductWidth: subProduct.subproductWidth,
+					subProductHeight: subProduct.subproductHeight,
+					subProductWeight: subProduct.subproductWeight,
+					subMediumPackagingVolume: subProduct.submediumPackagingVolume,
+					subOuterBoxPackingQuantity: subProduct.subouterBoxPackingQuantity,
+					subOuterBoxLength: subProduct.subouterBoxLength,
+					subOuterBoxWidth: subProduct.subouterBoxWidth,
+					subOuterBoxHeight: subProduct.subouterBoxHeight,
+					subOuterBoxVolume: subProduct.subouterBoxVolume,
+					subOuterBoxNetWeight: subProduct.subouterBoxNetWeight,
+					subOuterBoxGrossWeight: subProduct.subouterBoxGrossWeight,
+					subPackingMethod: subProduct.subPackingMethod,
+					subProductFiles: subProductFileUrls
+						.filter(url => url && url.trim()) // 过滤掉空值和空白字符
+						.join(','),
+					subCustomerGoodsNumber: subProduct.subcustomerGoodsNumber == null || subProduct.subcustomerGoodsNumber == undefined ? '无' : subProduct.subcustomerGoodsNumber,
+					developers: subProduct.developers,
+					subProductRemark: subProduct.subProductRemark == null || subProduct.subProductRemark == undefined ? '无' : subProduct.subProductRemark
+				};
+			}));
+		}
+
+		const response = await request.post('ProductInformation/UpdateProductInfo/Edit', editProductInfoRequest);
+		if (response != null) {
+			ElMessage({
+				message: '草稿保存成功',
+				type: 'success'
+			});
+			filelistUrlStr.value = '';
+			AddProductDialog.value = false;
+			getProductCategories();
+			GetProductInfoList(currentPage.value, pageSize.value);
+		} else {
+			throw new Error(response.data.message || '保存草稿失败');
+		}
+	} catch (error) {
+		console.error('保存草稿时出错：', error);
+		ElMessage({
+			message: '保存草稿失败: ' + error.message,
+			type: 'error'
+		});
+	}
+};
 </script>
 <style lang="scss" scoped>
 .image-preview-container {

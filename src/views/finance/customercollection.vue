@@ -35,6 +35,13 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="customercollectiontableData">
+			<el-table-column type="isDraft" label="是否草稿" width="100">
+				<template #default="scope">
+					<el-tag :type="scope.row.isDraft === 1 ? 'warning' : 'success'">
+						{{ scope.row.isDraft === 1 ? '是' : '否' }}
+					</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column prop="receiptNumber" label="收款单号" width="150"></el-table-column>
 			<el-table-column prop="receiptDate" label="收汇日期" width="150"
 				:formatter="(row, column, cellValue) => formatDate(cellValue)"></el-table-column>
@@ -155,10 +162,13 @@
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="primary" v-if="isSaveBtnShow" @click="SaveCustomerCollection()">
-						确定保存
+						保存草稿
 					</el-button>
 					<el-button type="primary" v-if="isEditSaveBtnShow" @click="SaveCustomerCollection()">
-						编辑保存
+						编辑保存草稿
+					</el-button>
+					<el-button type="primary" v-if="isSubmitBtnShow" @click="SubmitCustomerCollection()">
+						提交
 					</el-button>
 				</span>
 			</template>
@@ -170,7 +180,6 @@ import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
 import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 import { get } from 'sortablejs';
-import { el } from 'element-plus/es/locale';
 
 // 添加格式化日期函数
 const formatDate = (dateString) => {
@@ -234,6 +243,10 @@ const handleDelete = (row) => {
 
 // 添加新方法
 const openAddCustomerCollection = () => {
+	if (EditID.value == 0) {
+		isSaveBtnShow.value = true;
+		isSubmitBtnShow.value = true;
+	}
 	addcustomercollectiondialog.value = true;
 	addcustomercollectionform.value.receiptDate = new Date().toLocaleDateString();
 	getNewReceiptNumber();
@@ -266,7 +279,7 @@ const fileList = ref<CustomUploadFile[]>([]);
 const isEdit = ref(false);
 const isSaveBtnShow = ref(true);
 const isEditSaveBtnShow = ref(false);
-
+const isSubmitBtnShow = ref(false);
 
 /*动态下拉框start*/
 const proxy = getCurrentInstance().proxy
@@ -403,12 +416,13 @@ const customerCollectionsRequest = reactive({
 	ReceiptDate: null,
 	OurCompany: "",
 	ForeignCurrency: "",
-	ExchangeRate: null,
-	Amount: null,
+	ExchangeRate: 0,
+	Amount: 0,
 	Bank: "",
 	ReceiptImageUrl: "",
 	Remark: "",
-	IsDelete: 0
+	IsDelete: 0,
+	isDraft: 1
 })
 
 //保存收款单据
@@ -424,8 +438,8 @@ const SaveCustomerCollection = async () => {
 		customerCollectionsRequest.ReceiptDate = addcustomercollectionform.value.receiptDate;
 		customerCollectionsRequest.OurCompany = addcustomercollectionform.value.ourCompany;
 		customerCollectionsRequest.ForeignCurrency = addcustomercollectionform.value.foreignCurrency;
-		customerCollectionsRequest.ExchangeRate = addcustomercollectionform.value.exchangeRate;
-		customerCollectionsRequest.Amount = addcustomercollectionform.value.amount;
+		customerCollectionsRequest.ExchangeRate = Number(addcustomercollectionform.value.exchangeRate);
+		customerCollectionsRequest.Amount = Number(addcustomercollectionform.value.amount);
 		customerCollectionsRequest.Bank = addcustomercollectionform.value.bank;
 		// 上传图片
 		let receiptImageUrls = [];
@@ -547,19 +561,27 @@ function GetCustomerCollectionsList(start, end) {
 
 const EditID = ref(0);
 const CheckCustomerCollectionDetails = (row) => {
-	isEdit.value = true;
-	isSaveBtnShow.value = false;
-	isEditSaveBtnShow.value = true;
 	EditID.value = row.id;
+	if (row.isDraft === 1) {
+		isSubmitBtnShow.value = true;
+		isEdit.value = true;
+		isSaveBtnShow.value = false;
+		isEditSaveBtnShow.value = true;
+	} else {
+		isSubmitBtnShow.value = false;
+		isEdit.value = false;
+		isSaveBtnShow.value = false;
+		isEditSaveBtnShow.value = false;
 
+	}
 	// 基本信息赋值
 	addcustomercollectionform.value.receiptNumber = row.receiptNumber;
 	addcustomercollectionform.value.receiptDate = row.receiptDate;
-	addcustomercollectionform.value.ourCompany = state.optionss.hr_ourcompany.find((dict) => dict.dictLabel === row.ourCompany)?.dictValue;
-	addcustomercollectionform.value.foreignCurrency = state.optionss.hr_export_currency.find((dict) => dict.dictLabel === row.foreignCurrency)?.dictValue;
+	addcustomercollectionform.value.ourCompany = state.optionss.hr_ourcompany.find((dict) => dict.dictLabel === row.ourCompany)?.dictValue || '';
+	addcustomercollectionform.value.foreignCurrency = state.optionss.hr_export_currency.find((dict) => dict.dictLabel === row.foreignCurrency)?.dictValue || '';
 	addcustomercollectionform.value.exchangeRate = row.exchangeRate;
 	addcustomercollectionform.value.amount = row.amount;
-	addcustomercollectionform.value.bank = state.optionss.hr_bank.find((dict) => dict.dictLabel === row.bank)?.dictValue;
+	addcustomercollectionform.value.bank = state.optionss.hr_bank.find((dict) => dict.dictLabel === row.bank)?.dictValue || '';
 
 	// 清空现有图片列表
 	fileList.value = [];
@@ -614,5 +636,46 @@ const addcustomercollectionform = ref({
 	attachment: ''
 })
 
+const SubmitCustomerCollection = async () => {
+	try {
+		await ElMessageBox.confirm('确定提交该收款单据吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning',
+		});
 
+		if (EditID.value === 0) {
+			// First save the draft
+			await SaveCustomerCollection();
+		}
+
+		// Then update the draft status
+		const response = await request({
+			url: 'CustomerCollections/UpdateCustomerCollectionsIsDraft/UpdateIsDraft',
+			method: 'get',
+			params: {
+				ID: EditID.value
+			}
+		});
+
+		if (response.code === 200) {
+			ElMessage({
+				type: 'success',
+				message: response.msg
+			});
+			Closeaddcustomercollectiondialog();
+			GetCustomerCollectionsList(currentPage.value, pageSize.value);
+		} else {
+			ElMessage({
+				type: 'error',
+				message: response.msg || '提交失败'
+			});
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('提交收款单据出错：', error);
+			ElMessage.error('提交收款单据失败');
+		}
+	}
+}
 </script>

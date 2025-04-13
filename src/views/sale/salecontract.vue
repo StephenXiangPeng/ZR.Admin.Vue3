@@ -49,6 +49,13 @@
 			<el-table :data="contractsTableData" style="width: 100%">
 				<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
+				<el-table-column type="isDraft" label="是否草稿" width="100">
+					<template #default="scope">
+						<el-tag :type="scope.row.isDraft === 1 ? 'warning' : 'success'">
+							{{ scope.row.isDraft === 1 ? '是' : '否' }}
+						</el-tag>
+					</template>
+				</el-table-column>
 				<el-table-column prop="contractReviewStatusStr" label="审核状态" width="150" align="center">
 					<template #default="{ row }">
 						<template v-if="row.id"> <!-- 有ID才显示popover -->
@@ -925,7 +932,7 @@
 				<span class="dialog-footer">
 					<el-button type="primary" v-show="isSaveBtnShow && isCurrentUserSalesperson"
 						@click="SaveContract(NewcontractformRef)">
-						确定保存
+						保存草稿
 					</el-button>
 					<el-button type="primary" v-show="showEditBtn && isCurrentUserSalesperson" @click="EditContract">
 						编辑
@@ -936,7 +943,7 @@
 					</el-button>
 					<el-button type="success" v-show="isAuditBtnShow && isCurrentUserSalesperson"
 						@click="SubmitForReview">
-						提交审核
+						提交
 					</el-button>
 				</span>
 			</template>
@@ -998,7 +1005,6 @@ import {
 	UploadFile, FormInstance, FormRules,
 	stepProps
 } from 'element-plus'
-import { FOCUSABLE_CHILDREN } from 'element-plus/es/directives/trap-focus';
 import request from '@/utils/request';
 import { color, number } from 'echarts';
 import { Edit } from '@element-plus/icons-vue/dist/types';
@@ -1203,7 +1209,7 @@ const handleRowDblClick = (row) => {
 			contractQuantity: 0,
 			exportunitprice: 0,
 			exporttotalprice: 0,
-			unitofmeasurement: state.optionss['hr_calculate_unit'].filter(hr_calculate_unit => hr_calculate_unit.dictValue == row.unitOfMeasurement).map(item => item.dictLabel).values().next().value,
+			unitofmeasurement: state.optionss.hr_calculate_unit.find(x => x.dictValue == row.unitOfMeasurement.toString()).dictValue,
 			purchaseinquiry: 0,
 			purchaseunitprice: 0,
 			onepacking: 0,
@@ -2021,6 +2027,7 @@ const addContractsRequest = reactive({
 	Totalprofitmargin: null,
 	ProfitAmount: null,
 	portMiscellaneousFees: null,
+	isDraft: 0,
 	// 合同产品项数组
 	contractProductItems: [] as Array<{
 		Id: number,
@@ -2163,6 +2170,7 @@ const SaveContract = async (formEl: FormInstance | undefined) => {
 				addContractsRequest.portMiscellaneousFees = Newcontractform.portMiscellaneousFees;
 				addContractsRequest.CanPartial = Number(Newcontractform.canPartial) === 1 ? 1 : 0;
 				addContractsRequest.CanTransit = Number(Newcontractform.canTransit) === 1 ? 1 : 0;
+				addContractsRequest.isDraft = 1;
 				// 映射产品信息
 				addContractsRequest.contractProductItems = productData.value.map(item => ({
 					Id: 0,
@@ -2417,20 +2425,6 @@ const checkContractsDetails = async (row) => {
 		});
 		return;
 	}
-	contractReviewStatus.value = row.contractReviewStatusStr;
-	isDisabled.value = true;
-	contractDialog.value = true;
-	if (row.reviewStatus == 0 || row.reviewStatus == 3) {
-		isSaveBtnShow.value = false;
-		showEditSaveBtn.value = false;
-		showEditBtn.value = true;
-		isAuditBtnShow.value = true;
-	} else {
-		showEditSaveBtn.value = false;
-		isSaveBtnShow.value = false;
-		showEditBtn.value = false;
-		isAuditBtnShow.value = false;
-	}
 	productData.value = [];
 	CustomerRelaterExoensesTableData.value = [];
 	/*表单赋值*/
@@ -2445,16 +2439,44 @@ const checkContractsDetails = async (row) => {
 	Newcontractform.contactPerson = row.contactPerson;
 	Newcontractform.contactEmail = row.contactEmail;
 	Newcontractform.effectiveDate = row.effectiveDate;
-	Newcontractform.customerLevel = state.optionss['hr_customer_level'].find(item => item.dictValue === row.customerLevel.toString()).dictValue;
+	if (row.customerLevel) {
+		const levelOption = state.optionss['hr_customer_level']?.find(item =>
+			item.dictValue === row.customerLevel.toString()
+		);
+		if (levelOption) {
+			Newcontractform.customerLevel = levelOption.dictValue;
+		}
+	}
 	Newcontractform.customerContract = row.customerContract;
 	Newcontractform.deliveryDate = row.deliveryDate;
 	Newcontractform.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictLabel === row.ourCompany.toString()).dictValue;
-	Newcontractform.settlementType = row.settlementType.toString();
-	Newcontractform.foreignCurrency = state.optionss['hr_export_currency'].find(item => item.dictLabel === row.foreignCurrency.toString()).dictValue;
+	if (row.settlementType) {
+		const settlementTypeOption = state.optionss['hr_settlement_way']?.find(item =>
+			item.dictValue === row.settlementType.toString()
+		);
+		if (settlementTypeOption) {
+			Newcontractform.settlementType = settlementTypeOption.dictValue;
+		}
+	}
+	if (row.foreignCurrency) {
+		const foreignCurrencyOption = state.optionss['hr_export_currency']?.find(item =>
+			item.dictValue === row.foreignCurrency.toString()
+		);
+		if (foreignCurrencyOption) {
+			Newcontractform.foreignCurrency = foreignCurrencyOption.dictValue;
+		}
+	}
 	Newcontractform.exchangeRate = row.exchangeRate;
 	Newcontractform.usdExchangeRate = row.usdExchangeRate;
 	Newcontractform.settlementMethod = state.optionss['hr_settlement_way'].find(item => item.dictLabel === row.settlementMethod.toString()).dictValue;
-	Newcontractform.priceTerms = state.optionss['hr_pricing_term'].find(item => item.dictLabel === row.priceTerms.toString()).dictValue;
+	if (row.priceTerms) {
+		const priceTermOption = state.optionss['hr_pricing_term']?.find(item =>
+			item.dictValue === row.priceTerms.toString()
+		);
+		if (priceTermOption) {
+			Newcontractform.priceTerms = priceTermOption.dictValue;
+		}
+	}
 	Newcontractform.shippingPort = state.optionss['hr_transport_port'].find(item => item.dictLabel === row.shippingPort.toString()).dictValue;
 	Newcontractform.destinationPort = row.destinationPort;
 	Newcontractform.tradeCountry = state.optionss['hr_nation'].find(item => item.dictLabel === row.tradeCountry.toString()).dictValue;
@@ -2484,7 +2506,14 @@ const checkContractsDetails = async (row) => {
 	Newcontractform.receivingBank = row.receivingBank;
 	Newcontractform.goodsValue = row.goodsValue;
 	Newcontractform.oceanFreight = row.shippingCost;
-	Newcontractform.shippingCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === row.shippingCurrency.toString()).dictValue;
+	if (row.shippingCurrency) {
+		const shippingCurrencyOption = state.optionss['hr_export_currency']?.find(item =>
+			item.dictValue === row.shippingCurrency.toString()
+		);
+		if (shippingCurrencyOption) {
+			Newcontractform.shippingCurrency = shippingCurrencyOption.dictValue;
+		}
+	}
 	Newcontractform.shippingrate = row.shippingExchangeRate;
 	Newcontractform.portMiscellaneousFees = row.portMiscellaneousFees;
 	Newcontractform.freightForwarderCustomsClearanceFees = row.freightForwarderCustomsClearanceFees;
@@ -2507,6 +2536,7 @@ const checkContractsDetails = async (row) => {
 	Newcontractform.TotalOtherFees = row.totalOtherFees;
 	Newcontractform.ProfitAmount = row.profitAmount;
 	Newcontractform.Totalprofitmargin = row.totalprofitmargin;
+
 	/*合同产品信息与相关费用*/
 	return new Promise((resolve, reject) => {
 		request({
@@ -2574,6 +2604,20 @@ const checkContractsDetails = async (row) => {
 				});
 			}
 			getReceivedExpenseDetails(row.id);
+			contractReviewStatus.value = row.contractReviewStatusStr;
+			if (row.reviewStatus == 0 || row.reviewStatus == 3) {
+				isSaveBtnShow.value = false;
+				showEditSaveBtn.value = false;
+				showEditBtn.value = true;
+				isAuditBtnShow.value = true;
+			} else {
+				showEditSaveBtn.value = false;
+				isSaveBtnShow.value = false;
+				showEditBtn.value = false;
+				isAuditBtnShow.value = false;
+			}
+			isDisabled.value = true;
+			contractDialog.value = true;
 		}).catch(error => {
 			console.error(error);
 			reject(error);
@@ -2928,7 +2972,6 @@ const getApprovalFlow = async (documentId: number) => {
 				DocumentID: documentId
 			}
 		})
-
 		if (res.code === 200) {
 			approvalSteps.value = res.data
 		} else {

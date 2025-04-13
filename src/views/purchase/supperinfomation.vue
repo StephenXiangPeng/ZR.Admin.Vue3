@@ -39,6 +39,13 @@
 		<el-divider> </el-divider>
 		<el-table :data="SupplierInfoTableData">
 			<el-table-column prop="Id" label="供应商ID" width="150" v-if="false"></el-table-column>
+			<el-table-column prop="isDraft" label="是否草稿" width="100">
+				<template #default="scope">
+					<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
+						{{ scope.row.isDraft === 0 ? '否' : '是' }}
+					</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column prop="supplierId" label="供应商编号" width="150"></el-table-column>
 			<el-table-column prop="shortName" label="供应商简称" width="150"></el-table-column>
 			<el-table-column prop="fullName" label="供应商全称" width="150"></el-table-column>
@@ -403,7 +410,10 @@
 						编辑保存
 					</el-button>
 					<el-button v-show="isSavebtnVisible" type="primary" @click="SaveSupperinfo">
-						确定保存
+						保存
+					</el-button>
+					<el-button v-show="isSubmitbtnVisible" type="success" @click="SubmitSupperinfo">
+						提交
 					</el-button>
 				</span>
 			</template>
@@ -615,22 +625,26 @@ const saveBankAccountInfo = () => {
 
 // 加载银行账号列表
 const loadBankAccountList = () => {
-	request({
-		url: 'Supplierinfo/GetSupplierBankAccountList/GetBankAccountList',
-		method: 'GET',
-		params: {
-			supplierId: SelctedSupplierId.value
-		}
-	}).then(response => {
-		if (response.code === 200) {
-			supperinfoBankAccountInfoTableData.value = response.data;
-		} else {
+	if (SelctedSupplierId.value == '') {
+		return;
+	} else {
+		request({
+			url: 'Supplierinfo/GetSupplierBankAccountList/GetBankAccountList',
+			method: 'GET',
+			params: {
+				supplierId: SelctedSupplierId.value
+			}
+		}).then(response => {
+			if (response.code === 200) {
+				supperinfoBankAccountInfoTableData.value = response.data;
+			} else {
+				ElMessage.error('获取银行账号列表失败！');
+			}
+		}).catch(error => {
+			console.error('获取银行账号列表出错：', error);
 			ElMessage.error('获取银行账号列表失败！');
-		}
-	}).catch(error => {
-		console.error('获取银行账号列表出错：', error);
-		ElMessage.error('获取银行账号列表失败！');
-	});
+		});
+	}
 }
 //#endregion	
 
@@ -640,6 +654,7 @@ const activeTab = ref('contacttabpane')
 const isEditBtnVisible = ref(false)
 const isEditSaveBtnVisible = ref(false)
 const isSavebtnVisible = ref(true)
+const isSubmitbtnVisible = ref(true)
 
 /*供应商联系人列表*/
 const supperinfoContactsTableData = ref([]);
@@ -727,6 +742,7 @@ const SupplierRequest = reactive({
 	LastTransaction: '',
 	FactoryImageUrl: '',
 	IsDelete: 0,
+	IsDraft: 1,
 	contactInfoItems: []
 });
 
@@ -815,6 +831,7 @@ const SaveSupperinfo = () => {
 		SupplierRequest.LastTransaction = Addsupperinfoform.lastTransaction
 		SupplierRequest.IsDelete = 0
 		SupplierRequest.contactInfoItems = supperinfoContactsTableData.value
+		SupplierRequest.IsDraft = isDraft.value
 		// 如果联系人为空，赋值空字符串
 		SupplierRequest.contactInfoItems.forEach((element) => {
 			element.name = element.name || '';
@@ -862,6 +879,7 @@ const SaveSupperinfo = () => {
 					})
 					GetSupplierInfoList(SupplierInfoTableDatacurrentPage.value, SupplierInfoTableDatapageSize.value);
 					AddSupperDialog.value = false;
+					SelctedSupplierId.value = '';
 				} else {
 					console.error('新增供应商资料出错');
 				}
@@ -1014,6 +1032,11 @@ const isEditable = ref(false);
 const SelctedSupplierId = ref('')
 //查看供应商详情
 const checkSupplierDetails = async (row) => {
+	if (row.isDraft == 0) {
+		isSubmitbtnVisible.value = false;
+	} else {
+		isSubmitbtnVisible.value = true;
+	}
 	SelctedSupplierId.value = row.id;
 	loadSupplierProductList(row.id)// 加载供应商产品列表
 	loadBankAccountList();// 加载银行账号列表
@@ -1177,6 +1200,7 @@ const EditSaveSupperinfo = () => {
 					isEditBtnVisible.value = true;        // 显示编辑按钮
 					isEditSaveBtnVisible.value = false;   // 隐藏编辑保存按钮
 					GetSupplierInfoList(SupplierInfoTableDatacurrentPage.value, SupplierInfoTableDatapageSize.value);
+					isSubmitbtnVisible.value = true;
 				} else {
 					console.error('编辑供应商信息出错');
 				}
@@ -1320,5 +1344,46 @@ const formatDateTime = (dateTimeStr) => {
 	const minutes = String(date.getMinutes()).padStart(2, '0');
 	const seconds = String(date.getSeconds()).padStart(2, '0');
 	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+const isDraft = ref(0)
+const SubmitSupperinfo = () => {
+	if (SelctedSupplierId.value == '') {
+		isDraft.value = 0;
+		SaveSupperinfo();
+	} else {
+		ElMessageBox.confirm('确定提交供应商信息？提交后供应商信息将不再是草稿状态', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		}).then(() => {
+			request({
+				url: 'Supplierinfo/UpdateSupplierInfoIsDraft/UpdateSupplierInfoIsDraft',
+				method: 'GET',
+				params: {
+					supplierId: SelctedSupplierId.value
+				}
+			}).then(response => {
+				if (response && response.code === 200) {
+					ElMessage({
+						message: response.msg || '供应商信息提交成功',
+						type: 'success'
+					})
+					GetSupplierInfoList(SupplierInfoTableDatacurrentPage.value, SupplierInfoTableDatapageSize.value);
+					AddSupperDialog.value = false;
+				} else {
+					ElMessage.error(response.msg || '供应商信息提交失败');
+				}
+			}).catch(error => {
+				console.error('提交供应商信息出错！😔错误内容：', error);
+				ElMessage.error('提交供应商信息失败，请稍后重试');
+			})
+		}).catch(() => {
+			ElMessage({
+				type: 'info',
+				message: '已取消提交'
+			});
+		});
+	}
 }
 </script>

@@ -39,6 +39,13 @@
 		<el-divider> </el-divider>
 		<el-table :data="contractofpurchasetableData" style="width: 100%">
 			<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
+			<el-table-column prop="isDraft" label="是否草稿" width="100">
+				<template #default="scope">
+					<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
+						{{ scope.row.isDraft === 0 ? '否' : '是' }}
+					</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column prop="purchaseContractNumber" label="采购合同号" width="150"></el-table-column>
 			<el-table-column prop="contractStatus" label="合同状态" width="150"></el-table-column>
 			<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
@@ -401,7 +408,7 @@
 					<!-- 新增时的保存按钮 -->
 					<el-button type="primary" v-show="isSaveBtnShow && userId.toString() === CheckUser"
 						@click="SavePurchaseContract">
-						确定保存
+						保存草稿
 					</el-button>
 					<!-- 编辑时的保存按钮 -->
 					<el-button type="primary" v-show="showEditSaveBtn && userId.toString() === CheckUser"
@@ -478,6 +485,7 @@ import { el } from 'element-plus/es/locale';
 import useUserStore from "@/store/modules/user";
 import { FormInstance } from 'element-plus'
 import { invoke } from '@vueuse/core';
+import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer } from 'element-plus'
 
 
 const GeneratePurchaseContract = (row) => {
@@ -674,7 +682,7 @@ const updateTotalValues = () => {
 }
 
 var userId = useUserStore().userId;
-var CheckUser = ref();
+var CheckUser = ref(userId.toString()); // 初始化为当前用户ID
 
 // 按钮显示控制
 const isSaveBtnShow = ref(false);        // 确定保存按钮(新增时使用)
@@ -939,7 +947,8 @@ const submitPurchaseContract = () => {
 		createBy: userId,
 		updateBy: userId,
 		purchaseContractProducts: mappedProducts,
-		purchaseContractVendorExpenses: mappedExpenses
+		purchaseContractVendorExpenses: mappedExpenses,
+		isDraft: 1
 	};
 
 	// 提交采购合同
@@ -1067,7 +1076,8 @@ const saveEditContract = () => {
 			Remark: '',
 			IsDelete: 0,
 			PurchaseContractProducts: mappedProducts,
-			PurchaseContractVendorExpenses: mappedExpenses
+			PurchaseContractVendorExpenses: mappedExpenses,
+			isDraft: 1
 		};
 
 		// 发送请求

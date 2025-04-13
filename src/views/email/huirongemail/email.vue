@@ -659,7 +659,7 @@
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button @click="ConfigEmaildialog = false">取消</el-button>
-					<el-button type="primary" @click="ConfigUserEmail">确定保存</el-button>
+					<el-button type="primary" @click="ConfigUserEmail">保存</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -779,14 +779,14 @@ import {
 	Box, Share, DocumentAdd
 } from '@element-plus/icons-vue';
 import { closePage } from '@/plugins/tab';
-import { QuillEditor } from '@vueup/vue-quill'
-import '@vueup/vue-quill/dist/vue-quill.snow.css'
+import { QuillEditor } from '@vueup/vue-quill';
+import '@vueup/vue-quill/dist/vue-quill.snow.css';
 import request from '@/utils/request'
 import DOMPurify from 'dompurify'
-import { id } from 'element-plus/es/locale';
 import { h } from 'vue'
 import { ElSelect, ElOption } from 'element-plus'
 import { stringify } from 'qs';
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 
 // #region 商机选择
 const BusinessOpportunitySelectionDialog = ref(false);
@@ -3107,7 +3107,6 @@ const getTagType = (tagName) => {
 	line-height: 32px;
 }
 
-// 确保选择器和输入框高度一致
 :deep(.el-select .el-input__wrapper),
 :deep(.el-input .el-input__wrapper) {
 	line-height: 32px;
@@ -3454,7 +3453,6 @@ const getTagType = (tagName) => {
 	border-right: none;
 }
 
-/* 确保滚动条样式美观 */
 :deep(.el-scrollbar__wrap) {
 	overflow-x: hidden;
 }

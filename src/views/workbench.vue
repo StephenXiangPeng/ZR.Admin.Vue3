@@ -896,17 +896,16 @@ const tableData = [
 
 // .is-selected {
 //   color: #1989fa;
-// }
-</style>
-<style scoped >
-:deep .el-calendar__body {
-  padding: 4px 20px 35px;
+// }</style>
+<style scoped>
+:deep(.el-calendar__body) {
+  padding: 12px;
 }
 
-:deep .el-calendar-table thead th {
-  color: #ffab11;
+:deep(.el-calendar-table thead th) {
+  padding: 8px;
+  text-align: center;
   font-weight: bold;
-  font-size: 25px;
 }
 
 .tag {
@@ -937,28 +936,26 @@ const tableData = [
   font-weight: 600;
 }
 
-:deep .el-calendar-table .el-calendar-day:hover {
-  background-color: #faecd8;
+:deep(.el-calendar-table .el-calendar-day:hover) {
+  background-color: #f5f7fa;
 }
 
-:deep .el-calendar {
-  --el-calendar-selected-bg-color: #faecd8;
+:deep(.el-calendar) {
+  border: none;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
-.aaa .is-selected .datastyle {
-  color: #ffab11;
+:deep(.el-calendar) {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-.aaa .prev .datastyle {
-  color: #c4c5c8;
-}
-
-.aaa .next .datastyle {
-  color: #c4c5c8;
-}
-
-:deep .el-calendar {
-  --el-calendar-cell-width: 130px;
+:deep(.el-calendar__header) {
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .center {
@@ -975,10 +972,4 @@ const tableData = [
   margin-left: 5px;
   font-size: 20px;
 }
-
-:deep .el-calendar__header {
-  justify-content: center;
-}
 </style>
-
-

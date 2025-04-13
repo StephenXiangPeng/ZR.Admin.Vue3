@@ -103,18 +103,17 @@ init()
 }
 
 :deep(.el-transfer__button) {
-  border-radius: 50%;
-  display: block;
-  margin-left: 0px;
+  padding: 0 10px;
 }
 
 :deep(.el-transfer__button:first-child) {
-  margin-bottom: 10px;
+  margin-right: 10px;
 }
 
 .my-el-transfer {
   text-align: center;
 }
+
 .el-dropdown-menu {
   max-height: 400px;
   overflow-y: scroll;

@@ -14,15 +14,12 @@
       </el-header>
       <el-main class="app-main">
         <router-view v-slot="{ Component, route }">
-          <transition name="fade-transform" mode="out-in" v-if="!dev">
+          <transition name="fade-transform" mode="out-in">
             <keep-alive :include="cachedViews">
-              <component v-if="!route.meta.link" :is="Component" :key="route.path" />
-
+              <component :is="Component" v-if="!route.meta.link"
+                :key="route.path + route.fullPath + (route.meta.usePathKey ? route.path : '')" />
             </keep-alive>
           </transition>
-          <keep-alive :include="cachedViews" v-else>
-            <component v-if="!route.meta.link" :is="Component" :key="route.path" />
-          </keep-alive>
         </router-view>
         <iframe-toggle />
       </el-main>
@@ -60,12 +57,12 @@ const menuDrawer = computed({
     }
   }
 })
+
 // appMain 模块 start
 const route = useRoute()
-useTagsViewStore().addCachedView(route)
-const cachedViews = computed(() => {
-  return useTagsViewStore().cachedViews
-})
+const router = useRouter()
+
+// 不再依赖keep-alive的include属性，而是通过key的变化来控制组件重新渲染
 //appMain 模块结束
 
 const classObj = computed(() => ({
@@ -96,6 +93,21 @@ function setLayout() {
 function close() {
   useAppStore().closeSideBar()
 }
+
+const cachedViews = computed(() => useTagsViewStore().cachedViews)
+
+// 确保组件在路由切换时正确加载
+watch(
+  () => route.path,
+  () => {
+    nextTick(() => {
+      if (route.meta && !route.meta.noCache) {
+        useTagsViewStore().addCachedView(route)
+      }
+    })
+  },
+  { immediate: true }
+)
 </script>
 
 <style lang="scss">

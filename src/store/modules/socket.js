@@ -8,7 +8,9 @@ const useSocketStore = defineStore('socket', {
     onlineInfo: {},
     // 聊天数据
     chatList: [],
-    leaveUser: {}
+    leaveUser: {},
+    // 任务数量
+    taskStats: {}
   }),
   actions: {
     //更新在线人数
@@ -33,6 +35,9 @@ const useSocketStore = defineStore('socket', {
     },
     setChat(data) {
       this.chatList.push(data)
+    },
+    setTaskStats(data) {
+      this.taskStats = data
     }
   }
 })

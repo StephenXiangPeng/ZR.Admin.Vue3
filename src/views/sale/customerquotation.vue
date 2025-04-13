@@ -36,6 +36,13 @@
 		</div>
 		<el-divider></el-divider>
 		<el-table :data="quotationData" stripe>
+			<el-table-column prop="isDraft" label="是否草稿" :width="150">
+				<template #default="scope">
+					<el-tag :type="scope.row.isDraft === 1 ? 'warning' : 'success'">
+						{{ scope.row.isDraft === 1 ? '是' : '否' }}
+					</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column prop="quotationNum" label="报价单号" :width="150" />
 			<el-table-column prop="inquiryDate" label="询价日期" :width="180" :formatter="formatDate" />
 			<el-table-column prop="realQuotationDate" label="实际报价日期" :width="180" :formatter="formatDate" />
@@ -72,17 +79,17 @@
 				<el-form-item label="报价单号">
 					<el-input v-model="quotationDialogform.quotationnum" disabled style="width: 250px;" />
 				</el-form-item>
-				<el-form-item label="询价日期" prop="inquirydate">
-					<el-date-picker v-model="quotationDialogform.inquirydate" :disabled="isDisabled" type="date"
-						size="Default" style="width: 250px;" />
+				<el-form-item label="询价日期" prop="inquirydate" data-field="inquirydate">
+					<el-date-picker v-model="quotationDialogform.inquirydate" type="date" placeholder="选择日期"
+						style="width: 250px;" :disabled="isDisabled" />
 				</el-form-item>
-				<el-form-item label="实际报价日期" prop="realquotationdate">
-					<el-date-picker v-model="quotationDialogform.realquotationdate" :disabled="isDisabled" type="date"
-						placeholder="选择实际报价日期" size="Default" style="width: 250px;" />
+				<el-form-item label="实际报价日期" prop="realquotationdate" data-field="realquotationdate">
+					<el-date-picker v-model="quotationDialogform.realquotationdate" type="date" placeholder="选择日期"
+						style="width: 250px;" :disabled="isDisabled" />
 				</el-form-item>
-				<el-form-item label="有效期限" prop="validityperiod">
-					<el-input v-model="quotationDialogform.validityperiod" :disabled="isDisabled"
-						style="width: 250px;" />
+				<el-form-item label="有效期限" prop="validityperiod" data-field="validityperiod">
+					<el-input v-model="quotationDialogform.validityperiod" style="width: 250px;"
+						:disabled="isDisabled" />
 				</el-form-item>
 				<el-form-item label="报价状态">
 					<el-select v-model="quotationDialogform.quorationstatus" filterable placeholder="选择报价状态" disabled
@@ -98,14 +105,14 @@
 							:value="dict.dictValue"></el-option>
 					</el-select>
 				</el-form-item>
-				<el-form-item label="客户简称" prop="customername">
+				<el-form-item label="客户简称" prop="customername" data-field="customername">
 					<el-select v-model="quotationDialogform.customername" filterable placeholder="选择客户名称"
 						:disabled="isDisabled" style="width: 250px;" @change="handleCustomerSelection">
 						<el-option v-for="dict in optionss.sql_hr_customer_abbreviation" :key="dict.dictCode"
 							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 					</el-select>
 				</el-form-item>
-				<el-form-item label="联系人" prop="contactperson">
+				<el-form-item label="联系人" prop="contactperson" data-field="contactperson">
 					<el-select v-model="quotationDialogform.contactperson" filterable placeholder="选择联系人"
 						:disabled="isDisabled" style="width: 250px;" @change="handleContactpersonSelection">
 						<el-option v-for="item in contactpersonSelectOptions" :key="item.value" :label="item.label"
@@ -122,7 +129,7 @@
 							:label="dict.dictLabel" :value="dict.dictValue" />
 					</el-select>
 				</el-form-item>
-				<el-form-item label="我方公司" prop="ourcompany">
+				<el-form-item label="我方公司" prop="ourcompany" data-field="ourcompany">
 					<el-select v-model="quotationDialogform.ourcompany" filterable placeholder="请选择我方公司"
 						:disabled="isDisabled" style="width: 250px;">
 						<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode" :label="dict.dictLabel"
@@ -136,14 +143,14 @@
 							:label="dict.dictLabel" :value="dict.dictValue" />
 					</el-select>
 				</el-form-item>
-				<el-form-item label="外销币种" prop="exportcurrency">
+				<el-form-item label="外销币种" prop="exportcurrency" data-field="exportcurrency">
 					<el-select v-model="quotationDialogform.exportcurrency" filterable placeholder="选择外销币种"
 						:disabled="isDisabled" style="width: 250px;" @change="exportcurrencyChange">
 						<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 							:label="dict.dictLabel" :value="dict.dictValue" />
 					</el-select>
 				</el-form-item>
-				<el-form-item label="汇率" prop="exchangerate">
+				<el-form-item label="汇率" prop="exchangerate" data-field="exchangerate">
 					<el-input v-model="quotationDialogform.exchangerate" style="width: 250px;" :disabled="isDisabled"
 						@change="calculateTotal" />
 				</el-form-item>
@@ -151,39 +158,39 @@
 					<el-input v-model="quotationDialogform.uniformprofitmargin" style="width: 250px;"
 						:disabled="isDisabled" />
 				</el-form-item>
-				<el-form-item label="结汇方式" prop="settlementway">
+				<el-form-item label="结汇方式" prop="settlementway" data-field="settlementway">
 					<el-select v-model="quotationDialogform.settlementway" filterable placeholder="选择结汇方式"
 						:disabled="isDisabled" style="width: 250px;">
 						<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
 							:label="dict.dictLabel" :value="dict.dictValue" />
 					</el-select>
 				</el-form-item>
-				<el-form-item label="价格条款" prop="pricingterm">
+				<el-form-item label="价格条款" prop="pricingterm" data-field="pricingterm">
 					<el-select v-model="quotationDialogform.pricingterm" filterable placeholder="选择价格条款"
 						:disabled="isDisabled" style="width: 250px;">
 						<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode" :label="dict.dictLabel"
 							:value="dict.dictValue" />
 					</el-select>
 				</el-form-item>
-				<el-form-item label="出运口岸" prop="shippingport">
+				<el-form-item label="出运口岸" prop="shippingport" data-field="shippingport">
 					<el-select v-model="quotationDialogform.shippingport" filterable placeholder="选择出运口岸"
 						:disabled="isDisabled" style="width: 250px;">
 						<el-option v-for="dict in optionss.hr_transport_port" :key="dict.dictCode"
 							:label="dict.dictLabel" :value="dict.dictValue" />
 					</el-select>
 				</el-form-item>
-				<el-form-item label="目的口岸" prop="destinationport">
+				<el-form-item label="目的口岸" prop="destinationport" data-field="destinationport">
 					<el-input v-model="quotationDialogform.destinationport" :disabled="isDisabled"
 						style="width: 250px;" />
 				</el-form-item>
-				<el-form-item label="贸易国别" prop="tradingcountry">
+				<el-form-item label="贸易国别" prop="tradingcountry" data-field="tradingcountry">
 					<el-select v-model="quotationDialogform.tradingcountry" filterable placeholder="选择贸易国别"
 						:disabled="isDisabled" style="width: 250px;">
 						<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
 							:value="dict.dictValue" />
 					</el-select>
 				</el-form-item>
-				<el-form-item label="运输方式" prop="transportationmethod">
+				<el-form-item label="运输方式" prop="transportationmethod" data-field="transportationmethod">
 					<el-select v-model="quotationDialogform.transportationmethod" filterable placeholder="选择运输方式"
 						:disabled="isDisabled" style="width: 250px;">
 						<el-option v-for="dict in optionss.hr_transportation_method" :key="dict.dictCode"
@@ -260,12 +267,14 @@
 					</el-table-column>
 					<el-table-column prop="ProfitMargin" label="利润率%" width="100">
 						<template #default="{ row }">
-							<el-input v-model="row.ProfitMargin" @change="calculateTotal" :disabled="isDisabled" />
+							<el-input @blur="formatNumber(row, 'ProfitMargin')" v-model="row.ProfitMargin"
+								@change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="quotationnum" label="报价数量" width="110">
 						<template #default="{ row }">
-							<el-input v-model="row.quotationnum" @change="calculateTotal" :disabled="isDisabled" />
+							<el-input @blur="formatNumber(row, 'quotationnum')" v-model="row.quotationnum"
+								@change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="exportunitprice" label="外销单价" width="110">
@@ -298,18 +307,20 @@
 					</el-table-column>
 					<el-table-column prop="purchaseunitprice" label="采购单价" width="110">
 						<template #default="{ row }">
-							<el-input v-model="row.purchaseunitprice" @change="calculateTotal" :disabled="isDisabled" />
+							<el-input @blur="formatNumber2(row, 'purchaseunitprice')" v-model="row.purchaseunitprice"
+								@change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="inlandfreightprice" label="内陆运费(m³)" width="130">
 						<template #default="{ row }">
-							<el-input v-model="row.inlandfreightprice" @change="calculateTotal"
-								:disabled="isDisabled" />
+							<el-input @blur="formatNumber(row, 'inlandfreightprice')" v-model="row.inlandfreightprice"
+								@change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="additionalpackagingcosts" label="单个产品额外包装费用" width="180">
 						<template #default="{ row }">
-							<el-input v-model="row.additionalpackagingcosts" @change="calculateTotal"
+							<el-input @blur="formatNumber(row, 'additionalpackagingcosts')"
+								v-model="row.additionalpackagingcosts" @change="calculateTotal"
 								:disabled="isDisabled" />
 						</template>
 					</el-table-column>
@@ -323,7 +334,7 @@
 							<span>{{ scope.row.singleProductGrossProfitTotal }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="grossProfitRate" label="毛利率%" width="110">
+					<el-table-column prop="grossProfitRate" label="毛利率%" width="110" v-if="false">
 						<template #default="scope">
 							<span>{{ scope.row.grossProfitRate }}</span>
 						</template>
@@ -360,18 +371,21 @@
 					</el-table-column>
 					<el-table-column prop="rebaterate" label="退税率%" width="100">
 						<template #default="{ row }">
-							<el-input v-model="row.rebaterate" @change="calculateTotal" :disabled="isDisabled" />
+							<el-input @blur="formatNumber(row, 'rebaterate')" v-model="row.rebaterate"
+								@change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
 
 					<el-table-column prop="innerBoxLoading" label="内盒装量" width="100">
 						<template #default="{ row }">
-							<el-input v-model="row.innerBoxLoading" @change="calculateTotal" :disabled="isDisabled" />
+							<el-input @blur="formatNumber(row, 'innerBoxLoading')" v-model="row.innerBoxLoading"
+								@change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="outerboxloading" label="外箱装量" width="100">
 						<template #default="{ row }">
-							<el-input v-model="row.outerboxloading" @change="calculateTotal" :disabled="isDisabled" />
+							<el-input @blur="formatNumber(row, 'outerboxloading')" v-model="row.outerboxloading"
+								@change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="outerboxunit" label="外箱单位" width="150">
@@ -440,7 +454,8 @@
 					</el-table-column>
 					<el-table-column prop="OtherFees" label="单个产品其它费用" width="170">
 						<template #default="{ row }">
-							<el-input v-model="row.OtherFees" @change="calculateTotal" :disabled="isDisabled" />
+							<el-input @blur="formatNumber(row, 'OtherFees')" v-model="row.OtherFees"
+								@change="calculateTotal" :disabled="isDisabled" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="SinglesalesrevenueA" label="单个销售收入A" width="170" v-if="true">
@@ -532,19 +547,19 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button v-show="isSaveBtnShow" type="primary" @click="AddQuotation(quotationDialogformRef)">
-						确定保存
+					<el-button type="warning" @click="SaveDraft" v-if="showSaveDraftBtn">
+						保存草稿
+					</el-button>
+					<el-button v-show="isSaveBtnShow" type="success" @click="AddQuotation(quotationDialogformRef)">
+						提交
 					</el-button>
 					<el-button type="primary" v-show="showEditBtn" @click="EditQuotation">
 						编辑
 					</el-button>
-					<el-button type="primary" v-show="showEditSaveBtn"
+					<el-button type="success" v-show="showEditSaveBtn"
 						@click="EditSaveQuotation(quotationDialogformRef)">
-						编辑保存
+						提交
 					</el-button>
-					<!-- <el-button type="warning" v-show="isReviewBtnShow" @click="SubmitReview">
-						提交审核
-					</el-button> -->
 				</span>
 			</template>
 		</el-dialog>
@@ -575,6 +590,24 @@
 		</el-dialog>
 	</div>
 </template>
+<style scoped>
+.highlight-error {
+	animation: highlight 3s ease-in-out;
+	border-color: #f56c6c !important;
+	box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2) !important;
+}
+
+@keyframes highlight {
+	0% {
+		background-color: rgba(245, 108, 108, 0.1);
+	}
+
+	100% {
+		background-color: transparent;
+	}
+}
+</style>
+
 <script setup lang="ts">
 import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElMessageBox, ElMessage, FormInstance, FormRules } from 'element-plus'
@@ -583,12 +616,15 @@ import { Search } from '@element-plus/icons-vue';
 import DictData from '../components/dictData.vue';
 import { isNumber } from '@vueuse/core';
 import useUserStore from "@/store/modules/user";
+import { number } from 'echarts';
 
-const isSaveBtnShow = ref(true);
+const isSaveBtnShow = ref(false);
 const showEditBtn = ref(false);
 const showEditSaveBtn = ref(false);
 const isDisabled = ref(false);
 const isReviewBtnShow = ref(false);
+const showSaveDraftBtn = ref(false);
+const isViewDetails = ref(false); // 新增变量，用于标记是否是通过查看详情打开的对话框
 const QuotationRemarksTextarea = ref('');
 var userId = useUserStore().userId;
 //查询条件
@@ -707,7 +743,9 @@ interface quotationDialogform {
 	//银行费用
 	BankFee: number,
 	//文件杂费
-	DocumentationFees: number
+	DocumentationFees: number,
+	//是否草稿
+	isDraft: number
 
 }
 const quotationDialogformRef = ref<FormInstance>()
@@ -808,7 +846,9 @@ const quotationDialogform = reactive<quotationDialogform>({
 	//银行费用
 	BankFee: null,
 	//文件杂费
-	DocumentationFees: null
+	DocumentationFees: null,
+	//是否草稿
+	isDraft: null
 })
 
 const quotationDialogformRules = reactive<FormRules<quotationDialogform>>({
@@ -839,6 +879,8 @@ const OpenQuotationDialog = () => {
 	isSaveBtnShow.value = true;
 	showEditBtn.value = false;
 	showEditSaveBtn.value = false;
+	showSaveDraftBtn.value = true;
+	isViewDetails.value = false; // 新建时设置为false
 	quotationDialog.value = true;
 	for (let key in quotationDialogform) {
 		quotationDialogform[key] = null;
@@ -1031,12 +1073,13 @@ const handleRowDblClick = (row) => {
 			unitofmeasurement: state.optionss['hr_calculate_unit'].filter(hr_calculate_unit => hr_calculate_unit.dictLabel == row.unitOfMeasurement).map(item => item.dictValue).values().next().value,
 			purchaseinquiry: 0,
 			purchaseunitprice: 0,
+			purchasecurrency: state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictLabel == '人民币').map(item => item.dictValue).values().next().value,
 			onepacking: 0,
 			invoice: '',
 			packaging: '',
 			specialrequirements: '',
 			rebaterate: 0,
-			outerboxunit: '',
+			outerboxunit: state.optionss['hr_outerbox_unit'].filter(hr_outerbox_unit => hr_outerbox_unit.dictLabel == '箱').map(item => item.dictValue).values().next().value,
 			outerboxlength: row.outerBoxLength,
 			outerboxwidth: row.outerBoxWidth,
 			outerboxheight: row.outerBoxHeight,
@@ -1120,6 +1163,12 @@ function formatNumber(row, key) {
 	}
 }
 
+
+function formatNumber2(row, key) {
+	if (row[key] !== null && row[key] !== undefined) {
+		row[key] = parseFloat(row[key]).toFixed(2);
+	}
+}
 /// 外销币种Change事件
 ///如果为人民币，汇率默认为1
 const currencySymbol = ref('$'); // 默認貨幣符號
@@ -1186,10 +1235,6 @@ const calculateTotal = () => {
 		item.outerboxvolume = (item.outerboxlength * item.outerboxwidth * item.outerboxheight / 1000000);
 		item.outerboxvolume = item.outerboxvolume.toFixed(4); // 保留4位小数
 
-		// 单个销售收入A = (采购单价 / rebateDivisor * (rebate/100) + 销售单价 x 汇率)
-		item.SinglesalesrevenueA = (item.purchaseunitprice / rebateDivisor * (effectiveRebate / 100) + item.exportunitprice * Number(quotationDialogform.exchangerate));
-		item.SinglesalesrevenueA = item.SinglesalesrevenueA.toFixed(3);
-
 		// 单个产品体积 = 外箱体积 / 外箱装量
 		item.Singleproductvolume = (item.outerboxvolume / item.outerboxloading).toFixed(6).toString().replace(/(\.\d*?[1-9])0+$/, '$1');
 
@@ -1209,35 +1254,15 @@ const calculateTotal = () => {
 		// 单个产品内陆运费 = 内陆运费 x 单个产品体积
 		item.Inlandfreightforasingleproduct = (Number(item.inlandfreightprice) * item.Singleproductvolume).toFixed(3);
 
-		// 计算单个产品毛利
-		if (isNaN(item.SinglesalesrevenueA - item.Portchargesforindividualproducts - item.Inlandfreightforasingleproduct - item.Oceanfreightforasingleproduct - item.purchaseunitprice - item.additionalpackagingcosts - item.OtherFees)) {
-			item.singleProductGrossProfit = 0.000;
-		} else {
-			// 单个产品毛利 = 单个销售收入A - 港杂费 - 内陆运费 - 海运费 - 采购价 - 额外包装费用 - 其他费用
-			item.singleProductGrossProfit = (item.SinglesalesrevenueA - item.Portchargesforindividualproducts - item.Inlandfreightforasingleproduct - item.Oceanfreightforasingleproduct - item.purchaseunitprice - item.additionalpackagingcosts - item.OtherFees).toFixed(3);
-			// 单个产品毛利合计 = 单个产品毛利 x 报价数量
-			item.singleProductGrossProfitTotal = (item.singleProductGrossProfit * item.quotationnum).toFixed(3);
-		}
-
-		if (isNaN(item.singleProductGrossProfit / item.SinglesalesrevenueA)) {
-			item.grossProfitRate = 0.000;
-		} else {
-			// 毛利率 = 单个产品毛利 / 单个销售收入A x 100
-			item.grossProfitRate = (item.singleProductGrossProfit / item.SinglesalesrevenueA * 100).toFixed(3);
-		}
-
 		// 总净重 = 外箱净重 x 箱数
 		item.totalNetWeight = isNaN(item.outerboxnetweight * item.NumberOfBoxes) ? 0.000 : (item.outerboxnetweight * item.NumberOfBoxes).toFixed(1);
 		// 总毛重 = 外箱毛重 x 箱数
 		item.totalGrossWeight = isNaN(item.outerboxgrossweight * item.NumberOfBoxes) ? 0.000 : (item.outerboxgrossweight * item.NumberOfBoxes).toFixed(1);
 		// 总体积 = 外箱体积 x 箱数
-		item.totalVolume = isNaN(item.outerboxvolume * item.NumberOfBoxes) ? 0.000 : (item.outerboxvolume * item.NumberOfBoxes).toFixed(1);
+		item.totalVolume = isNaN(item.outerboxvolume * item.NumberOfBoxes) ? 0.000 : (item.outerboxvolume * item.NumberOfBoxes).toFixed(3);
 
-		// 外销总价 = 报价数量 x 报价单价
-		item.exporttotalprice = Number(item.quotationnum * item.exportunitprice).toFixed(2);
 
 		TotalSinglesalesrevenueA += Number(item.SinglesalesrevenueA * item.quotationnum);
-		TotalvalueOfGoods += Number(item.exporttotalprice);
 		TotalQuantity += Number(item.quotationnum);
 		TotalNumberOfBoxes += Number(item.NumberOfBoxes.toFixed(1));
 		TotalGrossWeight += Number(item.totalGrossWeight);
@@ -1274,28 +1299,71 @@ const calculateTotal = () => {
 		console.log('其它费用：' + OtherFees);
 		TotalOtherFees = Number(oceanFreightTotal) + Number(inlandAndPortChargesTotal) + Number(PortchargesforindividualproductsTotal) + Number(bankFeeTotal) + Number(documentationFees) + Number(OtherFees);
 		console.log('其它费用合计：' + TotalOtherFees);
-		//#endregion 其它费用合计计算
 
-		// -------------------------- 修改处：采用成本加成定价法计算外销单价 --------------------------
-		// 计算退税部分：如果退税率为0，则结果为0
-		const taxRefundComponent = effectiveRebate === 0
-			? 0
-			: Number((item.purchaseunitprice / rebateDivisor) * (effectiveRebate / 100));
-		// 国内成本 = 采购单价 + (内陆运费 x 单个产品体积) + 额外包装费用 + 其它费用 + 退税金额
-		const domesticCostComponents = Number(item.purchaseunitprice) +
-			(Number(item.inlandfreightprice) * Number(item.Singleproductvolume)) +
+		//计算外销单价
+		// 计算成本价
+		//成本价=采购单价+单个产品额外包装费用+单个产品其它费用+单个产品内陆运费+单个产品港杂费+（每立方米海运费*（外箱体积/外箱装量）*海运费汇率）
+		const costPrice = Number(item.purchaseunitprice) +
 			Number(item.additionalpackagingcosts) +
 			Number(item.OtherFees) +
-			taxRefundComponent;
-		// 海运费（已在 item.Oceanfreightforasingleproduct 中计算，转换为数字）
-		const oceanFreightCost = Number(item.Oceanfreightforasingleproduct);
-		// 总国内成本
-		const totalDomesticCost = domesticCostComponents + oceanFreightCost;
-		// 转换为外币成本（除以汇率）
-		const costForeign = totalDomesticCost / Number(quotationDialogform.exchangerate);
-		// 最终外销单价 = 外币成本 * (1 + 利润率/100)
-		item.exportunitprice = Number((costForeign * (1 + item.ProfitMargin / 100)).toFixed(3));
-		// -------------------------------------------------------------------------------------
+			Number(item.Inlandfreightforasingleproduct) +
+			Number(item.Portchargesforindividualproducts) +
+			(Number(quotationDialogform.oceanFreight) *
+				(Number(item.outerboxvolume) / Number(item.outerboxloading)) *
+				Number(quotationDialogform.shippingrate));
+		console.log('成本价：' + costPrice.toFixed(3));
+		// 数据验证
+		if (!item.purchaseunitprice || !item.outerboxloading || !quotationDialogform.exchangerate) {
+			return;
+		}
+		if (item.outerboxloading <= 0) {
+			return;
+		}
+		if (item.ProfitMargin < 0) {
+			return;
+		} else if (item.ProfitMargin >= 100) {
+			ElMessage.warning('利润率不能大于100%');
+			item.ProfitMargin = 99.9;
+			return;
+		}
+		let exportPrice;
+		const profitRateDecimal = item.ProfitMargin / 100;
+		if (profitRateDecimal < 1) {
+			// 正常情况的计算公式
+			exportPrice = (costPrice - (item.purchaseunitprice / 1.13 * ((item.rebaterate / 100) * (1 - profitRateDecimal)))) /
+				(quotationDialogform.exchangerate * (1 - profitRateDecimal));
+			// 保留三位小数
+			item.exportunitprice = Number(exportPrice.toFixed(3));
+			console.log('外销单价：' + item.exportunitprice);
+		} else {
+			// 当利润率 >= 100% 时，可以使用一个较大的基数来计算
+			item.exportunitprice = 0;
+			return;
+		}
+		// 外销总价 = 报价数量 x 报价单价
+		item.exporttotalprice = Number(item.quotationnum * item.exportunitprice).toFixed(2);
+		// 单个销售收入A = (采购单价 / rebateDivisor * (rebate/100) + 销售单价 x 汇率)
+		item.SinglesalesrevenueA = (item.purchaseunitprice / rebateDivisor * (effectiveRebate / 100) + item.exportunitprice * Number(quotationDialogform.exchangerate));
+		item.SinglesalesrevenueA = item.SinglesalesrevenueA.toFixed(3);
+
+		// 计算单个产品毛利
+		if (isNaN(item.SinglesalesrevenueA - item.Portchargesforindividualproducts - item.Inlandfreightforasingleproduct - item.Oceanfreightforasingleproduct - item.purchaseunitprice - item.additionalpackagingcosts - item.OtherFees)) {
+			item.singleProductGrossProfit = 0.000;
+		} else {
+			// 单个产品毛利 = 单个销售收入A - 港杂费 - 内陆运费 - 海运费 - 采购价 - 额外包装费用 - 其他费用
+			item.singleProductGrossProfit = (item.SinglesalesrevenueA - item.Portchargesforindividualproducts - item.Inlandfreightforasingleproduct - item.Oceanfreightforasingleproduct - item.purchaseunitprice - item.additionalpackagingcosts - item.OtherFees).toFixed(3);
+			// 单个产品毛利合计 = 单个产品毛利 x 报价数量
+			item.singleProductGrossProfitTotal = (item.singleProductGrossProfit * item.quotationnum).toFixed(3);
+		}
+
+		if (isNaN(item.singleProductGrossProfit / item.SinglesalesrevenueA)) {
+			item.grossProfitRate = 0.000;
+		} else {
+			// 毛利率 = 单个产品毛利 / 单个销售收入A x 100
+			item.grossProfitRate = (item.singleProductGrossProfit / item.SinglesalesrevenueA * 100).toFixed(3);
+		}
+
+		TotalvalueOfGoods += Number(item.exporttotalprice);
 	});
 
 	quotationDialogform.TotalValueOfGoods = TotalvalueOfGoods || 0;
@@ -1303,7 +1371,7 @@ const calculateTotal = () => {
 	quotationDialogform.TotalNumberOfBoxes = TotalNumberOfBoxes || 0;
 	quotationDialogform.TotalGrossWeight = TotalGrossWeight || 0;
 	quotationDialogform.TotalNetWeight = TotalNetWeight || 0;
-	quotationDialogform.TotalVolume = TotalVolume || 0;
+	quotationDialogform.TotalVolume = Number(TotalVolume.toFixed(2)) || 0;
 	quotationDialogform.TotalPurchases = TotalPurchases || 0;
 	quotationDialogform.TotalOtherFees = TotalOtherFees || 0;
 	quotationDialogform.TotalTaxRefund = TotalTaxRefund || 0;
@@ -1312,8 +1380,6 @@ const calculateTotal = () => {
 	quotationDialogform.Totalgrossprofit = Totalgrossprofit || 0;
 	quotationDialogform.Totalprofitmargin = Totalprofitmargin || 0;
 };
-
-
 
 const addQuotationRequest = reactive({
 	id: 0,
@@ -1369,8 +1435,8 @@ const addQuotationRequest = reactive({
 	totalprofitmargin: null,
 	quotationProductDetailsList: [],
 	bankfee: null,
-	documentationfees: null
-
+	documentationfees: null,
+	isDraft: null
 });
 const AddQuotation = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
@@ -1424,7 +1490,8 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 			addQuotationRequest.totalprofitmargin = quotationDialogform.Totalprofitmargin;
 			addQuotationRequest.bankfee = quotationDialogform.BankFee;
 			addQuotationRequest.documentationfees = quotationDialogform.DocumentationFees;
-			productData.value.forEach((item) => {
+			addQuotationRequest.quotationProductDetailsList = [];
+			productData.value.forEach(item => {
 				addQuotationRequest.quotationProductDetailsList.push({
 					productNum: item.productNum,
 					customerNum: item.customerNum,
@@ -1471,7 +1538,7 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 			request.post('Quotation/AddQuotation/Add', addQuotationRequest).then(response => {
 				if (response != null) {
 					ElMessage({
-						message: '新增报价单成功！',
+						message: '报价单提交成功',
 						type: 'success'
 					})
 					if (response.data > 0) {
@@ -1480,8 +1547,8 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 					EditQuotationId.value = response.data;
 					isDisabled.value = true;
 					isSaveBtnShow.value = false;
-					isReviewBtnShow.value = true;
-					showEditBtn.value = true;
+					isReviewBtnShow.value = false;
+					showEditBtn.value = false;
 					GetQuotationList(currentPage.value, pageSize.value);
 				} else {
 					console.error('新增报价单出错');
@@ -1490,9 +1557,196 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 				console.error('新增报价单出错！😔错误内容：', error);
 			});
 		} else {
-			console.log('error submit!', fields)
+			// 获取第一个验证失败的字段
+			const errorFields = Object.keys(fields);
+			if (errorFields.length > 0) {
+				const firstErrorField = errorFields[0];
+				const errorElement = document.querySelector(`[data-field="${firstErrorField}"]`);
+				if (errorElement) {
+					// 获取元素的位置信息
+					const elementRect = errorElement.getBoundingClientRect();
+					const isInViewport = (
+						elementRect.top >= 0 &&
+						elementRect.left >= 0 &&
+						elementRect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+						elementRect.right <= (window.innerWidth || document.documentElement.clientWidth)
+					);
+
+					// 如果元素不在视口中，则滚动到该元素
+					if (!isInViewport) {
+						errorElement.scrollIntoView({
+							behavior: 'smooth',
+							block: 'center',
+							inline: 'nearest'
+						});
+					}
+
+					// 添加高亮效果
+					errorElement.classList.add('highlight-error');
+
+					// 2秒后移除高亮效果
+					setTimeout(() => {
+						errorElement.classList.remove('highlight-error');
+					}, 2000);
+				}
+			}
 		}
-	})
+	});
+}
+
+const SaveDraft = async () => {
+	// 设置默认值
+	addQuotationRequest.customerid = parseInt(quotationDialogform.customernum) || 0;
+	addQuotationRequest.quotationProductDetailsList = [];
+	addQuotationRequest.quotationNum = quotationDialogform.quotationnum || '';
+	addQuotationRequest.inquiryDate = quotationDialogform.inquirydate || new Date().toISOString().split('T')[0];
+	addQuotationRequest.realQuotationDate = quotationDialogform.realquotationdate || new Date().toISOString().split('T')[0];
+	addQuotationRequest.validityPeriod = quotationDialogform.validityperiod || 30;
+	addQuotationRequest.quotationStatus = quotationDialogform.quorationstatus || 0;
+	addQuotationRequest.customerNum = quotationDialogform.customernum ? state.optionss['sql_hr_customer'].filter(item => item.dictValue == quotationDialogform.customerid).map(item => item.dictLabel).values().next().value : '';
+	addQuotationRequest.customerName = quotationDialogform.customername ? state.optionss['sql_hr_customer_name'].filter(item => item.dictValue == quotationDialogform.customerid).map(item => item.dictLabel).values().next().value : '';
+	addQuotationRequest.settlementWay = quotationDialogform.settlementway || 0;
+	addQuotationRequest.contactPerson = quotationDialogform.contactperson || 0;
+	addQuotationRequest.contactPersonEmail = quotationDialogform.contactpersonEmail || '';
+	addQuotationRequest.customerLevel = quotationDialogform.customerlevel || 0;
+	addQuotationRequest.ourCompany = quotationDialogform.ourcompany || 0;
+	addQuotationRequest.settlementCategory = quotationDialogform.settlementcategory || 0;
+	addQuotationRequest.exportCurrency = quotationDialogform.exportcurrency || 0;
+	addQuotationRequest.exchangeRate = quotationDialogform.exchangerate || 1;
+	addQuotationRequest.uniformProfitMargin = quotationDialogform.uniformprofitmargin || 0;
+	addQuotationRequest.pricingTerm = quotationDialogform.pricingterm || 0;
+	addQuotationRequest.shippingPort = quotationDialogform.shippingport || 0;
+	addQuotationRequest.destinationPort = quotationDialogform.destinationport || '';
+	addQuotationRequest.tradingCountry = quotationDialogform.tradingcountry || 0;
+	addQuotationRequest.transportationMethod = quotationDialogform.transportationmethod || 0;
+	addQuotationRequest.shippingCurrency = quotationDialogform.shippingcurrency || 0;
+	addQuotationRequest.shippingRate = quotationDialogform.shippingrate || 1;
+	addQuotationRequest.unitFreight = quotationDialogform.unitfreight || 0;
+	addQuotationRequest.commissionRate = quotationDialogform.commissionrate || 0;
+	addQuotationRequest.seller = quotationDialogform.seller || 0;
+	addQuotationRequest.remark = quotationDialogform.Remark || '';
+	addQuotationRequest.totalValueOfGoods = quotationDialogform.TotalValueOfGoods || 0;
+	addQuotationRequest.totalQuantity = quotationDialogform.TotalQuantity || 0;
+	addQuotationRequest.totalNumberOfBoxes = quotationDialogform.TotalNumberOfBoxes ? Number(quotationDialogform.TotalNumberOfBoxes).toFixed(1) : '0.0';
+	addQuotationRequest.totalGrossWeight = quotationDialogform.TotalGrossWeight || 0;
+	addQuotationRequest.totalNetWeight = quotationDialogform.TotalNetWeight || 0;
+	addQuotationRequest.totalVolume = quotationDialogform.TotalVolume || 0;
+	addQuotationRequest.totalPurchases = quotationDialogform.TotalPurchases || 0;
+	addQuotationRequest.totalOtherFees = quotationDialogform.TotalOtherFees || 0;
+	addQuotationRequest.totalTaxRefund = quotationDialogform.TotalTaxRefund || 0;
+	addQuotationRequest.profitAmount = quotationDialogform.ProfitAmount || 0;
+	addQuotationRequest.portMiscellaneousFees = quotationDialogform.portMiscellaneousFees || 0;
+	addQuotationRequest.inlandFreight = quotationDialogform.inlandFreight || 0;
+	addQuotationRequest.oceanFreight = quotationDialogform.oceanFreight || 0;
+	addQuotationRequest.singleCubicCost = quotationDialogform.singleCubicCost || 0;
+	addQuotationRequest.freightForwarderCustomsClearanceFees = quotationDialogform.freightForwarderCustomsClearanceFees || 0;
+	addQuotationRequest.totalgrossprofit = quotationDialogform.Totalgrossprofit || 0;
+	addQuotationRequest.totalprofitmargin = quotationDialogform.Totalprofitmargin || 0;
+	addQuotationRequest.bankfee = quotationDialogform.BankFee || 0;
+	addQuotationRequest.documentationfees = quotationDialogform.DocumentationFees || 0;
+	addQuotationRequest.isDraft = 1; // 设置为草稿状态
+	productData.value.forEach((item) => {
+		addQuotationRequest.quotationProductDetailsList.push({
+			id: item.id || 0,
+			productNum: item.productNum || '',
+			customerNum: item.customerNum || '',
+			cproductname: item.cproductname || '',
+			cspecification: item.cspecification || '',
+			quotationnum: item.quotationnum || 0,
+			exportunitprice: item.exportunitprice || 0,
+			exporttotalprice: item.exporttotalprice || 0,
+			unitofmeasurement: item.unitofmeasurement || 0,
+			purchasecurrency: item.purchasecurrency || 0,
+			purchaseunitprice: item.purchaseunitprice || 0,
+			onepacking: item.additionalPackagingCosts || 0,
+			Invoice: item.isInvoicingc || 0,
+			packaging: item.packaging || '',
+			specialrequirements: item.specialrequirements || '',
+			rebaterate: item.rebaterate || 0,
+			innerBoxLoading: item.innerBoxLoading || 0,
+			outerboxloading: item.outerboxloading || 0,
+			outerboxunit: item.outerboxunit || 0,
+			outerboxlength: item.outerboxlength || 0,
+			outerboxwidth: item.outerboxwidth || 0,
+			outerboxheight: item.outerboxheight || 0,
+			outerboxnetweight: item.outerboxnetweight || 0,
+			outerboxgrossweight: item.outerboxgrossweight || 0,
+			outerboxvolume: item.outerboxvolume || 0,
+			NumberOfBoxes: item.NumberOfBoxes || 0,
+			OtherFees: item.OtherFees || 0,
+			additionalpackagingcosts: item.additionalpackagingcosts || 0,
+			singleProductGrossProfit: item.singleProductGrossProfit || 0,
+			singleProductGrossProfitTotal: item.singleProductGrossProfitTotal || 0,
+			grossProfitRate: item.grossProfitRate || 0,
+			totalNetWeight: item.totalNetWeight || 0,
+			totalGrossWeight: item.totalGrossWeight || 0,
+			totalVolume: item.totalVolume || 0,
+			Singlesalesrevenue: item.SinglesalesrevenueA || 0,
+			Singleproductvolume: item.Singleproductvolume || 0,
+			Portchargesforindividualproducts: item.Portchargesforindividualproducts || 0,
+			Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct || 0,
+			Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct || 0,
+			inlandfreightprice: item.inlandfreightprice || 0,
+			IsNewProduct: item.isImported == true ? 0 : 1,
+			ProfitMargin: item.ProfitMargin || 0
+		});
+	});
+
+	// 如果是查看详情打开的对话框，使用修改接口
+	if (isViewDetails.value) {
+		addQuotationRequest.id = EditQuotationId.value;
+		request.post('Quotation/EditQuotation/Edit', addQuotationRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: '修改草稿成功！',
+					type: 'success'
+				})
+				if (response.data > 0) {
+					showSaveDraftBtn.value = false;
+					addQuotationRequest.quotationProductDetailsList = [];
+					GetQuotationDetailsList(response.data);
+				}
+				isDisabled.value = true;
+				isSaveBtnShow.value = false;
+				isReviewBtnShow.value = true;
+				showEditBtn.value = true;
+				GetQuotationList(currentPage.value, pageSize.value);
+			} else {
+				ElMessage.error('修改草稿失败');
+			}
+		}).catch(error => {
+			console.error('修改草稿出错！😔错误内容：', error);
+			ElMessage.error('修改草稿失败，请稍后重试');
+		});
+	} else {
+		// 新建时使用新增接口
+		request.post('Quotation/AddQuotation/Add', addQuotationRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: '保存草稿成功！',
+					type: 'success'
+				})
+				if (response.data > 0) {
+					addQuotationRequest.quotationProductDetailsList = [];
+					showSaveDraftBtn.value = false;
+					EditQuotationId.value = response.data;
+					isViewDetails.value = true;
+					GetQuotationDetailsList(response.data);
+				}
+				EditQuotationId.value = response.data;
+				isDisabled.value = true;
+				isSaveBtnShow.value = false;
+				isReviewBtnShow.value = true;
+				showEditBtn.value = true;
+				GetQuotationList(currentPage.value, pageSize.value);
+			} else {
+				ElMessage.error('保存草稿失败');
+			}
+		}).catch(error => {
+			console.error('保存草稿出错！😔错误内容：', error);
+			ElMessage.error('保存草稿失败，请稍后重试');
+		});
+	}
 }
 
 ///报价单列表
@@ -1549,20 +1803,37 @@ function GetQuotationList(start, end) {
 
 //#region 查看报价单详情
 const EditQuotationId = ref(0);
-const ChcekDetails = (row) => {
-	if (row.quotationStatus == '待审核') {
-		isReviewBtnShow.value = true;
+const ChcekDetails = async (row) => {
+	// if (row.quotationStatus == '待审核') {
+	// 	isReviewBtnShow.value = true;
+	// } else {
+	// 	isReviewBtnShow.value = false;
+	// }
+	isDisabled.value = true;
+	isViewDetails.value = true; // 查看详情时设置为true
+	if (row.isDraft == 0) {
+		showEditBtn.value = false;
+		showEditSaveBtn.value = false;
+		isSaveBtnShow.value = false;
+		showSaveDraftBtn.value = false;
+		handleCustomerSelection(row.customerid);
 	} else {
-		isReviewBtnShow.value = false;
+		showEditBtn.value = true;
+		showEditSaveBtn.value = true;
+		isSaveBtnShow.value = false;
+		showSaveDraftBtn.value = false;
 	}
-	handleCustomerSelection(row.customerid);
 	EditQuotationId.value = row.id;
+	if (row.customerid != 0 && row.customerid != null) {
+		quotationDialogform.customername = state.optionss['sql_hr_customer_abbreviation'].find(item => item.dictValue == row.customerid)?.dictValue;
+		handleCustomerSelection(row.customerid);
+	}
+	quotationDialogform.contactperson = row.contactPerson;
 	quotationDialogform.quotationnum = row.quotationNum;
 	quotationDialogform.inquirydate = row.inquiryDate;
 	quotationDialogform.realquotationdate = row.realQuotationDate;
 	quotationDialogform.validityperiod = row.validityPeriod;
 	quotationDialogform.quorationstatus = optionss.value.hr_quotation_status.find(item => item.dictLabel === row.quotationStatus)?.dictValue || '0';
-	quotationDialogform.contactperson = row.contactPerson;
 	quotationDialogform.contactpersonEmail = row.contactPersonEmail;
 	quotationDialogform.customerlevel = state.optionss.hr_customer_level.find(item => item.dictValue == row.customerLevel)?.dictValue;
 	quotationDialogform.ourcompany = state.optionss.hr_ourcompany.find(item => item.dictValue == row.ourCompany)?.dictValue;
@@ -1602,9 +1873,6 @@ const ChcekDetails = (row) => {
 	quotationDialogform.BankFee = row.bankFee;
 	quotationDialogform.DocumentationFees = row.documentationFees;
 	GetQuotationDetailsList(row.id);
-	isSaveBtnShow.value = false;
-	showEditBtn.value = true;
-	isDisabled.value = true;
 	quotationDialog.value = true;
 }
 //获取报价单产品列表
@@ -1661,7 +1929,8 @@ const GetQuotationDetailsList = (ID) => {
 						Inlandfreightforasingleproduct: element.inlandfreightforasingleproduct,
 						outerboxvolume: element.outerBoxVolume,
 						inlandfreightprice: element.inlandfreightprice,
-						IsNewProduct: element.IsNewProduct
+						IsNewProduct: element.IsNewProduct,
+						ProfitMargin: element.profitMargin
 					});
 			});
 		}
@@ -1677,6 +1946,7 @@ const EditQuotation = () => {
 	showEditBtn.value = false;
 	showEditSaveBtn.value = true;
 	isDisabled.value = false;
+	showSaveDraftBtn.value = true;
 }
 //#endregion
 //编辑保存报价单
@@ -1784,13 +2054,13 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 			request.post('Quotation/EditQuotation/Edit', addQuotationRequest).then(response => {
 				if (response != null) {
 					ElMessage({
-						message: response.data,
+						message: "报价单提交成功",
 						type: 'success'
 					})
-					isDisabled.value = true;
+					isDisabled.value = false;
 					showEditSaveBtn.value = false;
-					showEditBtn.value = true;
-					isReviewBtnShow.value = true;
+					showEditBtn.value = false;
+					isReviewBtnShow.value = false;
 					GetQuotationList(currentPage.value, pageSize.value);
 				} else {
 					console.error('编辑报价单出错');
@@ -1799,11 +2069,45 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 				console.error('编辑报价单出错！😔错误内容：', error);
 			})
 		} else {
-			console.log('error submit!', fields)
+			// 获取第一个验证失败的字段
+			const errorFields = Object.keys(fields);
+			if (errorFields.length > 0) {
+				const firstErrorField = errorFields[0];
+				const errorElement = document.querySelector(`[data-field="${firstErrorField}"]`);
+				if (errorElement) {
+					// 获取元素的位置信息
+					const elementRect = errorElement.getBoundingClientRect();
+					const isInViewport = (
+						elementRect.top >= 0 &&
+						elementRect.left >= 0 &&
+						elementRect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+						elementRect.right <= (window.innerWidth || document.documentElement.clientWidth)
+					);
+
+					// 如果元素不在视口中，则滚动到该元素
+					if (!isInViewport) {
+						errorElement.scrollIntoView({
+							behavior: 'smooth',
+							block: 'center',
+							inline: 'nearest'
+						});
+					}
+
+					// 添加高亮效果
+					errorElement.classList.add('highlight-error');
+
+					// 2秒后移除高亮效果
+					setTimeout(() => {
+						errorElement.classList.remove('highlight-error');
+					}, 2000);
+				}
+			}
 		}
 	});
 }
 const quotationDialogHandClose = () => {
+	// 清空表单验证提示
+	quotationDialogformRef.value?.clearValidate();
 	quotationDialog.value = false;
 	productData.value = [];
 	QuotationRemarksTextarea.value = '';

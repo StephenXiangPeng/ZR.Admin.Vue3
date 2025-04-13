@@ -107,6 +107,12 @@ function startApp() {
 
 const app = createApp(App)
 signalR.init(import.meta.env.VITE_APP_SOCKET_API)
+
+signalR.start().then(() => {
+	console.log('[SignalR] 连接成功，监听器已生效')
+}).catch(err => {
+	console.error('[SignalR] 连接失败：', err)
+})
 app.config.globalProperties.signalr = signalR
 // 全局方法挂载
 app.config.globalProperties.getConfigKey = getConfigKey

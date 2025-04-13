@@ -160,5 +160,11 @@ export default {
     connection.on('TaskReminder', (data) => {
       alert(JSON.stringify(data));
     })
+
+    // 在receiveMsg函数内添加新的监听
+    connection.on('taskStatsUpdate', (data) => {
+      console.log('接收到任务状态更新', data)
+      useSocketStore().setTaskStats(data)
+    })
   }
 }

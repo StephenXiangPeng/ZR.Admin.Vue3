@@ -326,7 +326,7 @@ const showEmailDetail = (email) => {
 }
 
 .el-table :deep(td) {
-  border-bottom: none;
+  padding: 8px 0;
 }
 
 .el-table :deep(.el-table__row) {

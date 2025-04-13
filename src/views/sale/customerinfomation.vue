@@ -60,6 +60,13 @@
 		</div>
 		<el-divider></el-divider>
 		<el-table :data="CunstomeinfotableData" @row-dblclick="CunstomeinfotableDatahandleRowDblClick">
+			<el-table-column prop="isDraft" label="是否草稿" style="width: 8%;">
+				<template #default="scope">
+					<el-tag :type="scope.row.isDraft === 1 ? 'warning' : 'success'">
+						{{ scope.row.isDraft === 1 ? '是' : '否' }}
+					</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column prop="customerNo" label="客户编号" style="width: 8%;" />
 			<el-table-column prop="customerStatus" label="客户状态" style="width: 8%;" />
 			<el-table-column prop="customerLevel" label="客户等级" style="width: 8%;" />
@@ -253,7 +260,10 @@
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="primary" @click="submitForm(CustomerProfileformRef)">
-						确定保存
+						提交
+					</el-button>
+					<el-button type="primary" @click="SaveCustomerDraft(CustomerProfileformRef)">
+						保存草稿
 					</el-button>
 				</span>
 			</template>
@@ -595,7 +605,7 @@
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance, reactive, toRefs, ref, onMounted } from 'vue'
+import { getCurrentInstance, reactive, toRefs, ref, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessageBox, UploadUserFile, ElMessage, UploadFile, FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/request';
@@ -888,7 +898,8 @@ interface CustomerProfileform {
 	create_by: string,
 	create_time: string,
 	update_by: string,
-	isDelete: number
+	isDelete: number,
+	IsDraft: number
 }
 const CustomerProfileformRef = ref<FormInstance>()
 //新建客户表单
@@ -915,7 +926,8 @@ const CustomerProfileform = reactive<CustomerProfileform>({
 	create_by: "",
 	create_time: "",
 	update_by: "",
-	isDelete: 0
+	isDelete: 0,
+	IsDraft: 0
 });
 
 const addCustomerInfo = {
@@ -1130,6 +1142,127 @@ const EditCustomerInfoClick = () => {
 	CustomerProfileDialog.value = true;
 }
 
+//保存草稿
+const SaveCustomerDraft = async (formEl: FormInstance | undefined) => {
+	if (!formEl) return
+	ElMessageBox.confirm('确定保存该客户资料的草稿吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(async () => {
+		try {
+			// 设置必要的默认值
+			if (CustomerProfileform.customerStatus === null || CustomerProfileform.customerStatus === undefined) {
+				CustomerProfileform.customerStatus = 0;
+			}
+			if (CustomerProfileform.customerLevel === null || CustomerProfileform.customerLevel === undefined) {
+				CustomerProfileform.customerLevel = 0;
+			}
+			if (CustomerProfileform.pricingTerm === null || CustomerProfileform.pricingTerm === undefined) {
+				CustomerProfileform.pricingTerm = 0;
+			}
+			if (CustomerProfileform.settlementWay === null || CustomerProfileform.settlementWay === undefined) {
+				CustomerProfileform.settlementWay = 0;
+			}
+			if (CustomerProfileform.collectionPeriod === null || CustomerProfileform.collectionPeriod === undefined) {
+				CustomerProfileform.collectionPeriod = 0;
+			}
+			if (CustomerProfileform.salesPerson === null || CustomerProfileform.salesPerson === undefined) {
+				CustomerProfileform.salesPerson = 0;
+			}
+			if (CustomerProfileform.tradingCountry === null || CustomerProfileform.tradingCountry === undefined) {
+				CustomerProfileform.tradingCountry = 0;
+			}
+			if (CustomerProfileform.customerSource === null || CustomerProfileform.customerSource === undefined) {
+				CustomerProfileform.customerSource = 0;
+			}
+			if (CustomerProfileform.businessScope === null || CustomerProfileform.businessScope === undefined) {
+				CustomerProfileform.businessScope = 0;
+			}
+			if (CustomerProfileform.customerAbbreviation === null || CustomerProfileform.customerAbbreviation === undefined) {
+				CustomerProfileform.customerAbbreviation = '';
+			}
+			if (CustomerProfileform.customerName === null || CustomerProfileform.customerName === undefined) {
+				CustomerProfileform.customerName = '';
+			}
+			if (CustomerProfileform.customerTaxNumber === null || CustomerProfileform.customerTaxNumber === undefined) {
+				CustomerProfileform.customerTaxNumber = '';
+			}
+			if (CustomerProfileform.compantWebsite === null || CustomerProfileform.compantWebsite === undefined) {
+				CustomerProfileform.compantWebsite = '';
+			}
+			if (CustomerProfileform.address1 === null || CustomerProfileform.address1 === undefined) {
+				CustomerProfileform.address1 = '';
+			}
+			if (CustomerProfileform.remark === null || CustomerProfileform.remark === undefined) {
+				CustomerProfileform.remark = '';
+			}
+
+			// 上传客户图片
+			let filelistUrlStr = '';
+			if (fileList.value && fileList.value.length > 0) {
+				const uploadPromises = fileList.value.map(file => {
+					const formData = new FormData();
+					formData.append('FileName', file.name);
+					formData.append('FileDir', 'CustomerInfo/CustomerInfoPhoto');
+					formData.append('FileNameType', '1');
+					formData.append('File', file.raw);
+					formData.append('storeType', '1');
+					return request.postForm(UploadUrl, formData);
+				});
+
+				const responses = await Promise.all(uploadPromises);
+				responses.forEach((response, index) => {
+					if (response?.data?.url) {
+						filelistUrlStr += (index > 0 ? ',' : '') + response.data.url;
+					}
+				});
+			}
+
+			// 准备保存数据
+			const saveData = {
+				customerInfo: {
+					...CustomerProfileform,
+					customerPhoto: filelistUrlStr || CustomerProfileform.customerPhoto,
+					IsDraft: 1
+				},
+				contactPeople: CustomerContactPersonTableData.value || []
+			};
+
+			// 保存草稿
+			const response = await request.post(
+				isEditCustomerInfo.value
+					? 'CustomerInfoMation/EditCustomerInfo/Edit'
+					: 'CustomerInfoMation/AddCustomerInfo/Add',
+				isEditCustomerInfo.value
+					? { ...saveData, customerInfo: { ...saveData.customerInfo, id: CustomerProfileDetailDialogform.id } }
+					: saveData
+			);
+
+			if (response?.data) {
+				ElMessage({
+					message: '保存草稿成功！',
+					type: 'success'
+				});
+				CloseCustomerProfileDetailDialog();
+			} else {
+				throw new Error(response?.msg || '保存草稿失败');
+			}
+		} catch (error) {
+			console.error('保存草稿出错！😔错误内容：', error);
+			ElMessage({
+				message: error?.message || '保存草稿失败',
+				type: 'error'
+			});
+		}
+	}).catch(() => {
+		ElMessage({
+			message: '已取消保存草稿',
+			type: 'info'
+		});
+	});
+}
+
 //保存客户资料
 const submitForm = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
@@ -1201,6 +1334,7 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 							addCustomerInfo.customerInfo = CustomerProfileform;
 							//保存新建客户资料
 							CustomerProfileform.customerPhoto = filelistUrlStr.value;
+							CustomerProfileform.IsDraft = 0;
 							request.post('CustomerInfoMation/AddCustomerInfo/Add', addCustomerInfo).then(response => {
 								if (response != null) {
 									ElMessage({
@@ -1284,6 +1418,7 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 							collectionPeriodValue = Number(collectionPeriodValue); // 确保它被转换为数字
 						}
 						addCustomerInfo.customerInfo.collectionPeriod = collectionPeriodValue;
+						addCustomerInfo.customerInfo.IsDraft = 0;
 						//编辑保存客户资料
 						request.post('CustomerInfoMation/EditCustomerInfo/Edit', addCustomerInfo).then(response => {
 							if (response != null) {
@@ -2002,35 +2137,60 @@ const loadCustomerDetail = async (customerId: number) => {
 }
 
 const route = useRoute()
-onMounted(() => {
-	// 初始化加载客户信息列表
-	GetCustomeInfoList(currentPage.value, pageSize.value);
+onMounted(async () => {
+	// 获取路由参数
+	const customerId = route.query.customerId
+	if (customerId) {
+		try {
+			// 等待数据加载完成
+			await GetCustomeInfoList(currentPage.value, pageSize.value);
 
-	// 如果路由中包含 openDetail 参数，则打开详情弹窗
-	if (route.query.openDetail === 'true' && route.query.id) {
-		OpenCustomerProfileDetailDialog(route.query.id);
+			// 添加一个小延时确保数据已更新
+			await nextTick();
+
+			// 确保数据已加载
+			let retryCount = 0;
+			const maxRetries = 3;
+			const checkAndOpenDialog = async () => {
+				if (CunstomeinfotableData.value?.length > 0) {
+					OpenDetailDialog(customerId);
+				} else if (retryCount < maxRetries) {
+					retryCount++;
+					await new Promise(resolve => setTimeout(resolve, 500));
+					await checkAndOpenDialog();
+				} else {
+					ElMessage.warning('加载客户数据超时，请刷新页面重试');
+				}
+			};
+
+			await checkAndOpenDialog();
+		} catch (error) {
+			console.error('加载客户数据失败:', error);
+			ElMessage.error('加载客户数据失败，请刷新页面重试');
+		}
 	}
 });
+
 //打开客户详情窗体并加载数据
 const OpenDetailDialog = async (customerId) => {
-	const customerInfo = CunstomeinfotableData.value.find(item => item.id === customerId);
+	const customerInfo = CunstomeinfotableData.value.find(item => item.id == customerId);
 	selectCustomerID.value = customerId;
 	clearUploadfile();
 	CustomerProfileDetailDialogform.id = customerId;
-	CustomerProfileDetailDialogform.customerStatus = state.optionss['hr_customer_status'].filter(item => item.dictLabel == row.customerStatus).map(item => item.dictValue).values().next().value;
-	CustomerProfileDetailDialogform.customerLevel = state.optionss['hr_customer_level'].filter(item => item.dictLabel == row.customerLevel).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.customerStatus = state.optionss['hr_customer_status'].filter(item => item.dictLabel == customerInfo.customerStatus).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.customerLevel = state.optionss['hr_customer_level'].filter(item => item.dictLabel == customerInfo.customerLevel).map(item => item.dictValue).values().next().value;
 	CustomerProfileDetailDialogform.customerNo = customerInfo.customerNo;
 	CustomerProfileDetailDialogform.customerAbbreviation = customerInfo.customerAbbreviation;
 	CustomerProfileDetailDialogform.customerName = customerInfo.customerName;
-	CustomerProfileDetailDialogform.tradingCountry = state.optionss['hr_nation'].filter(item => item.dictLabel == row.tradingCountry).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.tradingCountry = state.optionss['hr_nation'].filter(item => item.dictLabel == customerInfo.tradingCountry).map(item => item.dictValue).values().next().value;
 	CustomerProfileDetailDialogform.compantWebsite = customerInfo.compantWebsite;
-	CustomerProfileDetailDialogform.customerSource = state.optionss['sys_customer_source'].filter(item => item.dictLabel == row.customerSource).map(item => item.dictValue).values().next().value;
-	CustomerProfileDetailDialogform.businessScope = state.optionss['hr_business_scope'].filter(item => item.dictLabel == row.businessScope).map(item => item.dictValue).values().next().value;
-	CustomerProfileDetailDialogform.pricingTerm = state.optionss['hr_pricing_term'].filter(item => item.dictValue == row.pricingTerm).map(item => item.dictValue).values().next().value;
-	CustomerProfileDetailDialogform.settlementWay = state.optionss['hr_settlement_way'].filter(item => item.dictValue == row.settlementWay).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.customerSource = state.optionss['sys_customer_source'].filter(item => item.dictLabel == customerInfo.customerSource).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.businessScope = state.optionss['hr_business_scope'].filter(item => item.dictLabel == customerInfo.businessScope).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.pricingTerm = state.optionss['hr_pricing_term'].filter(item => item.dictValue == customerInfo.pricingTerm).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.settlementWay = state.optionss['hr_settlement_way'].filter(item => item.dictValue == customerInfo.settlementWay).map(item => item.dictValue).values().next().value;
 	CustomerProfileDetailDialogform.collectionPeriod = customerInfo.collectionPeriod;
 	CustomerProfileDetailDialogform.customerTaxNumber = customerInfo.customerTaxNumber;
-	CustomerProfileDetailDialogform.salesPerson = state.optionss['sql_hr_sale'].filter(item => item.dictLabel == row.salesPerson).map(item => item.dictValue).values().next().value;
+	CustomerProfileDetailDialogform.salesPerson = state.optionss['sql_hr_sale'].filter(item => item.dictLabel == customerInfo.salesPerson).map(item => item.dictValue).values().next().value;
 	CustomerProfileDetailDialogform.address1 = customerInfo.address1;
 	if (customerInfo.customerPhoto != null && customerInfo.customerPhoto != '') {
 		//NewCustomerleadsform.compantPhotoStr = row.compantPhotoStr;

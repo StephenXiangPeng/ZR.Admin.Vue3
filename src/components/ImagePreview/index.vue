@@ -1,12 +1,6 @@
 <template>
-  <el-image
-    :src="`${realSrc}`"
-    fit="contain"
-    preview-teleported
-    :hide-on-click-modal="true"
-    lazy
-    :style="`width:${realWidth};height:${realHeight};`"
-    :preview-src-list="realSrcList">
+  <el-image :src="`${realSrc}`" fit="contain" preview-teleported :hide-on-click-modal="true" lazy
+    :style="`width:${realWidth};height:${realHeight};`" :preview-src-list="realSrcList">
     <template #error>
       <div class="image-slot">
         <el-icon><picture-filled /></el-icon>
@@ -75,21 +69,28 @@ const realHeight = computed(() => (typeof props.height == 'string' ? props.heigh
   border-radius: 5px;
   background-color: #ebeef5;
   box-shadow: 0 0 5px 1px #ccc;
+
   :deep(.el-image__inner) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     transition: all 0.3s;
     cursor: pointer;
+
     &:hover {
       transform: scale(1.2);
     }
   }
+
   :deep(.image-slot) {
     display: flex;
     justify-content: center;
     align-items: center;
     width: 100%;
     height: 100%;
+    background: #f5f7fa;
     color: #909399;
-    font-size: 30px;
+    font-size: 20px;
   }
 }
 </style>

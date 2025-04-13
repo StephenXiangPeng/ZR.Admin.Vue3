@@ -38,6 +38,7 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="ProductSampleTableData">
+
 			<el-table-column prop="type" label="寄样/收样" width="150"></el-table-column>
 			<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="150"></el-table-column>
 			<el-table-column prop="customer_ID" label="寄样对象" width="150"></el-table-column>
@@ -242,8 +243,7 @@
 			<template #footer>
 				<span class="dialog-footer">
 					<!-- 新建模式：显示保存按钮 -->
-					<el-button v-if="isCreateMode" type="primary" :loading="loading"
-						@click="handleSave">确定保存</el-button>
+					<el-button v-if="isCreateMode" type="primary" :loading="loading" @click="handleSave">保存</el-button>
 
 					<!-- 查看模式：显示编辑按钮 -->
 					<el-button v-if="!isCreateMode && !isEditable" type="primary" @click="handleEdit">编辑</el-button>
@@ -630,6 +630,7 @@ const handleSave = async () => {
 		payment_Method: parseInt(CreateDialogform.value.paymentMethod),
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
 		isDelete: 0,
+		isDraft: 0,
 		details: SampleProductData.value.map(item => ({
 			sample_Code: item.productNumber,
 			chinese_Name: item.productChineseName,
@@ -800,6 +801,7 @@ const handleEditSave = async () => {
 		payment_Method: parseInt(CreateDialogform.value.paymentMethod),
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
 		isDelete: 0,
+		isDraft: 0,
 		details: SampleProductData.value.map(item => ({
 			ID: item.id || 0,
 			sample_Code: item.productNumber,

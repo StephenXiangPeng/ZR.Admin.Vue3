@@ -651,7 +651,7 @@
 				<template #footer>
 					<span class="dialog-footer">
 						<el-button type="primary">
-							确定保存
+							保存
 						</el-button>
 						<el-button type="primary">
 							编辑

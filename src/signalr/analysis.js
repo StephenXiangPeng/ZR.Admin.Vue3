@@ -88,6 +88,12 @@ export default {
         confirmButtonText: '确定'
       })
     })
+
+    // 添加任务状态更新监听
+    connection.on('taskStatsUpdate', (data) => {
+      console.log('接收到任务状态更新', data)
+      useSocketStore().setTaskStats(data)
+    })
   }
 }
 const MsgType = {

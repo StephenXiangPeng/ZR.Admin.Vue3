@@ -3,7 +3,9 @@
     <el-popover placement="bottom" trigger="click" width="400px" popper-class="el-popover-pupop-user-news">
       <template #reference>
         <el-badge :is-dot="noticeDot" style="line-height: 18px">
-          <el-icon><bell /></el-icon>
+          <el-icon>
+            <bell />
+          </el-icon>
         </el-badge>
       </template>
       <div class="layout-navbars-breadcrumb-user-news">
@@ -21,7 +23,9 @@
           </template>
           <div class="content-box-empty" v-else>
             <div class="content-box-empty-margin">
-              <el-icon><Promotion /></el-icon>
+              <el-icon>
+                <Promotion />
+              </el-icon>
               <div class="mt15">全部已读</div>
             </div>
           </div>
@@ -66,23 +70,29 @@ function onGoToGiteeClick() {
   justify-content: space-between;
   height: 35px;
   align-items: center;
+
   .head-box-btn {
     color: #1890ff;
     font-size: 13px;
     cursor: pointer;
     opacity: 0.8;
+
     &:hover {
       opacity: 1;
     }
   }
 }
+
 .content-box {
   font-size: 13px;
+
   .content-box-item {
     padding-top: 12px;
+
     &:last-of-type {
       padding-bottom: 12px;
     }
+
     .content-box-msg {
       color: #999999;
       margin-top: 5px;
@@ -92,22 +102,27 @@ function onGoToGiteeClick() {
       white-space: nowrap;
       overflow: hidden;
     }
+
     .content-box-time {
       color: #999999;
     }
   }
+
   .content-box-empty {
     height: 260px;
     display: flex;
+
     .content-box-empty-margin {
       margin: auto;
       text-align: center;
+
       i {
         font-size: 60px;
       }
     }
   }
 }
+
 .foot-box {
   height: 35px;
   color: #1890ff;
@@ -118,13 +133,16 @@ function onGoToGiteeClick() {
   align-items: center;
   justify-content: center;
   border-top: 1px solid #ebeef5;
+
   &:hover {
     opacity: 1;
   }
 }
+
 :deep(.el-empty__description p) {
-  font-size: 13px;
+  color: #909399;
 }
+
 .head-box-title {
   color: var(--base-color-white);
 }

@@ -18,32 +18,28 @@
 				placeholder="输入客户名称" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-input v-model="contactNameInput" clearable style="width: 15%"
 				placeholder="输入联系人" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="businessSelect" class="m-2" placeholder="选择涉及业务" size="default"
-				style="width: 15%;">
+			<el-select filterable v-model="businessSelect" class="m-2" placeholder="选择涉及业务" style="width: 15%;">
 				<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 		</div>
 		<div style="width: 100%; margin-top: 5px;">
-			<el-select filterable v-model="nationSelect" class="m-2" placeholder="选择国家" size="default"
-				style="width: 15%;">
+			<el-select filterable v-model="nationSelect" class="m-2" placeholder="选择国家" style="width: 15%;">
 				<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="customerLevelSelect" class="m-2" placeholder="选择客户等级" size="default"
-				style="width: 15%;">
+			<el-select filterable v-model="customerLevelSelect" class="m-2" placeholder="选择客户等级" style="width: 15%;">
 				<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="customerSourceSelect" class="m-2" placeholder="选择客户来源" size="default"
-				style="width: 15%;">
+			<el-select filterable v-model="customerSourceSelect" class="m-2" placeholder="选择客户来源" style="width: 15%;">
 				<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="startDate" type="date" placeholder="起始日期" size="default"
+			<el-date-picker v-model="startDate" type="date" placeholder="起始日期"
 				style="width: 15%;" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;------&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="endDate" type="date" placeholder="结束日期" size="default" style="width: 15%;" />
+			<el-date-picker v-model="endDate" type="date" placeholder="结束日期" style="width: 15%;" />
 		</div>
 		<div style="width: 100%; margin-top: 20px; text-align: right;">
 			<el-row class="mb-4">
@@ -57,6 +53,13 @@
 		</div>
 		<el-divider></el-divider>
 		<el-table :data="CustomerLeadsTableData" align="center">
+			<el-table-column type="isDraft" label="是否草稿" style="width: 12%;">
+				<template #default="scope">
+					<el-tag :type="scope.row.isDraft === 1 ? 'warning' : 'success'">
+						{{ scope.row.isDraft === 1 ? '是' : '否' }}
+					</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column fixed prop="id" label="线索编号" style="width: 12%;" />
 			<el-table-column prop="contactEmail" label="邮箱" style="width: 12%;" />
 			<el-table-column prop="customerName" label="客户名称" style="width: 12%;" />
@@ -187,11 +190,16 @@
 					</el-button>
 					<el-button v-show="isEditSaveBtnVisible" type="primary"
 						@click="EditSaveCustomerleads(NewCustomerleadsformRef)">
-						编辑保存
+						编辑提交
+					</el-button>
+					<el-button
+						v-show="(!isEditBtnVisible && !EditCustomerLeadsID.value) || (EditCustomerLeadsID.value && NewCustomerleadsform.IsDraft === 1)"
+						type="primary" @click="SaveCustomerleadsDraft(NewCustomerleadsformRef)">
+						保存草稿
 					</el-button>
 					<el-button v-show="isSavebtnVisible" type="primary"
 						@click="SaveCustomerleads(NewCustomerleadsformRef)">
-						确定保存
+						提交
 					</el-button>
 				</span>
 			</template>
@@ -385,10 +393,10 @@ interface NewCustomerleadsform {
 	remark: string,
 	clueName: string,
 	customerName: string,
-	customerSource: string,
-	customerLevel: string,
-	customerNation: string,
-	involvingBusiness: string,
+	customerSource: number,
+	customerLevel: number,
+	customerNation: number,
+	involvingBusiness: number,
 	compantWebsite: string,
 	clueRemark: string,
 	compantPhotoStr: string,
@@ -398,7 +406,8 @@ interface NewCustomerleadsform {
 	contactPosition: string,
 	contactRemark: string,
 	isDelete: number,
-	clueType: number
+	clueType: number,
+	IsDraft: number
 }
 const NewCustomerleadsformRef = ref<FormInstance>()
 const NewCustomerleadsform = reactive<NewCustomerleadsform>({
@@ -410,10 +419,10 @@ const NewCustomerleadsform = reactive<NewCustomerleadsform>({
 	remark: '',
 	clueName: '',
 	customerName: '',
-	customerSource: '',
-	customerLevel: '',
-	customerNation: '',
-	involvingBusiness: '',
+	customerSource: 0,
+	customerLevel: 0,
+	customerNation: 0,
+	involvingBusiness: 0,
 	compantWebsite: '',
 	clueRemark: '',
 	compantPhotoStr: '',
@@ -423,7 +432,8 @@ const NewCustomerleadsform = reactive<NewCustomerleadsform>({
 	contactPosition: '',
 	contactRemark: '',
 	isDelete: 0,
-	clueType: 0
+	clueType: 0,
+	IsDraft: 0
 });
 
 // 客户线索表单验证规则
@@ -469,6 +479,78 @@ const rules = reactive<FormRules<NewCustomerleadsform>>({
 	]
 });
 
+
+//保存草稿
+const SaveCustomerleadsDraft = async (formEl: FormInstance | undefined) => {
+	// #region 保存线索草稿
+	//上传公司图片
+	const uploadPromises = fileList.value.map(file => {
+		const formData = new FormData();
+		formData.append('FileName', file.name);
+		formData.append('FileDir', 'CustomerLeads/CompanyPhoto');
+		formData.append('FileNameType', '1');
+		formData.append('File', file.raw);
+		formData.append('storeType', '1');
+		// 返回上传文件的 Promise
+		return request.postForm(UploadUrl, formData);
+	});
+	Promise.all(uploadPromises).then(responses => {
+		responses.forEach((response, index) => {
+			if (response != null) {
+				filelistUrlStr.value += (index > 0 ? ',' : '') + response.data.url;
+			} else {
+				ElMessage({
+					message: "上传公司图片出错！😔",
+					type: 'error'
+				})
+			}
+		});
+		// 保存线索草稿
+		NewCustomerleadsform.compantPhotoStr = filelistUrlStr.value;
+		NewCustomerleadsform.customerLevel = 1;
+		NewCustomerleadsform.IsDraft = 1;
+
+		// 判断是新增还是修改
+		if (EditCustomerLeadsID.value != 0) {
+			// 修改草稿
+			NewCustomerleadsform.id = EditCustomerLeadsID.value;
+			request.post('CustomerLeads/EditCustomerLeads/Edit', NewCustomerleadsform).then(response => {
+				if (response != null) {
+					ElMessage({
+						message: response.msg,
+						type: 'success'
+					})
+					dialogFormVisible.value = false;
+					GetCustomeleadList(currentPage.value, pageSize.value);
+				} else {
+					console.error('修改草稿出错');
+				}
+			}).catch(error => {
+				console.error('修改草稿出错！😔错误内容：', error);
+			})
+		} else {
+			// 新增草稿
+			request.post('CustomerLeads/AddCustomerLeads/Add', NewCustomerleadsform).then(response => {
+				if (response != null) {
+					ElMessage({
+						message: response.msg,
+						type: 'success'
+					})
+					dialogFormVisible.value = false;
+					GetCustomeleadList(currentPage.value, pageSize.value);
+				} else {
+					console.error('保存草稿出错');
+				}
+			}).catch(error => {
+				console.error('保存草稿出错！😔错误内容：', error);
+			})
+		}
+	}).catch(error => {
+		console.error('上传公司图片出错！😔错误内容：', error);
+	});
+	filelistUrlStr.value = '';
+	// #endregion 保存线索草稿
+}
 //保存线索
 const SaveCustomerleads = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
@@ -504,7 +586,8 @@ const SaveCustomerleads = async (formEl: FormInstance | undefined) => {
 					});
 					// 保存线索
 					NewCustomerleadsform.compantPhotoStr = filelistUrlStr.value;
-					NewCustomerleadsform.customerLevel = '1';
+					NewCustomerleadsform.customerLevel = 1;
+					NewCustomerleadsform.IsDraft = 0;
 					request.post('CustomerLeads/AddCustomerLeads/Add', NewCustomerleadsform).then(response => {
 						if (response != null) {
 							ElMessage({
@@ -721,6 +804,7 @@ const EditSaveCustomerleads = async (formEl: FormInstance | undefined) => {
 							NewCustomerleadsform.compantPhotoStr = ''
 						}
 						NewCustomerleadsform.id = EditCustomerLeadsID.value;
+						NewCustomerleadsform.IsDraft = 0;
 						request.post('CustomerLeads/EditCustomerLeads/Edit', NewCustomerleadsform).then(response => {
 							if (response != null) {
 								ElMessage({

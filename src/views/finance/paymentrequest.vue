@@ -35,6 +35,13 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="paymentrequesttableData">
+			<el-table-column prop="isDraft" label="是否草稿" width="100">
+				<template #default="scope">
+					<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
+						{{ scope.row.isDraft === 0 ? '否' : '是' }}
+					</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
 			<el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
 			<el-table-column prop="reviewStatusStr" label="审核状态" width="150"></el-table-column>
@@ -308,7 +315,6 @@
 <script setup lang="ts">
 import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
-import { FOCUSABLE_CHILDREN } from 'element-plus/es/directives/trap-focus';
 import request from '@/utils/request';
 import { number } from 'echarts';
 import { Edit } from '@element-plus/icons-vue/dist/types';
@@ -641,7 +647,7 @@ const showSubmitReviewBtn = ref(false);
 const CheckPaymentRequest = (row) => {
 	IsDisabled.value = true;
 	isCheckAndEdit.value = true;
-	if (row.reviewStatus == "0" || row.reviewStatus == "1" || row.reviewStatus == "3") {
+	if (row.reviewStatus == "0" || row.reviewStatus == "3") {
 		showEditBtn.value = true;
 		showSubmitReviewBtn.value = true;
 	} else {

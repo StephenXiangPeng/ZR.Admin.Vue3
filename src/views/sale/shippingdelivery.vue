@@ -38,6 +38,13 @@
 		<el-divider> </el-divider>
 		<el-table :data="shippingDeliveryTableData">
 			<el-table-column prop="id" label="出运发货单ID" width="150px" v-if="false"></el-table-column>
+			<el-table-column prop="isDraft" label="是否草稿" width="100">
+				<template #default="scope">
+					<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
+						{{ scope.row.isDraft === 0 ? '否' : '是' }}
+					</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column prop="invoiceNumber" label="出运单号" width="150px"></el-table-column>
 			<el-table-column prop="salesContractNumber" label="销售合同号" width="150px"></el-table-column>
 			<el-table-column prop="createTime" label="制单日期" width="150px"></el-table-column>
@@ -441,16 +448,24 @@
 				}}</el-text>&nbsp;&nbsp;&nbsp;&nbsp;
 				<span class="dialog-footer">
 					<el-button v-show="isSaveBtnShow && userId.toString() === CreateByUser" type="primary"
-						@click="SaveClick()">
-						确定保存
+						@click="SaveClick(true)">
+						保存草稿
+					</el-button>
+					<el-button v-show="isSaveBtnShow && userId.toString() === CreateByUser" type="success"
+						@click="SaveClick(false)">
+						提交
 					</el-button>
 					<el-button type="primary" v-show="isEditBtnShow && userId.toString() === CreateByUser"
 						@click="EditClick()">
 						编辑
 					</el-button>
 					<el-button type="primary" v-show="isEditSaveBtnShow && userId.toString() === CreateByUser"
-						@click="EditSaveClick()">
+						@click="EditSaveClick(true)">
 						编辑保存
+					</el-button>
+					<el-button type="success" v-show="isEditSaveBtnShow && userId.toString() === CreateByUser"
+						@click="EditSaveClick(false)">
+						编辑提交
 					</el-button>
 					<el-button type="warning" v-show="isReviewBtnShow && userId.toString() === CreateByUser"
 						@click="SubmitReview">
@@ -464,9 +479,7 @@
 <script setup lang="ts">
 import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
-import { FOCUSABLE_CHILDREN } from 'element-plus/es/directives/trap-focus';
 import request from '@/utils/request';
-import { el } from 'element-plus/es/locale';
 import { get } from 'sortablejs';
 import Supperinfomation from '../purchase/supperinfomation.vue';
 import dayjs from 'dayjs';
@@ -879,6 +892,15 @@ const OpenCreateshippingdeliveryDialog = () => {
 	isCreateMode.value = true;
 	dialogVisible.value = true;
 
+	// 设置创建人为当前用户
+	CreateByUser = userId.toString();
+
+	// 设置按钮显示状态
+	isSaveBtnShow.value = true;
+	isEditBtnShow.value = false;
+	isEditSaveBtnShow.value = false;
+	isReviewBtnShow.value = false;
+
 	// 重置表单
 	AddShippingDeliveryform.value = {
 		invoiceNumber: '',          // 发票号码会被自动填充
@@ -915,9 +937,6 @@ const OpenCreateshippingdeliveryDialog = () => {
 	shippingDeliveryPurchaseDetailsTableData.value = [];
 	shippingDeliveryOtherexpensesTableData.value = [];
 	OriginalShipmentQuantity.value = [];
-	IsEditable.value = false;
-	isCreateMode.value = true;
-
 
 	// 获取新的发票号码
 	getNextShippingNumber();
@@ -954,6 +973,7 @@ const shippingDeliveriesRequest = reactive({
 	ShippingAgent: null,
 	Remark: '',
 	IsDelete: 0,
+	IsDraft: 0, // 是否草稿：1是，0否
 	shipmentTotalAmount: 0,
 	ShippingDeliveryProductItems: [],
 	ShippingDeliveryPurchaseDetailsItems: [],
@@ -961,14 +981,14 @@ const shippingDeliveriesRequest = reactive({
 });
 
 //保存出运发货单
-const SaveClick = async () => {
-	// 1. 数据验证
-	if (!validateForm()) {
+const SaveClick = async (isDraft) => {
+	// 1. 数据验证 - 只在非草稿模式下验证
+	if (!isDraft && !validateForm()) {
 		return;
 	}
 
 	try {
-		await ElMessageBox.confirm('确定保存出运发货单吗?', '提示', {
+		await ElMessageBox.confirm(`确定${isDraft ? '保存草稿' : '提交'}出运发货单吗?`, '提示', {
 			confirmButtonText: '确定',
 			cancelButtonText: '取消',
 			type: 'warning'
@@ -1016,6 +1036,7 @@ const SaveClick = async () => {
 				Number(AddShippingDeliveryform.value.shippingAgent) : null,
 			Remark: AddShippingDeliveryform.value.remark,
 			IsDelete: 0,
+			IsDraft: isDraft ? 1 : 0, // 是否草稿：1是，0否
 			shipmentTotalAmount: calculateShipmentTotalAmount(),
 
 			// 产品明细
@@ -1056,7 +1077,7 @@ const SaveClick = async () => {
 		// 4. 处理响应
 		if (response.code === 200) {
 			ElMessage({
-				message: response.msg || '出运发货单保存成功！',
+				message: response.msg || (isDraft ? '出运发货单保存草稿成功！' : '出运发货单提交成功！'),
 				type: 'success'
 			});
 
@@ -1072,17 +1093,17 @@ const SaveClick = async () => {
 				ShippingDeliveriesTableDataPageSize.value
 			);
 		} else {
-			throw new Error(response.msg || '保存失败');
+			throw new Error(response.msg || '操作失败');
 		}
 
 	} catch (error) {
 		if (error === 'cancel') {
 			ElMessage({
 				type: 'info',
-				message: '已取消保存'
+				message: '已取消操作'
 			});
 		} else {
-			console.error('保存出运发货单出错：', error);
+			console.error('出运发货单操作出错：', error);
 			ElMessage.error(error.message || '系统错误，请稍后重试');
 		}
 	}
@@ -1162,66 +1183,170 @@ const resetForm = () => {
 
 const IsEditShippingDeliveryID = ref(0)
 //编辑保存出运发货单
-const EditSaveClick = () => {
-	ElMessageBox.confirm('确定保存编辑后的出运发货单吗?', '提示', {
+const EditSaveClick = (isDraft) => {
+	// 只在非草稿模式下验证
+	if (!isDraft && !validateForm()) {
+		ElMessage.warning('表单验证未通过，请检查填写的信息');
+		return;
+	}
+
+	ElMessageBox.confirm(`确定${isDraft ? '保存' : '提交'}编辑后的出运发货单吗?`, '提示', {
 		confirmButtonText: '确定',
 		cancelButtonText: '取消',
 		type: 'warning'
 	}).then(() => {
-		shippingDeliveriesRequest.Id = IsEditShippingDeliveryID.value;
-		shippingDeliveriesRequest.InvoiceNumber = AddShippingDeliveryform.value.invoiceNumber;
-		shippingDeliveriesRequest.OrderMakingDate = AddShippingDeliveryform.value.OrderMakingDate;
-		shippingDeliveriesRequest.ShippingStatus = AddShippingDeliveryform.value.shippingStatus;
-		shippingDeliveriesRequest.ShippingDate = AddShippingDeliveryform.value.shippingDate;
-		shippingDeliveriesRequest.InvoiceDate = AddShippingDeliveryform.value.invoiceDate;
-		shippingDeliveriesRequest.CustomerNumber = AddShippingDeliveryform.value.customerNumber;
-		shippingDeliveriesRequest.CustomerAbbreviation = AddShippingDeliveryform.value.customerAbbreviation;
-		shippingDeliveriesRequest.ReferenceContractNumber = AddShippingDeliveryform.value.referenceContractNumber;
-		shippingDeliveriesRequest.SalesContractNumber = AddShippingDeliveryform.value.salesContractNumber;
-		shippingDeliveriesRequest.CustomerContractNumber = AddShippingDeliveryform.value.customerContractNumber;
-		shippingDeliveriesRequest.OurCompany = AddShippingDeliveryform.value.ourCompany;
-		shippingDeliveriesRequest.BankOfReceipt = Number(AddShippingDeliveryform.value.bankOfReceipt);
-		shippingDeliveriesRequest.ExportCurrency = AddShippingDeliveryform.value.exportCurrency;
-		shippingDeliveriesRequest.ExchangeRate = AddShippingDeliveryform.value.exchangeRate;
-		shippingDeliveriesRequest.PriceTerms = AddShippingDeliveryform.value.priceTerms;
-		shippingDeliveriesRequest.DeparturePort = AddShippingDeliveryform.value.departurePort;
-		shippingDeliveriesRequest.DestinationPort = AddShippingDeliveryform.value.destinationPort;
-		shippingDeliveriesRequest.TradeCountry = AddShippingDeliveryform.value.tradeCountry;
-		shippingDeliveriesRequest.SettlementMethod = AddShippingDeliveryform.value.settlementMethod;
-		shippingDeliveriesRequest.TransportationMethod = AddShippingDeliveryform.value.transportationMethod;
-		shippingDeliveriesRequest.ReceivableDate = AddShippingDeliveryform.value.receivableDate;
-		shippingDeliveriesRequest.DocumentClerk = AddShippingDeliveryform.value.documentClerk;
-		shippingDeliveriesRequest.IsDeposit = AddShippingDeliveryform.value.isDeposit;
-		shippingDeliveriesRequest.PreCarriageTransport = AddShippingDeliveryform.value.preCarriageTransport;
-		shippingDeliveriesRequest.ShippingAgent = AddShippingDeliveryform.value.shippingAgent;
-		shippingDeliveriesRequest.shipmentTotalAmount = Number(calculateShipmentTotalAmount());
-		shippingDeliveriesRequest.ShippingDeliveryProductItems = shippingDeliveryContrctProductTableData.value;
-		shippingDeliveriesRequest.ShippingDeliveryPurchaseDetailsItems = shippingDeliveryPurchaseDetailsTableData.value;
-		shippingDeliveriesRequest.ShippingDeliveriesExpensesItems = shippingDeliveryOtherexpensesTableData.value;
-
+		// 如果必填字段为空，使用默认值
+		if (!AddShippingDeliveryform.value.remark) {
+			AddShippingDeliveryform.value.remark = '无备注';
+		}
+		if (!AddShippingDeliveryform.value.invoiceNumber) {
+			AddShippingDeliveryform.value.invoiceNumber = '系统生成';
+		}
+		if (!AddShippingDeliveryform.value.salesContractNumber) {
+			AddShippingDeliveryform.value.salesContractNumber = '无合同号';
+		}
+		if (!AddShippingDeliveryform.value.customerAbbreviation) {
+			AddShippingDeliveryform.value.customerAbbreviation = '无简称';
+		}
+		if (!AddShippingDeliveryform.value.customerContractNumber) {
+			AddShippingDeliveryform.value.customerContractNumber = '无合同号';
+		}
+		// 创建与后端模型匹配的请求体
+		const shippingDeliveriesRequest = {
+			Id: IsEditShippingDeliveryID.value,
+			InvoiceNumber: AddShippingDeliveryform.value.invoiceNumber || '系统生成',
+			OrderMakingDate: AddShippingDeliveryform.value.OrderMakingDate || new Date(),
+			ShippingStatus: Number(AddShippingDeliveryform.value.shippingStatus),
+			ShippingDate: AddShippingDeliveryform.value.shippingDate,
+			InvoiceDate: AddShippingDeliveryform.value.invoiceDate,
+			CustomerNumber: AddShippingDeliveryform.value.customerNumber ? Number(AddShippingDeliveryform.value.customerNumber) : 0,
+			CustomerAbbreviation: AddShippingDeliveryform.value.customerAbbreviation || '无简称',
+			ReferenceContractNumber: AddShippingDeliveryform.value.referenceContractNumber ?
+				Number(AddShippingDeliveryform.value.referenceContractNumber) : null,
+			SalesContractNumber: AddShippingDeliveryform.value.salesContractNumber || '无合同号',
+			CustomerContractNumber: AddShippingDeliveryform.value.customerContractNumber || '无合同号',
+			OurCompany: AddShippingDeliveryform.value.ourCompany ? Number(AddShippingDeliveryform.value.ourCompany) : 0,
+			BankOfReceipt: AddShippingDeliveryform.value.bankOfReceipt ?
+				Number(AddShippingDeliveryform.value.bankOfReceipt) : null,
+			ExportCurrency: AddShippingDeliveryform.value.exportCurrency ?
+				Number(AddShippingDeliveryform.value.exportCurrency) : null,
+			ExchangeRate: AddShippingDeliveryform.value.exchangeRate ?
+				Number(AddShippingDeliveryform.value.exchangeRate) : 0,
+			PriceTerms: AddShippingDeliveryform.value.priceTerms ?
+				Number(AddShippingDeliveryform.value.priceTerms) : null,
+			DeparturePort: AddShippingDeliveryform.value.departurePort ?
+				Number(AddShippingDeliveryform.value.departurePort) : null,
+			DestinationPort: AddShippingDeliveryform.value.destinationPort || '',
+			TradeCountry: AddShippingDeliveryform.value.tradeCountry ?
+				Number(AddShippingDeliveryform.value.tradeCountry) : null,
+			SettlementMethod: AddShippingDeliveryform.value.settlementMethod ?
+				Number(AddShippingDeliveryform.value.settlementMethod) : null,
+			TransportationMethod: AddShippingDeliveryform.value.transportationMethod ?
+				Number(AddShippingDeliveryform.value.transportationMethod) : null,
+			ReceivableDate: AddShippingDeliveryform.value.receivableDate,
+			DocumentClerk: AddShippingDeliveryform.value.documentClerk ?
+				Number(AddShippingDeliveryform.value.documentClerk) : null,
+			IsDeposit: AddShippingDeliveryform.value.isDeposit ? true : false,
+			PreCarriageTransport: AddShippingDeliveryform.value.preCarriageTransport ?
+				Number(AddShippingDeliveryform.value.preCarriageTransport) : null,
+			ShippingAgent: AddShippingDeliveryform.value.shippingAgent ?
+				Number(AddShippingDeliveryform.value.shippingAgent) : null,
+			Remark: AddShippingDeliveryform.value.remark || '无备注',
+			IsDelete: 0,
+			IsDraft: isDraft ? 1 : 0,
+			ShipmentTotalAmount: Number(calculateShipmentTotalAmount()),
+			// 产品明细 - 确保至少有一个空项目
+			ShippingDeliveryProductItems: shippingDeliveryContrctProductTableData.value.length > 0 ?
+				shippingDeliveryContrctProductTableData.value.map(item => ({
+					ContractId: Number(item.contractId || 0),
+					ContractProductId: Number(item.contractProductId || 0),
+					contractQuantity: Number(item.contractQuantity || 0),
+					ShipmentQuantity: Number(item.shipmentQuantity || 0),
+					RemainingQuantity: Number(item.contractQuantity || 0) - Number(item.shipmentQuantity || 0),
+					IsDelete: 0,
+					Remark: item.remark || '无备注'
+				})) : [{
+					ContractId: 0,
+					ContractProductId: 0,
+					contractQuantity: 0,
+					ShipmentQuantity: 0,
+					RemainingQuantity: 0,
+					IsDelete: 0,
+					Remark: '无备注'
+				}],
+			// 采购明细 - 确保至少有一个空项目
+			ShippingDeliveryPurchaseDetailsItems: shippingDeliveryPurchaseDetailsTableData.value.length > 0 ?
+				shippingDeliveryPurchaseDetailsTableData.value.map(item => ({
+					PurchaseContractID: Number(item.purchaseContractID || 0),
+					PurchaseContractProductID: Number(item.purchaseContractProductID || 0),
+					ContractQuantity: Number(item.contractQuantity || 0),
+					ShipmentQuantity: Number(item.shipmentQuantity || 0),
+					RemainingQuantity: Number(item.contractQuantity || 0) - Number(item.shipmentQuantity || 0),
+					IsDelete: 0,
+					Remark: item.remark || '无备注'
+				})) : [{
+					PurchaseContractID: 0,
+					PurchaseContractProductID: 0,
+					ContractQuantity: 0,
+					ShipmentQuantity: 0,
+					RemainingQuantity: 0,
+					IsDelete: 0,
+					Remark: '无备注'
+				}],
+			// 其它费用 - 确保至少有一个空项目
+			ShippingDeliveriesExpensesItems: shippingDeliveryOtherexpensesTableData.value.length > 0 ?
+				shippingDeliveryOtherexpensesTableData.value.map(item => ({
+					ExpenseName: item.expenseName || '无费用名称',
+					Currency: item.currency ? Number(item.currency) : 0,
+					ExchangeRate: Number(item.exchangeRate || 0),
+					Expense: Number(item.expense || 0),
+					Remark: item.remark || '无备注',
+					IsDelete: 0
+				})) : [{
+					ExpenseName: '无费用名称',
+					Currency: 0,
+					ExchangeRate: 0,
+					Expense: 0,
+					Remark: '无备注',
+					IsDelete: 0
+				}]
+		};
+		// 直接发送请求，不再嵌套在shippingDeliveriesRequest中
 		request.post('ShippingDeliveries/EditShippingDeliveries/Edit', shippingDeliveriesRequest).then(response => {
 			if (response != null) {
 				ElMessage({
-					message: '出运发货单编辑成功！',
+					message: isDraft ? '出运发货单编辑保存成功！' : '出运发货单编辑提交成功！',
 					type: 'success'
 				});
 				IsEditable.value = true;
 				isEditBtnShow.value = true;
 				isReviewBtnShow.value = true;
 				isEditSaveBtnShow.value = false;
+
+				// 刷新列表数据
+				GetShippingDeliveriesList(
+					ShippingDeliveriesTableDataCurrentPage.value,
+					ShippingDeliveriesTableDataPageSize.value
+				);
+				// 关闭弹窗
+				CreateshippingdeliveryDialog.value = false;
 			} else {
 				console.error('出运发货单编辑出错');
 			}
 		}).catch(error => {
 			console.error('出运发货单编辑出错！😔错误内容：', error);
+			if (error.response && error.response.data) {
+				ElMessage.error(JSON.stringify(error.response.data));
+			} else {
+				ElMessage.error('提交失败，请检查数据格式');
+			}
 		})
 	}).catch(() => {
 		ElMessage({
 			type: 'info',
-			message: '已取消保存'
+			message: '已取消操作'
 		});
 	});
-
 }
 
 ///出运发货单表格数据
@@ -1335,7 +1460,7 @@ const CheckShipingDelivery = async (row) => {
 	CreateByUser = row.createBy;
 	// 先检查编辑锁
 	const lockStatus = await GetShippingDeliveriesContractEditLock(row.id);
-	if (lockStatus.data.isEditLock == true) {
+	if (lockStatus && lockStatus.data && lockStatus.data.isEditLock === true) {
 		ElMessageBox.alert(`当前出运发货单正在被${lockStatus.data.editUser}编辑中，请稍后再试！`, '提示', {
 			confirmButtonText: '确定',
 			showClose: false
@@ -1366,35 +1491,35 @@ const CheckShipingDelivery = async (row) => {
 			ShippingDeliveriesId: row.id
 		}
 	}).then(response => {
-		if (response.data.shippingDeliveries != null) {
+		if (response.data && response.data.shippingDeliveries) {
 			IsEditShippingDeliveryID.value = response.data.shippingDeliveries.id;
-			AddShippingDeliveryform.value.invoiceNumber = response.data.shippingDeliveries.invoiceNumber;
+			AddShippingDeliveryform.value.invoiceNumber = response.data.shippingDeliveries.invoiceNumber || '';
 			AddShippingDeliveryform.value.OrderMakingDate = response.data.shippingDeliveries.createTime;
-			AddShippingDeliveryform.value.shippingStatus = response.data.shippingDeliveries.shippingStatus.toString();
+			AddShippingDeliveryform.value.shippingStatus = response.data.shippingDeliveries.shippingStatus ? response.data.shippingDeliveries.shippingStatus.toString() : '';
 			AddShippingDeliveryform.value.shippingDate = response.data.shippingDeliveries.shippingDate;
 			AddShippingDeliveryform.value.invoiceDate = response.data.shippingDeliveries.invoiceDate;
-			AddShippingDeliveryform.value.customerNumber = response.data.shippingDeliveries.customerNumber.toString();
-			AddShippingDeliveryform.value.customerAbbreviation = response.data.shippingDeliveries.customerAbbreviation;
-			AddShippingDeliveryform.value.referenceContractNumber = response.data.shippingDeliveries.referenceContractNumber.toString();
-			AddShippingDeliveryform.value.salesContractNumber = response.data.shippingDeliveries.salesContractNumber;
-			AddShippingDeliveryform.value.customerContractNumber = response.data.shippingDeliveries.customerContractNumber;
-			AddShippingDeliveryform.value.ourCompany = response.data.shippingDeliveries.ourCompany.toString();
+			AddShippingDeliveryform.value.customerNumber = response.data.shippingDeliveries.customerNumber ? response.data.shippingDeliveries.customerNumber.toString() : '';
+			AddShippingDeliveryform.value.customerAbbreviation = response.data.shippingDeliveries.customerAbbreviation || '';
+			AddShippingDeliveryform.value.referenceContractNumber = state.optionss.customer_contract_data.find(c => c.dictValue === response.data.shippingDeliveries.referenceContractNumber)?.dictValue || '';
+			AddShippingDeliveryform.value.salesContractNumber = response.data.shippingDeliveries.salesContractNumber || '';
+			AddShippingDeliveryform.value.customerContractNumber = response.data.shippingDeliveries.customerContractNumber || '';
+			AddShippingDeliveryform.value.ourCompany = response.data.shippingDeliveries.ourCompany ? response.data.shippingDeliveries.ourCompany.toString() : '';
 			AddShippingDeliveryform.value.bankOfReceipt = response.data.shippingDeliveries.bankOfReceipt ? response.data.shippingDeliveries.bankOfReceipt.toString() : '';
-			AddShippingDeliveryform.value.exportCurrency = response.data.shippingDeliveries.exportCurrency.toString();
+			AddShippingDeliveryform.value.exportCurrency = response.data.shippingDeliveries.exportCurrency ? response.data.shippingDeliveries.exportCurrency.toString() : '';
 			AddShippingDeliveryform.value.exchangeRate = response.data.shippingDeliveries.exchangeRate;
-			AddShippingDeliveryform.value.priceTerms = response.data.shippingDeliveries.priceTerms.toString();
-			AddShippingDeliveryform.value.departurePort = response.data.shippingDeliveries.departurePort.toString();
-			AddShippingDeliveryform.value.destinationPort = response.data.shippingDeliveries.destinationPort.toString();
-			AddShippingDeliveryform.value.tradeCountry = response.data.shippingDeliveries.tradeCountry.toString();
-			AddShippingDeliveryform.value.settlementMethod = response.data.shippingDeliveries.settlementMethod.toString();
-			AddShippingDeliveryform.value.transportationMethod = response.data.shippingDeliveries.transportationMethod.toString();
+			AddShippingDeliveryform.value.priceTerms = response.data.shippingDeliveries.priceTerms ? response.data.shippingDeliveries.priceTerms.toString() : '';
+			AddShippingDeliveryform.value.departurePort = response.data.shippingDeliveries.departurePort ? response.data.shippingDeliveries.departurePort.toString() : '';
+			AddShippingDeliveryform.value.destinationPort = response.data.shippingDeliveries.destinationPort ? response.data.shippingDeliveries.destinationPort.toString() : '';
+			AddShippingDeliveryform.value.tradeCountry = response.data.shippingDeliveries.tradeCountry ? response.data.shippingDeliveries.tradeCountry.toString() : '';
+			AddShippingDeliveryform.value.settlementMethod = response.data.shippingDeliveries.settlementMethod ? response.data.shippingDeliveries.settlementMethod.toString() : '';
+			AddShippingDeliveryform.value.transportationMethod = response.data.shippingDeliveries.transportationMethod ? response.data.shippingDeliveries.transportationMethod.toString() : '';
 			AddShippingDeliveryform.value.receivableDate = response.data.shippingDeliveries.receivableDate;
-			AddShippingDeliveryform.value.documentClerk = response.data.shippingDeliveries.documentClerk.toString();
+			AddShippingDeliveryform.value.documentClerk = response.data.shippingDeliveries.documentClerk ? response.data.shippingDeliveries.documentClerk.toString() : '';
 			AddShippingDeliveryform.value.isDeposit = response.data.shippingDeliveries.isDeposit;
-			AddShippingDeliveryform.value.preCarriageTransport = response.data.shippingDeliveries.preCarriageTransport.toString();
-			AddShippingDeliveryform.value.shippingAgent = response.data.shippingDeliveries.shippingAgent.toString();
-			AddShippingDeliveryform.value.remark = response.data.shippingDeliveries.remark;
-			AddShippingDeliveryform.value.shipmentTotalAmount = response.data.shippingDeliveries.shipmentTotalAmount;
+			AddShippingDeliveryform.value.preCarriageTransport = response.data.shippingDeliveries.preCarriageTransport ? response.data.shippingDeliveries.preCarriageTransport.toString() : '';
+			AddShippingDeliveryform.value.shippingAgent = response.data.shippingDeliveries.shippingAgent ? response.data.shippingDeliveries.shippingAgent.toString() : '';
+			AddShippingDeliveryform.value.remark = response.data.shippingDeliveries.remark || '';
+			AddShippingDeliveryform.value.shipmentTotalAmount = response.data.shippingDeliveries.shipmentTotalAmount || 0;
 
 		}
 		if (response.data.shippingDeliveryProducts.length > 0) {
@@ -1501,17 +1626,20 @@ const CheckShipingDelivery = async (row) => {
 				});
 			});
 		}
-		if (response.data.shippingDeliveriesExpenses.length > 0) {
+		if (response.data && response.data.shippingDeliveriesExpenses && response.data.shippingDeliveriesExpenses.length > 0) {
 			shippingDeliveryOtherexpensesTableData.value = response.data.shippingDeliveriesExpenses;
 			shippingDeliveryOtherexpensesTableData.value.forEach(item => {
-				item.currency = state.optionss.hr_export_currency.find(c => c.dictValue === item.currency.toString()).dictValue;
-				item.amount = (item.expense * item.exchangeRate).toFixed(2);
+				const currency = state.optionss.hr_export_currency.find(c => c.dictValue === (item.currency ? item.currency.toString() : ''));
+				item.currency = currency ? currency.dictValue : '';
+				item.amount = item.expense && item.exchangeRate ? (item.expense * item.exchangeRate).toFixed(2) : '0.00';
 			});
 		}
 		GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
+		// 确保弹窗显示
 		CreateshippingdeliveryDialog.value = true;
 	}).catch(error => {
-		console.error(error);
+		console.error('获取出运单详情失败：', error);
+		ElMessage.error('获取出运单详情失败，请稍后重试');
 	});
 };
 

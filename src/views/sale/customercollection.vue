@@ -223,7 +223,7 @@
 						收款完结
 					</el-button>
 					<el-button type="primary" @click="">
-						确定保存
+						保存
 					</el-button>
 
 				</span>

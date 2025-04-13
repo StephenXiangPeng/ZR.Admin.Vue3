@@ -27,6 +27,13 @@
 			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;客户询价表</span>
 			<el-divider></el-divider>
 			<el-table :data="InquityTableData" style="width: 100%" stripe :size="small">
+				<el-table-column prop="isDraft" label="是否草稿" width="100">
+					<template #default="scope">
+						<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
+							{{ scope.row.isDraft === 0 ? '否' : '是' }}
+						</el-tag>
+					</template>
+				</el-table-column>
 				<el-table-column prop="inquiry_number" label="询价单号"></el-table-column>
 				<el-table-column prop="date" label="询价日期"></el-table-column>
 				<el-table-column prop="subject" label="询价主题"></el-table-column>
@@ -89,7 +96,7 @@
 							<el-input v-model="row.productId" :disabled="isEditable" />
 						</template>
 					</el-table-column>
-					<el-table-column prop="status" label="状态" width="100">
+					<el-table-column prop="status" label="报价状态" width="100">
 						<template #default="scope">
 							<el-tag :type="scope.row.status === 0 ? 'warning' : 'success'">
 								{{ scope.row.status === 0 ? '待报价' : '已报价' }}
@@ -339,7 +346,10 @@
 						编辑保存
 					</el-button>
 					<el-button v-show="isSavebtnVisible" type="primary" @click="uploadFilesAndSaveInquiry">
-						确定保存
+						保存草稿
+					</el-button>
+					<el-button v-show="isSubmitbtnVisible" type="success" @click="SubmitInquiry">
+						提交
 					</el-button>
 				</span>
 			</template>
@@ -472,7 +482,7 @@ const handleRowDblClick = (row) => {
 			outerboxheight: row.outerBoxHeight ?? 0,
 			outerboxvolume: row.outerBoxVolume ?? 0,
 			outerboxgrossweight: row.outerBoxGrossWeight ?? 0,
-			status: row.status
+			status: 0
 		});
 		SearchProcutDialog.value = false;
 	}
@@ -593,6 +603,7 @@ const isEditable = ref(true);
 const isEditBtnVisible = ref(false);
 const isEditSaveBtnVisible = ref(false);
 const isSavebtnVisible = ref(true);
+const isSubmitbtnVisible = ref(false);
 /*创建询价单Dialog中的Button*/
 
 const inquirynumber = ref('')
@@ -647,7 +658,8 @@ const NewprudctInquityDetailsform = reactive({
 	Inquirer: '',
 	Description: '',
 	InquiryProducts: [],
-	InquirySupplementaryDocuments: []
+	InquirySupplementaryDocuments: [],
+	isDraft: 0
 })
 
 
@@ -766,14 +778,6 @@ const uploadFilesAndSaveInquiry = async () => {
 	const invalidProduct = inquryProductTableData.value.find(product =>
 		!product.priceterms || !product.taxincluded
 	);
-	// if (invalidProduct) {
-	// 	if (!invalidProduct.priceterms) {
-	// 		ElMessage.error('请为所有产品选择价格条款');
-	// 	} else if (!invalidProduct.taxincluded) {
-	// 		ElMessage.error('请为所有产品填写含税信息');
-	// 	}
-	// 	return;
-	// }
 	ElMessageBox.confirm('确定保存该询价单吗？', '提示', {
 		confirmButtonText: '确定',
 		cancelButtonText: '取消',
@@ -813,6 +817,7 @@ const uploadFilesAndSaveInquiry = async () => {
 			item.priceterms = item.priceterms ? item.priceterms : 0
 			item.taxincluded = item.taxincluded ? item.taxincluded : 0
 		})
+		NewprudctInquityDetailsform.isDraft = 1;
 		try {
 			const response = await request.post('Inquiry/AddInquiry/Add', NewprudctInquityDetailsform)
 			if (response.code === 200) {
@@ -892,9 +897,17 @@ const inquiryDocumentList = ref([]) // 询价单附件列表
 // 查看询价单详情
 const ChcekDetails = (row) => {
 	isEditable.value = true;
-	isEditBtnVisible.value = true;
-	isSavebtnVisible.value = false;
-	isEditSaveBtnVisible.value = false;
+	if (row.isDraft === 1) {
+		isEditBtnVisible.value = true;
+		isSavebtnVisible.value = false;
+		isEditSaveBtnVisible.value = false;
+		isSubmitbtnVisible.value = true;
+	} else {
+		isEditBtnVisible.value = false;
+		isEditSaveBtnVisible.value = false;
+		isSavebtnVisible.value = false;
+		isSubmitbtnVisible.value = false;
+	}
 	EditInquiryID.value = row.id;
 	NewprudctInquityDetailsform.Id = row.id;
 	NewprudctInquityDetailsform.inquiry_number = row.inquiry_number;
@@ -1159,7 +1172,7 @@ const EditSaveInquiry = async () => {
 			originalDocumentData.value = JSON.parse(JSON.stringify(inquiryDocumentList.value));
 
 			// 关闭编辑对话框
-			CreateInquiryDialog.value = false;
+			//CreateInquiryDialog.value = false;
 		} else {
 			throw new Error(response.msg || '编辑询价单失败');
 		}
@@ -1424,4 +1437,40 @@ const loadDocumentList = async (inquiryId) => {
 		ElMessage.error('加载附件列表失败');
 	}
 };
+
+const SubmitInquiry = () => {
+	if (isEditable.value == false) {
+		ElMessage.warning('请先保存询价单');
+		return;
+	}
+	ElMessageBox.confirm('确定要提交该询价单吗？', '提醒', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(async () => {
+		const response = await request({
+			url: 'Inquiry/UpdateInquiryIsDraft/UpdateInquiryIsDraft',
+			method: 'GET',
+			params: {
+				IsDraft: 0,
+				ID: EditInquiryID.value
+			}
+		});
+		if (response.code === 200) {
+			ElMessage({
+				type: 'success',
+				message: response.msg
+			});
+			CreateInquiryDialog.value = false;
+			GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
+		} else {
+			ElMessage.error(response.msg || '提交失败');
+		}
+	}).catch(() => {
+		ElMessage({
+			type: 'info',
+			message: '已取消提交'
+		});
+	});
+}
 </script>
