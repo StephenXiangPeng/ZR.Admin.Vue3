@@ -1,7 +1,7 @@
 {
   "name": "zr.admin",
   "version": "v20240105",
-  "description": "ZRAdmin.NET管理系统",
+  "description": "亿果香网站管理后台",
   "author": "ZR",
   "license": "MIT",
   "type": "module",
