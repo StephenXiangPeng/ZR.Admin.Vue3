@@ -34,6 +34,7 @@
     "js-cookie": "3.0.1",
     "jsencrypt": "3.2.1",
     "md-editor-v3": "^1.11.11",
+    "mitt": "^3.0.1",
     "nprogress": "0.2.0",
     "pinia": "^2.1.6",
     "qrcodejs2-fixes": "^0.0.2",

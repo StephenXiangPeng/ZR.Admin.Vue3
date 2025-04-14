@@ -10,7 +10,11 @@ const useSocketStore = defineStore('socket', {
     chatList: [],
     leaveUser: {},
     // 任务数量
-    taskStats: {}
+    taskStats: {},
+    // 待办流程
+    todoProcessCount: {},
+    // 消息
+    message: {}
   }),
   actions: {
     //更新在线人数
@@ -38,6 +42,12 @@ const useSocketStore = defineStore('socket', {
     },
     setTaskStats(data) {
       this.taskStats = data
+    },
+    setTodoProcessCount(data) {
+      this.todoProcessCount = data
+    },
+    setMessage(data) {
+      this.message = data
     }
   }
 })

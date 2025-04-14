@@ -3,6 +3,7 @@ import { ElNotification, ElMessage, ElMessageBox } from 'element-plus'
 import useSocketStore from '@/store/modules/socket'
 import useUserStore from '@/store/modules/user'
 import { webNotify } from '@/utils/index'
+import { eventBus } from '@/utils/eventBus'
 
 export default {
   onMessage(connection) {
@@ -93,6 +94,31 @@ export default {
     connection.on('taskStatsUpdate', (data) => {
       console.log('接收到任务状态更新', data)
       useSocketStore().setTaskStats(data)
+    })
+
+    // 添加待办流程更新监听
+    connection.on('TodoProcessUpdate', (data) => {
+      console.log('接收到待办流程更新', data)
+      useSocketStore().setTodoProcessCount(data)
+    })
+
+    // 添加消息发送监听
+    connection.on('sendMessage', (data) => {
+      console.log('接收到消息发送', data);
+      // 检查消息接收者是否是当前用户
+      const currentUser = useUserStore().userId; // 获取当前用户ID
+      if (data.toUserId.toString() === currentUser.toString()) {  // 只有消息接收者才显示通知
+        const title = `来自${data.userName}的${data.title}`;
+        useSocketStore().setMessage(data);
+        // 触发事件
+        eventBus.emit('updatePendingCount');
+        ElNotification({
+          title: title,
+          message: data.message,
+          type: 'success',
+          duration: 30000
+        });
+      }
     })
   }
 }

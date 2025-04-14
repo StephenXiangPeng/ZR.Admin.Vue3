@@ -118,7 +118,7 @@ function onChat(item) {
     })
     .then(({ value }) => {
       console.log(item.connnectionId, item.userid, value)
-      proxy.signalr.SR.invoke('sendMessage', item.connnectionId, item.userid, value).catch(function (err) {
+      proxy.signalr.SR.invoke('sendMessage', item.connectionId, item.userid, value).catch(function (err) {
         console.error(err.toString())
       })
     })

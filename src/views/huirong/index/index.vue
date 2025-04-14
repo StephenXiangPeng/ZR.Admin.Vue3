@@ -1868,6 +1868,8 @@ import duration from 'dayjs/plugin/duration'
 import { Picture } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { useRouter } from 'vue-router'
+import { eventBus } from '@/utils/eventBus'
+
 
 // #region 商机看板
 
@@ -4058,6 +4060,10 @@ const getOutside24hoursEmailCount = async () => {
 }
 
 onMounted(async () => {
+  // 监听更新待办数量事件
+  eventBus.on('updatePendingCount', () => {
+    getPendingCount();
+  });
   try {
     await Promise.all([
       getWithin24hoursEmailCount(),
@@ -4070,6 +4076,10 @@ onMounted(async () => {
     ElMessage.error('数据加载失败，请刷新页面重试')
   }
 })
+// 组件卸载时清理事件监听
+onUnmounted(() => {
+  eventBus.off('updatePendingCount');
+});
 
 const showPendingEmails = async () => {
   if (pendingEmailCount.value === 0) {

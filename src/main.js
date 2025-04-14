@@ -44,77 +44,24 @@ import dateOptions from '@/utils/dateOptions'
 // Dialog组件
 import Dialog from '@/components/Dialog'
 
-// 创建全局错误处理函数
-window.onerror = function (message, source, lineno, colno, error) {
-	console.error('全局错误:', message, source, error);
-
-	// 如果是模块加载错误，自动尝试刷新
-	if (message.includes('Loading chunk') || message.includes('failed')) {
-		console.log('检测到资源加载失败，正在尝试刷新...');
-		localStorage.setItem('app_reload_attempt', (parseInt(localStorage.getItem('app_reload_attempt') || '0') + 1).toString());
-		if (parseInt(localStorage.getItem('app_reload_attempt')) < 3) {
-			window.location.reload();
-		}
-	}
-
-	return false;
-};
-
-// 检查是否为刷新后的加载
-if (localStorage.getItem('app_reload_attempt')) {
-	console.log(`应用刷新尝试次数: ${localStorage.getItem('app_reload_attempt')}`);
-}
-
-// 确保CSS和其他资源加载完成
-document.addEventListener('DOMContentLoaded', () => {
-	console.log('DOM已加载完成，准备初始化应用...');
-	startApp();
-});
-
-// 如果DOMContentLoaded事件已经触发，直接初始化
-if (document.readyState === 'interactive' || document.readyState === 'complete') {
-	console.log('DOM已就绪，直接初始化应用...');
-	startApp();
-}
-
-// 定义应用启动函数
-function startApp() {
-	// 防止重复初始化
-	if (window.appInitialized) return;
-	window.appInitialized = true;
-
-	console.log('开始初始化应用...');
-
-	// 创建并挂载Vue应用
-	const app = createApp(App);
-
-	// 添加全局错误处理
-	app.config.errorHandler = (err, vm, info) => {
-		console.error('Vue错误:', err, info);
-	};
-
-	// 使用路由和其他插件
-	app.use(router);
-	// 其他插件...
-
-	// 标记成功加载
-	localStorage.setItem('app_reload_attempt', '0');
-
-	// 挂载应用
-	app.mount('#app');
-	console.log('应用挂载完成');
-}
-
+// 创建应用实例
 const app = createApp(App)
-signalR.init(import.meta.env.VITE_APP_SOCKET_API)
 
+// 全局错误处理
+app.config.errorHandler = (err, vm, info) => {
+	console.error('Vue错误:', err, info)
+}
+
+// 初始化 SignalR
+signalR.init(import.meta.env.VITE_APP_SOCKET_API)
 signalR.start().then(() => {
 	console.log('[SignalR] 连接成功，监听器已生效')
 }).catch(err => {
 	console.error('[SignalR] 连接失败：', err)
 })
-app.config.globalProperties.signalr = signalR
+
 // 全局方法挂载
+app.config.globalProperties.signalr = signalR
 app.config.globalProperties.getConfigKey = getConfigKey
 app.config.globalProperties.getDicts = getDicts
 app.config.globalProperties.download = download
@@ -126,7 +73,7 @@ app.config.globalProperties.addDateRange = addDateRange
 app.config.globalProperties.selectDictLabel = selectDictLabel
 app.config.globalProperties.dateOptions = dateOptions
 
-// 全局组件挂载
+// 全局组件注册
 app.component('DictTag', DictTag)
 app.component('Pagination', Pagination)
 app.component('UploadFile', FileUpload)
@@ -136,6 +83,16 @@ app.component('RightToolbar', RightToolbar)
 app.component('svg-icon', SvgIcon)
 app.component('ZrDialog', Dialog)
 
+// 注册指令
 directive(app)
 
-app.use(pinia).use(router).use(plugins).use(ElementPlus, {}).use(elementIcons).use(vueI18n).mount('#app')
+// 使用插件（注意顺序：pinia 需要最先使用）
+app.use(pinia)      // 状态管理
+	.use(router)     // 路由
+	.use(plugins)    // 自定义插件
+	.use(ElementPlus)// UI 框架
+	.use(elementIcons)// 图标
+	.use(vueI18n)    // 国际化
+
+// 挂载应用
+app.mount('#app')
