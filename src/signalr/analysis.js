@@ -155,7 +155,7 @@ export default {
       const currentUser = useUserStore().userId;
       if (data.toUserId.toString() === currentUser.toString()) {
         useSocketStore().setSystemNotice(data);
-
+        eventBus.emit('updatePlanTaskItems');
         // 创建通知并获取关闭函数
         const notification = ElNotification({
           title: data.title,
