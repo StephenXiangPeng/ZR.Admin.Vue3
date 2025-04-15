@@ -4,6 +4,7 @@ import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import 'dayjs/locale/zh-cn'
 import '@/assets/styles/index.scss' // global css
+import './assets/styles/global.css' // 全局样式
 
 import App from './App'
 import router from './router'

@@ -75,6 +75,8 @@
 import { listOnline, forceLogout, forceLogoutAll } from '@/api/monitor/online'
 import dayjs from 'dayjs'
 import useSocketStore from '@/store/modules/socket'
+import request from '@/utils/request'
+
 const { proxy } = getCurrentInstance()
 const queryRef = ref(null)
 const queryParams = reactive({
@@ -107,23 +109,47 @@ function getList() {
 }
 getList()
 
-function onChat(item) {
-  console.log(JSON.stringify(item));
-  proxy
-    .$prompt('请输入通知内容', '', {
-      confirmButtonText: '发送',
-      cancelButtonText: '取消',
-      inputPattern: /\S/,
-      inputErrorMessage: '消息内容不能为空'
-    })
-    .then(({ value }) => {
-      console.log(item.connnectionId, item.userid, value)
-      proxy.signalr.SR.invoke('sendMessage', item.connectionId, item.userid, value).catch(function (err) {
-        console.error(err.toString())
-      })
-    })
-    .catch(() => { })
+
+// 添加发送通知的 API 函数
+const sendNotification = (toUserId, message) => {
+  return request({
+    url: 'SendMessage/SendNotificationToUsers/SendNotification',
+    method: 'GET',
+    params: {
+      ToUserID: toUserId,
+      message: message
+    }
+  }).then(response => {
+    return response;
+  })
 }
+const onChat = (item) => {
+  proxy.$prompt('请输入通知内容', '发送通知', {
+    confirmButtonText: '发送',
+    cancelButtonText: '取消',
+    inputPattern: /\S/,
+    inputErrorMessage: '消息内容不能为空'
+  })
+    .then(async ({ value }) => {
+      try {
+        // 使用 API 接口发送通知
+        const res = await sendNotification(item.userid, value);
+
+        if (res.code === 200) {
+          proxy.$modal.msgSuccess('通知发送成功');
+        } else {
+          proxy.$modal.msgError(res.msg || '发送失败');
+        }
+      } catch (err) {
+        console.error('发送通知失败:', err);
+        proxy.$modal.msgError('发送失败：' + (err.message || '服务器错误'));
+      }
+    })
+    .catch(() => {
+      // 用户取消输入，不做处理
+    });
+};
+
 function onLock(row) {
   proxy
     .$prompt('请输入强退原因', '', {

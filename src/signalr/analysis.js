@@ -103,8 +103,8 @@ export default {
     })
 
     // 添加消息发送监听
-    connection.on('sendMessage', (data) => {
-      console.log('接收到消息发送', data);
+    connection.on('SendMessage', (data) => {
+      console.log('接收到消息', data);
       // 检查消息接收者是否是当前用户
       const currentUser = useUserStore().userId; // 获取当前用户ID
       if (data.toUserId.toString() === currentUser.toString()) {  // 只有消息接收者才显示通知
@@ -120,9 +120,69 @@ export default {
         });
       }
     })
+
+    // 添加管理员通知监听
+    connection.on('SendNotification', (data) => {
+      console.log('接收到管理员消息', data);
+      const currentUser = useUserStore().userId;
+      if (data.toUserId.toString() === currentUser.toString()) {
+        useSocketStore().setSystemNotice(data);
+
+        ElNotification({
+          title: data.title,
+          customClass: 'custom-notification', // 添加自定义样式类
+          duration: 0,
+          position: 'bottom-right',
+          message: h('div', { class: 'notification-content' }, [
+            h('div', { class: 'notification-message' }, data.message),
+            h('div', { class: 'notification-footer' }, [
+              h('button', {
+                class: 'custom-btn',
+                onClick: () => {
+                  console.log('按钮被点击了')
+                  ElNotification.closeAll()
+                }
+              }, '我知道了')
+            ])
+          ])
+        })
+      }
+    })
+
+    // 添加系统通知监听
+    connection.on('SystemNotification', (data) => {
+      console.log('接收到系统通知', data);
+      const currentUser = useUserStore().userId;
+      if (data.toUserId.toString() === currentUser.toString()) {
+        useSocketStore().setSystemNotice(data);
+
+        // 创建通知并获取关闭函数
+        const notification = ElNotification({
+          title: data.title,
+          customClass: 'custom-notification',
+          duration: 0,
+          position: 'bottom-right',
+          message: h('div', { class: 'notification-content' }, [
+            h('div', { class: 'notification-message' }, data.message),
+            h('div', { class: 'notification-footer' }, [
+              h('button', {
+                class: 'custom-btn',
+                onClick: () => {
+                  console.log('按钮被点击了');
+                  notification.close();  // 关闭当前通知
+                }
+              }, '我知道了')
+            ])
+          ])
+        });
+      }
+    });
   }
 }
 const MsgType = {
   M001: 'onlineNum',
-  M002: 'connId'
+  M002: 'connId',
+  M003: 'SendMessage',
+  M004: 'SendNotification'
 }
+

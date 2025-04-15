@@ -8,14 +8,14 @@
           <el-divider></el-divider>
           <div class="work-wrap" style="font-size: 25px;">
             <el-row>
-              <cl-col>
+              <el-col>
                 <span>待您处理</span>
-              </cl-col>
+              </el-col>
             </el-row>
             <el-row>
-              <cl-col>
+              <el-col>
                 <span>超时未处理</span>
-              </cl-col>
+              </el-col>
             </el-row>
             <span>&nbsp;&nbsp;&nbsp;<el-button type="text" style="font-weight: bold;font-size: 30px; color: black;"
                 @click="WaitingforyouProcessedClick">{{
@@ -33,19 +33,19 @@
           <el-divider></el-divider>
           <div class="work-wrap2">
             <el-row>
-              <cl-col>
+              <el-col>
                 <span>交货逾期</span>
-              </cl-col>
+              </el-col>
             </el-row>
             <el-row>
-              <cl-col>
+              <el-col>
                 <span>货款逾期</span>
-              </cl-col>
+              </el-col>
             </el-row>
             <el-row>
-              <cl-col>
+              <el-col>
                 <span>沟通逾期</span>
-              </cl-col>
+              </el-col>
             </el-row>
             <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;
               <el-button type="text" style="font-weight: bold;font-size: 30px; color: red;"
@@ -70,14 +70,14 @@
           <el-divider></el-divider>
           <div class="work-wrap">
             <el-row>
-              <cl-col>
+              <el-col>
                 <span>待您处理</span>
-              </cl-col>
+              </el-col>
             </el-row>
             <el-row>
-              <cl-col>
+              <el-col>
                 <span>超时未处理</span>
-              </cl-col>
+              </el-col>
             </el-row>
             <span style="font-weight: bold;font-size: 30px; cursor: pointer;"
               @click="showPendingEmails">&nbsp;&nbsp;&nbsp;&nbsp;{{
@@ -1869,7 +1869,6 @@ import { Picture } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { useRouter } from 'vue-router'
 import { eventBus } from '@/utils/eventBus'
-
 
 // #region 商机看板
 
@@ -4059,10 +4058,19 @@ const getOutside24hoursEmailCount = async () => {
   }
 }
 
+
 onMounted(async () => {
   // 监听更新待办数量事件
   eventBus.on('updatePendingCount', () => {
     getPendingCount();
+  });
+  // 监听日历更新事件
+  eventBus.on('updatePlanTaskItems', () => {
+    console.log('收到日历更新事件');
+    // 刷新当前日历数据
+    const startDate = formatDate(calendarDates.value[0].date)
+    const endDate = formatDate(calendarDates.value[calendarDates.value.length - 1].date)
+    getPlanTaskItems(startDate, endDate);
   });
   try {
     await Promise.all([
@@ -4079,6 +4087,7 @@ onMounted(async () => {
 // 组件卸载时清理事件监听
 onUnmounted(() => {
   eventBus.off('updatePendingCount');
+  eventBus.off('updatePlanTaskItems');
 });
 
 const showPendingEmails = async () => {

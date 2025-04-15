@@ -14,7 +14,9 @@ const useSocketStore = defineStore('socket', {
     // 待办流程
     todoProcessCount: {},
     // 消息
-    message: {}
+    message: {},
+    // 系统通知
+    systemNotice: {}
   }),
   actions: {
     //更新在线人数
@@ -48,6 +50,9 @@ const useSocketStore = defineStore('socket', {
     },
     setMessage(data) {
       this.message = data
+    },
+    setSystemNotice(data) {
+      this.systemNotice = data
     }
   }
 })
