@@ -4,6 +4,8 @@ import useSocketStore from '@/store/modules/socket'
 import useUserStore from '@/store/modules/user'
 import { webNotify } from '@/utils/index'
 import { eventBus } from '@/utils/eventBus'
+import request from '@/utils/request'  // 添加这行，导入 request
+import { h } from 'vue'  // 添加这行，因为使用了 h 函数
 
 export default {
   onMessage(connection) {
@@ -150,7 +152,8 @@ export default {
     })
 
     // 添加系统通知监听
-    connection.on('SystemNotification', (data) => {
+    // 添加系统通知监听
+    connection.on('SystemNotification', (data) => {  // 修复这里的拼写错误，之前是 onnection
       console.log('接收到系统通知', data);
       const currentUser = useUserStore().userId;
       if (data.toUserId.toString() === currentUser.toString()) {
@@ -167,9 +170,21 @@ export default {
             h('div', { class: 'notification-footer' }, [
               h('button', {
                 class: 'custom-btn',
-                onClick: () => {
-                  console.log('按钮被点击了');
-                  notification.close();  // 关闭当前通知
+                onClick: async () => {
+                  try {
+                    // 调用更新已读状态的接口
+                    const response = await request({
+                      url: 'MessageRecord/UpdateIsReadByMessageID/UpdateIsRead',  // 修改API路径
+                      method: 'get',
+                      params: {
+                        MessagesID: data.messageID
+                      }
+                    });
+                  } catch (error) {
+                    console.error('调用更新已读接口失败:', error);
+                  } finally {
+                    notification.close();  // 无论成功失败都关闭通知
+                  }
                 }
               }, '我知道了')
             ])

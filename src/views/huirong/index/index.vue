@@ -1523,7 +1523,6 @@
         </el-descriptions-item>
       </el-descriptions>
 
-
       <!-- 国外费用 -->
       <div style="margin-top: 30px;">
         <span style="font-size: 20px; font-weight: bold;">国外费用</span>
@@ -1858,7 +1857,7 @@
 
 <script lang="ts" setup>
 import { getCurrentInstance, reactive, toRefs, ref, onMounted, h } from 'vue'
-import { ElMessage, ElMessageBox, ElDatePicker, ElLoading } from "element-plus";
+import { ElMessage, ElMessageBox, ElDatePicker, ElLoading, ElNotification } from "element-plus";
 import request from '@/utils/request';
 import dayjs from 'dayjs';
 import useUserStore from '@/store/modules/user'
@@ -1869,6 +1868,85 @@ import { Picture } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { useRouter } from 'vue-router'
 import { eventBus } from '@/utils/eventBus'
+
+
+// 添加一个 Set 来记录已经显示过的消息 ID
+const displayedMessages = new Set();
+
+// 修改获取未读消息的函数
+const getUnreadMessages = async () => {
+  try {
+    const response = await request({
+      url: '/MessageRecord/GetList/GetMessageList',
+      method: 'get'
+    });
+
+    if (response.code === 200 && response.data) {
+      console.log('获取到的消息:', response.data);
+
+      // 过滤未显示的消息
+      const unreadMessages = response.data.filter(msg => !displayedMessages.has(msg.id));
+      console.log('待显示的消息:', unreadMessages);
+
+      let currentOffset = 0;
+      const notifications = [];
+
+      unreadMessages.forEach((msg) => {
+        displayedMessages.add(msg.id);
+
+        const notification = ElNotification({
+          title: '系统通知',
+          customClass: 'custom-notification',
+          duration: 0,
+          position: 'bottom-right',
+          offset: currentOffset,
+          message: h('div', {
+            class: 'notification-content',
+          }, [
+            h('div', { class: 'notification-message' }, msg.content), // 使用 content 字段
+            h('div', { class: 'notification-footer' }, [
+              h('button', {
+                class: 'custom-btn',
+                onClick: async () => {
+                  try {
+                    const readResponse = await request({
+                      url: '/MessageRecord/UpdateIsReadByMessageID/UpdateIsRead',
+                      method: 'get',
+                      params: {
+                        MessagesID: msg.id
+                      }
+                    });
+
+                    if (readResponse.code === 200) {
+                      notification.close();
+                      const index = notifications.indexOf(notification);
+                      if (index > -1) {
+                        notifications.splice(index, 1);
+                        // 重新计算剩余通知的位置
+                        notifications.forEach((n, i) => {
+                          n.offset = i * 150; // 增加间距，避免重叠
+                        });
+                      }
+                    }
+                  } catch (error) {
+                    console.error('调用更新已读接口失败:', error);
+                    notification.close();
+                  }
+                }
+              }, '我知道了')
+            ])
+          ])
+        });
+
+        notifications.push(notification);
+        currentOffset += 150; // 增加间距，避免重叠
+      });
+    }
+  } catch (error) {
+    console.error('获取消息列表失败:', error);
+  }
+};
+
 
 // #region 商机看板
 
@@ -4077,7 +4155,8 @@ onMounted(async () => {
       getWithin24hoursEmailCount(),
       getOutside24hoursEmailCount(),
       fetchTaskReminderData(),
-      fetchDashboardData()
+      fetchDashboardData(),
+      getUnreadMessages()
     ])
   } catch (error) {
     console.error('数据加载失败:', error)
@@ -4088,6 +4167,9 @@ onMounted(async () => {
 onUnmounted(() => {
   eventBus.off('updatePendingCount');
   eventBus.off('updatePlanTaskItems');
+  displayedMessages.clear();
+  // 关闭所有通知
+  ElNotification.closeAll();
 });
 
 const showPendingEmails = async () => {
@@ -4501,5 +4583,37 @@ const handleOverdueEmailRowDblClick = (row) => {
 /* 表格样式优化 */
 .custom-dialog :deep(.el-table) {
   border-radius: 4px;
+}
+
+.custom-notification {
+  margin-bottom: 16px !important;
+
+  .notification-content {
+    margin-top: 10px;
+  }
+
+  .notification-message {
+    margin-bottom: 10px;
+    word-break: break-all;
+    line-height: 1.5;
+  }
+
+  .notification-footer {
+    text-align: right;
+    margin-top: 10px;
+  }
+
+  .custom-btn {
+    padding: 5px 15px;
+    background-color: #409eff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #66b1ff;
+    }
+  }
 }
 </style>
