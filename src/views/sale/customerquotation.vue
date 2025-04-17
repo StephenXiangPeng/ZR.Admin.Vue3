@@ -36,14 +36,12 @@
 		</div>
 		<el-divider></el-divider>
 		<el-table :data="quotationData" stripe>
-			<el-table-column prop="isDraft" label="是否草稿" :width="150">
+			<el-table-column prop="quotationNum" label="报价单号" :width="150">
 				<template #default="scope">
-					<el-tag :type="scope.row.isDraft === 1 ? 'warning' : 'success'">
-						{{ scope.row.isDraft === 1 ? '是' : '否' }}
-					</el-tag>
+					<span>{{ scope.row.quotationNum }}</span>
+					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
 				</template>
 			</el-table-column>
-			<el-table-column prop="quotationNum" label="报价单号" :width="150" />
 			<el-table-column prop="inquiryDate" label="询价日期" :width="180" :formatter="formatDate" />
 			<el-table-column prop="realQuotationDate" label="实际报价日期" :width="180" :formatter="formatDate" />
 			<el-table-column prop="quotationStatus" label="报价状态" :width="150" v-if="false" />
@@ -547,14 +545,14 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="warning" @click="SaveDraft" v-if="showSaveDraftBtn">
+					<el-button type="warning" v-show="showEditBtn" @click="EditQuotation">
+						编辑
+					</el-button>
+					<el-button type="primary" @click="SaveDraft" v-if="showSaveDraftBtn">
 						保存草稿
 					</el-button>
 					<el-button v-show="isSaveBtnShow" type="success" @click="AddQuotation(quotationDialogformRef)">
 						提交
-					</el-button>
-					<el-button type="primary" v-show="showEditBtn" @click="EditQuotation">
-						编辑
 					</el-button>
 					<el-button type="success" v-show="showEditSaveBtn"
 						@click="EditSaveQuotation(quotationDialogformRef)">

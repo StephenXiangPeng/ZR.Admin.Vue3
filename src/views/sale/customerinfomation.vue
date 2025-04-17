@@ -60,14 +60,12 @@
 		</div>
 		<el-divider></el-divider>
 		<el-table :data="CunstomeinfotableData" @row-dblclick="CunstomeinfotableDatahandleRowDblClick">
-			<el-table-column prop="isDraft" label="是否草稿" style="width: 8%;">
+			<el-table-column prop="customerNo" label="客户编号" style="width: 8%;">
 				<template #default="scope">
-					<el-tag :type="scope.row.isDraft === 1 ? 'warning' : 'success'">
-						{{ scope.row.isDraft === 1 ? '是' : '否' }}
-					</el-tag>
+					<span>{{ scope.row.customerNo }}</span>
+					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
 				</template>
 			</el-table-column>
-			<el-table-column prop="customerNo" label="客户编号" style="width: 8%;" />
 			<el-table-column prop="customerStatus" label="客户状态" style="width: 8%;" />
 			<el-table-column prop="customerLevel" label="客户等级" style="width: 8%;" />
 			<el-table-column prop="customerAbbreviation" label="客户简称" style="width: 8%;" />
@@ -259,11 +257,11 @@
 
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="primary" @click="submitForm(CustomerProfileformRef)">
-						提交
-					</el-button>
 					<el-button type="primary" @click="SaveCustomerDraft(CustomerProfileformRef)">
 						保存草稿
+					</el-button>
+					<el-button type="success" @click="submitForm(CustomerProfileformRef)">
+						提交
 					</el-button>
 				</span>
 			</template>
@@ -326,8 +324,8 @@
 				<el-table-column prop="customerAbbreviation" label="客户简称" style="width: 8%;" />
 				<el-table-column prop="tradingCountry" label="贸易国别" style="width: 8%;" />
 				<el-table-column prop="Lastcontactdate" label="最近联系时间" style="width: 8%;" />
-				<el-table-column prop="Create_time" label="建档时间" style="width: 8%;" />
-				<el-table-column prop="SalesPerson" label="所属销售员" style="width: 8%;" />
+				<el-table-column prop="create_time" label="建档时间" style="width: 8%;" />
+				<el-table-column prop="salesName" label="所属销售员" style="width: 8%;" />
 				<el-table-column prop="Originalfollower" label="原跟进人" style="width: 8%;" />
 				<el-table-column prop="create_by" label="创建人" style="width: 8%;" />
 			</el-table>
@@ -464,6 +462,7 @@
 				<el-tab-pane label="联系日志" name="ContactLogTable">
 					<el-button type="primary" @click="AddContactLog">添加联系日志</el-button>
 					<el-table :data="ContactLogData" height="200" style="width: 100%">
+						<el-table-column prop="conactTag" label="日志标签" width="130" />
 						<el-table-column prop="emailDate" label="联系日期" width="130" />
 						<el-table-column prop="logSouce" label="来源" width="150" />
 						<el-table-column prop="contact" label="联系人" width="180" />
@@ -552,6 +551,13 @@
 				<el-form-item label="联系日期" prop="contactDate">
 					<el-date-picker v-model="contactLogForm.contactDate" type="date" placeholder="选择联系日期"
 						style="width: 100%;" />
+				</el-form-item>
+				<el-form-item label="日志标签" prop="ContactLogTag">
+					<el-select v-model="contactLogForm.ContactLogTag" filterable placeholder="选择日志标签"
+						style="width: 100%;">
+						<el-option v-for="item in ContactLogTagData" :key="item.id" :label="item.emailTagName"
+							:value="item.id" />
+					</el-select>
 				</el-form-item>
 				<el-form-item label="联系人" prop="contactPerson">
 					<el-select v-model="contactLogForm.contactPerson" filterable placeholder="选择联系人"
@@ -1068,30 +1074,25 @@ const handleChange = (file, fileList) => {
 		fileList.splice(3); // 保留前三个文件，移除其余文件
 		return; // 不再继续执行后面的代码
 	}
-	const duplicate = uploadedFiles.value.findIndex(fileItem => fileItem.name === file.name);
-	if (duplicate !== -1) {
-		ElMessage({
-			type: 'info',
-			message: '不要上传重复的文件哦！😔'
-		});
-		const duplicatesInFileList = fileList.filter(fileItem => fileItem.name === file.name);
-		if (duplicatesInFileList.length > 1) {
-			for (let i = 1; i < duplicatesInFileList.length; i++) {
-				const index = fileList.findIndex(fileItem => fileItem.uid === duplicatesInFileList[i].uid);
-				if (index !== -1) {
-					fileList.splice(index, 1); // 从fileList中移除重复文件，保留一个
-				}
+
+	// 检查是否是新文件
+	if (file.raw) {
+		const isDuplicate = fileList.value.some(f =>
+			f !== file && f.name === file.name && !f.raw
+		);
+		if (isDuplicate) {
+			ElMessage({
+				type: 'info',
+				message: '不要上传重复的文件！'
+			});
+			const index = fileList.findIndex(f => f.uid === file.uid);
+			if (index !== -1) {
+				fileList.splice(index, 1);
 			}
+		} else {
+			// 为新文件创建预览URL
+			file.url = URL.createObjectURL(file.raw);
 		}
-	} else {
-		// 添加文件到uploadedFiles，确保不重复
-		const newFiles = fileList.filter(file => !uploadedFiles.value.some(fileItem => fileItem.name === file.name));
-		newFiles.forEach(file => {
-			if (!file.isChanged) {
-				file.isChanged = true;
-				uploadedFiles.value.push(file);
-			}
-		});
 	}
 };
 
@@ -1198,25 +1199,37 @@ const SaveCustomerDraft = async (formEl: FormInstance | undefined) => {
 				CustomerProfileform.remark = '';
 			}
 
-			// 上传客户图片
+			// 处理文件上传
 			let filelistUrlStr = '';
 			if (fileList.value && fileList.value.length > 0) {
-				const uploadPromises = fileList.value.map(file => {
-					const formData = new FormData();
-					formData.append('FileName', file.name);
-					formData.append('FileDir', 'CustomerInfo/CustomerInfoPhoto');
-					formData.append('FileNameType', '1');
-					formData.append('File', file.raw);
-					formData.append('storeType', '1');
-					return request.postForm(UploadUrl, formData);
-				});
+				// 收集已存在的URL（排除blob URL）
+				const existingUrls = fileList.value
+					.filter(file => file.url && !file.url.startsWith('blob:'))
+					.map(file => file.url);
 
-				const responses = await Promise.all(uploadPromises);
-				responses.forEach((response, index) => {
-					if (response?.data?.url) {
-						filelistUrlStr += (index > 0 ? ',' : '') + response.data.url;
-					}
-				});
+				// 只上传新文件
+				const newFiles = fileList.value.filter(file => file.raw && (!file.url || file.url.startsWith('blob:')));
+				if (newFiles.length > 0) {
+					const uploadPromises = newFiles.map(file => {
+						const formData = new FormData();
+						formData.append('FileName', file.name);
+						formData.append('FileDir', 'CustomerInfo/CustomerInfoPhoto');
+						formData.append('FileNameType', '1');
+						formData.append('File', file.raw);
+						formData.append('storeType', '1');
+						return request.postForm(UploadUrl, formData);
+					});
+
+					const responses = await Promise.all(uploadPromises);
+					responses.forEach(response => {
+						if (response?.data?.url) {
+							existingUrls.push(response.data.url);
+						}
+					});
+				}
+
+				// 合并所有URL
+				filelistUrlStr = existingUrls.join(',');
 			}
 
 			// 准备保存数据
@@ -1578,6 +1591,8 @@ const OpenCustomerProfileDetailDialog = (row) => {
 	loadContractHistory(row.id);
 	//加载收寄样历史
 	loadCustomerSendSampleHistory(row.id);
+	//加载日志标签
+	loadContactLogTagData();
 	CustomerProfileDetailDialog.value = true;
 }
 
@@ -1856,6 +1871,7 @@ const previewImageUrl = ref('')
 
 interface ContactLogForm {
 	contactDate: string | Date
+	ContactLogTag: string | number
 	contactPerson: string | number
 	ourStaff: string | number
 	contactContent: string
@@ -1867,6 +1883,7 @@ interface ContactLogForm {
 const contactLogForm = reactive<ContactLogForm>({
 	contactDate: new Date(),
 	contactPerson: '',
+	ContactLogTag: '',
 	ourStaff: '',
 	contactContent: '',
 	remark: '',
@@ -1876,13 +1893,14 @@ const contactLogForm = reactive<ContactLogForm>({
 
 const contactLogRules = reactive<FormRules>({
 	contactDate: [{ required: true, message: '请选择联系日期', trigger: 'change' }],
+	ContactLogTag: [{ required: true, message: '请选择日志标签', trigger: 'change' }],
 	contactPerson: [{ required: true, message: '请选择联系人', trigger: 'change' }],
 	ourStaff: [{ required: true, message: '请选择我方人员', trigger: 'change' }],
 	contactContent: [{ required: true, message: '请输入联系内容', trigger: 'blur' }]
 })
 
 // 打开添加联系日志对话框
-const AddContactLog = () => {
+const AddContactLog = async () => {
 	// 重置表单
 	contactLogForm.contactDate = new Date()
 	contactLogForm.contactPerson = ''
@@ -1971,6 +1989,7 @@ const submitContactLog = async (formEl: FormInstance | undefined) => {
 					ContactDate: contactLogForm.contactDate instanceof Date
 						? contactLogForm.contactDate.toISOString().split('T')[0]
 						: contactLogForm.contactDate,
+					ContactTag: contactLogForm.ContactLogTag,
 					ContactPerson: contactLogForm.contactPerson,
 					ContactContent: contactLogForm.contactContent,
 					OurStaff: contactLogForm.ourStaff,
@@ -2069,10 +2088,19 @@ const loadCustomerContactLogs = async (customerId: number, emailaddress: string 
 							ourStaffName = staff.dictLabel;
 						}
 					}
+					// 查找日志标签名称 - 将ID转换为名称
+					let contactTagName = item.contactTag;
+					if (!isNaN(Number(item.conactTag))) {
+						const contactTag = ContactLogTagData.value.find(tag => tag.id === Number(item.conactTag));
+						if (contactTag) {
+							contactTagName = contactTag.emailTagName;
+						}
+					}
 					return {
 						...item,
 						contact: contactName,
-						ourPersonnel: ourStaffName
+						ourPersonnel: ourStaffName,
+						conactTag: contactTagName
 					};
 				} else {
 					return item;
@@ -2215,5 +2243,157 @@ const OpenDetailDialog = async (customerId) => {
 	//加载收寄样历史
 	loadCustomerSendSampleHistory(customerInfo.id);
 	CustomerProfileDetailDialog.value = true;
+}
+
+// 上传客户图片
+const uploadFiles = async () => {
+	try {
+		// 重置文件URL字符串
+		filelistUrlStr.value = '';
+
+		// 1. 收集已存在的图片URL（从服务器加载的图片）
+		const existingUrls = fileList.value
+			.filter(file => file.url && file.url.includes('/CustomerInfo/CustomerInfoPhoto/'))
+			.map(file => file.url);
+
+		// 2. 只处理新上传的图片
+		const newFiles = fileList.value.filter(file => file.raw);
+
+		// 3. 上传新图片
+		if (newFiles.length > 0) {
+			const uploadPromises = newFiles.map(file => {
+				const formData = new FormData();
+				formData.append('FileName', file.name);
+				formData.append('FileDir', 'CustomerInfo/CustomerInfoPhoto');
+				formData.append('FileNameType', '1');
+				formData.append('File', file.raw);
+				formData.append('storeType', '1');
+				return request.postForm(UploadUrl, formData);
+			});
+
+			const responses = await Promise.all(uploadPromises);
+			const newUrls = responses
+				.filter(response => response?.data?.url)
+				.map(response => response.data.url);
+
+			// 4. 合并所有URL（已存在的和新上传的）
+			filelistUrlStr.value = [...existingUrls, ...newUrls].filter(Boolean).join(',');
+		} else {
+			// 如果没有新图片，只使用已存在的URL
+			filelistUrlStr.value = existingUrls.join(',');
+		}
+
+		// 5. 更新表单中的图片字符串
+		CustomerProfileform.customerPhoto = filelistUrlStr.value;
+
+	} catch (error) {
+		console.error('上传文件出错：', error);
+		ElMessage({
+			message: "上传文件出错！",
+			type: 'error'
+		});
+		throw error;
+	}
+};
+
+const SaveCustomerProfile = async (formEl: FormInstance | undefined) => {
+	if (!formEl) return
+	await formEl.validate(async (valid) => {
+		if (valid) {
+			try {
+				// 检查是否有新上传的文件需要处理
+				const hasNewFiles = fileList.value.some(file => file.raw && !file.url);
+
+				if (hasNewFiles) {
+					// 只处理新上传的文件
+					const uploadPromises = fileList.value
+						.filter(file => file.raw && !file.url)
+						.map(file => {
+							const formData = new FormData();
+							formData.append('FileName', file.name);
+							formData.append('FileDir', 'CustomerInfo/CustomerInfoPhoto');
+							formData.append('FileNameType', '1');
+							formData.append('File', file.raw);
+							formData.append('storeType', '1');
+							return request.postForm(UploadUrl, formData);
+						});
+
+					const responses = await Promise.all(uploadPromises);
+
+					// 收集所有已存在的URL
+					const existingUrls = fileList.value
+						.filter(file => file.url)
+						.map(file => file.url);
+
+					// 添加新上传文件的URL
+					responses.forEach(response => {
+						if (response?.data?.url) {
+							existingUrls.push(response.data.url);
+						}
+					});
+
+					// 更新filelistUrlStr
+					filelistUrlStr.value = existingUrls.join(',');
+				}
+
+				// 准备保存数据
+				const saveData = {
+					customerInfo: {
+						...CustomerProfileform,
+						customerPhoto: filelistUrlStr.value,
+						IsDraft: 1
+					},
+					contactPeople: CustomerContactPersonTableData.value || []
+				};
+
+				// 保存草稿
+				const response = await request.post(
+					isEditCustomerInfo.value
+						? 'CustomerInfoMation/EditCustomerInfo/Edit'
+						: 'CustomerInfoMation/AddCustomerInfo/Add',
+					isEditCustomerInfo.value
+						? { ...saveData, customerInfo: { ...saveData.customerInfo, id: CustomerProfileDetailDialogform.id } }
+						: saveData
+				);
+
+				if (response?.data) {
+					ElMessage({
+						message: '保存草稿成功！',
+						type: 'success'
+					});
+					CloseCustomerProfileDetailDialog();
+				} else {
+					throw new Error(response?.msg || '保存草稿失败');
+				}
+			} catch (error) {
+				console.error('保存草稿出错！😔错误内容：', error);
+				ElMessage({
+					message: error?.message || '保存草稿失败',
+					type: 'error'
+				});
+			}
+		} else {
+			console.log('error submit!', fields)
+		}
+	})
+}
+
+const ContactLogTagData = ref([]);
+
+const loadContactLogTagData = async () => {
+	try {
+		const response = await request({
+			url: 'Email/GetUserEmailTagList/GetUserEmailTag',
+			method: 'get'
+		})
+		if (response && response.code === 200) {
+			ContactLogTagData.value = response.data;
+			console.log(ContactLogTagData.value)
+		} else {
+			ElMessage.error(response.msg || '获取联系日志失败')
+		}
+	} catch (error) {
+		console.error('获取联系日志失败:', error)
+	}
 }
 </script>

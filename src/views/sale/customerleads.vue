@@ -53,14 +53,12 @@
 		</div>
 		<el-divider></el-divider>
 		<el-table :data="CustomerLeadsTableData" align="center">
-			<el-table-column type="isDraft" label="是否草稿" style="width: 12%;">
+			<el-table-column prop="id" label="线索编号" style="width: 12%;">
 				<template #default="scope">
-					<el-tag :type="scope.row.isDraft === 1 ? 'warning' : 'success'">
-						{{ scope.row.isDraft === 1 ? '是' : '否' }}
-					</el-tag>
+					<span>{{ scope.row.id }}</span>
+					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
 				</template>
 			</el-table-column>
-			<el-table-column fixed prop="id" label="线索编号" style="width: 12%;" />
 			<el-table-column prop="contactEmail" label="邮箱" style="width: 12%;" />
 			<el-table-column prop="customerName" label="客户名称" style="width: 12%;" />
 			<el-table-column prop="customerLevel" label="客户等级" style="width: 12%;" />
@@ -185,19 +183,19 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button v-show="isEditBtnVisible" type="primary" @click="IsEditBtnClick">
+					<el-button v-show="isEditBtnVisible" type="warning" @click="IsEditBtnClick">
 						编辑
-					</el-button>
-					<el-button v-show="isEditSaveBtnVisible" type="primary"
-						@click="EditSaveCustomerleads(NewCustomerleadsformRef)">
-						编辑提交
 					</el-button>
 					<el-button
 						v-show="(!isEditBtnVisible && !EditCustomerLeadsID.value) || (EditCustomerLeadsID.value && NewCustomerleadsform.IsDraft === 1)"
 						type="primary" @click="SaveCustomerleadsDraft(NewCustomerleadsformRef)">
 						保存草稿
 					</el-button>
-					<el-button v-show="isSavebtnVisible" type="primary"
+					<el-button v-show="isEditSaveBtnVisible" type="success"
+						@click="EditSaveCustomerleads(NewCustomerleadsformRef)">
+						提交
+					</el-button>
+					<el-button v-show="isSavebtnVisible" type="success"
 						@click="SaveCustomerleads(NewCustomerleadsformRef)">
 						提交
 					</el-button>
@@ -208,7 +206,7 @@
 </template>
 
 <script lang="ts" setup>
-import { getCurrentInstance, reactive, toRefs, ref } from 'vue'
+import { getCurrentInstance, reactive, toRefs, ref, onBeforeUnmount } from 'vue'
 import { ElMessageBox, UploadUserFile, ElMessage, UploadFile, FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/request';
 
@@ -291,14 +289,14 @@ const handleRemove = (file: UploadFile) => {
 			uploadedFiles.value.splice(uploadedIndex, 1);
 		}
 
-		// 从 NewCustomerleadsform.compantPhotoStr 中移除对应的 url
+		// 更新 compantPhotoStr，只移除被删除的图片URL
 		if (NewCustomerleadsform.compantPhotoStr) {
-			const urls = NewCustomerleadsform.compantPhotoStr.split(',');
-			const urlIndex = urls.indexOf(file.url);
-			if (urlIndex !== -1) {
-				urls.splice(urlIndex, 1);
-				NewCustomerleadsform.compantPhotoStr = urls.join(',');
-			}
+			const urls = NewCustomerleadsform.compantPhotoStr.split(',').filter(url => url.trim());
+			// 只移除匹配的URL
+			const updatedUrls = urls.filter(url => url !== file.url);
+			NewCustomerleadsform.compantPhotoStr = updatedUrls.join(',');
+			// 同时更新 filelistUrlStr
+			filelistUrlStr.value = NewCustomerleadsform.compantPhotoStr;
 		}
 
 		ElMessage({
@@ -314,54 +312,67 @@ const handleRemove = (file: UploadFile) => {
 };
 
 const handleChange = (file, fileList) => {
-	// 先检查文件数量限制
+	// 检查文件数量限制
 	if (fileList.length > 3) {
 		ElMessage({
 			type: 'info',
 			message: '最多上传3张图片！'
 		});
-		fileList.splice(3); // 保留前三个文件，移除其余文件
-		return; // 不再继续执行后面的代码
+		fileList.splice(3);
+		return;
 	}
-	const duplicate = uploadedFiles.value.findIndex(fileItem => fileItem.name === file.name);
-	if (duplicate !== -1) {
-		ElMessage({
-			type: 'info',
-			message: '不要上传重复的文件哦！😔'
-		});
-		const duplicatesInFileList = fileList.filter(fileItem => fileItem.name === file.name);
-		if (duplicatesInFileList.length > 1) {
-			for (let i = 1; i < duplicatesInFileList.length; i++) {
-				const index = fileList.findIndex(fileItem => fileItem.uid === duplicatesInFileList[i].uid);
-				if (index !== -1) {
-					fileList.splice(index, 1); // 从fileList中移除重复文件，保留一个
-				}
+
+	// 检查是否是新文件
+	if (!file.isExisting) {
+		const isDuplicate = uploadedFiles.value.some(f => f.name === file.name);
+		if (isDuplicate) {
+			ElMessage({
+				type: 'info',
+				message: '不要上传重复的文件！'
+			});
+			const index = fileList.findIndex(f => f.uid === file.uid);
+			if (index !== -1) {
+				fileList.splice(index, 1);
 			}
+		} else {
+			// 标记为新文件
+			file.isExisting = false;
+			// 为新文件创建预览URL
+			if (file.raw) {
+				file.url = URL.createObjectURL(file.raw);
+			}
+			uploadedFiles.value.push(file);
 		}
-	} else {
-		// 添加文件到uploadedFiles，确保不重复
-		const newFiles = fileList.filter(file => !uploadedFiles.value.some(fileItem => fileItem.name === file.name));
-		newFiles.forEach(file => {
-			if (!file.isChanged) {
-				file.isChanged = true;
-				uploadedFiles.value.push(file);
-			}
-		});
 	}
 };
 
 const handlePictureCardPreview = (file: UploadFile) => {
-	dialogImageUrl.value = file.url!
-	dialogVisible.value = true
-}
+	// 如果是新上传的文件，使用 blob URL
+	if (file.url && file.url.startsWith('blob:')) {
+		dialogImageUrl.value = file.url;
+	} else {
+		// 如果是已有文件，使用服务器URL
+		dialogImageUrl.value = file.url;
+	}
+	dialogVisible.value = true;
+};
+
+// 在组件卸载时清理 blob URLs
+onBeforeUnmount(() => {
+	fileList.value.forEach(file => {
+		if (file.url && file.url.startsWith('blob:')) {
+			URL.revokeObjectURL(file.url);
+		}
+	});
+});
 
 const resetForm = () => {
 	NewCustomerleadsform.clueName = '';
 	NewCustomerleadsform.customerName = '';
-	NewCustomerleadsform.customerSource = '';
-	NewCustomerleadsform.customerLevel = '';
-	NewCustomerleadsform.customerNation = '';
-	NewCustomerleadsform.involvingBusiness = '';
+	NewCustomerleadsform.customerSource = null;
+	NewCustomerleadsform.customerLevel = null;
+	NewCustomerleadsform.customerNation = null;
+	NewCustomerleadsform.involvingBusiness = null;
 	NewCustomerleadsform.compantWebsite = '';
 	NewCustomerleadsform.clueRemark = '';
 	NewCustomerleadsform.compantPhotoStr = '';
@@ -419,10 +430,10 @@ const NewCustomerleadsform = reactive<NewCustomerleadsform>({
 	remark: '',
 	clueName: '',
 	customerName: '',
-	customerSource: 0,
-	customerLevel: 0,
-	customerNation: 0,
-	involvingBusiness: 0,
+	customerSource: null,
+	customerLevel: null,
+	customerNation: null,
+	involvingBusiness: null,
 	compantWebsite: '',
 	clueRemark: '',
 	compantPhotoStr: '',
@@ -482,73 +493,59 @@ const rules = reactive<FormRules<NewCustomerleadsform>>({
 
 //保存草稿
 const SaveCustomerleadsDraft = async (formEl: FormInstance | undefined) => {
-	// #region 保存线索草稿
-	//上传公司图片
-	const uploadPromises = fileList.value.map(file => {
-		const formData = new FormData();
-		formData.append('FileName', file.name);
-		formData.append('FileDir', 'CustomerLeads/CompanyPhoto');
-		formData.append('FileNameType', '1');
-		formData.append('File', file.raw);
-		formData.append('storeType', '1');
-		// 返回上传文件的 Promise
-		return request.postForm(UploadUrl, formData);
-	});
-	Promise.all(uploadPromises).then(responses => {
-		responses.forEach((response, index) => {
-			if (response != null) {
-				filelistUrlStr.value += (index > 0 ? ',' : '') + response.data.url;
-			} else {
-				ElMessage({
-					message: "上传公司图片出错！😔",
-					type: 'error'
-				})
-			}
+	// 验证线索名称是否填写
+	if (!NewCustomerleadsform.clueName || NewCustomerleadsform.clueName.trim() === '') {
+		ElMessage({
+			message: "线索名称必须填写！",
+			type: 'error'
 		});
-		// 保存线索草稿
-		NewCustomerleadsform.compantPhotoStr = filelistUrlStr.value;
-		NewCustomerleadsform.customerLevel = 1;
-		NewCustomerleadsform.IsDraft = 1;
+		return; // 阻止保存操作
+	}
 
-		// 判断是新增还是修改
-		if (EditCustomerLeadsID.value != 0) {
-			// 修改草稿
-			NewCustomerleadsform.id = EditCustomerLeadsID.value;
-			request.post('CustomerLeads/EditCustomerLeads/Edit', NewCustomerleadsform).then(response => {
-				if (response != null) {
-					ElMessage({
-						message: response.msg,
-						type: 'success'
-					})
-					dialogFormVisible.value = false;
-					GetCustomeleadList(currentPage.value, pageSize.value);
-				} else {
-					console.error('修改草稿出错');
-				}
-			}).catch(error => {
-				console.error('修改草稿出错！😔错误内容：', error);
-			})
-		} else {
-			// 新增草稿
-			request.post('CustomerLeads/AddCustomerLeads/Add', NewCustomerleadsform).then(response => {
-				if (response != null) {
-					ElMessage({
-						message: response.msg,
-						type: 'success'
-					})
-					dialogFormVisible.value = false;
-					GetCustomeleadList(currentPage.value, pageSize.value);
-				} else {
-					console.error('保存草稿出错');
-				}
-			}).catch(error => {
-				console.error('保存草稿出错！😔错误内容：', error);
-			})
-		}
-	}).catch(error => {
-		console.error('上传公司图片出错！😔错误内容：', error);
-	});
-	filelistUrlStr.value = '';
+	if (hasFileListChanged()) {
+		await uploadFiles();
+	}
+
+	// #region 保存线索草稿
+	// 保存线索草稿
+	NewCustomerleadsform.compantPhotoStr = filelistUrlStr.value;
+	NewCustomerleadsform.customerLevel = 1;
+	NewCustomerleadsform.IsDraft = 1;
+	// 判断是新增还是修改
+	if (EditCustomerLeadsID.value != 0) {
+		// 修改草稿
+		NewCustomerleadsform.id = EditCustomerLeadsID.value;
+		request.post('CustomerLeads/EditCustomerLeads/Edit', NewCustomerleadsform).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.msg,
+					type: 'success'
+				})
+				dialogFormVisible.value = false;
+				GetCustomeleadList(currentPage.value, pageSize.value);
+			} else {
+				console.error('修改草稿出错');
+			}
+		}).catch(error => {
+			console.error('修改草稿出错！😔错误内容：', error);
+		})
+	} else {
+		// 新增草稿
+		request.post('CustomerLeads/AddCustomerLeads/Add', NewCustomerleadsform).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.msg,
+					type: 'success'
+				})
+				dialogFormVisible.value = false;
+				GetCustomeleadList(currentPage.value, pageSize.value);
+			} else {
+				console.error('保存草稿出错');
+			}
+		}).catch(error => {
+			console.error('保存草稿出错！😔错误内容：', error);
+		})
+	}
 	// #endregion 保存线索草稿
 }
 //保存线索
@@ -562,49 +559,27 @@ const SaveCustomerleads = async (formEl: FormInstance | undefined) => {
 				cancelButtonText: '取消',
 				type: 'warning'
 			}).then(() => {
-				//上传公司图片
-				const uploadPromises = fileList.value.map(file => {
-					const formData = new FormData();
-					formData.append('FileName', file.name);
-					formData.append('FileDir', 'CustomerLeads/CompanyPhoto');
-					formData.append('FileNameType', '1');
-					formData.append('File', file.raw);
-					formData.append('storeType', '1');
-					// 返回上传文件的 Promise
-					return request.postForm(UploadUrl, formData);
-				});
-				Promise.all(uploadPromises).then(responses => {
-					responses.forEach((response, index) => {
-						if (response != null) {
-							filelistUrlStr.value += (index > 0 ? ',' : '') + response.data.url;
-						} else {
-							ElMessage({
-								message: "上传公司图片出错！😔",
-								type: 'error'
-							})
-						}
-					});
-					// 保存线索
-					NewCustomerleadsform.compantPhotoStr = filelistUrlStr.value;
-					NewCustomerleadsform.customerLevel = 1;
-					NewCustomerleadsform.IsDraft = 0;
-					request.post('CustomerLeads/AddCustomerLeads/Add', NewCustomerleadsform).then(response => {
-						if (response != null) {
-							ElMessage({
-								message: response.msg,
-								type: 'success'
-							})
-							dialogFormVisible.value = false;
-							GetCustomeleadList(currentPage.value, pageSize.value);
-						} else {
-							console.error('保存线索出错');
-						}
-					}).catch(error => {
-						console.error('保存线索出错！😔错误内容：', error);
-					})
+				if (hasFileListChanged()) {
+					uploadFiles();
+				}
+				// 保存线索
+				NewCustomerleadsform.compantPhotoStr = filelistUrlStr.value;
+				NewCustomerleadsform.customerLevel = 1;
+				NewCustomerleadsform.IsDraft = 0;
+				request.post('CustomerLeads/AddCustomerLeads/Add', NewCustomerleadsform).then(response => {
+					if (response != null) {
+						ElMessage({
+							message: response.msg,
+							type: 'success'
+						})
+						dialogFormVisible.value = false;
+						GetCustomeleadList(currentPage.value, pageSize.value);
+					} else {
+						console.error('保存线索出错');
+					}
 				}).catch(error => {
-					console.error('上传公司图片出错！😔错误内容：', error);
-				});
+					console.error('保存线索出错！😔错误内容：', error);
+				})
 			}).catch(() => {
 				ElMessage({
 					type: 'info',
@@ -770,58 +745,26 @@ const EditSaveCustomerleads = async (formEl: FormInstance | undefined) => {
 					cancelButtonText: '取消',
 					type: 'warning'
 				}).then(() => {
-					//上传公司图片
-					const uploadPromises = fileList.value.filter(file => file.isChanged).map(file => {
-						const formData = new FormData();
-						formData.append('FileName', file.name);
-						formData.append('FileDir', 'CustomerLeads/CompanyPhoto');
-						formData.append('FileNameType', '1');
-						formData.append('File', file.raw);
-						formData.append('storeType', '1');
-						// 返回上传文件的 Promise
-						if (file.raw != null) {
-							return request.postForm(UploadUrl, formData);
+					if (hasFileListChanged()) {
+						uploadFiles();
+					}
+					// 修改线索
+					NewCustomerleadsform.id = EditCustomerLeadsID.value;
+					NewCustomerleadsform.IsDraft = 0;
+					request.post('CustomerLeads/EditCustomerLeads/Edit', NewCustomerleadsform).then(response => {
+						if (response != null) {
+							ElMessage({
+								message: response.msg,
+								type: 'success'
+							})
+							dialogFormVisible.value = false;
+							GetCustomeleadList(currentPage.value, pageSize.value);
+						} else {
+							console.error('修改线索出错');
 						}
-					});
-					Promise.all(uploadPromises).then(responses => {
-						responses.forEach((response, index) => {
-							if (response != null) {
-								if (NewCustomerleadsform.compantPhotoStr != null && NewCustomerleadsform.compantPhotoStr != '') {
-									NewCustomerleadsform.compantPhotoStr += ',' + response.data.url;
-								} else {
-									NewCustomerleadsform.compantPhotoStr = response.data.url;
-								}
-							} else {
-								ElMessage({
-									message: "上传公司图片出错！😔",
-									type: 'error'
-								})
-							}
-						});
-						// 修改线索
-						if (fileList.value.length == 0) {
-
-							NewCustomerleadsform.compantPhotoStr = ''
-						}
-						NewCustomerleadsform.id = EditCustomerLeadsID.value;
-						NewCustomerleadsform.IsDraft = 0;
-						request.post('CustomerLeads/EditCustomerLeads/Edit', NewCustomerleadsform).then(response => {
-							if (response != null) {
-								ElMessage({
-									message: response.msg,
-									type: 'success'
-								})
-								dialogFormVisible.value = false;
-								GetCustomeleadList(currentPage.value, pageSize.value);
-							} else {
-								console.error('修改线索出错');
-							}
-						}).catch(error => {
-							console.error('修改线索出错', error);
-						})
 					}).catch(error => {
-						console.error('上传公司图片出错！😔错误内容：', error);
-					});
+						console.error('修改线索出错', error);
+					})
 				}).catch(() => {
 					ElMessage({
 						type: 'info',
@@ -851,6 +794,105 @@ const EditSaveCustomerleads = async (formEl: FormInstance | undefined) => {
 		}
 	})
 }
+
+const initializeFileList = () => {
+	if (!NewCustomerleadsform.compantPhotoStr) return;
+
+	const existingFiles = NewCustomerleadsform.compantPhotoStr.split(',').filter(url => url);
+	fileList.value = existingFiles.map(url => ({
+		name: url.split('/').pop(),
+		url: url,
+		raw: null,
+		isExisting: true  // 标记为已存在的文件
+	}));
+	uploadedFiles.value = [...fileList.value];
+};
+
+const hasFileListChanged = () => {
+	// 检查是否有新添加的文件（没有 url 但有 raw 的文件）
+	const hasNewFiles = fileList.value.some(file => !file.url && file.raw);
+
+	// 检查已有文件是否有改变（通过比较当前显示的文件URL和原始的文件URL）
+	const currentUrls = fileList.value
+		.filter(file => file.url)
+		.map(file => file.url)
+		.sort();
+
+	const originalUrls = NewCustomerleadsform.compantPhotoStr ?
+		NewCustomerleadsform.compantPhotoStr.split(',').filter(url => url).sort() : [];
+
+	const hasUrlsChanged = JSON.stringify(currentUrls) !== JSON.stringify(originalUrls);
+
+	return hasNewFiles || hasUrlsChanged;
+};
+
+const uploadFiles = async () => {
+	// 重置文件URL字符串
+	filelistUrlStr.value = '';
+
+	// 获取当前显示的已有文件URL（排除 blob URL）
+	const currentFileUrls = fileList.value
+		.filter(file => file.url && !file.url.startsWith('blob:'))
+		.map(file => file.url);
+
+	// 只上传新添加的文件
+	const uploadPromises = fileList.value
+		.filter(file => file.raw && (!file.url || file.url.startsWith('blob:')))  // 处理新文件
+		.map(file => {
+			const formData = new FormData();
+			formData.append('FileName', file.name);
+			formData.append('FileDir', 'CustomerLeads/CompanyPhoto');
+			formData.append('FileNameType', '1');
+			formData.append('File', file.raw);
+			formData.append('storeType', '1');
+			return request.postForm(UploadUrl, formData);
+		});
+
+	try {
+		if (uploadPromises.length > 0) {
+			const responses = await Promise.all(uploadPromises);
+			const newUrls = responses
+				.filter(response => response != null)
+				.map(response => response.data.url);
+
+			// 合并已有URL和新URL
+			const allUrls = [...currentFileUrls, ...newUrls];
+			filelistUrlStr.value = allUrls.join(',');
+
+			// 更新文件列表中的URL
+			fileList.value = fileList.value.map(file => {
+				if (file.raw && (!file.url || file.url.startsWith('blob:'))) {
+					// 找到对应的新URL
+					const newUrl = responses.find(response =>
+						response.data.originalName === file.name
+					)?.data.url;
+					if (newUrl) {
+						// 清理旧的 blob URL
+						if (file.url && file.url.startsWith('blob:')) {
+							URL.revokeObjectURL(file.url);
+						}
+						file.url = newUrl;
+					}
+				}
+				return file;
+			});
+		} else {
+			// 如果没有新文件上传，使用当前的文件URL列表
+			filelistUrlStr.value = currentFileUrls.join(',');
+		}
+
+		// 更新表单中的文件字符串
+		NewCustomerleadsform.compantPhotoStr = filelistUrlStr.value;
+
+	} catch (error) {
+		console.error('上传文件出错：', error);
+		ElMessage({
+			message: "上传文件出错！",
+			type: 'error'
+		});
+		throw error;
+	}
+};
 </script>
 
 <style>
