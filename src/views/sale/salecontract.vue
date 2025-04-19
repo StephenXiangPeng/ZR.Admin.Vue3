@@ -49,7 +49,7 @@
 			<el-table :data="contractsTableData" style="width: 100%">
 				<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
-				<el-table-column type="isDraft" label="是否草稿" width="100">
+				<el-table-column type="isDraft" label="是否草稿" width="100" v-if="false">
 					<template #default="scope">
 						<el-tag :type="scope.row.isDraft === 1 ? 'warning' : 'success'">
 							{{ scope.row.isDraft === 1 ? '是' : '否' }}
@@ -89,9 +89,16 @@
 						</template>
 					</template>
 				</el-table-column>
-				<el-table-column prop="contractNumber" label="合同编号" width="150"></el-table-column>
+				<el-table-column prop="contractNumber" label="合同编号" width="150">
+					<template #default="scope">
+						<span>{{ scope.row.contractNumber }}</span>
+						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
+					</template>
+				</el-table-column>
 				<el-table-column prop="contractDate" label="合同日期" width="150"></el-table-column>
 				<el-table-column prop="contractStatus" label="合同状态" width="150"></el-table-column>
+				<el-table-column prop="customerId" label="客户ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="customerNumber" label="客户编号" width="150"></el-table-column>
 				<el-table-column prop="customerAbbreviation" label="客户简称" width="150"></el-table-column>
 				<el-table-column prop="effectiveDate" label="生效日期" width="150"></el-table-column>
@@ -166,7 +173,8 @@
 					<el-col :span="8">
 						<el-form-item label="客户编号" prop="customerNumber">
 							<el-select filterable v-model="Newcontractform.customerNumber" placeholder="请选择客户编号"
-								:disabled="isDisabled" style="width: 300px" @change="handleCustomerSelection">
+								:disabled="isDisabled" style="width: 300px" @change="handleCustomerSelection"
+								id="customerNumber">
 								<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -175,7 +183,8 @@
 					<el-col :span="8">
 						<el-form-item label="客户简称" prop="customerAbbreviation">
 							<el-select v-model="Newcontractform.customerAbbreviation" filterable placeholder="请选择客户简称"
-								:disabled="isDisabled" style="width: 300px;" @change="handleCustomerSelection">
+								:disabled="isDisabled" style="width: 300px;" @change="handleCustomerSelection"
+								id="customerAbbreviation">
 								<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -184,7 +193,8 @@
 					<el-col :span="8">
 						<el-form-item label="联系人" prop="contactPerson">
 							<el-select filterable v-model="Newcontractform.contactPerson" placeholder="请选择联系人"
-								style="width: 300px" :disabled="isDisabled" @change="handleContactpersonSelection">
+								style="width: 300px" :disabled="isDisabled" @change="handleContactpersonSelection"
+								id="contactPerson">
 								<el-option v-for="item in contactpersonSelectOptions" :key="item.value"
 									:label="item.label" :value="item.value" />
 							</el-select>
@@ -930,19 +940,16 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="primary" v-show="isSaveBtnShow && isCurrentUserSalesperson"
-						@click="SaveContract(NewcontractformRef)">
-						保存草稿
-					</el-button>
-					<el-button type="primary" v-show="showEditBtn && isCurrentUserSalesperson" @click="EditContract">
+					<el-button v-show="showEditBtn" type="warning" @click="EditContract">
 						编辑
 					</el-button>
-					<el-button type="primary" v-show="showEditSaveBtn && isCurrentUserSalesperson"
-						@click="EditContractSave(NewcontractformRef)">
-						编辑保存
+					<el-button v-show="isSaveBtnShow" type="primary" @click="SaveContractDraft(NewcontractformRef)">
+						保存草稿
 					</el-button>
-					<el-button type="success" v-show="isAuditBtnShow && isCurrentUserSalesperson"
-						@click="SubmitForReview">
+					<el-button v-show="showEditSaveBtn" type="success" @click="EditContractSave(NewcontractformRef)">
+						提交
+					</el-button>
+					<el-button v-show="isAuditBtnShow" type="success" @click="SaveContract(NewcontractformRef)">
 						提交
 					</el-button>
 				</span>
@@ -1787,21 +1794,51 @@ function GetContractList(start, end) {
 				for (var i = 0; i < contractsTableData.value.length; i++) {
 					contractsTableData.value[i].reviewStatus;
 					contractsTableData.value[i].contractReviewStatusStr = GetcontractReviewStatusStr(contractsTableData.value[i].reviewStatus);
-					contractsTableData.value[i].contractStatus = state.optionss.hr_contract_status.find(item => item.dictValue === contractsTableData.value[i].contractStatus.toString()).dictLabel;
-					contractsTableData.value[i].customerNumber = state.optionss.sql_hr_customer.find(item => item.dictValue === contractsTableData.value[i].customerId.toString()).dictLabel;
-					contractsTableData.value[i].customerAbbreviation = state.optionss.sql_hr_customer_abbreviation.find(item => item.dictValue === contractsTableData.value[i].customerId.toString()).dictLabel;
-					contractsTableData.value[i].ourCompany = state.optionss.hr_ourcompany.find(item => item.dictValue === contractsTableData.value[i].ourCompany.toString()).dictLabel;
-					contractsTableData.value[i].foreignCurrency = state.optionss.hr_export_currency.find(item => item.dictValue === contractsTableData.value[i].foreignCurrency.toString()).dictLabel;
-					contractsTableData.value[i].settlementMethod = state.optionss.hr_settlement_way.find(item => item.dictValue === contractsTableData.value[i].settlementMethod.toString()).dictLabel;
-					contractsTableData.value[i].priceTerms = state.optionss.hr_pricing_term.find(item => item.dictValue === contractsTableData.value[i].priceTerms.toString()).dictLabel;
-					contractsTableData.value[i].shippingPort = state.optionss.hr_transport_port.find(item => item.dictValue === contractsTableData.value[i].shippingPort.toString()).dictLabel;
-					contractsTableData.value[i].tradeCountry = state.optionss.hr_nation.find(item => item.dictValue === contractsTableData.value[i].tradeCountry.toString()).dictLabel;
-					contractsTableData.value[i].transportation = state.optionss.hr_transportation_method.find(item => item.dictValue === contractsTableData.value[i].transportation.toString()).dictLabel;
-					contractsTableData.value[i].contractDate = contractsTableData.value[i].contractDate ? contractsTableData.value[i].contractDate.substring(0, 10) : '';
-					contractsTableData.value[i].deliveryDate = contractsTableData.value[i].deliveryDate ? contractsTableData.value[i].deliveryDate.substring(0, 10) : '';
-					contractsTableData.value[i].effectiveDate = contractsTableData.value[i].effectiveDate ? contractsTableData.value[i].effectiveDate.substring(0, 10) : '';
-					contractsTableData.value[i].depositDate = contractsTableData.value[i].depositDate ? contractsTableData.value[i].depositDate.substring(0, 10) : '';
-					contractsTableData.value[i].paymentDate = contractsTableData.value[i].paymentDate ? contractsTableData.value[i].paymentDate.substring(0, 10) : '';
+					if (contractsTableData.value[i].contractStatus.toString() != "") {
+						contractsTableData.value[i].contractStatus = state.optionss.hr_contract_status.find(item => item.dictValue === contractsTableData.value[i].contractStatus.toString()).dictLabel;
+					}
+					if (contractsTableData.value[i].customerNumber > 0) {
+						contractsTableData.value[i].customerNumber = state.optionss.sql_hr_customer.find(item => item.dictValue === contractsTableData.value[i].customerNumber.toString()).dictLabel;
+					}
+					if (contractsTableData.value[i].customerAbbreviation > 0) {
+						contractsTableData.value[i].customerAbbreviation = state.optionss.sql_hr_customer_abbreviation.find(item => item.dictValue === contractsTableData.value[i].customerAbbreviation.toString()).dictLabel;
+					}
+					if (contractsTableData.value[i].ourCompany != null) {
+						contractsTableData.value[i].ourCompany = state.optionss.hr_ourcompany.find(item => item.dictValue === contractsTableData.value[i].ourCompany.toString()).dictLabel;
+					}
+					if (contractsTableData.value[i].foreignCurrency != null) {
+						contractsTableData.value[i].foreignCurrency = state.optionss.hr_export_currency.find(item => item.dictValue === contractsTableData.value[i].foreignCurrency.toString()).dictLabel;
+					}
+					if (contractsTableData.value[i].settlementMethod != null) {
+						contractsTableData.value[i].settlementMethod = state.optionss.hr_settlement_way.find(item => item.dictValue === contractsTableData.value[i].settlementMethod.toString()).dictLabel;
+					}
+					if (contractsTableData.value[i].priceTerms != null) {
+						contractsTableData.value[i].priceTerms = state.optionss.hr_pricing_term.find(item => item.dictValue === contractsTableData.value[i].priceTerms.toString()).dictLabel;
+					}
+					if (contractsTableData.value[i].shippingPort != null) {
+						contractsTableData.value[i].shippingPort = state.optionss.hr_transport_port.find(item => item.dictValue === contractsTableData.value[i].shippingPort.toString()).dictLabel;
+					}
+					if (contractsTableData.value[i].tradeCountry != null) {
+						contractsTableData.value[i].tradeCountry = state.optionss.hr_nation.find(item => item.dictValue === contractsTableData.value[i].tradeCountry.toString()).dictLabel;
+					}
+					if (contractsTableData.value[i].transportation != null) {
+						contractsTableData.value[i].transportation = state.optionss.hr_transportation_method.find(item => item.dictValue === contractsTableData.value[i].transportation.toString()).dictLabel;
+					}
+					if (contractsTableData.value[i].contractDate != null) {
+						contractsTableData.value[i].contractDate = contractsTableData.value[i].contractDate.substring(0, 10);
+					}
+					if (contractsTableData.value[i].deliveryDate != null) {
+						contractsTableData.value[i].deliveryDate = contractsTableData.value[i].deliveryDate.substring(0, 10);
+					}
+					if (contractsTableData.value[i].effectiveDate != null) {
+						contractsTableData.value[i].effectiveDate = contractsTableData.value[i].effectiveDate.substring(0, 10);
+					}
+					if (contractsTableData.value[i].depositDate != null) {
+						contractsTableData.value[i].depositDate = contractsTableData.value[i].depositDate.substring(0, 10);
+					}
+					if (contractsTableData.value[i].paymentDate != null) {
+						contractsTableData.value[i].paymentDate = contractsTableData.value[i].paymentDate.substring(0, 10);
+					}
 				}
 				contractsTableDatatotalItems.value = response.data.totalNum;
 				resolve(response.data.data);
@@ -2088,172 +2125,204 @@ const addContractsRequest = reactive({
 		Remark: string
 	}>
 });
+
+const scrollToError = (formEl: FormInstance) => {
+	// 获取所有验证失败的字段
+	const errorFields = formEl.fields.filter(field => field.validateState === 'error')
+	if (errorFields.length > 0) {
+		// 获取第一个错误字段的prop
+		const firstErrorProp = errorFields[0].prop
+		// 使用更可靠的选择器，包括label和input元素
+		const fieldEl = document.querySelector(`label[for="${firstErrorProp}"]`) ||
+			document.querySelector(`[name="${firstErrorProp}"]`) ||
+			document.querySelector(`[data-field="${firstErrorProp}"]`) ||
+			document.querySelector(`#${firstErrorProp}`)
+
+		if (fieldEl) {
+			// 滚动到该元素位置
+			fieldEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+			// 添加高亮效果
+			fieldEl.classList.add('highlight-error')
+			setTimeout(() => {
+				fieldEl.classList.remove('highlight-error')
+			}, 2000)
+		}
+	}
+}
+
 const SaveContract = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
-	await formEl.validate((valid) => {
-		if (valid) {
-			ElMessageBox.confirm('确定保存合同信息吗?', '提示', {
-				confirmButtonText: '确定',
-				cancelButtonText: '取消',
-				type: 'warning'
-			}).then(() => {
-				// 映射基本信息
-				addContractsRequest.Id = 0; // 新增时ID为0
-				addContractsRequest.ContractNumber = Newcontractform.contractNumber;
-				addContractsRequest.ContractDate = Newcontractform.contractDate;
-				addContractsRequest.ContractStatus = Newcontractform.contractStatus;
-				addContractsRequest.CustomerId = Newcontractform.customerid;
-				addContractsRequest.CustomerNumber = Newcontractform.customerNumber;
-				addContractsRequest.CustomerAbbreviation = Newcontractform.customerAbbreviation;
-				addContractsRequest.ContactPerson = Newcontractform.contactPerson;
-				addContractsRequest.ContactEmail = Newcontractform.contactEmail;
-				addContractsRequest.EffectiveDate = Newcontractform.effectiveDate;
-				addContractsRequest.CustomerLevel = Newcontractform.customerLevel;
-				addContractsRequest.CustomerContract = Newcontractform.customerContract;
-				addContractsRequest.DeliveryDate = Newcontractform.deliveryDate;
-				addContractsRequest.OurCompany = Newcontractform.ourCompany;
-				addContractsRequest.SettlementType = Newcontractform.settlementType;
-				addContractsRequest.ForeignCurrency = Newcontractform.foreignCurrency;
-				addContractsRequest.ExchangeRate = Newcontractform.exchangeRate;
-				addContractsRequest.UsdExchangeRate = Newcontractform.usdExchangeRate;
-				addContractsRequest.SettlementMethod = Newcontractform.settlementMethod;
-				addContractsRequest.PriceTerms = Newcontractform.priceTerms;
-				addContractsRequest.ShippingPort = Newcontractform.shippingPort;
-				addContractsRequest.DestinationPort = Newcontractform.destinationPort;
-				addContractsRequest.TradeCountry = Newcontractform.tradeCountry;
-				addContractsRequest.Transportation = Newcontractform.transportation;
-				addContractsRequest.Salesperson = Newcontractform.salesperson;
-				addContractsRequest.HasDeposit = Newcontractform.hasDeposit;
-				addContractsRequest.ReceivedDeposit = Newcontractform.receivedDeposit;
-				addContractsRequest.DepositDate = Newcontractform.depositDate;
-				addContractsRequest.Depositratio = Newcontractform.Depositratio;
-				addContractsRequest.CustomerOrder = Newcontractform.customerOrder;
-				addContractsRequest.SigningLocation = Newcontractform.signingLocation;
-				addContractsRequest.InsuranceAddition = Newcontractform.insuranceAddition;
-				addContractsRequest.InsuranceRate = Newcontractform.insuranceRate;
-				addContractsRequest.CommissionRate = Newcontractform.commissionRate;
-				addContractsRequest.ShippingCurrency = Newcontractform.shippingCurrency;
-				addContractsRequest.ShippingExchangeRate = Newcontractform.shippingrate;
-				addContractsRequest.ShippingCost = Newcontractform.oceanFreight;
-				addContractsRequest.freightForwarderCustomsClearanceFees = Newcontractform.freightForwarderCustomsClearanceFees;
-				addContractsRequest.ReceivingBank = Newcontractform.receivingBank;
-				addContractsRequest.BankCost = Newcontractform.BankFee;
-				addContractsRequest.DocumentationFees = Newcontractform.DocumentationFees;
-				addContractsRequest.PaymentDate = Newcontractform.paymentDate;
-				addContractsRequest.GoodsValue = Newcontractform.TotalValueOfGoods;
-				addContractsRequest.Quantity = Newcontractform.TotalQuantity;
-				addContractsRequest.BoxCount = Newcontractform.TotalNumberOfBoxes;
-				addContractsRequest.GrossWeight = Newcontractform.TotalGrossWeight;
-				addContractsRequest.NetWeight = Newcontractform.TotalNetWeight;
-				addContractsRequest.Volume = Newcontractform.TotalVolume;
-				addContractsRequest.PurchaseTotal = Newcontractform.TotalPurchases;
-				addContractsRequest.TaxRefundTotal = Newcontractform.TotalTaxRefund;
-				addContractsRequest.CustomerExpenseTotal = Newcontractform.customerExpenseTotal;
-				addContractsRequest.AmountTotal = Newcontractform.amountTotal;
-				addContractsRequest.UsdConversion = Newcontractform.usdConversion;
-				addContractsRequest.Totalgrossprofit = Newcontractform.Totalgrossprofit;
-				addContractsRequest.totalOtherFees = Newcontractform.TotalOtherFees;
-				addContractsRequest.ProfitAmount = Newcontractform.ProfitAmount;
-				addContractsRequest.Totalprofitmargin = Newcontractform.Totalprofitmargin;
-				addContractsRequest.CommissionAmount = Newcontractform.commissionAmount;
-				addContractsRequest.InsuranceCost = Newcontractform.insuranceCost;
-				addContractsRequest.FreightCost = Newcontractform.freightCost;
-				addContractsRequest.TotalCost = Newcontractform.totalCost;
-				addContractsRequest.ExchangeCost = Newcontractform.exchangeCost;
-				addContractsRequest.ProductProfit = Newcontractform.productProfit;
-				addContractsRequest.ProfitRate = Newcontractform.profitRate;
-				addContractsRequest.FreightCurrency = Newcontractform.FreightCurrency;
-				addContractsRequest.FreightQuote = Newcontractform.FreightQuote;
-				addContractsRequest.Courierfee = Newcontractform.Courierfee;
-				addContractsRequest.IsDelete = 0;
-				addContractsRequest.Remark = Newcontractform.contractremark;
-				addContractsRequest.portMiscellaneousFees = Newcontractform.portMiscellaneousFees;
-				addContractsRequest.CanPartial = Number(Newcontractform.canPartial) === 1 ? 1 : 0;
-				addContractsRequest.CanTransit = Number(Newcontractform.canTransit) === 1 ? 1 : 0;
-				addContractsRequest.isDraft = 1;
-				// 映射产品信息
-				addContractsRequest.contractProductItems = productData.value.map(item => ({
-					Id: 0,
-					ProductID: item.productID,
-					ContractId: 0,
-					ProductCode: item.productNum,
-					CustomerCode: item.customerNum,
-					ChineseName: item.cproductname,
-					ChineseSpec: item.cspecification,
-					EnglishName: '',
-					ContractQuantity: item.contractQuantity,
-					Unit: item.unitofmeasurement,
-					ExportUnitPrice: item.exportunitprice,
-					ExportTotalPrice: item.exporttotalprice,
-					PurchaseUnitPrice: item.purchaseunitprice,
-					PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
-					Packaging: item.packaging,
-					SpecialRequirements: item.specialrequirements,
-					Invoice: item.isInvoicingc === 'Y' ? 1 : 0,
-					TaxRefundRate: item.rebaterate,
-					InnerBoxQuantity: item.innerBoxLoading,
-					OuterBoxQuantity: item.outerboxloading,
-					BoxCount: item.NumberOfBoxes,
-					OuterBoxLength: item.outerboxlength,
-					OuterBoxWidth: item.outerboxwidth,
-					OuterBoxHeight: item.outerboxheight,
-					OuterBoxVolume: item.outerboxvolume,
-					OuterBoxNetWeight: item.outerboxnetweight,
-					OuterBoxGrossWeight: item.outerboxgrossweight,
-					TotalVolume: item.totalVolume,
-					TotalNetWeight: item.totalNetWeight,
-					TotalGrossWeight: item.totalGrossWeight,
-					Remark: item.remark,
-					additionalPackagingCosts: item.AdditionalPackagingCosts,
-					grossProfitRate: item.grossProfitRate,
-					Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct,
-					Inlandfreightprice: item.inlandfreightprice,
-					IsNewProduct: item.isImported ? 1 : 0,
-					Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct,
-					Onepacking: item.AdditionalPackagingCosts,
-					OtherFees: item.OtherFees,
-					outerboxunit: item.outerboxunit,
-					Portchargesforindividualproducts: item.Portchargesforindividualproducts,
-					Purchasecurrency: item.purchasecurrency,
-					singleProductGrossProfit: item.singleProductGrossProfit,
-					singleProductGrossProfitTotal: item.singleProductGrossProfitTotal,
-					Singleproductvolume: item.Singleproductvolume,
-					Singlesalesrevenue: item.SinglesalesrevenueA
-				}));
-
-				// 映射费用信息
-				addContractsRequest.contractExpensesItems = CustomerRelaterExoensesTableData.value.map(item => ({
-					Id: 0,
-					ContractId: 0,
-					ExpenseName: item.expenseName,
-					Currency: item.currency,
-					ExchangeRate: item.exchangeRate,
-					Expense: item.expense,
-					Remark: item.remark
-				}));
-
-				// 发送请求
-				request.post('Contracts/AddContracts/Add', addContractsRequest)
-					.then(response => {
-						if (response != null) {
-							ElMessage({
-								message: response.msg,
-								type: 'success'
-							});
-							contractDialog.value = false;
-							GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
-							isAuditBtnShow.value = true;
-						}
-					})
-					.catch(error => {
-						console.error('新增销售合同出错！😔错误内容：', error);
-						ElMessage.error('保存失败：' + error.message);
-					});
-			});
-		} else {
-			ElMessage.error('请检查销售合同基本信息是否填写完整')
+	try {
+		const valid = await formEl.validate()
+		if (!valid) {
+			scrollToError(formEl)
+			return
 		}
-	})
+
+		await ElMessageBox.confirm('确定提交当前合同吗?', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		}).then(() => {
+			// 映射基本信息
+			addContractsRequest.Id = 0; // 新增时ID为0
+			addContractsRequest.ContractNumber = Newcontractform.contractNumber;
+			addContractsRequest.ContractDate = Newcontractform.contractDate;
+			addContractsRequest.ContractStatus = Newcontractform.contractStatus;
+			addContractsRequest.CustomerId = Newcontractform.customerid;
+			addContractsRequest.CustomerNumber = Newcontractform.customerNumber;
+			addContractsRequest.CustomerAbbreviation = Newcontractform.customerAbbreviation;
+			addContractsRequest.ContactPerson = Newcontractform.contactPerson;
+			addContractsRequest.ContactEmail = Newcontractform.contactEmail;
+			addContractsRequest.EffectiveDate = Newcontractform.effectiveDate;
+			addContractsRequest.CustomerLevel = Newcontractform.customerLevel;
+			addContractsRequest.CustomerContract = Newcontractform.customerContract;
+			addContractsRequest.DeliveryDate = Newcontractform.deliveryDate;
+			addContractsRequest.OurCompany = Newcontractform.ourCompany;
+			addContractsRequest.SettlementType = Newcontractform.settlementType;
+			addContractsRequest.ForeignCurrency = Newcontractform.foreignCurrency;
+			addContractsRequest.ExchangeRate = Newcontractform.exchangeRate;
+			addContractsRequest.UsdExchangeRate = Newcontractform.usdExchangeRate;
+			addContractsRequest.SettlementMethod = Newcontractform.settlementMethod;
+			addContractsRequest.PriceTerms = Newcontractform.priceTerms;
+			addContractsRequest.ShippingPort = Newcontractform.shippingPort;
+			addContractsRequest.DestinationPort = Newcontractform.destinationPort;
+			addContractsRequest.TradeCountry = Newcontractform.tradeCountry;
+			addContractsRequest.Transportation = Newcontractform.transportation;
+			addContractsRequest.Salesperson = Newcontractform.salesperson;
+			addContractsRequest.HasDeposit = Newcontractform.hasDeposit;
+			addContractsRequest.ReceivedDeposit = Newcontractform.receivedDeposit;
+			addContractsRequest.DepositDate = Newcontractform.depositDate;
+			addContractsRequest.Depositratio = Newcontractform.Depositratio;
+			addContractsRequest.CustomerOrder = Newcontractform.customerOrder;
+			addContractsRequest.SigningLocation = Newcontractform.signingLocation;
+			addContractsRequest.InsuranceAddition = Newcontractform.insuranceAddition;
+			addContractsRequest.InsuranceRate = Newcontractform.insuranceRate;
+			addContractsRequest.CommissionRate = Newcontractform.commissionRate;
+			addContractsRequest.ShippingCurrency = Newcontractform.shippingCurrency;
+			addContractsRequest.ShippingExchangeRate = Newcontractform.shippingrate;
+			addContractsRequest.ShippingCost = Newcontractform.oceanFreight;
+			addContractsRequest.freightForwarderCustomsClearanceFees = Newcontractform.freightForwarderCustomsClearanceFees;
+			addContractsRequest.ReceivingBank = Newcontractform.receivingBank;
+			addContractsRequest.BankCost = Newcontractform.BankFee;
+			addContractsRequest.DocumentationFees = Newcontractform.DocumentationFees;
+			addContractsRequest.PaymentDate = Newcontractform.paymentDate;
+			addContractsRequest.GoodsValue = Newcontractform.TotalValueOfGoods;
+			addContractsRequest.Quantity = Newcontractform.TotalQuantity;
+			addContractsRequest.BoxCount = Newcontractform.TotalNumberOfBoxes;
+			addContractsRequest.GrossWeight = Newcontractform.TotalGrossWeight;
+			addContractsRequest.NetWeight = Newcontractform.TotalNetWeight;
+			addContractsRequest.Volume = Newcontractform.TotalVolume;
+			addContractsRequest.PurchaseTotal = Newcontractform.TotalPurchases;
+			addContractsRequest.TaxRefundTotal = Newcontractform.TotalTaxRefund;
+			addContractsRequest.CustomerExpenseTotal = Newcontractform.customerExpenseTotal;
+			addContractsRequest.AmountTotal = Newcontractform.amountTotal;
+			addContractsRequest.UsdConversion = Newcontractform.usdConversion;
+			addContractsRequest.Totalgrossprofit = Newcontractform.Totalgrossprofit;
+			addContractsRequest.totalOtherFees = Newcontractform.TotalOtherFees;
+			addContractsRequest.ProfitAmount = Newcontractform.ProfitAmount;
+			addContractsRequest.Totalprofitmargin = Newcontractform.Totalprofitmargin;
+			addContractsRequest.CommissionAmount = Newcontractform.commissionAmount;
+			addContractsRequest.InsuranceCost = Newcontractform.insuranceCost;
+			addContractsRequest.FreightCost = Newcontractform.freightCost;
+			addContractsRequest.TotalCost = Newcontractform.totalCost;
+			addContractsRequest.ExchangeCost = Newcontractform.exchangeCost;
+			addContractsRequest.ProductProfit = Newcontractform.productProfit;
+			addContractsRequest.ProfitRate = Newcontractform.profitRate;
+			addContractsRequest.FreightCurrency = Newcontractform.FreightCurrency;
+			addContractsRequest.FreightQuote = Newcontractform.FreightQuote;
+			addContractsRequest.Courierfee = Newcontractform.Courierfee;
+			addContractsRequest.IsDelete = 0;
+			addContractsRequest.Remark = Newcontractform.contractremark;
+			addContractsRequest.portMiscellaneousFees = Newcontractform.portMiscellaneousFees;
+			addContractsRequest.CanPartial = Number(Newcontractform.canPartial) === 1 ? 1 : 0;
+			addContractsRequest.CanTransit = Number(Newcontractform.canTransit) === 1 ? 1 : 0;
+			addContractsRequest.isDraft = 0;
+
+			// 映射产品信息
+			addContractsRequest.contractProductItems = productData.value.map(item => ({
+				Id: 0,
+				ProductID: item.productID,
+				ContractId: 0,
+				ProductCode: item.productNum,
+				CustomerCode: item.customerNum,
+				ChineseName: item.cproductname,
+				ChineseSpec: item.cspecification,
+				EnglishName: '',
+				ContractQuantity: item.contractQuantity,
+				Unit: item.unitofmeasurement,
+				ExportUnitPrice: item.exportunitprice,
+				ExportTotalPrice: item.exporttotalprice,
+				PurchaseUnitPrice: item.purchaseunitprice,
+				PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
+				Packaging: item.packaging,
+				SpecialRequirements: item.specialrequirements,
+				Invoice: item.isInvoicingc === 'Y' ? 1 : 0,
+				TaxRefundRate: item.rebaterate,
+				InnerBoxQuantity: item.innerBoxLoading,
+				OuterBoxQuantity: item.outerboxloading,
+				BoxCount: item.NumberOfBoxes,
+				OuterBoxLength: item.outerboxlength,
+				OuterBoxWidth: item.outerboxwidth,
+				OuterBoxHeight: item.outerboxheight,
+				OuterBoxVolume: item.outerboxvolume,
+				OuterBoxNetWeight: item.outerboxnetweight,
+				OuterBoxGrossWeight: item.outerboxgrossweight,
+				TotalVolume: item.totalVolume,
+				TotalNetWeight: item.totalNetWeight,
+				TotalGrossWeight: item.totalGrossWeight,
+				Remark: item.remark,
+				additionalPackagingCosts: item.AdditionalPackagingCosts,
+				grossProfitRate: item.grossProfitRate,
+				Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct,
+				Inlandfreightprice: item.inlandfreightprice,
+				IsNewProduct: item.isImported ? 1 : 0,
+				Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct,
+				Onepacking: item.AdditionalPackagingCosts,
+				OtherFees: item.OtherFees,
+				outerboxunit: item.outerboxunit,
+				Portchargesforindividualproducts: item.Portchargesforindividualproducts,
+				Purchasecurrency: item.purchasecurrency,
+				singleProductGrossProfit: item.singleProductGrossProfit,
+				singleProductGrossProfitTotal: item.singleProductGrossProfitTotal,
+				Singleproductvolume: item.Singleproductvolume,
+				Singlesalesrevenue: item.SinglesalesrevenueA
+			}));
+
+			// 映射费用信息
+			addContractsRequest.contractExpensesItems = CustomerRelaterExoensesTableData.value.map(item => ({
+				Id: 0,
+				ContractId: 0,
+				ExpenseName: item.expenseName,
+				Currency: item.currency,
+				ExchangeRate: item.exchangeRate,
+				Expense: item.expense,
+				Remark: item.remark
+			}));
+
+			// 发送请求
+			request({
+				url: 'Contracts/AddContracts/Add',
+				method: 'post',
+				data: addContractsRequest
+			}).then(response => {
+				if (response != null) {
+					ElMessage({
+						message: response.msg,
+						type: 'success'
+					});
+					contractDialog.value = false;
+					// 刷新列表
+					GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+				}
+			});
+		}).catch(() => {
+			ElMessage.info('已取消提交合同');
+		});
+	} catch (error) {
+		console.error('提交合同失败:', error);
+		ElMessage.error('提交合同失败');
+	}
 }
 
 const clearAll = () => {
@@ -2353,11 +2422,11 @@ const GetContractNumber = () => {
 
 const openContractDialog = () => {
 	clearAll();
-	contractDialog.value = true;
 	isDisabled.value = false;
 	showEditBtn.value = false;
 	showEditSaveBtn.value = false;
 	isSaveBtnShow.value = true;
+	isAuditBtnShow.value = true;
 	const currentDate = new Date();
 	const formattedDate = currentDate.toISOString().split('T')[0];
 	Newcontractform.contractDate = formattedDate;
@@ -2365,7 +2434,7 @@ const openContractDialog = () => {
 	Newcontractform.hasDeposit = false;
 	Newcontractform.salesperson = state.optionss['sql_hr_sale'].filter(item => item.dictValue == userId.toString()).map(item => item.dictValue).values().next().value;
 	GetContractNumber();
-
+	contractDialog.value = true;
 }
 
 
@@ -2431,16 +2500,26 @@ const checkContractsDetails = async (row) => {
 	SelctedContractId.value = row.id;
 	Newcontractform.contractNumber = row.contractNumber;
 	Newcontractform.contractDate = row.contractDate;
-	Newcontractform.contractStatus = row.contractStatus;
-	Newcontractform.customerid = row.customerId;
-	Newcontractform.customerNumber = state.optionss['sql_hr_customer'].find(item => item.dictValue === row.customerId.toString()).dictValue;
-	Newcontractform.customerAbbreviation = state.optionss['sql_hr_customer'].find(item => item.dictValue === row.customerId.toString()).dictValue;
-	GetCustomerContactPerson(row.customerId);
+	if (row.contractStatus.toString() != "") {
+		Newcontractform.contractStatus = state.optionss.hr_contract_status.find(item => item.dictLabel === row.contractStatus.toString()).dictValue;
+	}
+
+	if (row.customerNumber != null && row.customerNumber != "") {
+		Newcontractform.customerNumber = state.optionss.sql_hr_customer.find(item => item.dictLabel === row.customerNumber.toString()).dictValue;
+	}
+	if (row.customerAbbreviation != null && row.customerAbbreviation != "") {
+		Newcontractform.customerAbbreviation = state.optionss.sql_hr_customer_abbreviation.find(item => item.dictValue === row.customerAbbreviation.toString()).dictValue;
+	}
+	if (row.customerId != 0) {
+		Newcontractform.customerid = row.customerId;
+		GetCustomerContactPerson(row.customerId);
+	}
+
 	Newcontractform.contactPerson = row.contactPerson;
 	Newcontractform.contactEmail = row.contactEmail;
 	Newcontractform.effectiveDate = row.effectiveDate;
 	if (row.customerLevel) {
-		const levelOption = state.optionss['hr_customer_level']?.find(item =>
+		const levelOption = state.optionss.hr_customer_level.find(item =>
 			item.dictValue === row.customerLevel.toString()
 		);
 		if (levelOption) {
@@ -2449,9 +2528,11 @@ const checkContractsDetails = async (row) => {
 	}
 	Newcontractform.customerContract = row.customerContract;
 	Newcontractform.deliveryDate = row.deliveryDate;
-	Newcontractform.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictLabel === row.ourCompany.toString()).dictValue;
+	if (row.ourCompany != null) {
+		Newcontractform.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictLabel === row.ourCompany.toString()).dictValue;
+	}
 	if (row.settlementType) {
-		const settlementTypeOption = state.optionss['hr_settlement_way']?.find(item =>
+		const settlementTypeOption = state.optionss.hr_settlement_way.find(item =>
 			item.dictValue === row.settlementType.toString()
 		);
 		if (settlementTypeOption) {
@@ -2459,8 +2540,8 @@ const checkContractsDetails = async (row) => {
 		}
 	}
 	if (row.foreignCurrency) {
-		const foreignCurrencyOption = state.optionss['hr_export_currency']?.find(item =>
-			item.dictValue === row.foreignCurrency.toString()
+		const foreignCurrencyOption = state.optionss.hr_export_currency.find(item =>
+			item.dictLabel === row.foreignCurrency.toString()
 		);
 		if (foreignCurrencyOption) {
 			Newcontractform.foreignCurrency = foreignCurrencyOption.dictValue;
@@ -2468,20 +2549,28 @@ const checkContractsDetails = async (row) => {
 	}
 	Newcontractform.exchangeRate = row.exchangeRate;
 	Newcontractform.usdExchangeRate = row.usdExchangeRate;
-	Newcontractform.settlementMethod = state.optionss['hr_settlement_way'].find(item => item.dictLabel === row.settlementMethod.toString()).dictValue;
+	if (row.settlementMethod != null) {
+		Newcontractform.settlementMethod = state.optionss.hr_settlement_way.find(item => item.dictLabel === row.settlementMethod.toString()).dictValue;
+	}
 	if (row.priceTerms) {
-		const priceTermOption = state.optionss['hr_pricing_term']?.find(item =>
-			item.dictValue === row.priceTerms.toString()
+		const priceTermOption = state.optionss.hr_pricing_term.find(item =>
+			item.dictLabel === row.priceTerms.toString()
 		);
 		if (priceTermOption) {
 			Newcontractform.priceTerms = priceTermOption.dictValue;
 		}
 	}
-	Newcontractform.shippingPort = state.optionss['hr_transport_port'].find(item => item.dictLabel === row.shippingPort.toString()).dictValue;
+	if (row.shippingPort != null) {
+		Newcontractform.shippingPort = state.optionss.hr_transport_port.find(item => item.dictLabel === row.shippingPort.toString()).dictValue;
+	}
 	Newcontractform.destinationPort = row.destinationPort;
-	Newcontractform.tradeCountry = state.optionss['hr_nation'].find(item => item.dictLabel === row.tradeCountry.toString()).dictValue;
-	Newcontractform.transportation = state.optionss['hr_transportation_method'].find(item => item.dictLabel === row.transportation.toString()).dictValue;
-	Newcontractform.salesperson = state.optionss['sql_hr_sale'].find(item => item.dictValue === row.salesperson.toString()).dictValue;
+	if (row.tradeCountry != null) {
+		Newcontractform.tradeCountry = state.optionss.hr_nation.find(item => item.dictLabel === row.tradeCountry.toString()).dictValue;
+	}
+	if (row.transportation != null) {
+		Newcontractform.transportation = state.optionss.hr_transportation_method.find(item => item.dictLabel === row.transportation.toString()).dictValue;
+	}
+	Newcontractform.salesperson = state.optionss.sql_hr_sale.find(item => item.dictValue === row.salesperson.toString()).dictValue;
 	Newcontractform.hasDeposit = row.hasDeposit;
 	if (row.hasDeposit) {
 		DepositShow.value = true;
@@ -2498,8 +2587,8 @@ const checkContractsDetails = async (row) => {
 	Newcontractform.customerOrder = row.customerOrder;
 	Newcontractform.contractremark = row.remark;
 	//Newcontractform.signingLocation = state.optionss['hr_signing_place'].find(item => item.dictValue === row.signingLocation.toString()).dictValue;
-	Newcontractform.canPartial = state.optionss['sys_yes_no'].find(item => item.dictValue === (row.canPartial.toString() == "true" ? "Y" : "N")).dictValue;
-	Newcontractform.canTransit = state.optionss['sys_yes_no'].find(item => item.dictValue === (row.canTransit.toString() == "true" ? "Y" : "N")).dictValue;
+	Newcontractform.canPartial = state.optionss.sys_yes_no.find(item => item.dictValue === (row.canPartial.toString() == "true" ? "Y" : "N")).dictValue;
+	Newcontractform.canTransit = state.optionss.sys_yes_no.find(item => item.dictValue === (row.canTransit.toString() == "true" ? "Y" : "N")).dictValue;
 	Newcontractform.insuranceAddition = row.insuranceAddition;
 	Newcontractform.insuranceRate = row.insuranceRate;
 	Newcontractform.commissionRate = row.commissionRate;
@@ -2507,7 +2596,7 @@ const checkContractsDetails = async (row) => {
 	Newcontractform.goodsValue = row.goodsValue;
 	Newcontractform.oceanFreight = row.shippingCost;
 	if (row.shippingCurrency) {
-		const shippingCurrencyOption = state.optionss['hr_export_currency']?.find(item =>
+		const shippingCurrencyOption = state.optionss.hr_export_currency.find(item =>
 			item.dictValue === row.shippingCurrency.toString()
 		);
 		if (shippingCurrencyOption) {
@@ -2549,6 +2638,26 @@ const checkContractsDetails = async (row) => {
 			if (response.data.contractProducts.length > 0) {
 				productData.value = [];
 				response.data.contractProducts.forEach(element => {
+					let unitValue;
+					let currencyValue;
+					let invoiceValue;
+					let packagingValue;
+					let outerboxunitValue;
+					if (element.unit > 0) {
+						unitValue = state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString()).dictValue;
+					}
+					if (element.purchasecurrency > 0) {
+						currencyValue = state.optionss.hr_export_currency.find(item => item.dictValue === element.purchasecurrency.toString()).dictValue;
+					}
+					if (element.invoice > 0) {
+						invoiceValue = state.optionss.hr_yes_no.find(item => item.dictValue === element.invoice.toString()).dictValue;
+					}
+					if (element.packaging > 0) {
+						packagingValue = state.optionss.hr_packing.find(item => item.dictValue === element.packaging.toString()).dictValue;
+					}
+					if (element.outerboxunit > 0) {
+						outerboxunitValue = state.optionss.hr_calculate_unit.find(item => item.dictValue === element.outerboxunit.toString()).dictValue;
+					}
 					productData.value.push({
 						Id: element.id,
 						ProductID: element.productID,
@@ -2560,21 +2669,21 @@ const checkContractsDetails = async (row) => {
 						contractQuantity: element.contractQuantity,
 						exportunitprice: element.exportUnitPrice,
 						exporttotalprice: element.exportTotalPrice,
-						unitofmeasurement: state.optionss['hr_calculate_unit'].find(item => item.dictValue === element.unit.toString()).dictValue,
-						purchasecurrency: state.optionss['hr_export_currency'].find(item => item.dictValue === element.purchasecurrency.toString()).dictValue,
+						unitofmeasurement: unitValue,
+						purchasecurrency: currencyValue,
 						purchaseunitprice: element.purchaseUnitPrice,
 						inlandfreightprice: element.inlandfreightprice,
 						AdditionalPackagingCosts: element.additionalPackagingCosts,
 						singleProductGrossProfit: element.singleProductGrossProfit,
 						singleProductGrossProfitTotal: element.singleProductGrossProfitTotal,
 						grossProfitRate: element.grossProfitRate,
-						isInvoicingc: element.invoice == 0 ? "2" : state.optionss['hr_yes_no'].find(item => item.dictValue === element.invoice.toString()).dictValue,
-						packaging: state.optionss['hr_packing'].find(item => item.dictValue === element.packaging.toString()).dictValue,
+						isInvoicingc: invoiceValue,
+						packaging: packagingValue,
 						specialrequirements: element.specialRequirements,
 						rebaterate: element.taxRefundRate,
 						innerBoxLoading: element.innerBoxQuantity,
 						outerboxloading: element.outerBoxQuantity,
-						outerboxunit: state.optionss['hr_calculate_unit'].find(item => item.dictValue === element.outerboxunit.toString()).dictValue,
+						outerboxunit: outerboxunitValue,
 						outerboxlength: element.outerBoxLength,
 						outerboxwidth: element.outerBoxWidth,
 						outerboxheight: element.outerBoxHeight,
@@ -2599,7 +2708,7 @@ const checkContractsDetails = async (row) => {
 				CustomerRelaterExoensesTableData.value = [];
 				CustomerRelaterExoensesTableData.value = response.data.contractExpenses;
 				CustomerRelaterExoensesTableData.value.forEach(item => {
-					item.currency = state.optionss['hr_export_currency'].find(x => x.dictValue === item.currency?.toString())?.dictValue || '';
+					item.currency = state.optionss.hr_export_currency.find(x => x.dictValue === item.currency?.toString())?.dictValue || '';
 					item.amount = item.expense * item.exchangeRate;
 				});
 			}
@@ -2607,9 +2716,9 @@ const checkContractsDetails = async (row) => {
 			contractReviewStatus.value = row.contractReviewStatusStr;
 			if (row.reviewStatus == 0 || row.reviewStatus == 3) {
 				isSaveBtnShow.value = false;
-				showEditSaveBtn.value = false;
+				showEditSaveBtn.value = true;
 				showEditBtn.value = true;
-				isAuditBtnShow.value = true;
+				isAuditBtnShow.value = false;
 			} else {
 				showEditSaveBtn.value = false;
 				isSaveBtnShow.value = false;
@@ -2628,7 +2737,7 @@ const checkContractsDetails = async (row) => {
 
 const EditContract = () => {
 	setContractEditLock(SelctedContractId.value);
-	isSaveBtnShow.value = false;
+	isSaveBtnShow.value = true;
 	showEditBtn.value = false;
 	showEditSaveBtn.value = true;
 	isDisabled.value = false;
@@ -2716,184 +2825,183 @@ const EditContractsRequest = reactive({
 });
 const EditContractSave = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
-	await formEl.validate((valid) => {
-		if (valid) {
-			//#region 编辑保存合同信息
-			ElMessageBox.confirm('确定保存已编辑的合同信息吗?', '提示', {
-				confirmButtonText: '确定',
-				cancelButtonText: '取消',
-				type: 'warning'
-			}).then(() => {
-				EditContractsRequest.Id = SelctedContractId.value;
-				EditContractsRequest.ContractNumber = Newcontractform.contractNumber;
-				EditContractsRequest.ContractDate = Newcontractform.contractDate;
-				EditContractsRequest.ContractStatus = state.optionss['hr_contract_status'].filter(item => item.dictLabel == Newcontractform.contractStatus).map(item => item.dictValue).values().next().value;
-				EditContractsRequest.CustomerId = Newcontractform.customerid;
-				EditContractsRequest.CustomerNumber = Newcontractform.customerNumber;
-				EditContractsRequest.CustomerAbbreviation = Newcontractform.customerAbbreviation;
-				EditContractsRequest.ContactPerson = Newcontractform.contactPerson;
-				EditContractsRequest.ContactEmail = Newcontractform.contactEmail;
-				EditContractsRequest.EffectiveDate = Newcontractform.effectiveDate;
-				EditContractsRequest.CustomerLevel = Newcontractform.customerLevel;
-				EditContractsRequest.CustomerContract = Newcontractform.customerContract;
-				EditContractsRequest.DeliveryDate = Newcontractform.deliveryDate;
-				EditContractsRequest.OurCompany = Newcontractform.ourCompany;
-				EditContractsRequest.SettlementType = Newcontractform.settlementType;
-				EditContractsRequest.ForeignCurrency = Newcontractform.foreignCurrency;
-				EditContractsRequest.ExchangeRate = Newcontractform.exchangeRate;
-				EditContractsRequest.UsdExchangeRate = Newcontractform.usdExchangeRate;
-				EditContractsRequest.SettlementMethod = Newcontractform.settlementMethod;
-				EditContractsRequest.PriceTerms = Newcontractform.priceTerms;
-				EditContractsRequest.ShippingPort = Newcontractform.shippingPort;
-				EditContractsRequest.DestinationPort = Newcontractform.destinationPort;
-				EditContractsRequest.TradeCountry = Newcontractform.tradeCountry;
-				EditContractsRequest.Transportation = Newcontractform.transportation;
-				EditContractsRequest.Salesperson = Newcontractform.salesperson;
-				EditContractsRequest.HasDeposit = Newcontractform.hasDeposit;
-				EditContractsRequest.ReceivedDeposit = Newcontractform.receivedDeposit;
-				EditContractsRequest.DepositDate = Newcontractform.depositDate;
-				EditContractsRequest.Depositratio = Newcontractform.Depositratio;
-				EditContractsRequest.CustomerOrder = Newcontractform.customerOrder;
-				EditContractsRequest.SigningLocation = Newcontractform.signingLocation;
-				EditContractsRequest.InsuranceAddition = Newcontractform.insuranceAddition;
-				EditContractsRequest.InsuranceRate = Newcontractform.insuranceRate;
-				EditContractsRequest.CommissionRate = Newcontractform.commissionRate;
-				EditContractsRequest.ShippingCurrency = Newcontractform.shippingCurrency;
-				EditContractsRequest.ShippingExchangeRate = Newcontractform.shippingrate;
-				EditContractsRequest.ShippingCost = Newcontractform.oceanFreight;
-				EditContractsRequest.freightForwarderCustomsClearanceFees = Newcontractform.freightForwarderCustomsClearanceFees;
-				EditContractsRequest.ReceivingBank = Newcontractform.receivingBank;
-				EditContractsRequest.BankCost = Newcontractform.BankFee;
-				EditContractsRequest.DocumentationFees = Newcontractform.DocumentationFees;
-				EditContractsRequest.PaymentDate = Newcontractform.paymentDate;
-				EditContractsRequest.GoodsValue = Newcontractform.TotalValueOfGoods;
-				EditContractsRequest.Quantity = Newcontractform.TotalQuantity;
-				EditContractsRequest.BoxCount = Newcontractform.TotalNumberOfBoxes;
-				EditContractsRequest.GrossWeight = Newcontractform.TotalGrossWeight;
-				EditContractsRequest.NetWeight = Newcontractform.TotalNetWeight;
-				EditContractsRequest.Volume = Newcontractform.TotalVolume;
-				EditContractsRequest.PurchaseTotal = Newcontractform.TotalPurchases;
-				EditContractsRequest.TaxRefundTotal = Newcontractform.TotalTaxRefund;
-				EditContractsRequest.CustomerExpenseTotal = Newcontractform.customerExpenseTotal;
-				EditContractsRequest.AmountTotal = Newcontractform.amountTotal;
-				EditContractsRequest.UsdConversion = Newcontractform.usdConversion;
-				EditContractsRequest.Totalgrossprofit = Newcontractform.Totalgrossprofit;
-				EditContractsRequest.totalOtherFees = Newcontractform.TotalOtherFees;
-				EditContractsRequest.ProfitAmount = Newcontractform.ProfitAmount;
-				EditContractsRequest.Totalprofitmargin = Newcontractform.Totalprofitmargin;
-				EditContractsRequest.CommissionAmount = Newcontractform.commissionAmount;
-				EditContractsRequest.InsuranceCost = Newcontractform.insuranceCost;
-				EditContractsRequest.FreightCost = Newcontractform.freightCost;
-				EditContractsRequest.TotalCost = Newcontractform.totalCost;
-				EditContractsRequest.ExchangeCost = Newcontractform.exchangeCost;
-				EditContractsRequest.ProductProfit = Newcontractform.productProfit;
-				EditContractsRequest.ProfitRate = Newcontractform.profitRate;
-				EditContractsRequest.FreightCurrency = Newcontractform.FreightCurrency;
-				EditContractsRequest.FreightQuote = Newcontractform.FreightQuote;
-				EditContractsRequest.Courierfee = Newcontractform.Courierfee;
-				EditContractsRequest.IsDelete = 0;
-				EditContractsRequest.Remark = Newcontractform.contractremark;
-				EditContractsRequest.CanPartial = Number(Newcontractform.canPartial) === 1 ? 1 : 0;
-				EditContractsRequest.CanTransit = Number(Newcontractform.canTransit) === 1 ? 1 : 0;
-				EditContractsRequest.portMiscellaneousFees = Newcontractform.portMiscellaneousFees;
-				EditContractsRequest.contractProductItems = [];
-				productData.value.forEach(productItem => {
-					EditContractsRequest.contractProductItems.push({
-						Id: productItem.Id == 0 ? null : productItem.Id,
-						ContractId: SelctedContractId.value,
-						ProductID: productItem.ProductID,
-						ProductCode: productItem.productNum,
-						CustomerCode: productItem.customerNum,
-						ChineseName: productItem.cproductname,
-						ChineseSpec: productItem.cspecification,
-						EnglishName: '',
-						ContractQuantity: productItem.contractQuantity,
-						Unit: productItem.unitofmeasurement,
-						ExportUnitPrice: productItem.exportunitprice,
-						ExportTotalPrice: productItem.exporttotalprice,
-						PurchaseUnitPrice: productItem.purchaseunitprice,
-						PurchaseTotalPrice: productItem.purchaseunitprice * productItem.contractQuantity,
-						Packaging: productItem.packaging,
-						SpecialRequirements: productItem.specialrequirements,
-						invoice: productItem.isInvoicingc,
-						TaxRefundRate: productItem.rebaterate,
-						InnerBoxQuantity: productItem.innerBoxLoading,
-						OuterBoxQuantity: productItem.outerboxloading,
-						BoxCount: productItem.NumberOfBoxes,
-						OuterBoxLength: productItem.outerboxlength,
-						OuterBoxWidth: productItem.outerboxwidth,
-						OuterBoxHeight: productItem.outerboxheight,
-						OuterBoxVolume: productItem.outerboxvolume,
-						OuterBoxNetWeight: productItem.outerboxnetweight,
-						OuterBoxGrossWeight: productItem.outerboxgrossweight,
-						TotalVolume: productItem.totalVolume,
-						TotalNetWeight: productItem.totalNetWeight,
-						TotalGrossWeight: productItem.totalGrossWeight,
-						Remark: productItem.remark,
-						additionalPackagingCosts: productItem.AdditionalPackagingCosts,
-						Inlandfreightforasingleproduct: productItem.Inlandfreightforasingleproduct,
-						Inlandfreightprice: productItem.inlandfreightprice,
-						IsNewProduct: productItem.isImported ? 1 : 0,
-						Oceanfreightforasingleproduct: productItem.Oceanfreightforasingleproduct,
-						Onepacking: productItem.AdditionalPackagingCosts,
-						OtherFees: productItem.OtherFees,
-						outerboxunit: productItem.outerboxunit,
-						Portchargesforindividualproducts: productItem.Portchargesforindividualproducts,
-						Purchasecurrency: productItem.purchasecurrency,
-						singleProductGrossProfit: productItem.singleProductGrossProfit,
-						singleProductGrossProfitTotal: productItem.singleProductGrossProfitTotal,
-						Singleproductvolume: productItem.Singleproductvolume,
-						Singlesalesrevenue: productItem.SinglesalesrevenueA
-					});
-				});
-				EditContractsRequest.contractExpensesItems = [];
-				CustomerRelaterExoensesTableData.value.forEach(expenseItem => {
-					EditContractsRequest.contractExpensesItems.push({
-						ContractId: expenseItem.contractId,
-						ExpenseName: expenseItem.expenseName,
-						Currency: expenseItem.currency,
-						ExchangeRate: expenseItem.exchangeRate,
-						Expense: expenseItem.expense,
-						Remark: expenseItem.remark
-					});
-				});
-				console.log(EditContractsRequest);
-				request.post('Contracts/EditContract/Edit', EditContractsRequest).then(response => {
-					if (response != null) {
-						ElMessage({
-							message: response.msg,
-							type: 'success'
-						})
-						//contractDialog.value = false;
-						//SelctedContractId.value = 0;
-						GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
-						isSaveBtnShow.value = false;
-						showEditBtn.value = true;
-						showEditSaveBtn.value = false;
-						isDisabled.value = true;
-						isAuditBtnShow.value = true;
-					} else {
-						console.error('编辑销售合同出错');
-					}
-				}).catch(error => {
-					console.error('编辑销售合同出错！😔错误内容：', error);
-				})
-
-			}).catch(() => {
-				ElMessage({
-					type: 'info',
-					message: '已取消编辑保存销售合同'
-				});
-			});
-			//#endregion 编辑保存合同信息
-		} else {
-			ElMessage({
-				type: 'error',
-				message: '请检查销售合同基本信息是否填写完整'
-			})
-			// Remove the return false
+	try {
+		const valid = await formEl.validate()
+		if (!valid) {
+			scrollToError(formEl)
+			return
 		}
-	})
+
+		// 显示确认对话框
+		await ElMessageBox.confirm('确定提交当前合同吗?', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		})
+		// 映射基本信息
+		EditContractsRequest.Id = SelctedContractId.value;
+		EditContractsRequest.ContractNumber = Newcontractform.contractNumber;
+		EditContractsRequest.ContractDate = Newcontractform.contractDate;
+		EditContractsRequest.ContractStatus = Newcontractform.contractStatus;
+		EditContractsRequest.CustomerId = Newcontractform.customerid;
+		EditContractsRequest.CustomerNumber = Newcontractform.customerNumber;
+		EditContractsRequest.CustomerAbbreviation = Newcontractform.customerAbbreviation;
+		EditContractsRequest.ContactPerson = Newcontractform.contactPerson;
+		EditContractsRequest.ContactEmail = Newcontractform.contactEmail;
+		EditContractsRequest.EffectiveDate = Newcontractform.effectiveDate;
+		EditContractsRequest.CustomerLevel = Newcontractform.customerLevel;
+		EditContractsRequest.CustomerContract = Newcontractform.customerContract;
+		EditContractsRequest.DeliveryDate = Newcontractform.deliveryDate;
+		EditContractsRequest.OurCompany = Newcontractform.ourCompany;
+		EditContractsRequest.SettlementType = Newcontractform.settlementType;
+		EditContractsRequest.ForeignCurrency = Newcontractform.foreignCurrency;
+		EditContractsRequest.ExchangeRate = Newcontractform.exchangeRate;
+		EditContractsRequest.UsdExchangeRate = Newcontractform.usdExchangeRate;
+		EditContractsRequest.SettlementMethod = Newcontractform.settlementMethod;
+		EditContractsRequest.PriceTerms = Newcontractform.priceTerms;
+		EditContractsRequest.ShippingPort = Newcontractform.shippingPort;
+		EditContractsRequest.DestinationPort = Newcontractform.destinationPort;
+		EditContractsRequest.TradeCountry = Newcontractform.tradeCountry;
+		EditContractsRequest.Transportation = Newcontractform.transportation;
+		EditContractsRequest.Salesperson = Newcontractform.salesperson;
+		EditContractsRequest.HasDeposit = Newcontractform.hasDeposit;
+		EditContractsRequest.ReceivedDeposit = Newcontractform.receivedDeposit;
+		EditContractsRequest.DepositDate = Newcontractform.depositDate;
+		EditContractsRequest.Depositratio = Newcontractform.Depositratio;
+		EditContractsRequest.CustomerOrder = Newcontractform.customerOrder;
+		EditContractsRequest.SigningLocation = Newcontractform.signingLocation;
+		EditContractsRequest.InsuranceAddition = Newcontractform.insuranceAddition;
+		EditContractsRequest.InsuranceRate = Newcontractform.insuranceRate;
+		EditContractsRequest.CommissionRate = Newcontractform.commissionRate;
+		EditContractsRequest.ShippingCurrency = Newcontractform.shippingCurrency;
+		EditContractsRequest.ShippingExchangeRate = Newcontractform.shippingrate;
+		EditContractsRequest.ShippingCost = Newcontractform.oceanFreight;
+		EditContractsRequest.freightForwarderCustomsClearanceFees = Newcontractform.freightForwarderCustomsClearanceFees;
+		EditContractsRequest.ReceivingBank = Newcontractform.receivingBank;
+		EditContractsRequest.BankCost = Newcontractform.BankFee;
+		EditContractsRequest.DocumentationFees = Newcontractform.DocumentationFees;
+		EditContractsRequest.PaymentDate = Newcontractform.paymentDate;
+		EditContractsRequest.GoodsValue = Newcontractform.TotalValueOfGoods;
+		EditContractsRequest.Quantity = Newcontractform.TotalQuantity;
+		EditContractsRequest.BoxCount = Newcontractform.TotalNumberOfBoxes;
+		EditContractsRequest.GrossWeight = Newcontractform.TotalGrossWeight;
+		EditContractsRequest.NetWeight = Newcontractform.TotalNetWeight;
+		EditContractsRequest.Volume = Newcontractform.TotalVolume;
+		EditContractsRequest.PurchaseTotal = Newcontractform.TotalPurchases;
+		EditContractsRequest.TaxRefundTotal = Newcontractform.TotalTaxRefund;
+		EditContractsRequest.CustomerExpenseTotal = Newcontractform.customerExpenseTotal;
+		EditContractsRequest.AmountTotal = Newcontractform.amountTotal;
+		EditContractsRequest.UsdConversion = Newcontractform.usdConversion;
+		EditContractsRequest.Totalgrossprofit = Newcontractform.Totalgrossprofit;
+		EditContractsRequest.totalOtherFees = Newcontractform.TotalOtherFees;
+		EditContractsRequest.ProfitAmount = Newcontractform.ProfitAmount;
+		EditContractsRequest.Totalprofitmargin = Newcontractform.Totalprofitmargin;
+		EditContractsRequest.CommissionAmount = Newcontractform.commissionAmount;
+		EditContractsRequest.InsuranceCost = Newcontractform.insuranceCost;
+		EditContractsRequest.FreightCost = Newcontractform.freightCost;
+		EditContractsRequest.TotalCost = Newcontractform.totalCost;
+		EditContractsRequest.ExchangeCost = Newcontractform.exchangeCost;
+		EditContractsRequest.ProductProfit = Newcontractform.productProfit;
+		EditContractsRequest.ProfitRate = Newcontractform.profitRate;
+		EditContractsRequest.FreightCurrency = Newcontractform.FreightCurrency;
+		EditContractsRequest.FreightQuote = Newcontractform.FreightQuote;
+		EditContractsRequest.Courierfee = Newcontractform.Courierfee;
+		EditContractsRequest.IsDelete = 0;
+		EditContractsRequest.Remark = Newcontractform.contractremark;
+		EditContractsRequest.portMiscellaneousFees = Newcontractform.portMiscellaneousFees;
+		EditContractsRequest.CanPartial = Number(Newcontractform.canPartial) === 1 ? 1 : 0;
+		EditContractsRequest.CanTransit = Number(Newcontractform.canTransit) === 1 ? 1 : 0;
+		EditContractsRequest.isDraft = 0;
+
+		// 映射产品信息
+		EditContractsRequest.contractProductItems = productData.value.map(item => ({
+			Id: 0,
+			ProductID: item.productID,
+			ContractId: SelctedContractId.value,
+			ProductCode: item.productNum,
+			CustomerCode: item.customerNum,
+			ChineseName: item.cproductname,
+			ChineseSpec: item.cspecification,
+			EnglishName: '',
+			ContractQuantity: item.contractQuantity,
+			Unit: item.unitofmeasurement,
+			ExportUnitPrice: item.exportunitprice,
+			ExportTotalPrice: item.exporttotalprice,
+			PurchaseUnitPrice: item.purchaseunitprice,
+			PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
+			Packaging: item.packaging,
+			SpecialRequirements: item.specialrequirements,
+			Invoice: item.isInvoicingc === 'Y' ? 1 : 0,
+			TaxRefundRate: item.rebaterate,
+			InnerBoxQuantity: item.innerBoxLoading,
+			OuterBoxQuantity: item.outerboxloading,
+			BoxCount: item.NumberOfBoxes,
+			OuterBoxLength: item.outerboxlength,
+			OuterBoxWidth: item.outerboxwidth,
+			OuterBoxHeight: item.outerboxheight,
+			OuterBoxVolume: item.outerboxvolume,
+			OuterBoxNetWeight: item.outerboxnetweight,
+			OuterBoxGrossWeight: item.outerboxgrossweight,
+			TotalVolume: item.totalVolume,
+			TotalNetWeight: item.totalNetWeight,
+			TotalGrossWeight: item.totalGrossWeight,
+			Remark: item.remark,
+			additionalPackagingCosts: item.AdditionalPackagingCosts,
+			grossProfitRate: item.grossProfitRate,
+			Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct,
+			Inlandfreightprice: item.inlandfreightprice,
+			IsNewProduct: 0,
+			Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct,
+			Onepacking: '',
+			OtherFees: item.OtherFees,
+			outerboxunit: item.outerboxunit,
+			Portchargesforindividualproducts: item.Portchargesforindividualproducts,
+			Purchasecurrency: item.purchasecurrency,
+			Remark: '',
+			singleProductGrossProfit: item.singleProductGrossProfit,
+			singleProductGrossProfitTotal: item.singleProductGrossProfitTotal,
+			Singleproductvolume: item.Singleproductvolume,
+			Singlesalesrevenue: item.SinglesalesrevenueA
+		}));
+
+		// 映射费用信息
+		EditContractsRequest.contractExpensesItems = CustomerRelaterExoensesTableData.value.map(item => ({
+			Id: 0,
+			ContractId: SelctedContractId.value,
+			ExpenseName: item.expenseName,
+			Currency: item.currency,
+			ExchangeRate: item.exchangeRate,
+			Expense: item.expense,
+			Remark: item.remark
+		}));
+
+		// 发送请求
+		const res = await request({
+			url: 'Contracts/EditContract/Edit',
+			method: 'post',
+			data: EditContractsRequest
+		});
+
+		if (res.code === 200) {
+			ElMessage.success('提交合同成功');
+			contractDialog.value = false;
+			// 刷新列表
+			GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+			// 更新按钮状态
+			showEditSaveBtn.value = false;
+			showEditBtn.value = true;
+			isAuditBtnShow.value = true;
+		} else {
+			ElMessage.error(res.msg || '提交合同失败');
+		}
+	} catch (error) {
+		if (error === 'cancel') {
+			ElMessage.info('已取消提交合同');
+		} else {
+			console.error('提交合同失败:', error);
+			ElMessage.error('提交合同失败');
+		}
+	}
 }
 const IsOceanFreightEdit = ref(true);
 const IsCarTransportationEdit = ref(false);
@@ -3060,6 +3168,183 @@ const canWithdraw = (row: any) => {
 	// 根据状态判断是否可以撤回
 	return row.contractReviewStatusStr === '待审核'
 }
+
+const SaveContractDraft = async (formEl: FormInstance | undefined) => {
+	if (!formEl) return
+	ElMessageBox.confirm('确定保存合同草稿吗?', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(async () => {
+		// 映射基本信息
+		addContractsRequest.Id = SelctedContractId.value; // 使用当前选中的合同ID
+		addContractsRequest.ContractNumber = Newcontractform.contractNumber;
+		addContractsRequest.ContractDate = Newcontractform.contractDate;
+		addContractsRequest.ContractStatus = Newcontractform.contractStatus;
+		addContractsRequest.CustomerId = Newcontractform.customerid;
+		addContractsRequest.CustomerNumber = Newcontractform.customerNumber;
+		addContractsRequest.CustomerAbbreviation = Newcontractform.customerAbbreviation;
+		addContractsRequest.ContactPerson = Newcontractform.contactPerson;
+		addContractsRequest.ContactEmail = Newcontractform.contactEmail;
+		addContractsRequest.EffectiveDate = Newcontractform.effectiveDate;
+		addContractsRequest.CustomerLevel = Newcontractform.customerLevel;
+		addContractsRequest.CustomerContract = Newcontractform.customerContract;
+		addContractsRequest.DeliveryDate = Newcontractform.deliveryDate;
+		addContractsRequest.OurCompany = Newcontractform.ourCompany;
+		addContractsRequest.SettlementType = Newcontractform.settlementType;
+		addContractsRequest.ForeignCurrency = Newcontractform.foreignCurrency;
+		addContractsRequest.ExchangeRate = Newcontractform.exchangeRate;
+		addContractsRequest.UsdExchangeRate = Newcontractform.usdExchangeRate;
+		addContractsRequest.SettlementMethod = Newcontractform.settlementMethod;
+		addContractsRequest.PriceTerms = Newcontractform.priceTerms;
+		addContractsRequest.ShippingPort = Newcontractform.shippingPort;
+		addContractsRequest.DestinationPort = Newcontractform.destinationPort;
+		addContractsRequest.TradeCountry = Newcontractform.tradeCountry;
+		addContractsRequest.Transportation = Newcontractform.transportation;
+		addContractsRequest.Salesperson = Newcontractform.salesperson;
+		addContractsRequest.HasDeposit = Newcontractform.hasDeposit;
+		addContractsRequest.ReceivedDeposit = Newcontractform.receivedDeposit;
+		addContractsRequest.DepositDate = Newcontractform.depositDate;
+		addContractsRequest.Depositratio = Newcontractform.Depositratio;
+		addContractsRequest.CustomerOrder = Newcontractform.customerOrder;
+		addContractsRequest.SigningLocation = Newcontractform.signingLocation;
+		addContractsRequest.InsuranceAddition = Newcontractform.insuranceAddition;
+		addContractsRequest.InsuranceRate = Newcontractform.insuranceRate;
+		addContractsRequest.CommissionRate = Newcontractform.commissionRate;
+		addContractsRequest.ShippingCurrency = Newcontractform.shippingCurrency;
+		addContractsRequest.ShippingExchangeRate = Newcontractform.shippingrate;
+		addContractsRequest.ShippingCost = Newcontractform.oceanFreight;
+		addContractsRequest.freightForwarderCustomsClearanceFees = Newcontractform.freightForwarderCustomsClearanceFees;
+		addContractsRequest.ReceivingBank = Newcontractform.receivingBank;
+		addContractsRequest.BankCost = Newcontractform.BankFee;
+		addContractsRequest.DocumentationFees = Newcontractform.DocumentationFees;
+		addContractsRequest.PaymentDate = Newcontractform.paymentDate;
+		addContractsRequest.GoodsValue = Newcontractform.TotalValueOfGoods;
+		addContractsRequest.Quantity = Newcontractform.TotalQuantity;
+		addContractsRequest.BoxCount = Newcontractform.TotalNumberOfBoxes;
+		addContractsRequest.GrossWeight = Newcontractform.TotalGrossWeight;
+		addContractsRequest.NetWeight = Newcontractform.TotalNetWeight;
+		addContractsRequest.Volume = Newcontractform.TotalVolume;
+		addContractsRequest.PurchaseTotal = Newcontractform.TotalPurchases;
+		addContractsRequest.TaxRefundTotal = Newcontractform.TotalTaxRefund;
+		addContractsRequest.CustomerExpenseTotal = Newcontractform.customerExpenseTotal;
+		addContractsRequest.AmountTotal = Newcontractform.amountTotal;
+		addContractsRequest.UsdConversion = Newcontractform.usdConversion;
+		addContractsRequest.Totalgrossprofit = Newcontractform.Totalgrossprofit;
+		addContractsRequest.totalOtherFees = Newcontractform.TotalOtherFees;
+		addContractsRequest.ProfitAmount = Newcontractform.ProfitAmount;
+		addContractsRequest.Totalprofitmargin = Newcontractform.Totalprofitmargin;
+		addContractsRequest.CommissionAmount = Newcontractform.commissionAmount;
+		addContractsRequest.InsuranceCost = Newcontractform.insuranceCost;
+		addContractsRequest.FreightCost = Newcontractform.freightCost;
+		addContractsRequest.TotalCost = Newcontractform.totalCost;
+		addContractsRequest.ExchangeCost = Newcontractform.exchangeCost;
+		addContractsRequest.ProductProfit = Newcontractform.productProfit;
+		addContractsRequest.ProfitRate = Newcontractform.profitRate;
+		addContractsRequest.FreightCurrency = Newcontractform.FreightCurrency;
+		addContractsRequest.FreightQuote = Newcontractform.FreightQuote;
+		addContractsRequest.Courierfee = Newcontractform.Courierfee;
+		addContractsRequest.IsDelete = 0;
+		addContractsRequest.Remark = Newcontractform.contractremark;
+		addContractsRequest.portMiscellaneousFees = Newcontractform.portMiscellaneousFees;
+		addContractsRequest.CanPartial = Number(Newcontractform.canPartial) === 1 ? 1 : 0;
+		addContractsRequest.CanTransit = Number(Newcontractform.canTransit) === 1 ? 1 : 0;
+		addContractsRequest.isDraft = 1;
+
+		// 映射产品信息
+		addContractsRequest.contractProductItems = productData.value.map(item => ({
+			Id: 0,
+			ProductID: item.productID,
+			ContractId: SelctedContractId.value,
+			ProductCode: item.productNum,
+			CustomerCode: item.customerNum,
+			ChineseName: item.cproductname,
+			ChineseSpec: item.cspecification,
+			EnglishName: '',
+			ContractQuantity: item.contractQuantity,
+			Unit: item.unitofmeasurement,
+			ExportUnitPrice: item.exportunitprice,
+			ExportTotalPrice: item.exporttotalprice,
+			PurchaseUnitPrice: item.purchaseunitprice,
+			PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
+			Packaging: item.packaging,
+			SpecialRequirements: item.specialrequirements,
+			Invoice: item.isInvoicingc === 'Y' ? 1 : 0,
+			TaxRefundRate: item.rebaterate,
+			InnerBoxQuantity: item.innerBoxLoading,
+			OuterBoxQuantity: item.outerboxloading,
+			BoxCount: item.NumberOfBoxes,
+			OuterBoxLength: item.outerboxlength,
+			OuterBoxWidth: item.outerboxwidth,
+			OuterBoxHeight: item.outerboxheight,
+			OuterBoxVolume: item.outerboxvolume,
+			OuterBoxNetWeight: item.outerboxnetweight,
+			OuterBoxGrossWeight: item.outerboxgrossweight,
+			TotalVolume: item.totalVolume,
+			TotalNetWeight: item.totalNetWeight,
+			TotalGrossWeight: item.totalGrossWeight,
+			additionalPackagingCosts: item.AdditionalPackagingCosts,
+			Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct,
+			Inlandfreightprice: item.inlandfreightprice,
+			IsNewProduct: 0,
+			Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct,
+			Onepacking: '',
+			OtherFees: item.OtherFees,
+			outerboxunit: item.outerboxunit,
+			Portchargesforindividualproducts: item.Portchargesforindividualproducts,
+			Purchasecurrency: item.purchasecurrency,
+			Remark: '',
+			singleProductGrossProfit: item.singleProductGrossProfit,
+			singleProductGrossProfitTotal: item.singleProductGrossProfitTotal,
+			Singleproductvolume: item.Singleproductvolume,
+			Singlesalesrevenue: item.SinglesalesrevenueA
+		}));
+
+		// 映射费用信息
+		addContractsRequest.contractExpensesItems = CustomerRelaterExoensesTableData.value.map(item => ({
+			Id: 0,
+			ContractId: SelctedContractId.value,
+			ExpenseName: item.expenseName,
+			Currency: item.currency,
+			ExchangeRate: item.exchangeRate,
+			Expense: item.expense,
+			Remark: item.remark
+		}));
+
+		try {
+			let res;
+			if (SelctedContractId.value === 0) {
+				// 新增草稿
+				res = await request({
+					url: 'Contracts/AddContracts/Add',
+					method: 'post',
+					data: addContractsRequest
+				});
+			} else {
+				// 修改草稿
+				res = await request({
+					url: 'Contracts/EditContract/Edit',
+					method: 'post',
+					data: addContractsRequest
+				});
+			}
+
+			if (res.code === 200) {
+				ElMessage.success('保存草稿成功');
+				contractDialog.value = false;
+				// 刷新列表
+				GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+			} else {
+				ElMessage.error(res.msg || '保存草稿失败');
+			}
+		} catch (error) {
+			console.error('保存草稿失败:', error);
+			ElMessage.error('保存草稿失败');
+		}
+	}).catch(() => {
+		// 用户取消操作
+	});
+}
 </script>
 <style scoped>
 /* 基础红色文本 */
@@ -3086,5 +3371,26 @@ const canWithdraw = (row: any) => {
 .el-input.is-disabled.red-text .el-input__inner {
 	-webkit-text-fill-color: red !important;
 	color: red !important;
+}
+
+.highlight-error {
+	animation: error-shake 0.5s ease-in-out;
+	box-shadow: 0 0 0 2px var(--el-color-danger);
+}
+
+@keyframes error-shake {
+
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+
+	25% {
+		transform: translateX(-5px);
+	}
+
+	75% {
+		transform: translateX(5px);
+	}
 }
 </style>
