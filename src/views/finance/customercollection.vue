@@ -35,14 +35,12 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="customercollectiontableData">
-			<el-table-column type="isDraft" label="是否草稿" width="100">
+			<el-table-column prop="receiptNumber" label="收款单号" width="180">
 				<template #default="scope">
-					<el-tag :type="scope.row.isDraft === 1 ? 'warning' : 'success'">
-						{{ scope.row.isDraft === 1 ? '是' : '否' }}
-					</el-tag>
+					<span>{{ scope.row.receiptNumber }}</span>
+					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
 				</template>
 			</el-table-column>
-			<el-table-column prop="receiptNumber" label="收款单号" width="150"></el-table-column>
 			<el-table-column prop="receiptDate" label="收汇日期" width="150"
 				:formatter="(row, column, cellValue) => formatDate(cellValue)"></el-table-column>
 			<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
@@ -161,13 +159,13 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="primary" v-if="isSaveBtnShow" @click="SaveCustomerCollection()">
+					<el-button type="warning" v-if="isSaveBtnShow" @click="SaveCustomerCollection()">
 						保存草稿
 					</el-button>
 					<el-button type="primary" v-if="isEditSaveBtnShow" @click="SaveCustomerCollection()">
-						编辑保存草稿
+						保存草稿
 					</el-button>
-					<el-button type="primary" v-if="isSubmitBtnShow" @click="SubmitCustomerCollection()">
+					<el-button type="success" v-if="isSubmitBtnShow" @click="SubmitCustomerCollection()">
 						提交
 					</el-button>
 				</span>

@@ -39,7 +39,12 @@
 		<el-divider> </el-divider>
 		<el-table :data="ProductSampleTableData">
 
-			<el-table-column prop="type" label="寄样/收样" width="150"></el-table-column>
+			<el-table-column prop="type" label="寄样/收样" width="150">
+				<template #default="scope">
+					<span>{{ scope.row.type }}</span>
+					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="150"></el-table-column>
 			<el-table-column prop="customer_ID" label="寄样对象" width="150"></el-table-column>
 			<el-table-column prop="waybill_Number" label="运单号" width="150"></el-table-column>
@@ -242,15 +247,17 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<!-- 新建模式：显示保存按钮 -->
-					<el-button v-if="isCreateMode" type="primary" :loading="loading" @click="handleSave">保存</el-button>
-
 					<!-- 查看模式：显示编辑按钮 -->
-					<el-button v-if="!isCreateMode && !isEditable" type="primary" @click="handleEdit">编辑</el-button>
-
+					<el-button v-if="isEditBtnShow" type="primary" @click="handleEdit">编辑</el-button>
+					<!-- 新建模式：显示保存按钮 -->
+					<el-button v-if="isSaveDraftBtnShow" type="warning" :loading="loading"
+						@click="handleSaveDraft">保存草稿</el-button>
 					<!-- 编辑模式：显示保存按钮 -->
-					<el-button v-if="!isCreateMode && isEditable" type="primary" :loading="loading"
-						@click="handleEditSave">编辑保存</el-button>
+					<el-button v-if="isEditSubmitBtnShow" type="success" :loading="loading"
+						@click="handleEditSave">提交</el-button>
+					<!-- 编辑模式：显示提交按钮 -->
+					<el-button v-if="isSubmitBtnShow" type="success" :loading="loading"
+						@click="handleSave">提交</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -265,6 +272,13 @@ import {
 } from 'element-plus'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import request from '@/utils/request';
+
+
+
+const isEditBtnShow = ref(false);//编辑按钮
+const isSaveDraftBtnShow = ref(false);//保存草稿按钮
+const isEditSubmitBtnShow = ref(false);//编辑提交按钮
+const isSubmitBtnShow = ref(false);//提交按钮
 
 //查询条件
 const SearchwaybillNumber = ref('');
@@ -318,11 +332,19 @@ const GetProductSampleList = (start, end) => {
 				ProductSampleTableData.value.forEach(item => {
 					item.type = item.type === 1 ? '寄样' : '收样';
 					item.customer_or_Supplier = item.customer_or_Supplier === 1 ? '客户' : '供应商';
-					item.customer_ID = optionss.value.sql_hr_customer_abbreviation.find(customer => customer.dictValue === item.customer_ID.toString())?.dictLabel || '未知';
-					item.express_Company = optionss.value.hr_express_delivery_company.find(company => company.dictValue === item.express_Company.toString())?.dictLabel || '未知';
+					if (item.customer_ID != 0 && item.customer_ID != null) {
+						item.customer_ID = optionss.value.sql_hr_customer_abbreviation.find(customer => customer.dictValue === item.customer_ID.toString())?.dictLabel || '未知';
+					}
+					if (item.express_Company != 0 && item.express_Company != null) {
+						item.express_Company = optionss.value.hr_express_delivery_company.find(company => company.dictValue === item.express_Company.toString())?.dictLabel || '未知';
+					}
 					item.paid_Express_Fee = item.paid_Express_Fee.toFixed(2);
-					item.payment_Method = optionss.value.hr_express_payment_method.find(method => method.dictValue === item.payment_Method.toString())?.dictLabel || '未知';
-					item.company_ID = optionss.value.hr_ourcompany.find(company => company.dictValue === item.company_ID.toString())?.dictLabel || '未知';
+					if (item.payment_Method != 0 && item.payment_Method != null) {
+						item.payment_Method = optionss.value.hr_express_payment_method.find(method => method.dictValue === item.payment_Method.toString())?.dictLabel || '未知';
+					}
+					if (item.company_ID != 0 && item.company_ID != null) {
+						item.company_ID = optionss.value.hr_ourcompany.find(company => company.dictValue === item.company_ID.toString())?.dictLabel || '未知';
+					}
 					item.sample_Date = formatDate(item.sample_Date);
 				});
 				// 更新分页信息
@@ -355,6 +377,10 @@ const dialogVisible = ref(false);   // 对话框显示状态（原 CreateDialog�
 const handleCreate = () => {
 	isCreateMode.value = true;      // 设置为新建模式
 	isEditable.value = true;        // 允许编辑
+	isEditBtnShow.value = false;
+	isSaveDraftBtnShow.value = true;
+	isEditSubmitBtnShow.value = false;
+	isSubmitBtnShow.value = true;
 	dialogVisible.value = true;     // 打开对话框
 };
 
@@ -363,6 +389,10 @@ const handleView = async (id) => {
 	currentEditId.value = id;
 	isCreateMode.value = false;     // 设置为查看模式
 	isEditable.value = false;       // 初始禁用编辑
+	isEditBtnShow.value = true;
+	isSaveDraftBtnShow.value = false;
+	isEditSubmitBtnShow.value = false;
+	isSubmitBtnShow.value = false;
 	try {
 		const response = await request({
 			url: 'ProductSample/GetProductSampleDetails/GetDetails',
@@ -374,32 +404,36 @@ const handleView = async (id) => {
 			const { sample, details } = response.data;
 			// 填充主表数据
 			CreateDialogform.value = {
-				recipienttypeexamples: sample.customer_or_Supplier.toString(),
-				waybillNumber: sample.waybill_Number,
-				expressCompany: sample.express_Company.toString(),
-				sampleDate: sample.sample_Date.split(' ')[0],
-				sampleObject: sample.customer_ID.toString(),
-				partnerAbbreviation: sample.abbreviation,
-				ourCompany: sample.company_ID.toString(),
-				salesperson: sample.salesperson_ID.toString(),
-				paymentMethod: sample.payment_Method.toString(),
-				paidExpressCost: sample.paid_Express_Fee.toString()
+				recipienttypeexamples: (sample?.customer_or_Supplier ?? 1).toString(),
+				waybillNumber: sample?.waybill_Number ?? '',
+				expressCompany: (sample?.express_Company ?? '').toString(),
+				sampleDate: sample?.sample_Date ? sample.sample_Date.split(' ')[0] : '',
+				sampleObject: (sample?.customer_ID ?? '').toString(),
+				partnerAbbreviation: sample?.abbreviation ?? '',
+				ourCompany: (sample?.company_ID ?? '').toString(),
+				salesperson: (sample?.salesperson_ID ?? '').toString(),
+				paymentMethod: (sample?.payment_Method ?? '').toString(),
+				paidExpressCost: (sample?.paid_Express_Fee ?? 0).toString(),
+				photos: sample?.photos ?? []
 			};
+
 			// 设置寄样/收样类型
-			radioValue.value = sample.type.toString();
+			radioValue.value = (sample?.type ?? 1).toString();
+
 			// 填充样品明细数据
-			SampleProductData.value = details.map(detail => {
-				const images = detail.product_Image_URL ?
+			SampleProductData.value = (details || []).map(detail => {
+				const images = detail?.product_Image_URL ?
 					detail.product_Image_URL.split(',').map(url => ({
 						url: url.trim(),
 						name: url.split('/').pop()
 					})) : [];
 
 				return {
-					productNumber: detail.sample_Code,
-					productChineseName: detail.chinese_Name,
-					SampleQuantity: detail.sample_Quantity,
-					PricingAmount: detail.valuation_Amount,
+					id: detail?.ID ?? 0,
+					productNumber: detail?.sample_Code ?? '',
+					productChineseName: detail?.chinese_Name ?? '',
+					SampleQuantity: detail?.sample_Quantity ?? '',
+					PricingAmount: detail?.valuation_Amount ?? '',
 					subproductImages: images,
 					currentImageIndex: 0
 				};
@@ -410,6 +444,7 @@ const handleView = async (id) => {
 			ElMessage.error(response.msg || '获取详情失败');
 		}
 	} catch (error) {
+		console.error('获取详情失败:', error);
 		ElMessage.error('获取详情失败');
 	}
 };
@@ -417,6 +452,10 @@ const handleView = async (id) => {
 // 编辑按钮点击事件
 const handleEdit = () => {
 	isEditable.value = true;        // 切换到可编辑状态
+	isEditBtnShow.value = false;
+	isSaveDraftBtnShow.value = true;
+	isEditSubmitBtnShow.value = true;
+	isSubmitBtnShow.value = false;
 };
 
 /*动态下拉框start*/
@@ -815,7 +854,7 @@ const handleEditSave = async () => {
 	// 2. 表单验证
 	if (!validateForm(requestData)) {
 		// 验证失败时保持编辑状态
-		isEditable.value = false;
+		isEditable.value = true;
 		return;
 	}
 	loading.value = true;
@@ -854,17 +893,19 @@ const handleEditSave = async () => {
 		// 5. 发送编辑请求
 		const response = await request.post('ProductSample/EditProductSample/Edit', requestData);
 		if (response.code === 200) {
-			ElMessage.success('更新成功');
+			ElMessage.success('提交成功');
+			dialogVisible.value = false;
+			resetForm();
 			// 6. 刷新列表数据
 			await GetProductSampleList(currentPage.value, pageSize.value);
 			isEditable.value = false; // 成功后禁用编辑
 		} else {
-			ElMessage.error('更新失败');
+			ElMessage.error('提交失败');
 			isEditable.value = false; // 失败时保持编辑状态
 		}
 	} catch (error) {
-		console.error('更新失败:', error);
-		ElMessage.error('更新失败，请稍后重试');
+		console.error('提交失败:', error);
+		ElMessage.error('提交失败，请稍后重试');
 		isEditable.value = false; // 错误时保持编辑状态
 	} finally {
 		loading.value = false;
@@ -962,6 +1003,101 @@ const addSampleRow = () => {
 		// 添加其他可能需要的字段
 	});
 };
+
+const handleSaveDraft = async () => {
+	if (loading.value) return;
+
+	// 1. 构建请求数据
+	const requestData = {
+		ID: currentEditId.value || 0,  // 如果是编辑模式，使用当前ID
+		type: parseInt(radioValue.value),
+		customer_or_Supplier: parseInt(CreateDialogform.value.recipienttypeexamples),
+		waybill_Number: CreateDialogform.value.waybillNumber,
+		express_Company: parseInt(CreateDialogform.value.expressCompany) || null,
+		sample_Date: CreateDialogform.value.sampleDate,
+		customer_ID: parseInt(CreateDialogform.value.sampleObject) || null,
+		abbreviation: CreateDialogform.value.partnerAbbreviation,
+		company_ID: parseInt(CreateDialogform.value.ourCompany) || null,
+		salesperson_ID: parseInt(CreateDialogform.value.salesperson) || null,
+		payment_Method: parseInt(CreateDialogform.value.paymentMethod) || null,
+		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
+		isDelete: 0,
+		isDraft: 1,  // 标记为草稿
+		details: SampleProductData.value.map(item => ({
+			ID: item.id || 0,
+			sample_Code: item.productNumber,
+			chinese_Name: item.productChineseName,
+			sample_Quantity: parseInt(item.SampleQuantity) || 0,
+			valuation_Amount: parseFloat(item.PricingAmount) || 0,
+			isDelete: 0,
+			remark: ''
+		}))
+	};
+
+	loading.value = true;
+	try {
+		// 处理图片上传
+		for (const row of SampleProductData.value) {
+			if (row.subproductImages) {
+				const newImageUrls = [];
+				for (const img of row.subproductImages) {
+					if (img.isChanged) { // 只上传新添加的图片
+						try {
+							const uploadResult = await uploadProductPhoto(img);
+							if (uploadResult.code === 200) {
+								newImageUrls.push(uploadResult.data.url);
+							} else {
+								throw new Error('图片上传失败');
+							}
+						} catch (error) {
+							ElMessage.error(`图片 ${img.name} 上传失败`);
+							return;
+						}
+					} else {
+						newImageUrls.push(img.url); // 保留已有的图片URL
+					}
+				}
+				row.finalImageUrls = newImageUrls.join(',');
+			}
+		}
+
+		// 更新请求数据中的图片URL
+		requestData.details = requestData.details.map((detail, index) => ({
+			...detail,
+			product_Image_URL: SampleProductData.value[index].finalImageUrls || ''
+		}));
+
+		// 发送请求
+		const url = isCreateMode.value ?
+			'ProductSample/AddProductSample/Add' :
+			'ProductSample/EditProductSample/Edit';
+
+		const response = await request.post(url, requestData);
+
+		if (response.code === 200) {
+			ElMessage.success('草稿保存成功');
+			dialogVisible.value = false;
+			resetForm();
+			// 刷新列表数据
+			await GetProductSampleList(currentPage.value, pageSize.value);
+		} else {
+			ElMessage.error(response.msg || '保存草稿失败');
+		}
+	} catch (error) {
+		console.error('保存草稿失败:', error);
+		ElMessage.error('保存草稿失败，请稍后重试');
+	} finally {
+		loading.value = false;
+	}
+};
+
+// 监听付费方式变化
+watch(() => CreateDialogform.value.paymentMethod, (newValue) => {
+	// 如果选择到付，自动设置已付快递费为0
+	if (newValue === '2') { // 假设'2'代表到付
+		CreateDialogform.value.paidExpressCost = '0';
+	}
+});
 </script>
 
 <style scoped></style>

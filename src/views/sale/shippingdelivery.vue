@@ -38,14 +38,12 @@
 		<el-divider> </el-divider>
 		<el-table :data="shippingDeliveryTableData">
 			<el-table-column prop="id" label="出运发货单ID" width="150px" v-if="false"></el-table-column>
-			<el-table-column prop="isDraft" label="是否草稿" width="100">
+			<el-table-column prop="invoiceNumber" label="出运单号" width="150px">
 				<template #default="scope">
-					<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
-						{{ scope.row.isDraft === 0 ? '否' : '是' }}
-					</el-tag>
+					<span>{{ scope.row.invoiceNumber }}</span>
+					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
 				</template>
 			</el-table-column>
-			<el-table-column prop="invoiceNumber" label="出运单号" width="150px"></el-table-column>
 			<el-table-column prop="salesContractNumber" label="销售合同号" width="150px"></el-table-column>
 			<el-table-column prop="createTime" label="制单日期" width="150px"></el-table-column>
 			<el-table-column prop="shippingStatus" label="出运状态" width="150px"></el-table-column>

@@ -35,14 +35,12 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="paymentrequesttableData">
-			<el-table-column prop="isDraft" label="是否草稿" width="100">
+			<el-table-column prop="applicationNumber" label="申请单号" width="180">
 				<template #default="scope">
-					<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
-						{{ scope.row.isDraft === 0 ? '否' : '是' }}
-					</el-tag>
+					<span>{{ scope.row.applicationNumber }}</span>
+					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
 				</template>
 			</el-table-column>
-			<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
 			<el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
 			<el-table-column prop="reviewStatusStr" label="审核状态" width="150"></el-table-column>
 			<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>

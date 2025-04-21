@@ -39,14 +39,12 @@
 		<el-divider> </el-divider>
 		<el-table :data="SupplierInfoTableData">
 			<el-table-column prop="Id" label="供应商ID" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="isDraft" label="是否草稿" width="100">
+			<el-table-column prop="supplierId" label="供应商编号" width="150">
 				<template #default="scope">
-					<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
-						{{ scope.row.isDraft === 0 ? '否' : '是' }}
-					</el-tag>
+					<span>{{ scope.row.supplierId }}</span>
+					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
 				</template>
 			</el-table-column>
-			<el-table-column prop="supplierId" label="供应商编号" width="150"></el-table-column>
 			<el-table-column prop="shortName" label="供应商简称" width="150"></el-table-column>
 			<el-table-column prop="fullName" label="供应商全称" width="150"></el-table-column>
 			<el-table-column prop="cooperationLevel" label="供应商等级" width="150"></el-table-column>
@@ -406,11 +404,11 @@
 					<el-button v-show="isEditBtnVisible" type="primary" @click="IsEditBtnClick">
 						编辑
 					</el-button>
-					<el-button v-show="isEditSaveBtnVisible" type="primary" @click="EditSaveSupperinfo">
-						编辑保存
+					<el-button v-show="isSavebtnVisible" type="warning" @click="SaveSupperinfo">
+						保存草稿
 					</el-button>
-					<el-button v-show="isSavebtnVisible" type="primary" @click="SaveSupperinfo">
-						保存
+					<el-button v-show="isEditSaveBtnVisible" type="warning" @click="EditSaveSupperinfo">
+						保存草稿
 					</el-button>
 					<el-button v-show="isSubmitbtnVisible" type="success" @click="SubmitSupperinfo">
 						提交
@@ -831,7 +829,7 @@ const SaveSupperinfo = () => {
 		SupplierRequest.LastTransaction = Addsupperinfoform.lastTransaction
 		SupplierRequest.IsDelete = 0
 		SupplierRequest.contactInfoItems = supperinfoContactsTableData.value
-		SupplierRequest.IsDraft = isDraft.value
+		SupplierRequest.IsDraft = 1
 		// 如果联系人为空，赋值空字符串
 		SupplierRequest.contactInfoItems.forEach((element) => {
 			element.name = element.name || '';

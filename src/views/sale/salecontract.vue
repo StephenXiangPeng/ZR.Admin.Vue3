@@ -1118,6 +1118,16 @@ const handlecontractDialogclose = async () => {
 	isSaveBtnShow.value = true;
 	GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
 	clearAll();
+	// 重置表单验证状态
+	if (NewcontractformRef.value) {
+		NewcontractformRef.value.resetFields();
+		NewcontractformRef.value.clearValidate();
+	}
+	// 移除所有可能存在的高亮错误样式
+	const errorElements = document.querySelectorAll('.highlight-error');
+	errorElements.forEach(el => {
+		el.classList.remove('highlight-error');
+	});
 }
 
 //定金日期触发函数，将定金日期赋值给有效日期
@@ -1801,7 +1811,7 @@ function GetContractList(start, end) {
 						contractsTableData.value[i].customerNumber = state.optionss.sql_hr_customer.find(item => item.dictValue === contractsTableData.value[i].customerNumber.toString()).dictLabel;
 					}
 					if (contractsTableData.value[i].customerAbbreviation > 0) {
-						contractsTableData.value[i].customerAbbreviation = state.optionss.sql_hr_customer_abbreviation.find(item => item.dictValue === contractsTableData.value[i].customerAbbreviation.toString()).dictLabel;
+						contractsTableData.value[i].customerAbbreviation = state.optionss.sql_hr_customer.find(item => item.dictValue === contractsTableData.value[i].customerAbbreviation.toString()).dictLabel;
 					}
 					if (contractsTableData.value[i].ourCompany != null) {
 						contractsTableData.value[i].ourCompany = state.optionss.hr_ourcompany.find(item => item.dictValue === contractsTableData.value[i].ourCompany.toString()).dictLabel;
@@ -2127,25 +2137,51 @@ const addContractsRequest = reactive({
 });
 
 const scrollToError = (formEl: FormInstance) => {
-	// 获取所有验证失败的字段
-	const errorFields = formEl.fields.filter(field => field.validateState === 'error')
-	if (errorFields.length > 0) {
-		// 获取第一个错误字段的prop
-		const firstErrorProp = errorFields[0].prop
-		// 使用更可靠的选择器，包括label和input元素
-		const fieldEl = document.querySelector(`label[for="${firstErrorProp}"]`) ||
-			document.querySelector(`[name="${firstErrorProp}"]`) ||
-			document.querySelector(`[data-field="${firstErrorProp}"]`) ||
-			document.querySelector(`#${firstErrorProp}`)
+	console.log('scrollToError called');
+	const errorFields = formEl.fields.filter(field => field.validateState === 'error');
 
-		if (fieldEl) {
-			// 滚动到该元素位置
-			fieldEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+	if (errorFields.length > 0) {
+		const firstErrorField = errorFields[0];
+		console.log('First error field:', firstErrorField);
+
+		// 使用更基础的选择器
+		const formItemEl = document.querySelector(
+			`.el-form-item[prop="${firstErrorField.prop}"]`
+		);
+
+		if (formItemEl) {
+			// 滚动到元素位置
+			formItemEl.scrollIntoView({
+				behavior: 'smooth',
+				block: 'center'
+			});
+
 			// 添加高亮效果
-			fieldEl.classList.add('highlight-error')
+			formItemEl.classList.add('highlight-error');
+
+			// 同时高亮表单项的内容
+			const contentEl = formItemEl.querySelector('.el-form-item__content');
+			if (contentEl) {
+				contentEl.classList.add('highlight-error');
+			}
+
+			// 移除高亮效果
 			setTimeout(() => {
-				fieldEl.classList.remove('highlight-error')
-			}, 2000)
+				formItemEl.classList.remove('highlight-error');
+				if (contentEl) {
+					contentEl.classList.remove('highlight-error');
+				}
+			}, 2000);
+
+			// 显示错误消息
+			ElMessage.error(`请填写${firstErrorField.label || firstErrorField.prop}`);
+		} else {
+			console.log('No form item element found for prop:', firstErrorField.prop);
+			// 如果找不到具体元素，滚动到表单顶部
+			const formEl = document.querySelector('.el-form');
+			if (formEl) {
+				formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
 		}
 	}
 }
@@ -2158,7 +2194,10 @@ const SaveContract = async (formEl: FormInstance | undefined) => {
 			scrollToError(formEl)
 			return
 		}
-
+		if (!productData.value || productData.value.length === 0) {
+			ElMessage.error('请至少添加一个产品');
+			return;
+		}
 		await ElMessageBox.confirm('确定提交当前合同吗?', '提示', {
 			confirmButtonText: '确定',
 			cancelButtonText: '取消',
@@ -2320,8 +2359,21 @@ const SaveContract = async (formEl: FormInstance | undefined) => {
 			ElMessage.info('已取消提交合同');
 		});
 	} catch (error) {
-		console.error('提交合同失败:', error);
-		ElMessage.error('提交合同失败');
+		// 处理验证错误
+		if (error && typeof error === 'object' && Object.keys(error).length > 0) {
+			console.log('表单验证失败:', error);
+			ElMessage.error('请填写必填项');
+			try {
+				scrollToError(formEl);
+			} catch (scrollError) {
+				console.error('滚动到错误位置失败:', scrollError);
+			}
+		} else if (error === 'cancel') {
+			ElMessage.info('已取消提交合同');
+		} else {
+			console.error('提交合同失败:', error);
+			ElMessage.error('提交合同失败');
+		}
 	}
 }
 
@@ -2401,7 +2453,6 @@ const clearAll = () => {
 	Newcontractform.Totalgrossprofit = null;
 	productData.value = [];
 	CustomerRelaterExoensesTableData.value = [];
-
 }
 
 //获取销售合同编号
@@ -2507,8 +2558,9 @@ const checkContractsDetails = async (row) => {
 	if (row.customerNumber != null && row.customerNumber != "") {
 		Newcontractform.customerNumber = state.optionss.sql_hr_customer.find(item => item.dictLabel === row.customerNumber.toString()).dictValue;
 	}
+
 	if (row.customerAbbreviation != null && row.customerAbbreviation != "") {
-		Newcontractform.customerAbbreviation = state.optionss.sql_hr_customer_abbreviation.find(item => item.dictValue === row.customerAbbreviation.toString()).dictValue;
+		Newcontractform.customerAbbreviation = state.optionss.sql_hr_customer.find(item => item.dictLabel === row.customerAbbreviation.toString()).dictValue;
 	}
 	if (row.customerId != 0) {
 		Newcontractform.customerid = row.customerId;
@@ -2831,13 +2883,17 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 			scrollToError(formEl)
 			return
 		}
-
+		if (!productData.value || productData.value.length === 0) {
+			ElMessage.error('请至少添加一个产品');
+			return;
+		}
 		// 显示确认对话框
 		await ElMessageBox.confirm('确定提交当前合同吗?', '提示', {
 			confirmButtonText: '确定',
 			cancelButtonText: '取消',
 			type: 'warning'
 		})
+
 		// 映射基本信息
 		EditContractsRequest.Id = SelctedContractId.value;
 		EditContractsRequest.ContractNumber = Newcontractform.contractNumber;
@@ -2976,26 +3032,91 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 		}));
 
 		// 发送请求
-		const res = await request({
-			url: 'Contracts/EditContract/Edit',
-			method: 'post',
-			data: EditContractsRequest
-		});
+		try {
+			const res = await request({
+				url: 'Contracts/EditContract/Edit',
+				method: 'post',
+				data: EditContractsRequest
+			});
 
-		if (res.code === 200) {
-			ElMessage.success('提交合同成功');
-			contractDialog.value = false;
-			// 刷新列表
-			GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
-			// 更新按钮状态
-			showEditSaveBtn.value = false;
-			showEditBtn.value = true;
-			isAuditBtnShow.value = true;
-		} else {
-			ElMessage.error(res.msg || '提交合同失败');
+			if (res.code === 200) {
+				ElMessage.success('提交合同成功');
+				contractDialog.value = false;
+				// 刷新列表
+				GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+				// 更新按钮状态
+				showEditSaveBtn.value = false;
+				showEditBtn.value = true;
+				isAuditBtnShow.value = true;
+			} else {
+				ElMessage.error(res.msg || '提交合同失败');
+			}
+		} catch (error) {
+			// 处理后端返回的验证错误
+			if (error.errors) {
+				// 构建错误消息
+				const errorMessages = [];
+
+				// 遍历错误对象
+				for (const key in error.errors) {
+					if (key.startsWith('contractProductItems')) {
+						// 解析数组索引，例如 "contractProductItems[0].outerboxunit"
+						const match = key.match(/contractProductItems\[(\d+)\]\.(\w+)/);
+						if (match) {
+							const index = parseInt(match[1]);
+							const field = match[2];
+							const productCode = productData.value[index]?.productNum || `第${index + 1}项`;
+							errorMessages.push(`产品 ${productCode} 的${field}是必填项`);
+						}
+					} else {
+						errorMessages.push(error.errors[key][0]);
+					}
+				}
+
+				// 显示错误消息
+				if (errorMessages.length > 0) {
+					ElMessage.error({
+						message: errorMessages.join('\n'),
+						duration: 5000,
+						showClose: true,
+						grouping: true
+					});
+				}
+
+				// 如果是产品表格的错误，可以高亮对应的行
+				const errorIndices = Object.keys(error.errors)
+					.filter(key => key.startsWith('contractProductItems'))
+					.map(key => {
+						const match = key.match(/contractProductItems\[(\d+)\]/);
+						return match ? parseInt(match[1]) : -1;
+					})
+					.filter(index => index !== -1);
+
+				// 高亮错误行
+				if (errorIndices.length > 0) {
+					// 假设你的表格组件有一个方法可以设置行的类名
+					errorIndices.forEach(index => {
+						const row = productData.value[index];
+						if (row) {
+							row.rowClassName = 'error-row';
+						}
+					});
+				}
+			} else {
+				ElMessage.error(error.msg || '提交合同失败');
+			}
 		}
 	} catch (error) {
-		if (error === 'cancel') {
+		// 处理验证错误
+		if (error && typeof error === 'object' && Object.keys(error).length > 0) {
+			console.log('表单验证失败:', error);
+			ElMessage.error('请填写必填项');
+			try {
+				scrollToError(formEl);
+			} catch (scrollError) {
+				console.error('滚动到错误位置失败:', scrollError);
+			}
+		} else if (error === 'cancel') {
 			ElMessage.info('已取消提交合同');
 		} else {
 			console.error('提交合同失败:', error);
@@ -3267,37 +3388,37 @@ const SaveContractDraft = async (formEl: FormInstance | undefined) => {
 			ExportTotalPrice: item.exporttotalprice,
 			PurchaseUnitPrice: item.purchaseunitprice,
 			PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
-			Packaging: item.packaging,
+			Packaging: item.packaging || 0,
 			SpecialRequirements: item.specialrequirements,
 			Invoice: item.isInvoicingc === 'Y' ? 1 : 0,
 			TaxRefundRate: item.rebaterate,
-			InnerBoxQuantity: item.innerBoxLoading,
-			OuterBoxQuantity: item.outerboxloading,
-			BoxCount: item.NumberOfBoxes,
-			OuterBoxLength: item.outerboxlength,
-			OuterBoxWidth: item.outerboxwidth,
-			OuterBoxHeight: item.outerboxheight,
-			OuterBoxVolume: item.outerboxvolume,
-			OuterBoxNetWeight: item.outerboxnetweight,
-			OuterBoxGrossWeight: item.outerboxgrossweight,
-			TotalVolume: item.totalVolume,
-			TotalNetWeight: item.totalNetWeight,
-			TotalGrossWeight: item.totalGrossWeight,
-			additionalPackagingCosts: item.AdditionalPackagingCosts,
-			Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct,
-			Inlandfreightprice: item.inlandfreightprice,
+			InnerBoxQuantity: item.innerBoxLoading || 0,
+			OuterBoxQuantity: item.outerboxloading || 0,
+			BoxCount: item.NumberOfBoxes || 0,
+			OuterBoxLength: item.outerboxlength || 0,
+			OuterBoxWidth: item.outerboxwidth || 0,
+			OuterBoxHeight: item.outerboxheight || 0,
+			OuterBoxVolume: item.outerboxvolume || 0,
+			OuterBoxNetWeight: item.outerboxnetweight || 0,
+			OuterBoxGrossWeight: item.outerboxgrossweight || 0,
+			TotalVolume: item.totalVolume || 0,
+			TotalNetWeight: item.totalNetWeight || 0,
+			TotalGrossWeight: item.totalGrossWeight || 0,
+			additionalPackagingCosts: item.AdditionalPackagingCosts || 0,
+			Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct || 0,
+			Inlandfreightprice: item.inlandfreightprice || 0,
 			IsNewProduct: 0,
-			Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct,
+			Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct || 0,
 			Onepacking: '',
-			OtherFees: item.OtherFees,
-			outerboxunit: item.outerboxunit,
-			Portchargesforindividualproducts: item.Portchargesforindividualproducts,
-			Purchasecurrency: item.purchasecurrency,
+			OtherFees: item.OtherFees || 0,
+			outerboxunit: item.outerboxunit || '',
+			Portchargesforindividualproducts: item.Portchargesforindividualproducts || 0,
+			Purchasecurrency: item.purchasecurrency || 0,
 			Remark: '',
-			singleProductGrossProfit: item.singleProductGrossProfit,
-			singleProductGrossProfitTotal: item.singleProductGrossProfitTotal,
-			Singleproductvolume: item.Singleproductvolume,
-			Singlesalesrevenue: item.SinglesalesrevenueA
+			singleProductGrossProfit: item.singleProductGrossProfit || 0,
+			singleProductGrossProfitTotal: item.singleProductGrossProfitTotal || 0,
+			Singleproductvolume: item.Singleproductvolume || 0,
+			Singlesalesrevenue: item.SinglesalesrevenueA || 0,
 		}));
 
 		// 映射费用信息
@@ -3373,11 +3494,26 @@ const SaveContractDraft = async (formEl: FormInstance | undefined) => {
 	color: red !important;
 }
 
-.highlight-error {
+/* 错误高亮样式 */
+.el-form-item.highlight-error {
 	animation: error-shake 0.5s ease-in-out;
-	box-shadow: 0 0 0 2px var(--el-color-danger);
+	position: relative;
 }
 
+.el-form-item.highlight-error::after {
+	content: '';
+	position: absolute;
+	top: -4px;
+	left: -4px;
+	right: -4px;
+	bottom: -4px;
+	border: 2px solid var(--el-color-danger);
+	border-radius: 4px;
+	pointer-events: none;
+	z-index: 1;
+}
+
+/* 抖动动画 */
 @keyframes error-shake {
 
 	0%,
@@ -3389,8 +3525,42 @@ const SaveContractDraft = async (formEl: FormInstance | undefined) => {
 		transform: translateX(-5px);
 	}
 
-	75% {
+	50% {
 		transform: translateX(5px);
 	}
+
+	75% {
+		transform: translateX(-5px);
+	}
+}
+
+/* 确保错误状态下的表单项突出显示 */
+.el-form-item.is-error.highlight-error .el-form-item__content {
+	box-shadow: 0 0 8px var(--el-color-danger);
+}
+
+/* 错误行样式 */
+.error-row {
+	--el-table-tr-bg-color: var(--el-color-danger-light-9);
+	animation: error-flash 1s ease-in-out;
+}
+
+@keyframes error-flash {
+
+	0%,
+	100% {
+		background-color: var(--el-table-tr-bg-color);
+	}
+
+	50% {
+		background-color: var(--el-color-danger-light-8);
+	}
+}
+
+/* 多行错误消息样式 */
+.el-message--error {
+	white-space: pre-line;
+	max-height: 300px;
+	overflow-y: auto;
 }
 </style>

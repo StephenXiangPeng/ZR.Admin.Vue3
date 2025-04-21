@@ -2090,10 +2090,8 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 							inline: 'nearest'
 						});
 					}
-
 					// 添加高亮效果
 					errorElement.classList.add('highlight-error');
-
 					// 2秒后移除高亮效果
 					setTimeout(() => {
 						errorElement.classList.remove('highlight-error');

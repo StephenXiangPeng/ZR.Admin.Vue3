@@ -27,14 +27,13 @@
 			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;客户询价表</span>
 			<el-divider></el-divider>
 			<el-table :data="InquityTableData" style="width: 100%" stripe :size="small">
-				<el-table-column prop="isDraft" label="是否草稿" width="100">
+				<el-table-column prop="inquiry_number" label="询价单号">
 					<template #default="scope">
-						<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
-							{{ scope.row.isDraft === 0 ? '否' : '是' }}
-						</el-tag>
+						<span>{{ scope.row.inquiry_number }}</span>
+						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
 					</template>
 				</el-table-column>
-				<el-table-column prop="inquiry_number" label="询价单号"></el-table-column>
 				<el-table-column prop="date" label="询价日期"></el-table-column>
 				<el-table-column prop="subject" label="询价主题"></el-table-column>
 				<el-table-column prop="inquirer" label="询价人"></el-table-column>
@@ -342,11 +341,11 @@
 					<el-button v-show="isEditBtnVisible" type="primary" @click="IsEditBtnClick">
 						编辑
 					</el-button>
-					<el-button v-show="isEditSaveBtnVisible" type="primary" @click="EditSaveInquiry">
-						编辑保存
-					</el-button>
-					<el-button v-show="isSavebtnVisible" type="primary" @click="uploadFilesAndSaveInquiry">
+					<el-button v-show="isSavebtnVisible" type="warning" @click="uploadFilesAndSaveInquiry">
 						保存草稿
+					</el-button>
+					<el-button v-show="isEditSaveBtnVisible" type="success" @click="EditSaveInquiry">
+						编辑提交
 					</el-button>
 					<el-button v-show="isSubmitbtnVisible" type="success" @click="SubmitInquiry">
 						提交
@@ -996,8 +995,8 @@ const existingDocuments = ref([]) // 存储已有的附件
 const IsEditBtnClick = () => {
 	isEditable.value = false
 	isEditBtnVisible.value = false
-	isEditSaveBtnVisible.value = true
-	isSavebtnVisible.value = false
+	isSavebtnVisible.value = true
+	isEditSaveBtnVisible.value = false
 	isShowUpload.value = true // 显示上传组件
 	// 将现有附件信息复制到 existingDocuments
 	existingDocuments.value = [...inquiryDocumentList.value]
