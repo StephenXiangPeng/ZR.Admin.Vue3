@@ -2345,11 +2345,13 @@ const SaveContract = async (formEl: FormInstance | undefined) => {
 				method: 'post',
 				data: addContractsRequest
 			}).then(response => {
-				if (response != null) {
+				if (response != null && response.code === 200) {
 					ElMessage({
-						message: response.msg,
+						message: "销售合同提交成功",
 						type: 'success'
 					});
+					SelctedContractId.value = response.data;
+					SubmitForReview();
 					contractDialog.value = false;
 					// 刷新列表
 					GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
@@ -2971,7 +2973,7 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 
 		// 映射产品信息
 		EditContractsRequest.contractProductItems = productData.value.map(item => ({
-			Id: 0,
+			Id: item.Id,
 			ProductID: item.productID,
 			ContractId: SelctedContractId.value,
 			ProductCode: item.productNum,
@@ -3040,6 +3042,7 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 			});
 
 			if (res.code === 200) {
+				SubmitForReview();
 				ElMessage.success('提交合同成功');
 				contractDialog.value = false;
 				// 刷新列表

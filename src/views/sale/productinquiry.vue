@@ -45,6 +45,9 @@
 					</template>
 				</el-table-column>
 			</el-table>
+			<!-- <el-pagination @current-change="SearchInquiryhandlePageChange" :current-page="SearchInquirycurrentPage"
+				:page-size="SearchInquirypageSize" :total="SearchInquirytotalItems" :background="true"
+				layout="total, prev, pager, next" style="margin-top: 5px;" /> -->
 			<el-pagination @current-change="SearchInquiryhandlePageChange" :current-page="SearchInquirycurrentPage"
 				:page-size="SearchInquirypageSize" :total="SearchInquirytotalItems" background
 				layout="prev, pager, next" style="margin-top: 5px;" />
@@ -345,7 +348,7 @@
 						保存草稿
 					</el-button>
 					<el-button v-show="isEditSaveBtnVisible" type="success" @click="EditSaveInquiry">
-						编辑提交
+						提交
 					</el-button>
 					<el-button v-show="isSubmitbtnVisible" type="success" @click="SubmitInquiry">
 						提交
@@ -500,6 +503,7 @@ const OpenCreateInquiryDialog = () => {
 	isEditBtnVisible.value = false;
 	isSavebtnVisible.value = true;
 	isEditSaveBtnVisible.value = false;
+	isSubmitbtnVisible.value = true;
 
 	NewprudctInquityDetailsform.Id = 0;
 	NewprudctInquityDetailsform.inquiry_number = '';
@@ -764,15 +768,6 @@ const uploadFileToAliyun = async (file) => {
 var UploadResponse = ref(null);
 // 保存询价单
 const uploadFilesAndSaveInquiry = async () => {
-	// 添加询价主题和询价人员的验证
-	if (!NewprudctInquityDetailsform.Subject?.trim()) {
-		ElMessage.error('请填写询价主题');
-		return;
-	}
-	if (!NewprudctInquityDetailsform.Inquirer) {
-		ElMessage.error('请选择询价人员');
-		return;
-	}
 	// 添加价格条款和含税校验
 	const invalidProduct = inquryProductTableData.value.find(product =>
 		!product.priceterms || !product.taxincluded
@@ -818,25 +813,34 @@ const uploadFilesAndSaveInquiry = async () => {
 		})
 		NewprudctInquityDetailsform.isDraft = 1;
 		try {
-			const response = await request.post('Inquiry/AddInquiry/Add', NewprudctInquityDetailsform)
+			// 判断是新建还是编辑状态
+			let response;
+			if (NewprudctInquityDetailsform.Id > 0) {
+				// 编辑状态，使用Edit接口
+				response = await request.post('Inquiry/EditInquiry/Edit', NewprudctInquityDetailsform)
+			} else {
+				// 新建状态，使用Add接口
+				response = await request.post('Inquiry/AddInquiry/Add', NewprudctInquityDetailsform)
+			}
+
 			if (response.code === 200) {
 				ElMessage({
-					message: response.msg,
+					message: '草稿保存成功',
 					type: 'success'
 				})
 				CreateInquiryDialog.value = false
 				GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value)
 			} else {
-				throw new Error(response.msg || '新增询价单失败')
+				throw new Error(response.msg || '保存询价单草稿失败')
 			}
 		} catch (error) {
-			console.error('新增询价单出错:', error)
-			ElMessage.error(error.message || '新增询价单失败')
+			console.error('保存询价单草稿出错:', error)
+			ElMessage.error(error.message || '保存询价单草稿失败')
 		}
 	}).catch(() => {
 		ElMessage({
 			type: 'info',
-			message: '已取消保存'
+			message: '已取消保存草稿'
 		})
 	})
 };
@@ -849,10 +853,12 @@ const SearchInquirycurrentPage = ref(1);
 const SearchInquirypageSize = ref(10);
 const searchInquiryNameText = ref('');
 const SearchInquiryhandlePageChange = async (newPage) => {
-	SearchInquirypageSize.value = newPage;
-	const start = newPage;
-	const end = SearchInquirypageSize.value;
-	const newData = await GetInquiryList(start, end);
+	try {
+		await GetInquiryList(newPage, SearchInquirypageSize.value);
+	} catch (error) {
+		console.error('分页加载失败:', error);
+		ElMessage.error('加载数据失败，请重试');
+	}
 };
 //GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
 function GetInquiryList(start, end) {
@@ -868,23 +874,25 @@ function GetInquiryList(start, end) {
 				endDate: inquiryEndDate.value
 			}
 		}).then(response => {
-			if (response.data.result.length) {
-				InquityTableData.value = response.data.result;
-				InquityTableData.value.forEach(item => {
-					item.inquirer = state.optionss.sql_hr_sale.find(option => option.dictValue === item.inquirer.toString()).dictLabel;
-				});
-				resolve(response.data.data);
-			} else {
-				if (response.data.totalNum > 0 && start > 1) {
-					GetInquiryList(start - 1, end);
-				} else {
-					InquityTableData.value = [];
+			if (response.code == 200) {
+				const data = response.data;
+				InquityTableData.value = data.result || [];
+				// 更新分页信息
+				SearchInquirytotalItems.value = data.totalNum || 0;
+				SearchInquirycurrentPage.value = data.pageIndex || 1;
+				SearchInquirypageSize.value = data.pageSize || 10;
+				resolve(data.result);
+				if (InquityTableData.value.length > 0) {
+					InquityTableData.value.forEach(item => {
+						item.inquirer = state.optionss.sql_hr_sale.find(option => option.dictValue === item.inquirer.toString()).dictLabel;
+					});
 				}
-				reject(new Error('无数据'));  // Reject the promise if the response is null
+			} else {
+				reject(new Error(response.msg || '获取数据失败'));
 			}
 		}).catch(error => {
 			console.error(error);
-			reject(error);  // Reject the promise if an error occurs
+			reject(error);
 		});
 	});
 }
@@ -938,7 +946,7 @@ const ChcekDetails = (row) => {
 					moq: item.moq,
 					negotiateprice: item.negotiateprice,
 					custommade: item.customMade,
-					priceterms: item.priceTerms == 0 ? 0 : state.optionss.hr_purchase_pricing_term.find(option => option.dictValue === item.priceTerms.toString()).dictValue,
+					priceterms: item.priceTerms == 0 ? 0 : state.optionss.hr_purchase_pricing_term.find(option => option.dictValue === item.priceTerms.toString())?.dictValue,
 					taxincluded: item.taxIncluded,
 					price: item.price,
 					QuoteQuantity: item.quoteQuantity,
@@ -955,7 +963,7 @@ const ChcekDetails = (row) => {
 					outerboxvolume: item.outerBoxVolume,
 					outerboxgrossweight: item.outerBoxGrossWeight,
 					status: item.status
-				}))
+				}));
 			} else {
 				inquryProductTableData.value = [];
 				originalProductData.value = [];
@@ -966,7 +974,7 @@ const ChcekDetails = (row) => {
 					id: item.id,
 					fileName: item.fileName,
 					documentUrl: item.documentUrl
-				}))
+				}));
 			} else {
 				inquiryDocumentList.value = []
 				originalDocumentData.value = [];
@@ -996,7 +1004,8 @@ const IsEditBtnClick = () => {
 	isEditable.value = false
 	isEditBtnVisible.value = false
 	isSavebtnVisible.value = true
-	isEditSaveBtnVisible.value = false
+	isEditSaveBtnVisible.value = true
+	isSubmitbtnVisible.value = false
 	isShowUpload.value = true // 显示上传组件
 	// 将现有附件信息复制到 existingDocuments
 	existingDocuments.value = [...inquiryDocumentList.value]
@@ -1006,7 +1015,7 @@ const IsEditBtnClick = () => {
 		url: doc.documentUrl,
 		// 添加一个标志来表示这是现有文件
 		isExisting: true
-	}))
+	}));
 	// 清空 inquryProductDocumentTableData，为新上传做准备
 	inquryProductDocumentTableData.value = [];
 }
@@ -1044,20 +1053,12 @@ const EditSaveInquiry = async () => {
 			ElMessage.error('请选择询价人员');
 			return;
 		}
-		// 添加价格条款和含税校验
-		// const invalidProduct = inquryProductTableData.value.find(product =>
-		// 	!product.priceterms || !product.taxincluded
-		// );
-		// if (invalidProduct) {
-		// 	if (!invalidProduct.priceterms) {
-		// 		ElMessage.error('请为所有产品选择价格条款');
-		// 	} else if (!invalidProduct.taxincluded) {
-		// 		ElMessage.error('请为所有产品填写含税信息');
-		// 	}
-		// 	return;
-		// }
+		if (inquryProductTableData.value.length === 0) {
+			ElMessage.error('请添加至少一个产品');
+			return;
+		}
 		try {
-			await ElMessageBox.confirm('确定编辑该询价单吗？', '提示', {
+			await ElMessageBox.confirm('确定提交该询价单吗？', '提示', {
 				confirmButtonText: '确定',
 				cancelButtonText: '取消',
 				type: 'warning'
@@ -1145,12 +1146,14 @@ const EditSaveInquiry = async () => {
 			}
 		}
 
+		dataToSend.isDraft = 0;
+		dataToSend.Inquirer = state.optionss.sql_hr_sale.find(option => option.dictLabel === NewprudctInquityDetailsform.Inquirer.toString())?.dictValue;
 		// 发送编辑请求
 		const response = await request.post('Inquiry/EditInquiry/Edit', dataToSend);
 
 		if (response.code === 200) {
 			ElMessage({
-				message: response.msg,
+				message: '提交成功',
 				type: 'success'
 			});
 			// 更新状态
@@ -1162,6 +1165,7 @@ const EditSaveInquiry = async () => {
 
 			// 恢复到待编辑状态
 			restoreToViewMode();
+			CreateInquiryDialog.value = false;
 
 			// 刷新询价单列表
 			GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
@@ -1437,39 +1441,144 @@ const loadDocumentList = async (inquiryId) => {
 	}
 };
 
-const SubmitInquiry = () => {
-	if (isEditable.value == false) {
-		ElMessage.warning('请先保存询价单');
-		return;
-	}
-	ElMessageBox.confirm('确定要提交该询价单吗？', '提醒', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'warning'
-	}).then(async () => {
-		const response = await request({
-			url: 'Inquiry/UpdateInquiryIsDraft/UpdateInquiryIsDraft',
-			method: 'GET',
-			params: {
-				IsDraft: 0,
-				ID: EditInquiryID.value
+const SubmitInquiry = async () => {
+	try {
+		// 添加询价主题和询价人员的验证
+		if (!NewprudctInquityDetailsform.Subject?.trim()) {
+			ElMessage.error('请填写询价主题');
+			return;
+		}
+		if (!NewprudctInquityDetailsform.Inquirer) {
+			ElMessage.error('请选择询价人员');
+			return;
+		}
+		if (inquryProductTableData.value.length === 0) {
+			ElMessage.error('请添加至少一个产品');
+			return;
+		}
+		try {
+			await ElMessageBox.confirm('确定提交该询价单吗？', '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning'
+			});
+		} catch (err) {
+			// 用户点击取消按钮
+			ElMessage({
+				type: 'info',
+				message: '已取消保存'
+			});
+			return; // 直接返回，不执行后续操作
+		}
+
+		// 准备要发送到服务器的数据
+		const dataToSend = {
+			...NewprudctInquityDetailsform,
+			InquiryProducts: [],
+			InquirySupplementaryDocuments: []
+		};
+
+		// 处理产品数据
+		for (let i = 0; i < inquryProductTableData.value.length; i++) {
+			const product = inquryProductTableData.value[i];
+			// 如果有新的图片，先上传
+			if (selectedImages.value[i]) {
+				const imageUrl = await uploadImageToLocal(selectedImages.value[i]);
+				if (imageUrl) {
+					product.productimage = imageUrl;
+				}
 			}
-		});
+			// 添加到要发送的数据中
+			dataToSend.InquiryProducts.push({
+				ID: product.id || 0, // 如果是新产品，ID 为 0
+				ProductID: product.productId,
+				Date: product.date,
+				ProductImage: product.productimage,
+				ProductNumber: product.productnumber,
+				ProductSpecifications: product.productspecifications,
+				MainMaterials: product.mainmaterials,
+				SmallPackagingMethod: product.smallpackagingmethod,
+				MOQ: product.moq,
+				negotiateprice: product.negotiateprice,
+				CustomMade: product.custommade,
+				PriceTerms: product.priceterms ? product.priceterms : 0,
+				TaxIncluded: product.taxincluded ? product.taxincluded : 0,
+				QuoteQuantity: product.QuoteQuantity,
+				Price: product.price,
+				ProductLength: product.productlength,
+				ProductWidth: product.productwidth,
+				ProductHeight: product.productheight,
+				ProductWeight: product.productweight,
+				MediumPackaging: product.mediumpackaging,
+				OuterBox: product.outerbox,
+				MiddleBagOrOuterBox: product.middlebagorouterbox,
+				OuterBoxLength: product.outerboxlength,
+				OuterBoxWidth: product.outerboxwidth,
+				OuterBoxHeight: product.outerboxheight,
+				OuterBoxVolume: product.outerboxvolume,
+				OuterBoxGrossWeight: product.outerboxgrossweight,
+				IsNewProduct: product.id ? 0 : 1 // 如果有 id 则不是新产品
+			});
+		}
+
+		// 处理附件数据
+		for (const document of inquiryDocumentList.value) {
+			if (document.isNew) {
+				// 新上传的文件
+				const result = await uploadFileToAliyun(document.file);
+				if (result) {
+					dataToSend.InquirySupplementaryDocuments.push({
+						ID: 0,
+						FileName: result.fileName,
+						DocumentUrl: result.documentUrl,
+						Remark: document.remark || ''
+					});
+				}
+			} else {
+				// 已存在的文件
+				dataToSend.InquirySupplementaryDocuments.push({
+					ID: document.id,
+					FileName: document.fileName,
+					DocumentUrl: document.documentUrl,
+					Remark: document.remark || ''
+				});
+			}
+		}
+
+		dataToSend.isDraft = 0;
+		// 发送编辑请求
+		const response = await request.post('Inquiry/AddInquiry/Add', dataToSend);
+
 		if (response.code === 200) {
 			ElMessage({
-				type: 'success',
-				message: response.msg
+				message: '提交成功',
+				type: 'success'
 			});
+			// 更新状态
+			isEditable.value = true;
+			isEditBtnVisible.value = true;
+			isEditSaveBtnVisible.value = false;
+			isSavebtnVisible.value = false;
+			isShowUpload.value = false;
+
+			// 恢复到待编辑状态
+			restoreToViewMode();
 			CreateInquiryDialog.value = false;
+			// 刷新询价单列表
 			GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
+
+			// 更新原始数据
+			originalProductData.value = JSON.parse(JSON.stringify(inquryProductTableData.value));
+			originalDocumentData.value = JSON.parse(JSON.stringify(inquiryDocumentList.value));
+
+			// 关闭编辑对话框
+			//CreateInquiryDialog.value = false;
 		} else {
-			ElMessage.error(response.msg || '提交失败');
+			throw new Error(response.msg || '编辑询价单失败');
 		}
-	}).catch(() => {
-		ElMessage({
-			type: 'info',
-			message: '已取消提交'
-		});
-	});
+	} catch (error) {
+		console.error('保存已编辑的询价单出错！😔错误内容：', error);
+		ElMessage.error(error.message || '保存失败,请稍后重试');
+	}
 }
 </script>

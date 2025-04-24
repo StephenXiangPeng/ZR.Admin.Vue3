@@ -445,7 +445,7 @@
 				<el-text class="mx-1" size="large" type="success">出运单总金额：{{ AddShippingDeliveryform.shipmentTotalAmount
 				}}</el-text>&nbsp;&nbsp;&nbsp;&nbsp;
 				<span class="dialog-footer">
-					<el-button v-show="isSaveBtnShow && userId.toString() === CreateByUser" type="primary"
+					<el-button v-show="isSaveBtnShow && userId.toString() === CreateByUser" type="warning"
 						@click="SaveClick(true)">
 						保存草稿
 					</el-button>
@@ -457,15 +457,15 @@
 						@click="EditClick()">
 						编辑
 					</el-button>
-					<el-button type="primary" v-show="isEditSaveBtnShow && userId.toString() === CreateByUser"
+					<el-button type="warning" v-show="isEditSaveBtnShow && userId.toString() === CreateByUser"
 						@click="EditSaveClick(true)">
-						编辑保存
+						保存草稿
 					</el-button>
 					<el-button type="success" v-show="isEditSaveBtnShow && userId.toString() === CreateByUser"
 						@click="EditSaveClick(false)">
 						编辑提交
 					</el-button>
-					<el-button type="warning" v-show="isReviewBtnShow && userId.toString() === CreateByUser"
+					<el-button type="danger" v-show="isReviewBtnShow && userId.toString() === CreateByUser"
 						@click="SubmitReview">
 						提交审核
 					</el-button>
@@ -654,7 +654,7 @@ const shippingDeliveryOtherexpensesTableData = ref([]);
 //客户编号改变
 const customerNumberChange = () => {
 	if (AddShippingDeliveryform.value.customerNumber != null && AddShippingDeliveryform.value.customerNumber != undefined && AddShippingDeliveryform.value.customerNumber != '') {
-		getContractData(AddShippingDeliveryform.value.customerId);
+		getContractData(Number(AddShippingDeliveryform.value.customerNumber));
 	} else {
 		getContractData();
 		shippingDeliveryContrctProductTableData.value = [];
@@ -984,14 +984,12 @@ const SaveClick = async (isDraft) => {
 	if (!isDraft && !validateForm()) {
 		return;
 	}
-
 	try {
 		await ElMessageBox.confirm(`确定${isDraft ? '保存草稿' : '提交'}出运发货单吗?`, '提示', {
 			confirmButtonText: '确定',
 			cancelButtonText: '取消',
 			type: 'warning'
 		});
-
 		// 2. 构建请求数据
 		const requestData = {
 			// 基本信息
@@ -1068,23 +1066,18 @@ const SaveClick = async (isDraft) => {
 				remark: item.remark
 			}))
 		};
-
 		// 3. 发送保存请求
 		const response = await request.post('ShippingDeliveries/AddShippingDeliveries/Add', requestData);
-
 		// 4. 处理响应
 		if (response.code === 200) {
 			ElMessage({
 				message: response.msg || (isDraft ? '出运发货单保存草稿成功！' : '出运发货单提交成功！'),
 				type: 'success'
 			});
-
 			// 关闭弹窗
 			CreateshippingdeliveryDialog.value = false;
-
 			// 重置表单
 			resetForm();
-
 			// 刷新列表
 			await GetShippingDeliveriesList(
 				ShippingDeliveriesTableDataCurrentPage.value,
@@ -1093,7 +1086,6 @@ const SaveClick = async (isDraft) => {
 		} else {
 			throw new Error(response.msg || '操作失败');
 		}
-
 	} catch (error) {
 		if (error === 'cancel') {
 			ElMessage({

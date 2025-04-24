@@ -39,15 +39,13 @@
 		<el-divider> </el-divider>
 		<el-table :data="contractofpurchasetableData" style="width: 100%">
 			<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="isDraft" label="是否草稿" width="100">
+			<el-table-column prop="purchaseContractNumber" label="采购合同号" width="180">
 				<template #default="scope">
-					<el-tag :type="scope.row.isDraft === 0 ? 'warning' : 'success'">
-						{{ scope.row.isDraft === 0 ? '否' : '是' }}
-					</el-tag>
+					<span>{{ scope.row.purchaseContractNumber }}</span>
+					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
 				</template>
 			</el-table-column>
-			<el-table-column prop="purchaseContractNumber" label="采购合同号" width="150"></el-table-column>
-			<el-table-column prop="contractStatus" label="合同状态" width="150"></el-table-column>
+			<el-table-column prop="contractStatus" label="合同状态" width="100"></el-table-column>
 			<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
 			<el-table-column prop="reviewStatusStr" label="审核状态" width="150" align="center">
 				<template #default="{ row }">
@@ -92,7 +90,8 @@
 			<el-table-column fixed="right" label="操作" width="250">
 				<template #default="scope">
 					<el-button type="text" size="small" @click="CheckDetails(scope.row)">查看详情</el-button>
-					<el-button type="text" size="small" @click="GeneratePurchaseContract(scope.row)">生成采购合同</el-button>
+					<el-button type="text" size="small"
+						@click="GeneratePurchaseContract(scope.row)">生成采购合同PDF</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -406,14 +405,14 @@
 			<template #footer>
 				<span class="dialog-footer">
 					<!-- 新增时的保存按钮 -->
-					<el-button type="primary" v-show="isSaveBtnShow && userId.toString() === CheckUser"
+					<el-button type="warning" v-show="isSaveBtnShow && userId.toString() === CheckUser"
 						@click="SavePurchaseContract">
 						保存草稿
 					</el-button>
 					<!-- 编辑时的保存按钮 -->
-					<el-button type="primary" v-show="showEditSaveBtn && userId.toString() === CheckUser"
+					<el-button type="warning" v-show="showEditSaveBtn && userId.toString() === CheckUser"
 						@click="saveEditContract">
-						编辑保存
+						保存草稿
 					</el-button>
 					<!-- 查看详情时的编辑按钮 -->
 					<el-button type="primary" v-show="showEditBtn && userId.toString() === CheckUser"
@@ -422,7 +421,7 @@
 					</el-button>
 					<el-button type="success" v-show="showSubmitReviewBtn && userId.toString() === CheckUser"
 						@click="submitForReview">
-						提交审核
+						提交
 					</el-button>
 				</span>
 			</template>
@@ -865,6 +864,7 @@ const SavePurchaseContract = () => {
 	});
 };
 
+const NewPurchaseContractID = ref(0);//采购合同ID
 // 提交采购合同的具体逻辑
 const submitPurchaseContract = () => {
 	// 映射产品数据以匹配后端模型
@@ -999,7 +999,7 @@ const editContract = () => {
 	setPurchaseContractEditLock(currentContractId.value);
 	showEditBtn.value = false;
 	showEditSaveBtn.value = true;
-	showSubmitReviewBtn.value = false;
+	showSubmitReviewBtn.value = true;
 	isFormDisabled.value = false;         // 启用表单编辑
 }
 // 保存编辑
@@ -1130,29 +1130,173 @@ const submitForReview = () => {
 		confirmButtonText: '确定',
 		cancelButtonText: '取消',
 		type: 'warning'
-	}).then(() => {
-		request({
-			url: 'PurchaseContracts/SubmitForReview/SubmitPurchseContractReview',
-			method: 'GET',
-			params: {
-				ContractID: currentContractId.value // 需要添加这个响应式变量来存储当前合同ID
+	}).then(async () => {
+		if (currentContractId.value == null) {
+			let isCheckVendor = true;
+			productinfotableData.value.forEach(item => {
+				if (item.vendorCode == null || item.vendorCode == 0 || item.vendorCode == undefined || item.vendorCode == '') {
+					isCheckVendor = false;
+				}
+			});
+			if (!isCheckVendor) {
+				ElMessage.error('请为产品列表中的产品选择供应商！');
+				return;
 			}
-		}).then(response => {
-			if (response.code === 200) {
-				ElMessage.success(response.msg || '提交审核成功');
-				Addcontractofpurchasedialog.value = false;  // 关闭对话框
-				// 刷新采购合同列表
-				GetpurchaseContractList(
-					purchasecontractsTableDatacurrentPage.value,
-					purchasecontractsTableDatapageSize.value
-				);
-			} else {
-				ElMessage.error(response.msg || '提交审核失败');
+			try {
+				// 映射产品数据以匹配后端模型
+				const mappedProducts = productinfotableData.value.map(product => ({
+					id: product.id || 0,
+					SupplierID: product.vendorCode,
+					purchaseContractId: 0, // 新增时为0
+					productCode: state.optionss.sql_product.find(item => item.dictLabel === product.productCode.toString())?.dictValue,
+					customerCode: product.customerCode,
+					chineseName: product.chineseName,
+					englishName: product.englishName || '',
+					chineseSpec: product.chineseSpec,
+					contractQuantity: parseFloat(product.contractQuantity),
+					unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
+					purchasePrice: parseFloat(product.purchaseUnitPrice),
+					purchaseTotalPrice: parseFloat(product.purchaseTotalPrice),
+					deliveryDate: product.deliveryDate,
+					productionLeadTime: product.productionLeadTime,
+					packaging: state.optionss.hr_packing.find(item => item.dictLabel === product.packaging.toString())?.dictValue,
+					specialRequirements: product.specialRequirements || '',
+					invoice: product.invoice,
+					innerBoxQuantity: parseInt(product.innerBoxQuantity),
+					outerBoxQuantity: parseInt(product.outerBoxQuantity),
+					remark: product.remark || '',
+					isDelete: 0,
+					createTime: new Date(),
+					updateTime: new Date(),
+					createBy: userId,
+					updateBy: userId
+				}));
+
+				// 映射厂商费用数据
+				const mappedExpenses = CustomerRelaterExoensesTableData.value.map(expense => ({
+					id: expense.id || 0,
+					purchaseContractID: 0, // 新增时为0
+					expenseName: expense.expenseName,
+					currency: parseInt(expense.currency),
+					exchangeRate: parseFloat(expense.exchangeRate),
+					expense: parseFloat(expense.expense),
+					remark: expense.remark || '',
+					isDelete: 0,
+					createTime: new Date(),
+					updateTime: new Date(),
+					createBy: userId,
+					updateBy: userId
+				}));
+
+				// 构建合同请求数据
+				const contractRequest = {
+					id: 0, // 新增时为0
+					customerId: Addcontractofpurchaseform.value.customerid,
+					purchaseContractNumber: Addcontractofpurchaseform.value.purchaseContract,
+					contractStatus: parseInt(Addcontractofpurchaseform.value.contractStatus),
+					vendorCode: Addcontractofpurchaseform.value.vendorCode,
+					vendorAbbreviation: Addcontractofpurchaseform.value.vendorAbbreviation,
+					salesContract: Addcontractofpurchaseform.value.salesContract,
+					customerContract: Addcontractofpurchaseform.value.customerContract,
+					customerAbbreviation: Addcontractofpurchaseform.value.customerAbbreviation,
+					deliveryDate: Addcontractofpurchaseform.value.deliveryDate,
+					purchaseCurrency: parseInt(Addcontractofpurchaseform.value.purchaseCurrency),
+					deposit: parseFloat(Addcontractofpurchaseform.value.deposit || '0'),
+					salesperson: Addcontractofpurchaseform.value.salesperson,
+					purchaser: Addcontractofpurchaseform.value.purchaser,
+					paymentDays: parseInt(Addcontractofpurchaseform.value.paymentDays),
+					priceTerms: Addcontractofpurchaseform.value.priceTerms,
+					totalGoodsValue: parseFloat(Totalvalueofgoodsform.value.totalValue),
+					totalQuantity: parseFloat(Totalvalueofgoodsform.value.totalQuantity),
+					totalBoxes: parseInt(Totalvalueofgoodsform.value.totalBoxCount),
+					totalGrossWeight: parseFloat(Totalvalueofgoodsform.value.totalGrossWeight),
+					totalNetWeight: parseFloat(Totalvalueofgoodsform.value.totalNetWeight),
+					totalVolume: parseFloat(Totalvalueofgoodsform.value.totalVolume),
+					appliedPayment: parseFloat(Totalvalueofgoodsform.value.appliedPayment || '0'),
+					availablePayment: parseFloat(Totalvalueofgoodsform.value.availablePayment || '0'),
+					paidAmount: parseFloat(Totalvalueofgoodsform.value.paidAmount || '0'),
+					unpaidAmount: parseFloat(Totalvalueofgoodsform.value.unpaidAmount || '0'),
+					remark: '',
+					isDelete: 0,
+					createTime: new Date(),
+					updateTime: new Date(),
+					createBy: userId,
+					updateBy: userId,
+					purchaseContractProducts: mappedProducts,
+					purchaseContractVendorExpenses: mappedExpenses,
+					isDraft: 1
+				};
+
+				// 提交采购合同
+				request.post("PurchaseContracts/AddPurchaseContracts/Add", contractRequest)
+					.then(async response => {
+						if (response.code === 200) {
+							const Reviewresponse = await request({
+								url: 'PurchaseContracts/SubmitForReview/SubmitPurchseContractReview',
+								method: 'GET',
+								params: {
+									ContractID: response.data
+								}
+							});
+
+							if (Reviewresponse.code === 200) {
+								ElMessage.success(Reviewresponse.msg || '提交审核成功');
+								Addcontractofpurchasedialog.value = false;  // 关闭对话框
+								// 刷新采购合同列表
+								await GetpurchaseContractList(
+									purchasecontractsTableDatacurrentPage.value,
+									purchasecontractsTableDatapageSize.value
+								);
+								if (isGeneratedFromRequirement.value) {
+									await updateGenerateStatusByContractId(SaleContractID.value);
+									await ProcurementRequirements(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+								}
+							} else {
+								ElMessage.error(Reviewresponse.msg || '提交审核失败');
+							}
+						} else {
+							ElMessage.error(response.msg || '提交审核失败,请重试');
+						}
+					})
+					.catch(error => {
+						if (error.response?.data?.errors) {
+							const errorMessages = Object.values(error.response.data.errors)
+								.flat()
+								.join(', ');
+							ElMessage.error(`验证失败: ${errorMessages}`);
+						} else {
+							ElMessage.error('添加采购合同失败');
+						}
+						console.error("添加采购合同失败:", error);
+					});
+			} catch (error) {
+				console.error('提交审核失败:', error);
+				ElMessage.error('提交审核失败，请重试');
 			}
-		}).catch(error => {
-			console.error('提交审核失败:', error);
-			ElMessage.error('提交审核失败，请重试');
-		});
+		} else {
+			request({
+				url: 'PurchaseContracts/SubmitForReview/SubmitPurchseContractReview',
+				method: 'GET',
+				params: {
+					ContractID: currentContractId.value // 需要添加这个响应式变量来存储当前合同ID
+				}
+			}).then(response => {
+				if (response.code === 200) {
+					ElMessage.success(response.msg || '提交审核成功');
+					Addcontractofpurchasedialog.value = false;  // 关闭对话框
+					// 刷新采购合同列表
+					GetpurchaseContractList(
+						purchasecontractsTableDatacurrentPage.value,
+						purchasecontractsTableDatapageSize.value
+					);
+				} else {
+					ElMessage.error(response.msg || '提交审核失败');
+				}
+			}).catch(error => {
+				console.error('提交审核失败:', error);
+				ElMessage.error('提交审核失败，请重试');
+			});
+		}
 	}).catch(() => {
 		ElMessage.info('已取消提交审核');
 	});
@@ -1210,7 +1354,7 @@ const ProcurementRequirements = async (pageNum, pageSize) => {
 				unitPrice: element.unitPrice,
 				totalPrice: element.totalPrice,
 				status: element.status,
-				salesperson: element.salesperson,
+				salesperson: state.optionss.sql_hr_sale.find(item => item.dictValue === element.salesperson.toString())?.dictLabel || '未知',
 				createTime: formatDate(element.createTime),
 				remark: element.remark
 			}))
@@ -1296,7 +1440,7 @@ const GenerateContractPurchase = (row) => {
 			isSaveBtnShow.value = true;           // 显示确定保存按钮
 			showEditBtn.value = false;
 			showEditSaveBtn.value = false;
-			showSubmitReviewBtn.value = false;
+			showSubmitReviewBtn.value = true;
 			isFormDisabled.value = false;
 			// 先获取新的采购合同号
 			await GetNewPurchaseContractNumber();

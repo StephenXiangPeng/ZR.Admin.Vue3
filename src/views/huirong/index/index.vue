@@ -2454,11 +2454,15 @@ const openSaleContractDialog = (row) => {
         contractform.contactPerson = response.data.contract.contactPerson;
         contractform.contactEmail = response.data.contract.contactEmail;
         contractform.effectiveDate = response.data.contract.effectiveDate;
-        contractform.customerLevel = state.optionss['hr_customer_level'].find(item => item.dictValue === response.data.contract.customerLevel.toString()).dictValue;
+        if (response.data.contract.customerLevel != null) {
+          contractform.customerLevel = state.optionss['hr_customer_level'].find(item => item.dictValue === response.data.contract.customerLevel.toString()).dictValue;
+        }
         contractform.customerContract = response.data.contract.customerContract;
         contractform.deliveryDate = response.data.contract.deliveryDate;
         contractform.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictValue === response.data.contract.ourCompany.toString()).dictValue;
-        contractform.settlementType = response.data.contract.settlementType.toString();
+        if (response.data.contract.settlementType) {
+          contractform.settlementType = response.data.contract.settlementType.toString();
+        }
         contractform.foreignCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.contract.foreignCurrency.toString()).dictValue;
         contractform.exchangeRate = response.data.contract.exchangeRate;
         contractform.usdExchangeRate = response.data.contract.usdExchangeRate;
@@ -2493,7 +2497,9 @@ const openSaleContractDialog = (row) => {
         contractform.receivingBank = response.data.contract.receivingBank;
         contractform.goodsValue = response.data.contract.goodsValue;
         contractform.oceanFreight = response.data.contract.shippingCost;
-        contractform.shippingCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.contract.shippingCurrency.toString()).dictValue;
+        if (response.data.contract.shippingCurrency) {
+          contractform.shippingCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.contract.shippingCurrency.toString()).dictValue;
+        }
         contractform.shippingrate = response.data.contract.shippingExchangeRate;
         contractform.portMiscellaneousFees = response.data.contract.portMiscellaneousFees;
         contractform.freightForwarderCustomsClearanceFees = response.data.contract.freightForwarderCustomsClearanceFees;
