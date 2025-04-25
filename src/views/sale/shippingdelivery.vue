@@ -465,10 +465,10 @@
 						@click="EditSaveClick(false)">
 						编辑提交
 					</el-button>
-					<el-button type="danger" v-show="isReviewBtnShow && userId.toString() === CreateByUser"
+					<!-- <el-button type="danger" v-show="isReviewBtnShow && userId.toString() === CreateByUser"
 						@click="SubmitReview">
 						提交审核
-					</el-button>
+					</el-button> -->
 				</span>
 			</template>
 		</el-dialog>
@@ -1043,7 +1043,8 @@ const SaveClick = async (isDraft) => {
 				ShipmentQuantity: Number(item.shipmentQuantity),
 				RemainingQuantity: Number(item.contractQuantity) - Number(item.shipmentQuantity),
 				IsDelete: 0,
-				Remark: item.remark || ''
+				Remark: item.remark || '',
+				Singlesalesrevenue: Number(item.singlesalesrevenue || 0)
 			})),
 
 			// 采购明细
@@ -1248,14 +1249,17 @@ const EditSaveClick = (isDraft) => {
 			// 产品明细 - 确保至少有一个空项目
 			ShippingDeliveryProductItems: shippingDeliveryContrctProductTableData.value.length > 0 ?
 				shippingDeliveryContrctProductTableData.value.map(item => ({
+					id: item.id || 0,
 					ContractId: Number(item.contractId || 0),
 					ContractProductId: Number(item.contractProductId || 0),
 					contractQuantity: Number(item.contractQuantity || 0),
 					ShipmentQuantity: Number(item.shipmentQuantity || 0),
 					RemainingQuantity: Number(item.contractQuantity || 0) - Number(item.shipmentQuantity || 0),
 					IsDelete: 0,
-					Remark: item.remark || '无备注'
+					Remark: item.remark || '无备注',
+					Singlesalesrevenue: Number(item.singlesalesrevenue || 0)
 				})) : [{
+					id: 0,
 					ContractId: 0,
 					ContractProductId: 0,
 					contractQuantity: 0,
@@ -1267,6 +1271,7 @@ const EditSaveClick = (isDraft) => {
 			// 采购明细 - 确保至少有一个空项目
 			ShippingDeliveryPurchaseDetailsItems: shippingDeliveryPurchaseDetailsTableData.value.length > 0 ?
 				shippingDeliveryPurchaseDetailsTableData.value.map(item => ({
+					id: item.id || 0,
 					PurchaseContractID: Number(item.purchaseContractID || 0),
 					PurchaseContractProductID: Number(item.purchaseContractProductID || 0),
 					ContractQuantity: Number(item.contractQuantity || 0),
@@ -1275,6 +1280,7 @@ const EditSaveClick = (isDraft) => {
 					IsDelete: 0,
 					Remark: item.remark || '无备注'
 				})) : [{
+					id: 0,
 					PurchaseContractID: 0,
 					PurchaseContractProductID: 0,
 					ContractQuantity: 0,
@@ -1312,7 +1318,6 @@ const EditSaveClick = (isDraft) => {
 				isEditBtnShow.value = true;
 				isReviewBtnShow.value = true;
 				isEditSaveBtnShow.value = false;
-
 				// 刷新列表数据
 				GetShippingDeliveriesList(
 					ShippingDeliveriesTableDataCurrentPage.value,
@@ -1542,6 +1547,7 @@ const CheckShipingDelivery = async (row) => {
 								const productData = response.data[0];
 								shippingDeliveryContrctProductTableData.value[index] = {
 									...shippingDeliveryContrctProductTableData.value[index], // 保留原有数据
+									id: productData.id,
 									contractNumber: productData.contractNumber,
 									productCode: productData.productCode,
 									chineseName: productData.chineseName,
@@ -1903,7 +1909,7 @@ const calculateShipmentTotalAmount = () => {
 
 	// 确保返回有效数字
 	const total = productTotal + otherExpensesTotal
-
+	console.log("总金额", total);
 	return isNaN(total) ? '0.00' : total.toFixed(3)
 }
 
