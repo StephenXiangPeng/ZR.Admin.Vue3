@@ -512,11 +512,12 @@ const OpenCreateInquiryDialog = () => {
 	NewprudctInquityDetailsform.Inquirer = userId.toString();
 	NewprudctInquityDetailsform.Description = '';
 	NewprudctInquityDetailsform.InquiryProducts = [];
-	NewprudctInquityDetailsform.InquirySupplementaryDocuments = [];
+	NewprudctInquityDetailsform.InquirySupplementaryDocuments = []; // 确保清空附件列表
 
 	inquryProductTableData.value = [];
 	selectedImages.value = [];
-	uploadfileList.value = [];
+	uploadfileList.value = []; // 清空文件列表
+
 
 	CreateInquiryDialog.value = true;
 	GetNextInquiryNumber();
@@ -907,8 +908,9 @@ const ChcekDetails = (row) => {
 	if (row.isDraft === 1) {
 		isEditBtnVisible.value = true;
 		isSavebtnVisible.value = false;
-		isEditSaveBtnVisible.value = false;
-		isSubmitbtnVisible.value = true;
+		isEditSaveBtnVisible.value = true;
+		isSubmitbtnVisible.value = false;
+
 	} else {
 		isEditBtnVisible.value = false;
 		isEditSaveBtnVisible.value = false;
@@ -1030,9 +1032,14 @@ const CloseInquiryDialog = () => {
 	NewprudctInquityDetailsform.Date = '';
 	NewprudctInquityDetailsform.Inquirer = '';
 	NewprudctInquityDetailsform.Description = '';
+	NewprudctInquityDetailsform.InquiryProducts = [];
+	NewprudctInquityDetailsform.InquirySupplementaryDocuments = [];
 	inquryProductTableData.value = [];
+	inquiryDocumentList.value = []; // 清空附件列表
+	uploadfileList.value = []; // 清空上传文件列表
+	selectedImages.value = []; // 清空图片列表
 	CreateInquiryDialog.value = false;
-	isShowUpload.value = true
+	isShowUpload.value = true;
 }
 
 const handleDeleteNewFile = (index: number) => {

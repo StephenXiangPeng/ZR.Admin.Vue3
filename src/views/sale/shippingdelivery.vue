@@ -354,7 +354,7 @@
 			<el-table :data="shippingDeliveryPurchaseDetailsTableData">
 				<el-table-column prop="purchaseContractID" label="采购合同ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="purchaseContractProductID" label="采购合同明细ID" width="150"
-					v-if="false"></el-table-column>
+					vif="false"></el-table-column>
 				<el-table-column prop="purchaseContractNumber" label="采购合同" width="150"></el-table-column>
 				<el-table-column prop="vendorAbbreviation" label="厂商简称" width="150"></el-table-column>
 				<el-table-column prop="productNumber" label="产品编号" width="150"></el-table-column>
@@ -477,6 +477,7 @@
 <script setup lang="ts">
 import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
+import type { Action } from 'element-plus'
 import request from '@/utils/request';
 import { get } from 'sortablejs';
 import Supperinfomation from '../purchase/supperinfomation.vue';
@@ -1766,9 +1767,10 @@ const shipmentQuantityChange = (row) => {
 
 		// 验证是否超过最大允许数量
 		if (shipmentQty > maxAllowedQty) {
-			ElMessage.warning(`出货数量不能大于${maxAllowedQty}`)
-			row.shipmentQuantity = maxAllowedQty
-			return
+			ElMessageBox.alert(`合同数量为${maxAllowedQty},当前出运数量为${shipmentQty},大于合同数量,请知悉！`, '提示', {
+				confirmButtonText: '确定',
+				showClose: false
+			})
 		}
 		// 计算总金额
 		AddShippingDeliveryform.value.shipmentTotalAmount = Number(calculateShipmentTotalAmount())

@@ -74,15 +74,13 @@
 						v-if="userId.toString() === '1'">添加产品</el-button>
 					<el-table :data="ProductInfoTableData" row-key="id"
 						:tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
-						<el-table-column prop="isDraft" label="是否草稿" width="100">
+						<el-table-column prop="productCode" label="产品编号" width="200" sortable>
 							<template #default="scope">
-								<el-tag v-if="!scope.row.isSubProduct"
-									:type="scope.row.isDraft === 0 ? 'warning' : 'success'">
-									{{ scope.row.isDraft === 0 ? '否' : '是' }}
-								</el-tag>
+								<span>{{ scope.row.productCode }}</span>
+								<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+									size="small">草稿</el-tag>
 							</template>
 						</el-table-column>
-						<el-table-column prop="productCode" label="产品编号" width="200" sortable></el-table-column>
 						<el-table-column prop="chineseProductName" label="中文品名" width="200"></el-table-column>
 						<el-table-column prop="chineseSpecification" label="中文规格" width="200"></el-table-column>
 						<el-table-column prop="englishProductName" label="英文品名" width="200"></el-table-column>
@@ -124,56 +122,53 @@
 			<el-form ref="ProductformRef" :rules="ProductformRules" :model="Productform" label-width="120px">
 				<el-row>
 					<el-col :span="8">
-						<el-form-item label="产品编号" prop="productCode">
+						<el-form-item label="产品编号" prop="productCode" data-field="productCode">
 							<el-input v-model="Productform.productCode" :disabled="isDisabled" placeholder="请输入产品编号"
 								style="width: 300px;" ref="productCodeInput" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="客户货号" prop="customerGoodsNumber">
+						<el-form-item label="客户货号" prop="customerGoodsNumber" data-field="customerGoodsNumber">
 							<el-input v-model="Productform.customerGoodsNumber" :disabled="isDisabled"
 								placeholder="请输入客户货号" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="产品条码">
+						<el-form-item label="产品条码" data-field="productBarcode">
 							<el-input v-model="Productform.productBarcode" :disabled="isDisabled" placeholder="请输入产品条码"
 								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-
 				</el-row>
 				<el-row>
 					<el-col :span="8">
-						<el-form-item label="中文品名" prop="chineseProductName">
+						<el-form-item label="中文品名" prop="chineseProductName" data-field="chineseProductName">
 							<el-input v-model="Productform.chineseProductName" :disabled="isDisabled"
 								placeholder="请输入中文品名" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="英文品名" prop="englishProductName">
+						<el-form-item label="英文品名" prop="englishProductName" data-field="englishProductName">
 							<el-input v-model="Productform.englishProductName" :disabled="isDisabled"
 								placeholder="请输入英文品名" style="width: 300px;" />
 						</el-form-item>
-
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="中文规格" prop="chineseSpecification">
+						<el-form-item label="中文规格" prop="chineseSpecification" data-field="chineseSpecification">
 							<el-input v-model="Productform.chineseSpecification" :disabled="isDisabled"
 								placeholder="请输入中文规格" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-
 				</el-row>
 				<el-row>
 					<el-col :span="8">
-						<el-form-item label="英文规格">
+						<el-form-item label="英文规格" data-field="englishSpecification">
 							<el-input v-model="Productform.englishSpecification" :disabled="isDisabled"
 								placeholder="请输入英文规格" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="计量单位" prop="unit">
+						<el-form-item label="计量单位" prop="unit" data-field="unit">
 							<el-select v-model="Productform.unit" :disabled="isDisabled" placeholder="选择计量单位"
 								style="width: 300px;">
 								<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
@@ -182,7 +177,7 @@
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="海关编码" prop="customsCode">
+						<el-form-item label="海关编码" prop="customsCode" data-field="customsCode">
 							<el-input v-model="Productform.customsCode" :disabled="isDisabled" placeholder="请输入海关编码"
 								style="width: 300px;" />
 						</el-form-item>
@@ -190,19 +185,21 @@
 				</el-row>
 				<el-row>
 					<el-col :span="8">
-						<el-form-item label="报关中文品名" prop="chineseDeclarationProductName">
+						<el-form-item label="报关中文品名" prop="chineseDeclarationProductName"
+							data-field="chineseDeclarationProductName">
 							<el-input v-model="Productform.chineseDeclarationProductName" :disabled="isDisabled"
 								placeholder="请输入报关中文品名" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="报关英文品名" prop="englishDeclarationProductName">
+						<el-form-item label="报关英文品名" prop="englishDeclarationProductName"
+							data-field="englishDeclarationProductName">
 							<el-input v-model="Productform.englishDeclarationProductName" :disabled="isDisabled"
 								placeholder="请输入报关英文品名" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="商检标志" prop="inspectionMark">
+						<el-form-item label="商检标志" prop="inspectionMark" data-field="inspectionMark">
 							<el-select v-model="Productform.inspectionMark" :disabled="isDisabled" placeholder="选择商检标志"
 								style="width: 300px;">
 								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
@@ -238,7 +235,7 @@
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="开发时间日期">
 							<el-date-picker v-model="Productform.developmentEventDate" type="date" disabled
 								style=" width: 300px;" />
@@ -253,21 +250,19 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="最近报价">
 							<el-select v-model="Productform.recentQuotation" placeholder="" disabled
 								style="width: 300px;">
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="最近成交日期">
 							<el-date-picker v-model="Productform.recentTransactionDate" type="date" disabled
 								placeholder="" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="所属分类" prop="ProductCategories">
 							<el-cascader v-model="Productform.ProductCategories" :disabled="isDisabled"
@@ -603,8 +598,7 @@
 					</el-table-column>
 					<el-table-column prop="subrecentQuotation" label="最近报价" width="150" align="center">
 						<template #default="scope">
-							<el-select v-model="scope.row.subrecentQuotation" disabled placeholder="请选择"
-								style="width: 90px;">
+							<el-select v-model="scope.row.subrecentQuotation" placeholder="请选择" style="width: 90px;">
 								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -612,25 +606,25 @@
 					</el-table-column>
 					<el-table-column prop="subrecentTransactionDate" label="最近成交日期" width="200" align="center">
 						<template #default="scope">
-							<el-date-picker v-model="scope.row.subrecentTransactionDate" type="date" disabled
-								placeholder="请选择" style="width: 140px;" />
+							<el-date-picker v-model="scope.row.subrecentTransactionDate" type="date" placeholder="请选择"
+								style="width: 140px;" />
 						</template>
 					</el-table-column>
-					<el-table-column prop="subproductLength" label="产品长度" width="200" align="center">
+					<el-table-column prop="subproductLength" label="产品长度" width="200" align="center" v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subproductLength" style="max-width:200px"
 								:disabled="isDisabled" placeholder="请输入子产品长度">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subproductWidth" label="产品宽度" width="200" align="center">
+					<el-table-column prop="subproductWidth" label="产品宽度" width="200" align="center" v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subproductWidth" style="max-width:200px" :disabled="isDisabled"
 								placeholder="请输入子产品宽度">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subproductHeight" label="产品高度" width="200" align="center">
+					<el-table-column prop="subproductHeight" label="产品高度" width="200" align="center" v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subproductHeight" style="max-width:200px"
 								:disabled="isDisabled" placeholder="请输入子产品高度">
@@ -774,11 +768,11 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="info" v-if="showSaveBtn && userId.toString() === '1'"
+					<el-button type="warning" v-if="showSaveBtn && userId.toString() === '1'"
 						@click="SaveProductinfomation(ProductformRef, true)">
 						保存草稿
 					</el-button>
-					<el-button type="primary" v-if="showSaveBtn && userId.toString() === '1'"
+					<el-button type="success" v-if="showSaveBtn && userId.toString() === '1'"
 						@click="SaveProductinfomation(ProductformRef)">
 						提交
 					</el-button>
@@ -786,10 +780,11 @@
 						@click="EditProductinfomation()">
 						编辑
 					</el-button>
-					<el-button type="info" v-if="showEditSaveBtn && userId.toString() === '1'" @click="EditSaveDraft()">
+					<el-button type="warning" v-if="showEditSaveBtn && userId.toString() === '1'"
+						@click="EditSaveDraft()">
 						保存草稿
 					</el-button>
-					<el-button type="primary" v-if="showEditSaveBtn && userId.toString() === '1'"
+					<el-button type="success" v-if="showEditSaveBtn && userId.toString() === '1'"
 						@click="EditSaveProductinfomation()">
 						提交
 					</el-button>
@@ -1147,6 +1142,11 @@ const openAddProductDialog = () => {
 	Productform.developmentEventDate = new Date().toISOString().split('T')[0];
 	showSaveBtn.value = true;
 	AddProductDialog.value = true;
+	showAddSubProductButton.value = true;
+	// Clear form validation
+	if (ProductformRef.value) {
+		ProductformRef.value.clearValidate();
+	}
 }
 
 const closeAddProductDialog = async () => {
@@ -1176,7 +1176,7 @@ const clearProductform = () => {
 	Productform.recentQuotation = '';
 	Productform.recentTransactionDate = '';
 	Productform.ProductPhoto = '';
-	Productform.PackingMethod = '';
+	Productform.PackingMethod = null;
 	Productform.productLength = '';
 	Productform.productwidth = '';
 	Productform.productheight = '';
@@ -1197,7 +1197,8 @@ const clearProductform = () => {
 	showEditBtn.value = false;
 	Productform.productDescription = '';
 	Productform.customerGoodsNumber = '';
-	Productform.Supplier = '';
+	Productform.Supplier = null;
+	Productform.developmentPersonnel = null;
 	Productform.isDraft = 0; // 默认不是草稿
 }
 
@@ -1546,8 +1547,8 @@ const Productform = reactive<Productform>({
 	recentTransactionDate: '',
 	ProductPhoto: '',
 	PackingMethod: '',
-	Supplier: '',
-	ProductCategories: 0,
+	Supplier: [],
+	ProductCategories: '',
 	customerGoodsNumber: '',
 	//产品属性
 	productLength: '',
@@ -1602,8 +1603,7 @@ const validateProductCode = (rule, value, callback) => {
 };
 
 const ProductformRules = reactive<FormRules<Productform>>({
-	productCode: [{ required: true, message: '请输入产品编号', trigger: ['blur', 'change'] },
-	{ validator: validateProductCode, trigger: 'blur' }],
+	productCode: [{ required: true, message: '请输入产品编号', trigger: ['blur', 'change'] }, { validator: validateProductCode, trigger: 'blur' }],
 	chineseProductName: [{ required: true, message: '请输入中文品名', trigger: ['blur', 'change'] }],
 	englishProductName: [{ required: true, message: '请输入英文品名', trigger: ['blur', 'change'] }],
 	chineseSpecification: [{ required: true, message: '请输入中文规格', trigger: ['blur', 'change'] }],
@@ -1612,9 +1612,9 @@ const ProductformRules = reactive<FormRules<Productform>>({
 	chineseDeclarationProductName: [{ required: true, message: '请输入中文申报品名', trigger: ['blur', 'change'] }],
 	englishDeclarationProductName: [{ required: true, message: '请输入英文申报品名', trigger: ['blur', 'change'] }],
 	inspectionMark: [{ required: true, message: '请选择检验标志', trigger: ['blur', 'change'] }],
-	PackingMethod: [{ required: true, message: '请选择包装方式', trigger: ['blur', 'change'] }],
-	Supplier: [{ required: true, message: '请选择供应商', trigger: ['blur', 'change'] }],
-	ProductCategories: [{ required: true, message: '请选择产品分类', trigger: ['blur', 'change'] }]
+	PackingMethod: [{ required: true, message: '请选择包装方式', trigger: 'change' }],
+	Supplier: [{ required: true, message: '请选择供应商', trigger: 'change' }],
+	ProductCategories: [{ required: true, message: '请选择产品分类', trigger: 'change' }]
 })
 
 const createSubProductItem = () => ({
@@ -1718,6 +1718,18 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined, isDraftMo
 			await saveProductInfo(false);
 		} else {
 			console.log('error submit!', fields)
+			const firstErrorField = Object.keys(fields)[0]; // Get the first invalid field
+			if (firstErrorField) {
+				const errorElement = document.querySelector(`[data-field="${firstErrorField}"]`);
+				if (errorElement) {
+					errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					// 查找任何可交互的元素并触发点击
+					const interactiveElement = errorElement.querySelector('.el-select, .el-cascader, input, textarea');
+					if (interactiveElement) {
+						interactiveElement.click();
+					}
+				}
+			}
 		}
 	})
 };
