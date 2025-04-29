@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<el-form :model="queryParams" inline @submit.prevent ref="queryRef">
+		<!-- <el-form :model="queryParams" inline @submit.prevent ref="queryRef">
 			<el-form-item prop="queryText">
 				<el-input v-model="queryParams.queryText" placeholder="请输入计划任务名称" clearable @clear="Search_PlanTaskInfo"
 					style="width: 600px" />
@@ -9,7 +9,7 @@
 				<el-button type="primary" icon="search" @click="Search_PlanTaskInfo">{{ $t('btn.search') }}</el-button>
 				<el-button type="primary" @click="OpenPlanTaskDialog">新建计划/任务</el-button>
 			</el-form-item>
-		</el-form>
+		</el-form> -->
 		<el-dialog v-model="PlanTaskDialogVisible" title="新建计划/任务" width="1000">
 			<el-form ref="PlanTaskFormRef" :model="PlanTaskForm" :rules="rules" label-width="120px"
 				class="demo-ruleForm" status-icon :inline="true">
@@ -103,7 +103,8 @@
 								<el-form-item :label="'执行人'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.executor'">
 									<el-select v-model="item.executor" filterable placeholder="选择执行人"
-										style="width: 300px" @change="getsalePersonCustomerData(item.executor)">
+										style="width: 300px"
+										@change="handleExecutorChange(stageIndex, itemIndex, item.executor)">
 										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue">
 										</el-option>
@@ -117,7 +118,7 @@
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.customer'">
 									<el-select v-model="item.customer" filterable placeholder="选择关联客户"
 										style="width: 300px" clearable>
-										<el-option v-for="dict in optionss.salePersonCustomer" :key="dict.dictCode"
+										<el-option v-for="dict in item.customerOptions || []" :key="dict.dictValue"
 											:label="dict.dictLabel" :value="dict.dictValue">
 										</el-option>
 									</el-select>
@@ -160,139 +161,208 @@
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button @click="ResetPlanTaskForm(PlanTaskFormRef)">重置</el-button>
-					<el-button type="primary" @click="SubmitPlanTaskForm(PlanTaskFormRef)">
+					<!-- <el-button type="primary" @click="SubmitPlanTaskForm(PlanTaskFormRef, false)">
 						保存
+					</el-button>
+					<el-button type="primary" @click="SubmitPlanTaskForm(PlanTaskFormRef, true)">
+						编辑
+					</el-button> -->
+					<el-button type="warning" @click="SubmitPlanTaskForm(PlanTaskFormRef, true)">
+						保存草稿
+					</el-button>
+					<el-button type="success" @click="SubmitPlanTaskForm(PlanTaskFormRef, false)">
+						提交
 					</el-button>
 				</span>
 			</template>
 		</el-dialog>
-		<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;计划/任务</span>
+		<!-- <span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;计划/任务</span> -->
+		<!-- <el-divider></el-divider> -->
+		<div>
+			<el-form :model="queryParams" inline @submit.prevent ref="queryRef">
+				<el-form-item>
+					<el-radio-group v-model="PlanTaskStatusRadio" size="large">
+						<el-radio-button label="进行中" value="0" />
+						<el-radio-button label="已完成" value="1" />
+						<el-radio-button label="已作废" value="2" />
+					</el-radio-group>
+				</el-form-item>
+				<el-form-item prop="queryText">
+					<el-input v-model="queryParams.queryText" placeholder="请输入计划任务名称" clearable
+						@clear="Search_PlanTaskInfo" style="width: 600px" />
+				</el-form-item>
+				<el-form-item>
+					<el-button type="primary" icon="search" @click="Search_PlanTaskInfo">{{ $t('btn.search')
+					}}</el-button>
+					<el-button type="primary" @click="OpenPlanTaskDialog">新建计划/任务</el-button>
+				</el-form-item>
+			</el-form>
+		</div>
 		<el-divider></el-divider>
-
 		<!-- 任务列表 -->
-		<el-row :gutter="20">
-			<el-col v-for="item in dataPlanTasks" :key="item.id" :lg="8" :span="24">
-				<el-card v-loading="loading" :body-style="{ padding: '15px 15px 0', height: '360px' }" class="mb-20">
-					<el-descriptions :column="1" :title="item.taskName" size="small" border>
-						<el-descriptions-item label="计划任务名称">
-							{{ item.taskName }}
-						</el-descriptions-item>
-						<el-descriptions-item label="总负责人">
-							{{ item.totalLeaderIds }}
-						</el-descriptions-item>
-						<el-descriptions-item label="开始日期">
-							{{ formatDate(item.startTime) }}
-						</el-descriptions-item>
-						<el-descriptions-item label="结束日期">
-							{{ formatDate(item.endTime) }}
-						</el-descriptions-item>
-						<el-descriptions-item label="任务描述">
-							<el-tooltip :content="item.taskDescription" placement="top" :show-after="200">
-								<div class="truncated-text">{{ item.taskDescription }}</div>
-							</el-tooltip>
-						</el-descriptions-item>
-						<el-descriptions-item label="创建日期">
-							{{ formatDate(item.create_time) }}
-						</el-descriptions-item>
-						<el-descriptions-item label="当前进度">
-							<el-progress :text-inside="true" :stroke-width="24" :percentage="item.completionRate"
-								:status="item.completionRate >= 1 ? 'success' : ''" />
-						</el-descriptions-item>
-						<!-- 添加附件列表 -->
-						<el-descriptions-item label="附件">
-							<div class="task-attachments">
-								<el-button v-if="item.attachmentUrls" type="primary" link
-									@click="showAttachmentsDialog(item)">
-									<el-icon>
-										<Document />
-									</el-icon>
-									查看附件
-								</el-button>
-								<span v-else>无</span>
-							</div>
-						</el-descriptions-item>
-					</el-descriptions>
-					<div style="text-align: right; margin-top: 15px;">
-						<el-button type="primary" size="default" @click="showTaskDetail(item)">
-							查看详情
+		<el-table v-loading="loading" :data="dataPlanTasks" style="width: 100%" border>
+			<el-table-column prop="create_time" label="创建日期" min-width="120">
+				<template #default="{ row }">
+					<span>{{ formatDate(row.create_time) }}</span>
+					<el-tag v-if="row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
+				</template>
+			</el-table-column>
+			<el-table-column prop="taskName" label="计划任务名称" min-width="180">
+				<template #default="{ row }">
+					<el-tooltip :content="row.taskName" placement="top" :show-after="200">
+						<div class="truncated-text">{{ row.taskName }}</div>
+					</el-tooltip>
+				</template>
+			</el-table-column>
+			<el-table-column prop="totalLeaderIds" label="总负责人" min-width="120" />
+			<el-table-column prop="taskDescription" label="任务描述" min-width="200">
+				<template #default="{ row }">
+					<el-tooltip :content="row.taskDescription" placement="top" :show-after="200">
+						<div class="truncated-text">{{ row.taskDescription }}</div>
+					</el-tooltip>
+				</template>
+			</el-table-column>
+			<el-table-column label="当前进度" min-width="150">
+				<template #default="{ row }">
+					<el-progress :text-inside="true" :stroke-width="24" :percentage="row.completionRate"
+						:status="row.completionRate >= 1 ? 'success' : ''" />
+				</template>
+			</el-table-column>
+			<el-table-column label="时间范围" min-width="200">
+				<template #default="{ row }">
+					{{ formatDate(row.startTime) }} 至 {{ formatDate(row.endTime) }}
+				</template>
+			</el-table-column>
+			<!-- <el-table-column label="附件" min-width="100">
+				<template #default="{ row }">
+					<div class="task-attachments">
+						<el-button v-if="row.attachmentUrls" type="primary" link @click="showAttachmentsDialog(row)">
+							<el-icon>
+								<Document />
+							</el-icon>
+							查看附件
 						</el-button>
+						<span v-else>无</span>
 					</div>
-				</el-card>
-			</el-col>
-		</el-row>
+				</template>
+			</el-table-column> -->
+			<el-table-column label="操作" width="180" fixed="right">
+				<template #default="{ row }">
+					<el-button type="primary" link @click="showTaskDetail(row)">
+						查看详情
+					</el-button>
+					<el-button v-if="isCurrentUserTotalLeader(row.totalLeaderIds)" type="danger" link
+						@click="InvalidTask(row)">
+						作废
+					</el-button>
+				</template>
+			</el-table-column>
+		</el-table>
+
 		<!-- 分页 -->
 		<el-pagination v-model:current-page="queryParams.pageNum" v-model:page-size="queryParams.pageSize"
-			:total="total" :page-sizes="[3, 6, 9, 12]" layout="total, sizes, prev, pager, next, jumper"
+			:total="total" :page-sizes="[10, 20, 30, 40]" layout="total, sizes, prev, pager, next, jumper"
 			@size-change="handleSizeChange" @current-change="handlePageChange" />
-		<el-drawer v-model="drawer" :title="selectedTask?.taskName || '任务详情'" :direction="direction"
-			:before-close="handleClose" size="40%">
-			<template #default>
-				<el-timeline v-if="selectedTaskPhases && selectedTaskPhases.length">
-					<el-timeline-item v-for="phaseData in selectedTaskPhases"
-						:key="phaseData?.phase?.id || Math.random()" :timestamp="phaseData?.phase?.phaseName"
-						:type="getPhaseStatus(phaseData?.items)" placement="top">
-						<el-card>
-							<el-timeline-item v-for="item in phaseData?.items || []" :key="item?.id || Math.random()"
-								:timestamp="formatDate(item?.timePoint)"
-								:type="item?.realTimePoint ? 'success' : 'primary'" size="large">
-								<!-- 现有的事项内容保持不变 -->
-								<div class="task-item-title">
-									{{ item?.itemName }}
-									<el-link type="success"
-										v-if="currentUser === item?.executorId && !item?.realTimePoint"
-										@click="handleTaskComplete(item)">确认完成</el-link>
-								</div>
-								<p>执行人: {{ getUserName(item?.executorId) }}</p>
-								<p>关联客户: {{ getCustomerName(item?.relatedCustomers) }}</p>
-								<p>计划完成时间: {{ formatDate(item?.timePoint) }}</p>
-								<p>{{ item?.realTimePoint ? `实际完成时间: ${formatDate(item?.realTimePoint)}` : '状态: 未完成' }}
-								</p>
-								<p>{{ item?.remark ? `备注: ${item?.remark}` : '' }}</p>
-								<!-- 显示附件列表 -->
-								<div class="item-attachments">
-									<p class="attachments-title">附件:</p>
-									<ul v-if="item?.attachmentUrls" class="attachments-list">
-										<li v-for="(url, index) in item.attachmentUrls.split(',')" :key="index"
-											class="attachment-item">
-											<span class="file-name">{{ getFileNameFromUrl(url) }}</span>
-											<el-button type="primary" link
-												@click="downloadFile(url, getFileNameFromUrl(url))">
-												<el-icon>
-													<Download />
-												</el-icon>
-												下载
-											</el-button>
-										</li>
-									</ul>
-									<span v-else>无</span>
-								</div>
-								<!-- 显示完成附件列表 -->
-								<div class="item-attachments">
-									<p class="attachments-title">完成附件:</p>
-									<ul v-if="item?.finishattachmentUrls" class="attachments-list">
-										<li v-for="(url, index) in item.finishattachmentUrls.split(',')" :key="index"
-											class="attachment-item">
-											<span class="file-name">{{ getFileNameFromUrl(url) }}</span>
-											<el-button type="primary" link
-												@click="downloadFile(url, getFileNameFromUrl(url))">
-												<el-icon>
-													<Download />
-												</el-icon>
-												下载
-											</el-button>
-										</li>
-									</ul>
-									<span v-else>无</span>
-								</div>
-							</el-timeline-item>
-						</el-card>
-					</el-timeline-item>
-				</el-timeline>
-				<div v-else>
-					<el-empty description="暂无数据" />
+
+		<!-- 任务详情对话框 -->
+		<el-dialog v-model="taskDetailDialogVisible" :title="selectedTask?.taskName || '任务详情'" width="70%">
+			<template v-if="selectedTask">
+				<el-descriptions :column="2" border>
+					<el-descriptions-item label="任务名称">{{ selectedTask.taskName }}</el-descriptions-item>
+					<el-descriptions-item label="总负责人">{{ selectedTask.totalLeaderIds }}</el-descriptions-item>
+					<el-descriptions-item label="开始时间">{{ formatDate(selectedTask.startTime) }}</el-descriptions-item>
+					<el-descriptions-item label="结束时间">{{ formatDate(selectedTask.endTime) }}</el-descriptions-item>
+					<el-descriptions-item label="任务描述" :span="2">{{ selectedTask.taskDescription
+					}}</el-descriptions-item>
+					<el-descriptions-item label="创建时间">{{ formatDate(selectedTask.create_time) }}</el-descriptions-item>
+					<el-descriptions-item label="状态">
+						<el-tag :type="selectedTask.isDraft ? 'warning' : 'success'">
+							{{ selectedTask.isDraft ? '草稿' : '已提交' }}
+						</el-tag>
+					</el-descriptions-item>
+					<el-descriptions-item v-if="selectedTask.attachmentUrls" label="附件" :span="2">
+						<div class="attachments-list">
+							<div v-for="(url, urlIndex) in selectedTask.attachmentUrls.split(',')" :key="urlIndex"
+								class="attachment-item">
+								<span class="file-name">{{ getFileNameFromUrl(url) }}</span>
+								<el-button type="primary" link @click="downloadFile(url, getFileNameFromUrl(url))">
+									<el-icon>
+										<Download />
+									</el-icon>下载
+								</el-button>
+							</div>
+						</div>
+					</el-descriptions-item>
+				</el-descriptions>
+
+				<!-- 阶段和事项列表 -->
+				<div v-if="selectedTaskPhases && selectedTaskPhases.length" class="phases-container">
+					<div v-for="(phaseData, phaseIndex) in selectedTaskPhases" :key="phaseData.phase.id"
+						class="phase-item">
+						<el-divider>第{{ phaseIndex + 1 }}阶段：{{ phaseData.phase.phaseName }}</el-divider>
+						<el-table :data="phaseData.items" border style="width: 100%">
+							<el-table-column prop="itemName" label="事项名称" min-width="150" />
+							<el-table-column prop="executorId" label="执行人" min-width="120">
+								<template #default="{ row }">
+									{{ getUserName(row.executorId) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="relatedCustomers" label="关联客户" min-width="150">
+								<template #default="{ row }">
+									{{ getCustomerName(row.relatedCustomers) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="timePoint" label="计划完成时间" min-width="150">
+								<template #default="{ row }">
+									{{ formatDate(row.timePoint) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="realTimePoint" label="实际完成时间" min-width="150">
+								<template #default="{ row }">
+									{{ row.realTimePoint ? formatDate(row.realTimePoint) : '未完成' }}
+								</template>
+							</el-table-column>
+							<el-table-column label="状态" width="100">
+								<template #default="{ row }">
+									<el-tag :type="row.realTimePoint ? 'success' : 'warning'">
+										{{ row.realTimePoint ? '已完成' : '进行中' }}
+									</el-tag>
+								</template>
+							</el-table-column>
+						</el-table>
+
+						<!-- 事项附件列表 -->
+						<template v-for="(item, itemIndex) in phaseData.items" :key="item.id">
+							<div v-if="item.attachmentUrls" class="item-attachments">
+								<el-collapse>
+									<el-collapse-item :title="'事项附件：' + item.itemName">
+										<div class="attachments-list">
+											<div v-for="(url, urlIndex) in item.attachmentUrls.split(',')"
+												:key="urlIndex" class="attachment-item">
+												<span class="file-name">{{ getFileNameFromUrl(url) }}</span>
+												<el-button type="primary" link
+													@click="downloadFile(url, getFileNameFromUrl(url))">
+													<el-icon>
+														<Download />
+													</el-icon>下载
+												</el-button>
+											</div>
+										</div>
+									</el-collapse-item>
+								</el-collapse>
+							</div>
+						</template>
+					</div>
 				</div>
+				<el-empty v-else description="暂无阶段数据" />
 			</template>
-		</el-drawer>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button v-if="selectedTask?.isDraft" type="primary" @click="handleEditTask">编辑</el-button>
+					<el-button @click="taskDetailDialogVisible = false">关闭</el-button>
+				</span>
+			</template>
+		</el-dialog>
 
 		<!-- 添加确认对话框 -->
 		<el-dialog v-model="confirmDialogVisible" title="确认完成任务" width="30%">
@@ -352,13 +422,13 @@
 import { reactive, ref, getCurrentInstance } from 'vue'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElMessage, DrawerProps, ElDrawer,
-	ElMessageBox, ElTimeline, ElTimelineItem, FormInstance, FormRules, ElLoading
+	ElMessageBox, ElTimeline, ElTimelineItem, FormInstance, FormRules, ElLoading, ElRadioGroup, ElRadioButton
 } from 'element-plus'
 import { Document, Download } from '@element-plus/icons-vue'
 import request from '@/utils/request';
 import useUserStore from '@/store/modules/user'
 
-
+const PlanTaskStatusRadio = ref('0');
 // 定义API响应类型
 interface ApiResponse<T = any> {
 	code: number;
@@ -382,12 +452,33 @@ const currentAttachments = ref<string[]>([])
 // 文件上传相关
 const mainTaskFileList = ref([])
 const handleMainTaskFileChange = (file, fileList) => {
-	mainTaskFileList.value = fileList
+	// 如果是编辑模式，保留原有的文件列表
+	if (isEditMode.value && selectedTask.value?.attachmentUrls) {
+		const existingFiles = selectedTask.value.attachmentUrls.split(',').map(url => ({
+			name: getFileNameFromUrl(url),
+			url: getRelativePathFromUrl(url), // 存储相对路径
+			isExisting: true
+		}));
+		mainTaskFileList.value = [...existingFiles, ...fileList.filter(f => !f.url && !f.isExisting)];
+	} else {
+		mainTaskFileList.value = fileList;
+	}
 }
+
 const handleMainTaskFileRemove = (file) => {
 	const index = mainTaskFileList.value.indexOf(file)
 	if (index !== -1) {
 		mainTaskFileList.value.splice(index, 1)
+	}
+
+	// 如果是编辑模式，更新 selectedTask 中的 attachmentUrls
+	if (isEditMode.value && selectedTask.value) {
+		// 获取剩余文件的URL
+		const remainingUrls = mainTaskFileList.value
+			.filter(f => f.isExisting)
+			.map(f => f.url)
+			.join(',');
+		selectedTask.value.attachmentUrls = remainingUrls;
 	}
 }
 
@@ -396,7 +487,26 @@ const handleItemFileChange = (stageIndex, itemIndex, file, fileList) => {
 	if (!stages.value[stageIndex].items[itemIndex].fileList) {
 		stages.value[stageIndex].items[itemIndex].fileList = []
 	}
-	stages.value[stageIndex].items[itemIndex].fileList = fileList
+
+	// 如果是编辑模式，保留原有的文件列表
+	if (isEditMode.value && selectedTaskPhases.value) {
+		const phase = selectedTaskPhases.value[stageIndex];
+		if (phase?.items?.[itemIndex]?.attachmentUrls) {
+			const existingFiles = phase.items[itemIndex].attachmentUrls.split(',').map(url => ({
+				name: getFileNameFromUrl(url),
+				url: getRelativePathFromUrl(url), // 存储相对路径
+				isExisting: true
+			}));
+			stages.value[stageIndex].items[itemIndex].fileList = [
+				...existingFiles,
+				...fileList.filter(f => !f.url && !f.isExisting)
+			];
+		} else {
+			stages.value[stageIndex].items[itemIndex].fileList = fileList;
+		}
+	} else {
+		stages.value[stageIndex].items[itemIndex].fileList = fileList;
+	}
 }
 
 // 处理事项文件移除
@@ -406,6 +516,18 @@ const handleItemFileRemove = (stageIndex, itemIndex, file) => {
 		const index = fileList.indexOf(file)
 		if (index !== -1) {
 			fileList.splice(index, 1)
+		}
+	}
+
+	// 如果是编辑模式，更新 selectedTaskPhases 中的 attachmentUrls
+	if (isEditMode.value && selectedTaskPhases.value) {
+		const phase = selectedTaskPhases.value[stageIndex]
+		if (phase && phase.items && phase.items[itemIndex]) {
+			const remainingUrls = fileList
+				.filter(f => f.url)
+				.map(f => f.url)
+				.join(',')
+			phase.items[itemIndex].attachmentUrls = remainingUrls
 		}
 	}
 }
@@ -458,11 +580,24 @@ const uploadSingleFile = async (file) => {
 const uploadFilesAndGetUrlString = async (files) => {
 	if (!files || files.length === 0) return ''
 
-	const uploadPromises = files.map(file => uploadSingleFile(file))
-	const results = await Promise.all(uploadPromises)
+	// 分离已有URL和需要上传的新文件
+	const existingUrls = files
+		.filter(file => file.isExisting)
+		.map(file => file.url)
 
-	// 过滤掉上传失败的文件，并用逗号连接URL
-	return results.filter(downloadurl => downloadurl !== null).join(',')
+	const newFiles = files.filter(file => !file.isExisting && !file.url)
+
+	// 只上传新文件
+	const uploadPromises = newFiles.map(file => uploadSingleFile(file))
+	const uploadResults = await Promise.all(uploadPromises)
+
+	// 合并已有URL和新上传的URL
+	const allUrls = [
+		...existingUrls,
+		...uploadResults.filter(url => url !== null)
+	]
+
+	return allUrls.join(',')
 }
 
 // 获取用户名的辅助函数
@@ -521,7 +656,7 @@ const confirmTaskCompletion = async () => {
 			if (res.code === 200) {
 				ElMessage.success('任务完成确认成功');
 				// 刷新任务详情
-				await showTaskDetail(selectedTask.value);
+				//await showTaskDetail(selectedTask.value);
 				await getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
 			} else {
 				ElMessage.error(res.data.msg || '确认失败');
@@ -552,28 +687,29 @@ const handleClose = () => {
 
 // 修改查看详情按钮的点击事件
 const showTaskDetail = async (task) => {
+	// 处理总负责人显示
+	const leaderIds = task.totalLeaderIds.split(',');
+	task.totalLeaderIds = leaderIds.map(id => {
+		const user = optionss.value.sql_all_user.find(u => u.dictValue === id);
+		return user ? user.dictLabel : id;
+	}).join(', ');
+
 	selectedTask.value = task;
+	taskDetailDialogVisible.value = true;
 	try {
 		const res = await request.get(`PlanTasks/GetPlanTaskDetails/GetDetails?ID=${task.id}`) as unknown as { data: ApiResponse };
-		console.log('任务详情原始响应:', res); // 添加调试日志
+		console.log('任务详情原始响应:', res);
 
 		if (res.data.code === 200) {
-			// 处理嵌套的响应结构
-			const responseData = res.data.data;
-			console.log('任务详情数据结构:', responseData); // 添加调试日志
-
-			// 确保数据存在且是数组
-			selectedTaskPhases.value = Array.isArray(responseData) ? responseData :
-				(responseData && responseData.data && Array.isArray(responseData.data)) ? responseData.data : [];
-
-			console.log('处理后的任务详情数据:', selectedTaskPhases.value); // 用于调试
+			// 直接使用 res.data.data 作为数组，因为数据结构已经正确
+			selectedTaskPhases.value = res.data.data;
+			console.log('处理后的任务详情数据:', selectedTaskPhases.value);
 		}
 	} catch (error) {
 		console.error('获取任务详情失败:', error);
 		ElMessage.error('获取任务详情失败');
 		selectedTaskPhases.value = []; // 出错时清空数据
 	}
-	drawer.value = true;
 }
 
 // 从URL中提取文件名并清理敏感信息
@@ -637,88 +773,139 @@ const getPhaseStatus = (items: any[]) => {
 };
 
 // 提交任务计划表单
-const SubmitPlanTaskForm = async (formEl: FormInstance | undefined) => {
+const SubmitPlanTaskForm = async (formEl: FormInstance | undefined, isDraft: boolean = false) => {
 	if (!formEl) return
 	await formEl.validate(async (valid, fields) => {
-		if (valid) {
-			try {
-				// 显示加载状态
-				const loadingInstance = ElLoading.service({
-					lock: true,
-					text: '正在上传附件并保存...',
-					background: 'rgba(0, 0, 0, 0.7)'
-				})
-
-				try {
-					// 1. 先上传主任务附件并获取URL字符串
-					const mainTaskUrlsStr = await uploadFilesAndGetUrlString(mainTaskFileList.value)
-
-					// 2. 构建请求数据，使用与后端 JsonPropertyName 匹配的命名
-					const requestData = {
-						taskName: PlanTaskForm.plantaskname.trim(),
-						taskDescription: PlanTaskForm.plantaskdescription?.trim() || '',
-						startTime: PlanTaskForm.starttime ? new Date(PlanTaskForm.starttime).toISOString() : new Date().toISOString(),
-						endTime: PlanTaskForm.endtime ? new Date(PlanTaskForm.endtime).toISOString() : new Date().toISOString(),
-						totalLeaderIds: Array.isArray(PlanTaskForm.participants)
-							? PlanTaskForm.participants.join(',')
-							: PlanTaskForm.participants || '',
-						attachmentUrls: mainTaskUrlsStr, // 使用字符串格式的URL
-						planTask_Phases: []
-					};
-					// 3. 处理各阶段和事项
-					for (let stageIndex = 0; stageIndex < stages.value.length; stageIndex++) {
-						const stage = stages.value[stageIndex]
-						const phaseData = {
-							phaseName: stage.name?.trim() || '',
-							planTask_Items: []
-						}
-						for (let itemIndex = 0; itemIndex < stage.items.length; itemIndex++) {
-							const item = stage.items[itemIndex]
-							// 上传该事项的附件
-							const itemUrlsStr = await uploadFilesAndGetUrlString(item.fileList || [])
-
-							phaseData.planTask_Items.push({
-								itemName: item.name?.trim() || '',
-								executorId: Number(item.executor) || 0,
-								timePoint: item.deadline ? new Date(item.deadline).toISOString() : null,
-								attachmentUrls: itemUrlsStr, // 使用字符串格式的URL
-								finishattachmentUrls: '', // 初始为空，完成时才会有值
-								relatedCustomers: item.customer || null//关联客户
-							})
-						}
-						requestData.planTask_Phases.push(phaseData)
-					}
-					// 验证关键字段
-					if (!requestData.taskName) {
-						ElMessage.error('任务名称不能为空');
-						return;
-					}
-					console.log('发送的数据:', JSON.stringify(requestData, null, 2));
-					const res = await request.post('PlanTasks/AddPlanTasks/Add', requestData) as unknown as { data: ApiResponse };
-					if (res.code === 200) {
-						ElMessage.success(res.data);
-						PlanTaskDialogVisible.value = false;
-						ResetPlanTaskForm(formEl);
-						getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
-					} else {
-						ElMessage.error(res.data.msg || '保存失败');
-					}
-				} finally {
-					// 关闭加载状态
-					loadingInstance.close()
-				}
-			} catch (error) {
-				console.error('保存失败:', error);
-				ElMessage.error('保存失败，请稍后重试');
-			}
-		} else {
+		if (!isDraft && !valid) {
 			console.log('表单验证失败:', fields);
 			ElMessage.warning('请填写完整的表单信息');
+			return;
+		}
+
+		try {
+			const loadingInstance = ElLoading.service({
+				lock: true,
+				text: '正在上传附件并保存...',
+				background: 'rgba(0, 0, 0, 0.7)'
+			})
+
+			try {
+				// 1. 处理主任务附件
+				let mainTaskUrlsStr = '';
+				if (isEditMode.value) {
+					const existingUrls = mainTaskFileList.value
+						.filter(f => f.isExisting)
+						.map(f => f.url)
+						.join(',');
+
+					const newFiles = mainTaskFileList.value.filter(file => !file.isExisting && !file.url);
+					if (newFiles.length > 0) {
+						const newUrls = await uploadFilesAndGetUrlString(newFiles);
+						const newRelativeUrls = newUrls.split(',').map(url => getRelativePathFromUrl(url)).join(',');
+						mainTaskUrlsStr = existingUrls ? `${existingUrls},${newRelativeUrls}` : newRelativeUrls;
+					} else {
+						mainTaskUrlsStr = existingUrls;
+					}
+				} else {
+					const uploadedUrls = await uploadFilesAndGetUrlString(mainTaskFileList.value);
+					mainTaskUrlsStr = uploadedUrls.split(',').map(url => getRelativePathFromUrl(url)).join(',');
+				}
+
+				// 2. 构建请求数据
+				const requestData = {
+					id: isEditMode.value ? selectedTask.value.id : 0,
+					taskName: PlanTaskForm.plantaskname?.trim() || '',
+					taskDescription: PlanTaskForm.plantaskdescription?.trim() || '',
+					startTime: PlanTaskForm.starttime ? new Date(PlanTaskForm.starttime).toISOString() : new Date().toISOString(),
+					endTime: PlanTaskForm.endtime ? new Date(PlanTaskForm.endtime).toISOString() : new Date().toISOString(),
+					totalLeaderIds: Array.isArray(PlanTaskForm.participants)
+						? PlanTaskForm.participants.join(',')
+						: PlanTaskForm.participants || '',
+					attachmentUrls: mainTaskUrlsStr,
+					planTask_Phases: [],
+					isDraft: isDraft ? 1 : 0
+				};
+
+				// 3. 处理各阶段和事项
+				for (let stageIndex = 0; stageIndex < stages.value.length; stageIndex++) {
+					const stage = stages.value[stageIndex]
+					const phaseData = {
+						id: isEditMode.value && selectedTaskPhases.value[stageIndex]?.phase?.id || 0,
+						phaseName: stage.name?.trim() || '',
+						planTask_Items: []
+					}
+
+					for (let itemIndex = 0; itemIndex < stage.items.length; itemIndex++) {
+						const item = stage.items[itemIndex];
+						let itemUrlsStr = '';
+
+						if (isEditMode.value && selectedTaskPhases.value[stageIndex]?.items[itemIndex]) {
+							// 编辑模式：使用当前文件列表中的URL（相对路径）
+							const existingUrls = (item.fileList || [])
+								.filter(f => f.isExisting)
+								.map(f => f.url)
+								.join(',');
+
+							const newFiles = (item.fileList || []).filter(file => !file.isExisting && !file.url);
+							if (newFiles.length > 0) {
+								const newUrls = await uploadFilesAndGetUrlString(newFiles);
+								const newRelativeUrls = newUrls.split(',').map(url => getRelativePathFromUrl(url)).join(',');
+								itemUrlsStr = existingUrls ? `${existingUrls},${newRelativeUrls}` : newRelativeUrls;
+							} else {
+								itemUrlsStr = existingUrls;
+							}
+						} else {
+							// 新建模式：上传所有附件并转换为相对路径
+							const uploadedUrls = await uploadFilesAndGetUrlString(item.fileList || []);
+							itemUrlsStr = uploadedUrls.split(',').map(url => getRelativePathFromUrl(url)).join(',');
+						}
+
+						phaseData.planTask_Items.push({
+							id: isEditMode.value && selectedTaskPhases.value[stageIndex]?.items[itemIndex]?.id || 0,
+							itemName: item.name?.trim() || '',
+							executorId: Number(item.executor) || 0,
+							timePoint: item.deadline ? new Date(item.deadline).toISOString() : null,
+							attachmentUrls: itemUrlsStr,
+							finishattachmentUrls: '',
+							relatedCustomers: item.customer || null
+						})
+					}
+					requestData.planTask_Phases.push(phaseData)
+				}
+
+				// 验证关键字段（仅在非草稿模式下）
+				if (!isDraft && !requestData.taskName) {
+					ElMessage.error('任务名称不能为空');
+					return;
+				}
+
+				console.log('发送的数据:', JSON.stringify(requestData, null, 2));
+
+				// 根据是否是编辑模式选择不同的API端点
+				const apiEndpoint = isEditMode.value ? 'PlanTasks/EditPlanTasks/Edit' : 'PlanTasks/AddPlanTasks/Add';
+				const res = await request.post(apiEndpoint, requestData) as unknown as { data: ApiResponse };
+
+				if (res.code === 200) {
+					ElMessage.success(isDraft ? '草稿保存成功' : '保存成功');
+					PlanTaskDialogVisible.value = false;
+					ResetPlanTaskForm(formEl);
+					getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
+				} else {
+					ElMessage.error(res.data.msg || '保存失败');
+				}
+			} finally {
+				// 关闭加载状态
+				loadingInstance.close()
+			}
+		} catch (error) {
+			console.error('保存失败:', error);
+			ElMessage.error('保存失败，请稍后重试');
 		}
 	})
 }
 
 const PlanTaskDialogVisible = ref(false);
+const isEditMode = ref(false); // 添加编辑模式标识
 
 const OpenPlanTaskDialog = () => {
 	// 添加检查，确保 PlanTaskFormRef.value 存在
@@ -726,6 +913,7 @@ const OpenPlanTaskDialog = () => {
 		PlanTaskFormRef.value.resetFields()
 	}
 	PlanTaskDialogVisible.value = true;
+	isEditMode.value = false; // 重置为新建模式
 	// 确保打开对话框时有一个默认阶段
 	if (stages.value.length === 0) {
 		stages.value = [{
@@ -734,7 +922,9 @@ const OpenPlanTaskDialog = () => {
 				name: '',
 				executor: '',
 				customer: '',
-				deadline: ''
+				deadline: '',
+				fileList: [], // 初始化文件列表
+				customerOptions: [] // 初始化客户选项
 			}]
 		}];
 	}
@@ -748,6 +938,7 @@ interface StageItem {
 	fileList?: any[]; // 添加文件列表属性
 	attachments?: { fileName: string; fileUrl: string }[]; // 添加附件属性
 	finishAttachments?: { fileName: string; fileUrl: string }[]; // 添加完成附件属性
+	customerOptions?: any[]; // 添加客户选项属性
 }
 
 interface Stage {
@@ -763,7 +954,8 @@ const stages = ref<Stage[]>([{
 		executor: '',
 		customer: '',
 		deadline: '',
-		fileList: [] // 初始化文件列表
+		fileList: [], // 初始化文件列表
+		customerOptions: [] // 初始化客户选项
 	}]
 }]);
 
@@ -780,7 +972,8 @@ const handleStageNumberChange = (value: number) => {
 					executor: '',
 					customer: '',
 					deadline: '',
-					fileList: [] // 初始化文件列表
+					fileList: [], // 初始化文件列表
+					customerOptions: [] // 初始化客户选项
 				}]
 			});
 		}
@@ -796,7 +989,8 @@ const addItem = (stageIndex: number) => {
 		executor: '',
 		customer: '',
 		deadline: '',
-		fileList: [] // 初始化文件列表
+		fileList: [], // 初始化文件列表
+		customerOptions: [] // 初始化客户选项
 	});
 }
 
@@ -878,7 +1072,8 @@ const ResetPlanTaskForm = (formEl: FormInstance | undefined) => {
 			executor: '',
 			customer: '',
 			deadline: '',
-			fileList: [] // 重置文件列表
+			fileList: [], // 重置文件列表
+			customerOptions: [] // 重置客户选项
 		}]
 	}];
 }
@@ -903,8 +1098,12 @@ proxy.getDicts(dictParams).then((response) => {
 })
 /*动态下拉框end*/
 
-// 获取用户相关的客户数据
+// 修改获取用户相关的客户数据的函数
 const getsalePersonCustomerData = async (salesPersonID: string) => {
+	if (!salesPersonID || salesPersonID === '0') {
+		return [];
+	}
+
 	try {
 		const response = await request({
 			url: 'CustomerInfoMation/GetCustomerDataBysalesPersonID/GetSelectCustomerDataBysalesPersonID',
@@ -915,17 +1114,27 @@ const getsalePersonCustomerData = async (salesPersonID: string) => {
 		})
 
 		if (response.code === 200) {
-			state.optionss.salePersonCustomer = response.data.map(item => ({
+			return response.data.map(item => ({
 				dictValue: item.dictValue,
 				dictLabel: item.dictLabel
-			}))
+			}));
 		} else {
 			ElMessage.error(response.msg || '获取客户数据失败')
+			return [];
 		}
 	} catch (error) {
 		console.error('获取客户数据失败:', error)
 		ElMessage.error('获取客户数据失败')
+		return [];
 	}
+}
+
+// 修改事项执行人变更处理函数
+const handleExecutorChange = async (stageIndex: number, itemIndex: number, executorId: string) => {
+	// 清空当前事项的客户选择
+	stages.value[stageIndex].items[itemIndex].customer = '';
+	// 加载新的执行人的客户数据并保存到事项中
+	stages.value[stageIndex].items[itemIndex].customerOptions = await getsalePersonCustomerData(executorId);
 }
 
 // 定义返回数据的接口
@@ -956,7 +1165,7 @@ const loading = ref(false);
 const total = ref(0);
 const queryParams = reactive({
 	pageNum: 1,
-	pageSize: 6,
+	pageSize: 10,
 	queryText: ''
 });
 const dataPlanTasks = ref<PlanTask[]>([]);
@@ -1032,12 +1241,12 @@ const showAttachmentsDialog = (item) => {
 	}
 }
 
-// 下载文件
+// 修改下载文件函数
 const downloadFile = (url: string, fileName: string) => {
 	try {
 		// 创建一个隐藏的a标签
 		const link = document.createElement('a')
-		link.href = url
+		link.href = url  // 直接使用原始URL
 		link.download = fileName
 		link.target = '_blank'
 
@@ -1053,6 +1262,116 @@ const downloadFile = (url: string, fileName: string) => {
 	}
 }
 
+const InvalidTask = (row) => {
+	ElMessageBox.confirm('确定作废该任务吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(async () => {
+		const res = await request({
+			url: 'PlanTasks/InvalidPlanTaskItemByID/InvalidPlanTask',
+			method: 'get',
+			params: {
+				ID: row.id
+			}
+		})
+		if (res.code === 200) {
+			ElMessage.success('作废成功')
+			getPlanTasksList(queryParams.pageNum, queryParams.pageSize)
+		} else {
+			ElMessage.error(res.msg || '作废失败')
+		}
+	})
+}
+
+const taskDetailDialogVisible = ref(false);
+
+// 处理编辑任务
+const handleEditTask = async () => {
+	// 关闭详情对话框
+	taskDetailDialogVisible.value = false;
+
+	// 打开新建对话框
+	PlanTaskDialogVisible.value = true;
+	isEditMode.value = true; // 设置为编辑模式
+
+	// 填充表单数据
+	PlanTaskForm.plantaskname = selectedTask.value.taskName;
+	// 将显示的用户名转换回用户ID
+	const userIds = selectedTask.value.totalLeaderIds.split(',').map(name => {
+		const user = optionss.value.sql_all_user.find(u => u.dictLabel === name.trim());
+		return user ? user.dictValue : '';
+	}).filter(id => id); // 过滤掉空值
+	PlanTaskForm.participants = userIds;
+
+	PlanTaskForm.starttime = selectedTask.value.startTime;
+	PlanTaskForm.endtime = selectedTask.value.endTime;
+	PlanTaskForm.plantaskdescription = selectedTask.value.taskDescription;
+
+	// 设置阶段数据
+	stages.value = await Promise.all(selectedTaskPhases.value.map(async phaseData => {
+		const items = await Promise.all(phaseData.items.map(async item => {
+			// 如果执行人ID不为空且不为0，则加载该执行人的客户数据
+			let customerOptions = [];
+			if (item.executorId && item.executorId !== 0) {
+				customerOptions = await getsalePersonCustomerData(item.executorId.toString());
+			}
+
+			return {
+				name: item.itemName,
+				executor: item.executorId == 0 ? '' : item.executorId.toString(),
+				customer: item.relatedCustomers == 0 ? '' : item.relatedCustomers.toString(),
+				deadline: item.timePoint,
+				fileList: item.attachmentUrls ? item.attachmentUrls.split(',').map(url => ({
+					name: getFileNameFromUrl(url),
+					url: url
+				})) : [],
+				customerOptions: customerOptions // 保存客户选项到事项中
+			};
+		}));
+
+		return {
+			name: phaseData.phase.phaseName,
+			items: items
+		};
+	}));
+
+	// 设置总阶段数
+	PlanTaskForm.TotalStageNumber = stages.value.length;
+
+	// 如果有主任务附件，设置主任务附件列表
+	if (selectedTask.value.attachmentUrls) {
+		mainTaskFileList.value = selectedTask.value.attachmentUrls.split(',').map(url => ({
+			name: getFileNameFromUrl(url),
+			url: url
+		}));
+	}
+}
+
+// 检查当前用户是否是总负责人
+const isCurrentUserTotalLeader = (totalLeaderIds: string) => {
+	console.log(totalLeaderIds, 'totalLeaderIds', currentUser.value, 'currentUser.value')
+	if (!totalLeaderIds) return false;
+	const leaderIds = totalLeaderIds.split(',').map(id => id.trim());
+	const user = optionss.value.sql_all_user.find(u => u.dictValue === currentUser.value.toString());
+	return leaderIds.includes(user?.dictLabel || '');
+}
+
+// 添加处理OSS URL的函数
+const getRelativePathFromUrl = (url: string) => {
+	if (!url) return '';
+	try {
+		const urlObj = new URL(url);
+		// 获取路径部分，去掉查询参数
+		const path = urlObj.pathname;
+		// 去掉域名部分，只保留 PlanTask/Attachments/... 部分
+		const relativePath = path.substring(path.indexOf('PlanTask/Attachments/'));
+		return relativePath;
+	} catch (error) {
+		console.error('解析URL失败:', error);
+		return url;
+	}
+}
 </script>
 
 <style scoped>
@@ -1154,5 +1473,37 @@ const downloadFile = (url: string, fileName: string) => {
 	text-overflow: ellipsis;
 	max-width: 200px;
 	/* Adjust as needed */
+}
+
+.phases-container {
+	margin-top: 20px;
+}
+
+.phase-item {
+	margin-bottom: 30px;
+}
+
+.item-attachments {
+	margin-top: 15px;
+}
+
+.attachments-list {
+	margin-top: 10px;
+}
+
+.attachment-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px;
+	background-color: #f5f7fa;
+	margin-bottom: 5px;
+	border-radius: 4px;
+}
+
+.file-name {
+	flex: 1;
+	margin-right: 10px;
+	word-break: break-all;
 }
 </style>
