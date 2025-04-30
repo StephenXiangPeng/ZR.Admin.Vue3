@@ -39,7 +39,11 @@
 					<el-col :span="12">
 						<el-form-item label="结束时间" prop="endtime">
 							<el-date-picker v-model="PlanTaskForm.endtime" type="date" aria-label="选择日期"
-								placeholder="请选择结束日期" style="width: 300px" />
+								placeholder="请选择结束日期" style="width: 300px" @change="(value) => {
+									if (!validateEndTime(value)) {
+										PlanTaskForm.endtime = '';
+									}
+								}" />
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -48,6 +52,43 @@
 						<el-form-item label="计划/任务描述" prop="plantaskdescription">
 							<el-input v-model="PlanTaskForm.plantaskdescription" type="textarea" :rows="5"
 								style="width: 785px" />
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<!-- 添加图片上传组件 -->
+				<el-row>
+					<el-col :span="24">
+						<el-form-item label="计划/任务图片">
+							<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="planTaskImages"
+								:limit="3" :disabled="planTaskImages.length >= 3" @change="handleImageChange"
+								:action="UploadUrl" :data="formData">
+								<el-icon>
+									<Plus />
+								</el-icon>
+								<template #file="{ file }">
+									<div>
+										<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
+										<span class="el-upload-list__item-actions">
+											<span class="el-upload-list__item-preview"
+												@click="handlePictureCardPreview(file)">
+												<el-icon>
+													<ZoomIn />
+												</el-icon>
+											</span>
+											<span v-if="!disabled" class="el-upload-list__item-delete"
+												@click="handleImageRemove(file)">
+												<el-icon>
+													<Delete />
+												</el-icon>
+											</span>
+										</span>
+									</div>
+								</template>
+							</el-upload>
+							<el-dialog v-model="dialogVisible">
+								<img style="max-width: 100%; max-height: 100%; width: auto; height: auto;" w-full
+									:src="dialogImageUrl" alt="Preview Image" />
+							</el-dialog>
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -117,7 +158,7 @@
 								<el-form-item :label="'关联客户'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.customer'">
 									<el-select v-model="item.customer" filterable placeholder="选择关联客户"
-										style="width: 300px" clearable>
+										style="width: 300px" clearable multiple>
 										<el-option v-for="dict in item.customerOptions || []" :key="dict.dictValue"
 											:label="dict.dictLabel" :value="dict.dictValue">
 										</el-option>
@@ -128,7 +169,25 @@
 								<el-form-item :label="'时间节点'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.deadline'">
 									<el-date-picker v-model="item.deadline" type="date" placeholder="选择时间节点"
-										style="width: 300px" />
+										style="width: 300px" @change="(value) => {
+											if (!value) return;
+											if (!PlanTaskForm.starttime || !PlanTaskForm.endtime) {
+												ElMessage.warning('请先设置任务的开始时间和结束时间');
+												item.deadline = '';
+												return;
+											}
+											const deadline = new Date(value);
+											const startTime = new Date(PlanTaskForm.starttime);
+											const endTime = new Date(PlanTaskForm.endtime);
+
+											if (deadline < startTime) {
+												ElMessage.warning(`第${stageIndex + 1}阶段第${itemIndex + 1}个事项的时间节点不能早于任务开始时间`);
+												item.deadline = '';
+											} else if (deadline > endTime) {
+												ElMessage.warning(`第${stageIndex + 1}阶段第${itemIndex + 1}个事项的时间节点不能超过任务结束时间`);
+												item.deadline = '';
+											}
+										}" />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -251,8 +310,8 @@
 					<el-button type="primary" link @click="showTaskDetail(row)">
 						查看详情
 					</el-button>
-					<el-button v-if="isCurrentUserTotalLeader(row.totalLeaderIds)" type="danger" link
-						@click="InvalidTask(row)">
+					<el-button v-if="isCurrentUserTotalLeader(row.totalLeaderIds) && row.planTaskStatus !== 2"
+						type="danger" link @click="InvalidTask(row)">
 						作废
 					</el-button>
 				</template>
@@ -267,6 +326,10 @@
 		<!-- 任务详情对话框 -->
 		<el-dialog v-model="taskDetailDialogVisible" :title="selectedTask?.taskName || '任务详情'" width="70%">
 			<template v-if="selectedTask">
+				<!-- 添加水印 -->
+				<div v-if="selectedTask.planTaskStatus === 2" class="watermark">
+					<div class="watermark-text">已作废</div>
+				</div>
 				<el-descriptions :column="2" border>
 					<el-descriptions-item label="任务名称">{{ selectedTask.taskName }}</el-descriptions-item>
 					<el-descriptions-item label="总负责人">{{ selectedTask.totalLeaderIds }}</el-descriptions-item>
@@ -275,10 +338,18 @@
 					<el-descriptions-item label="任务描述" :span="2">{{ selectedTask.taskDescription
 					}}</el-descriptions-item>
 					<el-descriptions-item label="创建时间">{{ formatDate(selectedTask.create_time) }}</el-descriptions-item>
-					<el-descriptions-item label="状态">
-						<el-tag :type="selectedTask.isDraft ? 'warning' : 'success'">
-							{{ selectedTask.isDraft ? '草稿' : '已提交' }}
-						</el-tag>
+					<el-descriptions-item label="完成进度">
+						<el-progress :percentage="selectedTask.completionRate"
+							:status="selectedTask.completionRate >= 100 ? 'success' : ''" :stroke-width="15"
+							:text-inside="true" />
+					</el-descriptions-item>
+					<el-descriptions-item v-if="selectedTask.imageUrls" label="任务图片" :span="2">
+						<div class="task-images">
+							<div v-for="(url, index) in selectedTask.imageUrls.split(',')" :key="index"
+								class="image-item">
+								<img :src="url" @click="handleTaskImagePreview(url)" class="preview-image" />
+							</div>
+						</div>
 					</el-descriptions-item>
 					<el-descriptions-item v-if="selectedTask.attachmentUrls" label="附件" :span="2">
 						<div class="attachments-list">
@@ -327,6 +398,19 @@
 									<el-tag :type="row.realTimePoint ? 'success' : 'warning'">
 										{{ row.realTimePoint ? '已完成' : '进行中' }}
 									</el-tag>
+								</template>
+							</el-table-column>
+							<el-table-column label="操作" width="130" fixed="right">
+								<template #default="{ row }">
+									<el-button
+										v-if="isCurrentUserExecutor(row.executorId) && !row.realTimePoint && !selectedTask?.isDraft && selectedTask?.planTaskStatus !== 2"
+										type="success" size="default" @click="handleTaskComplete(row)">
+										确认完成
+									</el-button>
+									<el-button v-if="row.realTimePoint" type="primary" link
+										@click="showCompletionDetails(row)">
+										查看完成详情
+									</el-button>
 								</template>
 							</el-table-column>
 						</el-table>
@@ -416,15 +500,66 @@
 				</span>
 			</template>
 		</el-dialog>
+
+		<!-- 添加完成详情对话框 -->
+		<el-dialog v-model="completionDetailsDialogVisible"
+			:title="`完成详情 - ${currentCompletionDetails?.phaseName || '未知阶段'} - ${currentCompletionDetails?.itemName || ''}`"
+			width="50%">
+			<template v-if="currentCompletionDetails">
+				<el-descriptions :column="2" border>
+					<!-- <el-descriptions-item label="所属阶段">
+						{{ currentCompletionDetails.phaseName || '未知阶段' }}
+					</el-descriptions-item>
+					<el-descriptions-item label="事项名称">
+						{{ currentCompletionDetails.itemName }}
+					</el-descriptions-item> -->
+					<el-descriptions-item label="执行人">
+						{{ getUserName(currentCompletionDetails.executorId) }}
+					</el-descriptions-item>
+					<el-descriptions-item label="关联客户">
+						{{ getCustomerName(currentCompletionDetails.relatedCustomers) }}
+					</el-descriptions-item>
+					<el-descriptions-item label="计划完成时间">
+						{{ formatDate(currentCompletionDetails.timePoint) }}
+					</el-descriptions-item>
+					<el-descriptions-item label="实际完成时间">
+						{{ formatDate(currentCompletionDetails.realTimePoint) }}
+					</el-descriptions-item>
+					<el-descriptions-item label="完成备注" :span="2">
+						{{ currentCompletionDetails.remark || '无' }}
+					</el-descriptions-item>
+					<el-descriptions-item label="完成附件" :span="2">
+						<div v-if="currentCompletionDetails.finishattachmentUrls && currentCompletionDetails.finishattachmentUrls.trim()"
+							class="attachments-list">
+							<div v-for="(url, index) in currentCompletionDetails.finishattachmentUrls.split(',')"
+								:key="index" class="attachment-item">
+								<span class="file-name">{{ getFileNameFromUrl(url) }}</span>
+								<el-button type="primary" link @click="downloadFile(url, getFileNameFromUrl(url))">
+									<el-icon>
+										<Download />
+									</el-icon>下载
+								</el-button>
+							</div>
+						</div>
+						<span v-else>无</span>
+					</el-descriptions-item>
+				</el-descriptions>
+			</template>
+		</el-dialog>
+
+		<!-- 添加任务图片预览对话框 -->
+		<el-dialog v-model="taskImagePreviewVisible" title="图片预览" width="50%">
+			<img :src="previewImageUrl" style="max-width: 100%; max-height: 100%; width: auto; height: auto;" />
+		</el-dialog>
 	</div>
 </template>
 <script setup lang="ts">
-import { reactive, ref, getCurrentInstance } from 'vue'
+import { reactive, ref, getCurrentInstance, watch } from 'vue'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElMessage, DrawerProps, ElDrawer,
 	ElMessageBox, ElTimeline, ElTimelineItem, FormInstance, FormRules, ElLoading, ElRadioGroup, ElRadioButton
 } from 'element-plus'
-import { Document, Download } from '@element-plus/icons-vue'
+import { Document, Download, Plus, Delete, ZoomIn } from '@element-plus/icons-vue'
 import request from '@/utils/request';
 import useUserStore from '@/store/modules/user'
 
@@ -456,7 +591,7 @@ const handleMainTaskFileChange = (file, fileList) => {
 	if (isEditMode.value && selectedTask.value?.attachmentUrls) {
 		const existingFiles = selectedTask.value.attachmentUrls.split(',').map(url => ({
 			name: getFileNameFromUrl(url),
-			url: getRelativePathFromUrl(url), // 存储相对路径
+			url: getRelativePathFromUrl(url),
 			isExisting: true
 		}));
 		mainTaskFileList.value = [...existingFiles, ...fileList.filter(f => !f.url && !f.isExisting)];
@@ -469,16 +604,6 @@ const handleMainTaskFileRemove = (file) => {
 	const index = mainTaskFileList.value.indexOf(file)
 	if (index !== -1) {
 		mainTaskFileList.value.splice(index, 1)
-	}
-
-	// 如果是编辑模式，更新 selectedTask 中的 attachmentUrls
-	if (isEditMode.value && selectedTask.value) {
-		// 获取剩余文件的URL
-		const remainingUrls = mainTaskFileList.value
-			.filter(f => f.isExisting)
-			.map(f => f.url)
-			.join(',');
-		selectedTask.value.attachmentUrls = remainingUrls;
 	}
 }
 
@@ -494,7 +619,7 @@ const handleItemFileChange = (stageIndex, itemIndex, file, fileList) => {
 		if (phase?.items?.[itemIndex]?.attachmentUrls) {
 			const existingFiles = phase.items[itemIndex].attachmentUrls.split(',').map(url => ({
 				name: getFileNameFromUrl(url),
-				url: getRelativePathFromUrl(url), // 存储相对路径
+				url: getRelativePathFromUrl(url),
 				isExisting: true
 			}));
 			stages.value[stageIndex].items[itemIndex].fileList = [
@@ -606,9 +731,15 @@ const getUserName = (executorId) => {
 	return user ? user.dictLabel : executorId;
 }
 
-const getCustomerName = (customerId) => {
-	const customer = optionss.value.sql_hr_customer.find(c => c.dictValue === customerId.toString());
-	return customer == null ? '无' : customer.dictLabel;
+// 修改获取客户名称的辅助函数
+const getCustomerName = (customerIds) => {
+	if (!customerIds) return '无';
+	const ids = customerIds.split(',');
+	const names = ids.map(id => {
+		const customer = optionss.value.sql_hr_customer.find(c => c.dictValue === id);
+		return customer ? customer.dictLabel : id;
+	});
+	return names.join(', ') || '无';
 }
 
 // 日期格式化函数
@@ -625,6 +756,27 @@ const formatDate = (dateStr: string) => {
 const handleTaskComplete = (task) => {
 	currentTask.value = task
 	confirmDialogVisible.value = true
+}
+
+// 处理任务完成附件变更
+const handleCompletionFileChange = (file, fileList) => {
+	completionFileList.value = fileList;
+}
+
+// 处理任务完成附件移除
+const handleCompletionFileRemove = (file) => {
+	const index = completionFileList.value.indexOf(file)
+	if (index !== -1) {
+		completionFileList.value.splice(index, 1)
+	}
+}
+
+// 取消任务完成
+const cancelTaskCompletion = () => {
+	confirmDialogVisible.value = false
+	completionNote.value = ''
+	completionFileList.value = []
+	currentTask.value = null
 }
 
 // 确认完成任务
@@ -648,6 +800,8 @@ const confirmTaskCompletion = async () => {
 				finishattachmentUrls: attachmentUrlsStr // 使用字符串格式的URL
 			}
 
+			console.log('发送的完成确认数据:', requestData); // 添加日志
+
 			// 3. 发送请求
 			const res = await request.get(`PlanTasks/ConfirmationOfCompletion/ConfirmItem`, {
 				params: requestData
@@ -656,7 +810,21 @@ const confirmTaskCompletion = async () => {
 			if (res.code === 200) {
 				ElMessage.success('任务完成确认成功');
 				// 刷新任务详情
-				//await showTaskDetail(selectedTask.value);
+				await showTaskDetail(selectedTask.value);
+				// 获取最新的任务信息并更新进度
+				const taskRes = await request.get(`PlanTasks/GetPlanTaskDetails/GetDetails?ID=${selectedTask.value.id}`) as unknown as { data: ApiResponse };
+				if (taskRes.data.code === 200) {
+					selectedTaskPhases.value = taskRes.data.data;
+					// 更新主任务的完成进度
+					const completedItems = selectedTaskPhases.value.reduce((total, phase) => {
+						return total + phase.items.filter(item => item.realTimePoint).length;
+					}, 0);
+					const totalItems = selectedTaskPhases.value.reduce((total, phase) => {
+						return total + phase.items.length;
+					}, 0);
+					selectedTask.value.completionRate = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+				}
+				// 刷新列表
 				await getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
 			} else {
 				ElMessage.error(res.data.msg || '确认失败');
@@ -715,46 +883,343 @@ const showTaskDetail = async (task) => {
 // 从URL中提取文件名并清理敏感信息
 const getFileNameFromUrl = (url) => {
 	if (!url) return '';
-
-	// 从URL中提取文件名
 	const parts = url.split('/');
 	let fileName = parts[parts.length - 1];
-
-	// 处理文件名中的查询参数
 	if (fileName.includes('?')) {
-		// 只保留问号前面的部分
 		fileName = fileName.split('?')[0];
 	}
-
-	// 处理URL编码
-	fileName = decodeURIComponent(fileName);
-
-	// 处理特殊字符，如括号等
-	fileName = fileName.replace(/%28/g, '(').replace(/%29/g, ')').replace(/%20/g, ' ');
-
-	return fileName;
-}
-
-// 处理任务完成附件变更
-const handleCompletionFileChange = (file, fileList) => {
-	completionFileList.value = fileList
-}
-
-// 处理任务完成附件移除
-const handleCompletionFileRemove = (file) => {
-	const index = completionFileList.value.indexOf(file)
-	if (index !== -1) {
-		completionFileList.value.splice(index, 1)
+	// 解码URL编码的文件名
+	try {
+		return decodeURIComponent(fileName);
+	} catch (error) {
+		console.error('解码文件名失败:', error);
+		return fileName;
 	}
 }
 
-// 取消任务完成
-const cancelTaskCompletion = () => {
-	confirmDialogVisible.value = false
-	completionNote.value = ''
-	completionFileList.value = []
-	currentTask.value = null
+// 显示附件对话框
+const showAttachmentsDialog = (item) => {
+	if (item.attachmentUrls) {
+		// 将逗号分隔的URL字符串转换为数组
+		currentAttachments.value = item.attachmentUrls.split(',').filter(url => url.trim() !== '')
+		attachmentsDialogVisible.value = true
+	} else {
+		ElMessage.info('该任务没有附件')
+	}
 }
+
+// 修改下载文件函数
+const downloadFile = (url: string, fileName: string) => {
+	try {
+		// 创建一个隐藏的a标签
+		const link = document.createElement('a')
+		link.href = url
+		link.download = fileName
+		link.target = '_blank'
+
+		// 添加到文档中并触发点击
+		document.body.appendChild(link)
+		link.click()
+
+		// 清理
+		document.body.removeChild(link)
+	} catch (error) {
+		console.error('下载文件失败:', error)
+		ElMessage.error('下载文件失败，请稍后重试')
+	}
+}
+
+const InvalidTask = (row) => {
+	ElMessageBox.confirm('确定作废该任务吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(async () => {
+		const res = await request({
+			url: 'PlanTasks/InvalidPlanTaskItemByID/InvalidPlanTask',
+			method: 'get',
+			params: {
+				ID: row.id
+			}
+		})
+		if (res.code === 200) {
+			ElMessage.success('作废成功')
+			getPlanTasksList(queryParams.pageNum, queryParams.pageSize)
+		} else {
+			ElMessage.error(res.msg || '作废失败')
+		}
+	})
+}
+
+const taskDetailDialogVisible = ref(false);
+
+// 处理编辑任务
+const handleEditTask = async () => {
+	// 关闭详情对话框
+	taskDetailDialogVisible.value = false;
+
+	// 打开新建对话框
+	PlanTaskDialogVisible.value = true;
+	isEditMode.value = true; // 设置为编辑模式
+
+	// 填充表单数据
+	PlanTaskForm.plantaskname = selectedTask.value.taskName;
+	// 将显示的用户名转换回用户ID
+	const userIds = selectedTask.value.totalLeaderIds.split(',').map(name => {
+		const user = optionss.value.sql_all_user.find(u => u.dictLabel === name.trim());
+		return user ? user.dictValue : '';
+	}).filter(id => id); // 过滤掉空值
+	PlanTaskForm.participants = userIds;
+
+	PlanTaskForm.starttime = selectedTask.value.startTime;
+	PlanTaskForm.endtime = selectedTask.value.endTime;
+	PlanTaskForm.plantaskdescription = selectedTask.value.taskDescription;
+
+	// 如果有图片，设置图片列表
+	if (selectedTask.value.imageUrls) {
+		planTaskImages.value = selectedTask.value.imageUrls.split(',').map(url => ({
+			name: getFileNameFromUrl(url),
+			url: url,
+			isExisting: true
+		}));
+	}
+
+	// 设置阶段数据
+	stages.value = await Promise.all(selectedTaskPhases.value.map(async phaseData => {
+		const items = await Promise.all(phaseData.items.map(async item => {
+			// 如果执行人ID不为空且不为0，则加载该执行人的客户数据
+			let customerOptions = [];
+			if (item.executorId && item.executorId !== 0) {
+				customerOptions = await getsalePersonCustomerData(item.executorId.toString());
+			}
+
+			return {
+				name: item.itemName,
+				executor: item.executorId == 0 ? '' : item.executorId.toString(),
+				customer: item.relatedCustomers ? item.relatedCustomers.split(',') : [], // 将逗号分隔的字符串转换为数组
+				deadline: item.timePoint,
+				fileList: item.attachmentUrls ? item.attachmentUrls.split(',').map(url => ({
+					name: getFileNameFromUrl(url),
+					url: getRelativePathFromUrl(url),
+					isExisting: true
+				})) : [],
+				customerOptions: customerOptions // 保存客户选项到事项中
+			};
+		}));
+
+		return {
+			name: phaseData.phase.phaseName,
+			items: items
+		};
+	}));
+
+	// 设置总阶段数
+	PlanTaskForm.TotalStageNumber = stages.value.length;
+
+	// 如果有主任务附件，设置主任务附件列表
+	if (selectedTask.value.attachmentUrls) {
+		mainTaskFileList.value = selectedTask.value.attachmentUrls.split(',').map(url => ({
+			name: getFileNameFromUrl(url),
+			url: getRelativePathFromUrl(url),
+			isExisting: true
+		}));
+	}
+}
+
+// 检查当前用户是否是总负责人
+const isCurrentUserTotalLeader = (totalLeaderIds: string) => {
+	console.log(totalLeaderIds, 'totalLeaderIds', currentUser.value, 'currentUser.value')
+	if (!totalLeaderIds) return false;
+	const leaderIds = totalLeaderIds.split(',').map(id => id.trim());
+	const user = optionss.value.sql_all_user.find(u => u.dictValue === currentUser.value.toString());
+	return leaderIds.includes(user?.dictLabel || '');
+}
+
+// 修改获取相对路径的函数
+const getRelativePathFromUrl = (url: string) => {
+	if (!url) return '';
+	try {
+		const urlObj = new URL(url);
+		// 获取路径部分，去掉查询参数
+		const path = urlObj.pathname;
+		// 去掉域名部分，只保留 PlanTask/Attachments/... 部分
+		const relativePath = path.substring(path.indexOf('PlanTask/Attachments/'));
+		// 解码相对路径
+		return decodeURIComponent(relativePath);
+	} catch (error) {
+		// 如果URL解析失败，检查是否已经是相对路径
+		if (url.includes('PlanTask/Attachments/')) {
+			return decodeURIComponent(url);
+		}
+		console.error('解析URL失败:', error);
+		return url;
+	}
+}
+
+// 检查当前用户是否是事项执行人
+const isCurrentUserExecutor = (executorId: string | number) => {
+	return executorId?.toString() === currentUser.value?.toString();
+}
+
+// 添加新的响应式变量
+const completionDetailsDialogVisible = ref(false);
+const currentCompletionDetails = ref(null);
+
+// 修改显示完成详情的方法
+const showCompletionDetails = (row) => {
+	console.log('完成详情数据:', row); // 添加日志
+	// 从任务详情中找到对应的阶段和事项
+	const phase = selectedTaskPhases.value.find(phase =>
+		phase.items.some(item => item.id === row.id)
+	);
+	const item = phase?.items.find(item => item.id === row.id);
+
+	currentCompletionDetails.value = {
+		...row,
+		phaseName: phase?.phase.phaseName || '未知阶段',
+		itemName: item?.itemName || row.itemName,
+		executorId: item?.executorId || row.executorId,
+		relatedCustomers: item?.relatedCustomers || row.relatedCustomers,
+		timePoint: item?.timePoint || row.timePoint,
+		realTimePoint: row.realTimePoint,
+		remark: row.remark || '',
+		finishattachmentUrls: row.finishattachmentUrls || ''
+	};
+	completionDetailsDialogVisible.value = true;
+};
+
+// 修改获取用户相关的客户数据的函数
+const getsalePersonCustomerData = async (salesPersonID: string) => {
+	if (!salesPersonID || salesPersonID === '0') {
+		return [];
+	}
+
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetCustomerDataBysalesPersonID/GetSelectCustomerDataBysalesPersonID',
+			method: 'get',
+			params: {
+				salesPersonID: salesPersonID
+			}
+		})
+
+		if (response.code === 200) {
+			return response.data.map(item => ({
+				dictValue: item.dictValue,
+				dictLabel: item.dictLabel
+			}));
+		} else {
+			ElMessage.error(response.msg || '获取客户数据失败')
+			return [];
+		}
+	} catch (error) {
+		console.error('获取客户数据失败:', error)
+		ElMessage.error('获取客户数据失败')
+		return [];
+	}
+}
+
+// 修改事项执行人变更处理函数
+const handleExecutorChange = async (stageIndex: number, itemIndex: number, executorId: string) => {
+	// 清空当前事项的客户选择
+	stages.value[stageIndex].items[itemIndex].customer = '';
+	// 加载新的执行人的客户数据并保存到事项中
+	stages.value[stageIndex].items[itemIndex].customerOptions = await getsalePersonCustomerData(executorId);
+}
+
+// 定义返回数据的接口
+interface PlanTask {
+	id: number;
+	taskName: string;
+	taskDescription: string;
+	startTime: string;
+	endTime: string;
+	totalLeaderIds: string;
+	create_by: string;
+	create_time: string;
+	completionRate: number;
+	attachmentUrls?: string; // 添加附件URL字段
+}
+
+interface PaginationData {
+	pageSize: number;
+	pageIndex: number;
+	totalNum: number;
+	totalPage: number;
+	result: PlanTask[];
+	extra: Record<string, any>;
+}
+
+//分页组件
+const loading = ref(false);
+const total = ref(0);
+const queryParams = reactive({
+	pageNum: 1,
+	pageSize: 10,
+	queryText: ''
+});
+const dataPlanTasks = ref<PlanTask[]>([]);
+const handlePageChange = async (newPage: number) => {
+	queryParams.pageNum = newPage;
+	await getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
+};
+
+// 处理每页显示数量变化
+const handleSizeChange = async (size: number) => {
+	try {
+		queryParams.pageSize = size;
+		queryParams.pageNum = 1;  // 切换每页数量时重置为第一页
+		await getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
+	} catch (error) {
+		console.error('切换每页显示数量失败:', error);
+		ElMessage.error('操作失败，请稍后重试');
+	}
+};
+
+const Search_PlanTaskName = ref('');
+const Search_PlanTaskInfo = () => {
+	queryParams.pageNum = 1; // 搜索时重置到第一页
+	getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
+}
+
+// 获取计划任务列表
+const getPlanTasksList = async (pageNum: number, pageSize: number) => {
+	loading.value = true;
+	try {
+		const res = await request({
+			url: 'PlanTasks/GetPlanTasksList/GetList',
+			method: 'get',
+			params: {
+				pageNum: pageNum,
+				pageSize: pageSize,
+				TaskName: queryParams.queryText?.trim() || '',
+				PlanTaskStatus: PlanTaskStatusRadio.value
+			}
+		}) as unknown as { data: ApiResponse<PlanTask[]> };
+
+		if (res.code === 200) {
+			// 直接使用 res.data.data 作为数组
+			dataPlanTasks.value = res.data.result || [];
+			// 更新总数为数组长度
+			total.value = res.data.totalNum;
+
+			// 转换用户ID为用户名
+			dataPlanTasks.value.forEach(item => {
+				const userIds = item.totalLeaderIds.split(',');
+				const userNames = userIds.map(id => {
+					const user = optionss.value.sql_all_user.find(u => u.dictValue === id);
+					return user ? user.dictLabel : id;
+				});
+				item.totalLeaderIds = userNames.join(', ');
+			});
+		}
+	} catch (error) {
+		console.error('获取列表失败:', error);
+		ElMessage.error('获取列表失败，请稍后重试');
+	} finally {
+		loading.value = false;
+	}
+};
 
 // 添加获取阶段状态的函数
 const getPhaseStatus = (items: any[]) => {
@@ -771,6 +1236,72 @@ const getPhaseStatus = (items: any[]) => {
 		return 'warning';  // 部分完成 - 黄色
 	}
 };
+
+// 添加图片上传相关的响应式变量
+const planTaskImages = ref([])
+const dialogImageUrl = ref('')
+const dialogVisible = ref(false)
+const disabled = ref(false)
+const formData = { filePath: 'planTask' }
+
+// 处理图片变更
+const handleImageChange = (file, fileList) => {
+	// 先检查文件数量限制
+	if (fileList.length > 3) {
+		ElMessage({
+			type: 'info',
+			message: '最多上传3张图片!'
+		});
+		fileList.splice(3); // 保留前三个文件，移除其余文件
+		return;
+	}
+	// 如果是编辑模式，保留已存在的图片
+	if (isEditMode.value) {
+		const existingImages = planTaskImages.value.filter(img => img.isExisting);
+		planTaskImages.value = [...existingImages, ...fileList.filter(f => !f.isExisting)];
+	} else {
+		planTaskImages.value = fileList;
+	}
+}
+
+// 处理图片预览
+const handlePictureCardPreview = (file) => {
+	dialogImageUrl.value = file.url
+	dialogVisible.value = true
+}
+
+// 处理图片删除
+const handleImageRemove = (file) => {
+	ElMessageBox.confirm('确定删除该图片吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning',
+	}).then(() => {
+		if (isEditMode.value && file.isExisting) {
+			// 如果是编辑模式且是已存在的图片，标记为删除
+			file.isDeleted = true;
+			const index = planTaskImages.value.findIndex(f => f.uid === file.uid);
+			if (index !== -1) {
+				planTaskImages.value.splice(index, 1);
+			}
+		} else {
+			// 如果是新上传的图片，直接删除
+			const index = planTaskImages.value.findIndex(f => f.uid === file.uid);
+			if (index !== -1) {
+				planTaskImages.value.splice(index, 1);
+			}
+		}
+		ElMessage({
+			type: 'success',
+			message: '删除成功!',
+		});
+	}).catch(() => {
+		ElMessage({
+			type: 'info',
+			message: '已取消删除',
+		});
+	});
+}
 
 // 提交任务计划表单
 const SubmitPlanTaskForm = async (formEl: FormInstance | undefined, isDraft: boolean = false) => {
@@ -790,17 +1321,63 @@ const SubmitPlanTaskForm = async (formEl: FormInstance | undefined, isDraft: boo
 			})
 
 			try {
-				// 1. 处理主任务附件
+				// 1. 处理主任务图片
+				let mainTaskImageUrls = [];
+				if (isEditMode.value) {
+					// 编辑模式：保留未删除的已存在图片，上传新图片
+					const existingImages = planTaskImages.value
+						.filter(img => img.isExisting && !img.isDeleted)
+						.map(img => img.url);
+
+					const newImages = planTaskImages.value
+						.filter(img => !img.isExisting && !img.isDeleted)
+						.map(file => file.raw || file);
+
+					if (newImages.length > 0) {
+						const newUrls = await Promise.all(newImages.map(async (file) => {
+							const formData = new FormData();
+							formData.append('FileName', file.name);
+							formData.append('FileDir', 'PlanTask/Images');
+							formData.append('FileNameType', '1');
+							formData.append('File', file);
+							formData.append('storeType', '1');
+							const response = await request.postForm(UploadUrl, formData);
+							return response.data.url;
+						}));
+						mainTaskImageUrls = [...existingImages, ...newUrls];
+					} else {
+						mainTaskImageUrls = existingImages;
+					}
+				} else {
+					// 新建模式：上传所有图片
+					if (planTaskImages.value.length > 0) {
+						mainTaskImageUrls = await Promise.all(planTaskImages.value.map(async (file) => {
+							const formData = new FormData();
+							formData.append('FileName', file.name);
+							formData.append('FileDir', 'PlanTask/Images');
+							formData.append('FileNameType', '1');
+							formData.append('File', file.raw || file);
+							formData.append('storeType', '1');
+							const response = await request.postForm(UploadUrl, formData);
+							return response.data.url;
+						}));
+					}
+				}
+
+				// 2. 处理主任务附件
 				let mainTaskUrlsStr = '';
 				if (isEditMode.value) {
+					// 获取现有附件（已经是相对路径）
 					const existingUrls = mainTaskFileList.value
 						.filter(f => f.isExisting)
 						.map(f => f.url)
 						.join(',');
 
+					// 获取新上传的文件
 					const newFiles = mainTaskFileList.value.filter(file => !file.isExisting && !file.url);
 					if (newFiles.length > 0) {
 						const newUrls = await uploadFilesAndGetUrlString(newFiles);
+						// 确保新上传的文件也转换为相对路径
 						const newRelativeUrls = newUrls.split(',').map(url => getRelativePathFromUrl(url)).join(',');
 						mainTaskUrlsStr = existingUrls ? `${existingUrls},${newRelativeUrls}` : newRelativeUrls;
 					} else {
@@ -811,7 +1388,7 @@ const SubmitPlanTaskForm = async (formEl: FormInstance | undefined, isDraft: boo
 					mainTaskUrlsStr = uploadedUrls.split(',').map(url => getRelativePathFromUrl(url)).join(',');
 				}
 
-				// 2. 构建请求数据
+				// 3. 构建请求数据
 				const requestData = {
 					id: isEditMode.value ? selectedTask.value.id : 0,
 					taskName: PlanTaskForm.plantaskname?.trim() || '',
@@ -822,11 +1399,12 @@ const SubmitPlanTaskForm = async (formEl: FormInstance | undefined, isDraft: boo
 						? PlanTaskForm.participants.join(',')
 						: PlanTaskForm.participants || '',
 					attachmentUrls: mainTaskUrlsStr,
+					imageUrls: mainTaskImageUrls.join(','), // 添加图片URL
 					planTask_Phases: [],
 					isDraft: isDraft ? 1 : 0
 				};
 
-				// 3. 处理各阶段和事项
+				// 4. 处理各阶段和事项
 				for (let stageIndex = 0; stageIndex < stages.value.length; stageIndex++) {
 					const stage = stages.value[stageIndex]
 					const phaseData = {
@@ -840,22 +1418,23 @@ const SubmitPlanTaskForm = async (formEl: FormInstance | undefined, isDraft: boo
 						let itemUrlsStr = '';
 
 						if (isEditMode.value && selectedTaskPhases.value[stageIndex]?.items[itemIndex]) {
-							// 编辑模式：使用当前文件列表中的URL（相对路径）
+							// 获取现有附件（已经是相对路径）
 							const existingUrls = (item.fileList || [])
 								.filter(f => f.isExisting)
 								.map(f => f.url)
 								.join(',');
 
+							// 获取新上传的文件
 							const newFiles = (item.fileList || []).filter(file => !file.isExisting && !file.url);
 							if (newFiles.length > 0) {
 								const newUrls = await uploadFilesAndGetUrlString(newFiles);
+								// 确保新上传的文件也转换为相对路径
 								const newRelativeUrls = newUrls.split(',').map(url => getRelativePathFromUrl(url)).join(',');
 								itemUrlsStr = existingUrls ? `${existingUrls},${newRelativeUrls}` : newRelativeUrls;
 							} else {
 								itemUrlsStr = existingUrls;
 							}
 						} else {
-							// 新建模式：上传所有附件并转换为相对路径
 							const uploadedUrls = await uploadFilesAndGetUrlString(item.fileList || []);
 							itemUrlsStr = uploadedUrls.split(',').map(url => getRelativePathFromUrl(url)).join(',');
 						}
@@ -867,7 +1446,7 @@ const SubmitPlanTaskForm = async (formEl: FormInstance | undefined, isDraft: boo
 							timePoint: item.deadline ? new Date(item.deadline).toISOString() : null,
 							attachmentUrls: itemUrlsStr,
 							finishattachmentUrls: '',
-							relatedCustomers: item.customer || null
+							relatedCustomers: Array.isArray(item.customer) ? item.customer.join(',') : item.customer || null // 将数组转换为逗号分隔的字符串
 						})
 					}
 					requestData.planTask_Phases.push(phaseData)
@@ -1032,25 +1611,46 @@ const rules = reactive<FormRules<PlanTaskForm>>({
 		{ required: true, message: '请选择开始时间', trigger: 'change,blur' }
 	],
 	endtime: [
-		{ required: true, message: '请选择结束时间', trigger: 'change,blur' }
+		{ required: true, message: '请选择结束时间', trigger: 'change,blur' },
+		{
+			validator: (rule, value, callback) => {
+				if (value && PlanTaskForm.starttime && new Date(value) < new Date(PlanTaskForm.starttime)) {
+					callback(new Error('结束时间不能小于开始时间'));
+				} else {
+					callback();
+				}
+			},
+			trigger: 'change,blur'
+		}
 	],
 	plantaskdescription: [
 		{ required: true, message: '请输入计划/任务描述', trigger: 'change,blur' }
+	],
+	'stages.*.items.*.deadline': [
+		{
+			validator: (rule, value, callback) => {
+				if (!value) {
+					callback();
+					return;
+				}
+				if (!PlanTaskForm.endtime) {
+					callback();
+					return;
+				}
+
+				const deadlineDate = new Date(value);
+				const endTimeDate = new Date(PlanTaskForm.endtime);
+
+				if (deadlineDate > endTimeDate) {
+					callback(new Error('时间节点不能超过任务结束时间'));
+				} else {
+					callback();
+				}
+			},
+			trigger: 'change,blur'
+		}
 	]
-	// ... existing rules ...
-	// 'stages.*.name': [
-	// 	{ required: true, message: '请输入阶段名称', trigger: 'blur' }
-	// ],
-	// 'stages.*.items.*.name': [
-	// 	{ required: true, message: '请输入事项名称', trigger: 'blur' }
-	// ],
-	// 'stages.*.items.*.executor': [
-	// 	{ required: true, message: '请选择执行人', trigger: 'blur' }
-	// ],
-	// 'stages.*.items.*.deadline': [
-	// 	{ required: true, message: '请选择时间节点', trigger: 'blur' }
-	// ]
-})
+});
 
 //重置任务计划表单
 const ResetPlanTaskForm = (formEl: FormInstance | undefined) => {
@@ -1064,6 +1664,8 @@ const ResetPlanTaskForm = (formEl: FormInstance | undefined) => {
 	PlanTaskForm.plantaskdescription = ''
 	// 重置文件列表
 	mainTaskFileList.value = []
+	// 重置图片列表
+	planTaskImages.value = []
 	// 重置阶段为一个默认阶段
 	stages.value = [{
 		name: '',
@@ -1072,8 +1674,8 @@ const ResetPlanTaskForm = (formEl: FormInstance | undefined) => {
 			executor: '',
 			customer: '',
 			deadline: '',
-			fileList: [], // 重置文件列表
-			customerOptions: [] // 重置客户选项
+			fileList: [],
+			customerOptions: []
 		}]
 	}];
 }
@@ -1098,280 +1700,51 @@ proxy.getDicts(dictParams).then((response) => {
 })
 /*动态下拉框end*/
 
-// 修改获取用户相关的客户数据的函数
-const getsalePersonCustomerData = async (salesPersonID: string) => {
-	if (!salesPersonID || salesPersonID === '0') {
-		return [];
+// 在 script setup 部分添加新的响应式变量和函数
+const taskImagePreviewVisible = ref(false)
+const previewImageUrl = ref('')
+
+// 添加任务图片预览处理函数
+const handleTaskImagePreview = (url) => {
+	previewImageUrl.value = url
+	taskImagePreviewVisible.value = true
+}
+
+// 添加时间验证函数
+const validateEndTime = (value) => {
+	if (!value || !PlanTaskForm.starttime) return true;
+	const endTime = new Date(value);
+	const startTime = new Date(PlanTaskForm.starttime);
+	if (endTime < startTime) {
+		ElMessage.warning('结束时间不能小于开始时间');
+		return false;
 	}
-
-	try {
-		const response = await request({
-			url: 'CustomerInfoMation/GetCustomerDataBysalesPersonID/GetSelectCustomerDataBysalesPersonID',
-			method: 'get',
-			params: {
-				salesPersonID: salesPersonID
-			}
-		})
-
-		if (response.code === 200) {
-			return response.data.map(item => ({
-				dictValue: item.dictValue,
-				dictLabel: item.dictLabel
-			}));
-		} else {
-			ElMessage.error(response.msg || '获取客户数据失败')
-			return [];
-		}
-	} catch (error) {
-		console.error('获取客户数据失败:', error)
-		ElMessage.error('获取客户数据失败')
-		return [];
-	}
-}
-
-// 修改事项执行人变更处理函数
-const handleExecutorChange = async (stageIndex: number, itemIndex: number, executorId: string) => {
-	// 清空当前事项的客户选择
-	stages.value[stageIndex].items[itemIndex].customer = '';
-	// 加载新的执行人的客户数据并保存到事项中
-	stages.value[stageIndex].items[itemIndex].customerOptions = await getsalePersonCustomerData(executorId);
-}
-
-// 定义返回数据的接口
-interface PlanTask {
-	id: number;
-	taskName: string;
-	taskDescription: string;
-	startTime: string;
-	endTime: string;
-	totalLeaderIds: string;
-	create_by: string;
-	create_time: string;
-	completionRate: number;
-	attachmentUrls?: string; // 添加附件URL字段
-}
-
-interface PaginationData {
-	pageSize: number;
-	pageIndex: number;
-	totalNum: number;
-	totalPage: number;
-	result: PlanTask[];
-	extra: Record<string, any>;
-}
-
-//分页组件
-const loading = ref(false);
-const total = ref(0);
-const queryParams = reactive({
-	pageNum: 1,
-	pageSize: 10,
-	queryText: ''
-});
-const dataPlanTasks = ref<PlanTask[]>([]);
-const handlePageChange = async (newPage: number) => {
-	queryParams.pageNum = newPage;
-	await getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
+	return true;
 };
 
-// 处理每页显示数量变化
-const handleSizeChange = async (size: number) => {
-	try {
-		queryParams.pageSize = size;
-		queryParams.pageNum = 1;  // 切换每页数量时重置为第一页
-		await getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
-	} catch (error) {
-		console.error('切换每页显示数量失败:', error);
-		ElMessage.error('操作失败，请稍后重试');
+const validateItemDeadline = (value, stageIndex, itemIndex) => {
+	if (!value || !PlanTaskForm.endtime) return true;
+	const deadline = new Date(value);
+	const endTime = new Date(PlanTaskForm.endtime);
+	if (deadline > endTime) {
+		ElMessage.warning(`第${stageIndex + 1}阶段第${itemIndex + 1}个事项的时间节点不能超过任务结束时间`);
+		return false;
+	}
+	return true;
+};
+
+// 修改事项时间节点变更处理函数
+const handleItemDeadlineChange = (value, stageIndex, itemIndex) => {
+	if (!validateItemDeadline(value, stageIndex, itemIndex)) {
+		// 如果验证失败，清空时间节点
+		stages.value[stageIndex].items[itemIndex].deadline = '';
 	}
 };
 
-const Search_PlanTaskName = ref('');
-const Search_PlanTaskInfo = () => {
-	queryParams.pageNum = 1; // 搜索时重置到第一页
+// 监听状态切换
+watch(PlanTaskStatusRadio, (newValue) => {
 	getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
-}
-
-// 获取计划任务列表
-const getPlanTasksList = async (pageNum: number, pageSize: number) => {
-	loading.value = true;
-	try {
-		const res = await request({
-			url: 'PlanTasks/GetPlanTasksList/GetList',
-			method: 'get',
-			params: {
-				pageNum: pageNum,
-				pageSize: pageSize,
-				TaskName: queryParams.queryText?.trim() || ''
-			}
-		}) as unknown as { data: ApiResponse<PlanTask[]> };
-
-		if (res.code === 200) {
-			// 直接使用 res.data.data 作为数组
-			dataPlanTasks.value = res.data.result || [];
-			// 更新总数为数组长度
-			total.value = res.data.totalNum;
-
-			// 转换用户ID为用户名
-			dataPlanTasks.value.forEach(item => {
-				const userIds = item.totalLeaderIds.split(',');
-				const userNames = userIds.map(id => {
-					const user = optionss.value.sql_all_user.find(u => u.dictValue === id);
-					return user ? user.dictLabel : id;
-				});
-				item.totalLeaderIds = userNames.join(', ');
-			});
-		}
-	} catch (error) {
-		console.error('获取列表失败:', error);
-		ElMessage.error('获取列表失败，请稍后重试');
-	} finally {
-		loading.value = false;
-	}
-};
-
-// 显示附件对话框
-const showAttachmentsDialog = (item) => {
-	if (item.attachmentUrls) {
-		// 将逗号分隔的URL字符串转换为数组
-		currentAttachments.value = item.attachmentUrls.split(',').filter(url => url.trim() !== '')
-		attachmentsDialogVisible.value = true
-	} else {
-		ElMessage.info('该任务没有附件')
-	}
-}
-
-// 修改下载文件函数
-const downloadFile = (url: string, fileName: string) => {
-	try {
-		// 创建一个隐藏的a标签
-		const link = document.createElement('a')
-		link.href = url  // 直接使用原始URL
-		link.download = fileName
-		link.target = '_blank'
-
-		// 添加到文档中并触发点击
-		document.body.appendChild(link)
-		link.click()
-
-		// 清理
-		document.body.removeChild(link)
-	} catch (error) {
-		console.error('下载文件失败:', error)
-		ElMessage.error('下载文件失败，请稍后重试')
-	}
-}
-
-const InvalidTask = (row) => {
-	ElMessageBox.confirm('确定作废该任务吗？', '提示', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'warning'
-	}).then(async () => {
-		const res = await request({
-			url: 'PlanTasks/InvalidPlanTaskItemByID/InvalidPlanTask',
-			method: 'get',
-			params: {
-				ID: row.id
-			}
-		})
-		if (res.code === 200) {
-			ElMessage.success('作废成功')
-			getPlanTasksList(queryParams.pageNum, queryParams.pageSize)
-		} else {
-			ElMessage.error(res.msg || '作废失败')
-		}
-	})
-}
-
-const taskDetailDialogVisible = ref(false);
-
-// 处理编辑任务
-const handleEditTask = async () => {
-	// 关闭详情对话框
-	taskDetailDialogVisible.value = false;
-
-	// 打开新建对话框
-	PlanTaskDialogVisible.value = true;
-	isEditMode.value = true; // 设置为编辑模式
-
-	// 填充表单数据
-	PlanTaskForm.plantaskname = selectedTask.value.taskName;
-	// 将显示的用户名转换回用户ID
-	const userIds = selectedTask.value.totalLeaderIds.split(',').map(name => {
-		const user = optionss.value.sql_all_user.find(u => u.dictLabel === name.trim());
-		return user ? user.dictValue : '';
-	}).filter(id => id); // 过滤掉空值
-	PlanTaskForm.participants = userIds;
-
-	PlanTaskForm.starttime = selectedTask.value.startTime;
-	PlanTaskForm.endtime = selectedTask.value.endTime;
-	PlanTaskForm.plantaskdescription = selectedTask.value.taskDescription;
-
-	// 设置阶段数据
-	stages.value = await Promise.all(selectedTaskPhases.value.map(async phaseData => {
-		const items = await Promise.all(phaseData.items.map(async item => {
-			// 如果执行人ID不为空且不为0，则加载该执行人的客户数据
-			let customerOptions = [];
-			if (item.executorId && item.executorId !== 0) {
-				customerOptions = await getsalePersonCustomerData(item.executorId.toString());
-			}
-
-			return {
-				name: item.itemName,
-				executor: item.executorId == 0 ? '' : item.executorId.toString(),
-				customer: item.relatedCustomers == 0 ? '' : item.relatedCustomers.toString(),
-				deadline: item.timePoint,
-				fileList: item.attachmentUrls ? item.attachmentUrls.split(',').map(url => ({
-					name: getFileNameFromUrl(url),
-					url: url
-				})) : [],
-				customerOptions: customerOptions // 保存客户选项到事项中
-			};
-		}));
-
-		return {
-			name: phaseData.phase.phaseName,
-			items: items
-		};
-	}));
-
-	// 设置总阶段数
-	PlanTaskForm.TotalStageNumber = stages.value.length;
-
-	// 如果有主任务附件，设置主任务附件列表
-	if (selectedTask.value.attachmentUrls) {
-		mainTaskFileList.value = selectedTask.value.attachmentUrls.split(',').map(url => ({
-			name: getFileNameFromUrl(url),
-			url: url
-		}));
-	}
-}
-
-// 检查当前用户是否是总负责人
-const isCurrentUserTotalLeader = (totalLeaderIds: string) => {
-	console.log(totalLeaderIds, 'totalLeaderIds', currentUser.value, 'currentUser.value')
-	if (!totalLeaderIds) return false;
-	const leaderIds = totalLeaderIds.split(',').map(id => id.trim());
-	const user = optionss.value.sql_all_user.find(u => u.dictValue === currentUser.value.toString());
-	return leaderIds.includes(user?.dictLabel || '');
-}
-
-// 添加处理OSS URL的函数
-const getRelativePathFromUrl = (url: string) => {
-	if (!url) return '';
-	try {
-		const urlObj = new URL(url);
-		// 获取路径部分，去掉查询参数
-		const path = urlObj.pathname;
-		// 去掉域名部分，只保留 PlanTask/Attachments/... 部分
-		const relativePath = path.substring(path.indexOf('PlanTask/Attachments/'));
-		return relativePath;
-	} catch (error) {
-		console.error('解析URL失败:', error);
-		return url;
-	}
-}
+});
 </script>
 
 <style scoped>
@@ -1505,5 +1878,66 @@ const getRelativePathFromUrl = (url: string) => {
 	flex: 1;
 	margin-right: 10px;
 	word-break: break-all;
+}
+
+.task-images {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 10px;
+}
+
+.image-item {
+	width: 120px;
+	height: 120px;
+	border-radius: 4px;
+	overflow: hidden;
+	cursor: pointer;
+	transition: transform 0.3s;
+}
+
+.image-item:hover {
+	transform: scale(1.05);
+}
+
+.preview-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.watermark {
+	position: fixed;
+	/* 改为 fixed 定位 */
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	/* 居中定位 */
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 9999;
+	/* 提高 z-index 确保在最上层 */
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.watermark-text {
+	font-size: 120px;
+	color: rgba(0, 0, 0, 0.1);
+	transform: rotate(-45deg);
+	white-space: nowrap;
+	user-select: none;
+	position: relative;
+	/* 添加相对定位 */
+	z-index: 9999;
+	/* 确保文字也在最上层 */
+}
+
+/* 添加一个相对定位的容器来确保水印的正确定位 */
+.el-dialog {
+	position: relative;
+	overflow: hidden;
 }
 </style>
