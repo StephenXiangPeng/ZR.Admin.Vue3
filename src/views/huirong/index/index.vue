@@ -1826,17 +1826,52 @@
         <!-- 其他需要显示的列 -->
       </el-table>
     </el-dialog>
-    <el-dialog v-model="pendingEmailDialogVisible" title="待处理邮件" :close-on-click-modal="false" class="custom-dialog"
-      width="700px">
-      <el-table :data="pendingEmailList" :height="400" style="width: 100%">
-        <el-table-column prop="customerName" label="客户名称" width="200"></el-table-column>
-        <el-table-column prop="emailsubject" label="邮件标题" width="200"></el-table-column>
-        <el-table-column prop="create_time" label="时间" width="250">
-          <template #default="scope">
-            {{ scope.row.createTime }}
+    <el-dialog v-model="pendingEmailDialogVisible" title="待处理工作任务" :close-on-click-modal="false" class="custom-dialog"
+      width="900px">
+      <el-tabs type="border-card" class="demo-tabs">
+        <el-tab-pane>
+          <template #label>
+            <span class="custom-tabs-label">
+              <el-icon>
+                <calendar />
+              </el-icon>
+              <span>计划任务</span>
+            </span>
           </template>
-        </el-table-column>
-      </el-table>
+          <el-table :data="pendingTaskPlanItemList" :height="400" style="width: 100%" @row-dblclick="handleRowDblClick">
+            <el-table-column prop="taskId" label="任务ID" width="200" v-if="false"></el-table-column>
+            <el-table-column prop="taskName" label="任务名称" width="200"></el-table-column>
+            <el-table-column prop="phaseName" label="阶段名称" width="200"></el-table-column>
+            <el-table-column prop="itemId" label="事项ID" width="200" v-if="false"></el-table-column>
+            <el-table-column prop="itemName" label="事项名称" width="200"></el-table-column>
+            <el-table-column prop="timePoint" label="截止时间" width="200">
+              <template #default="scope">
+                {{ scope.row.timePoint }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane>
+          <template #label>
+            <span class="custom-tabs-label">
+              <el-icon>
+                <message />
+              </el-icon>
+              <span>邮件</span>
+            </span>
+          </template>
+          <el-table :data="pendingEmailList" :height="400" style="width: 100%">
+            <el-table-column prop="customerName" label="客户名称" width="200"></el-table-column>
+            <el-table-column prop="emailsubject" label="邮件标题" width="200"></el-table-column>
+            <el-table-column prop="create_time" label="时间" width="250">
+              <template #default="scope">
+                {{ scope.row.createTime }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
+
     </el-dialog>
     <el-dialog v-model="overdueEmailDialogVisible" title="超时未处理邮件" :close-on-click-modal="false" class="custom-dialog"
       width="700px">
@@ -4103,7 +4138,27 @@ const overdueEmailCount = ref(0)
 const pendingEmailDialogVisible = ref(false)
 const overdueEmailDialogVisible = ref(false)
 const userStore = useUserStore()
-
+const pendingTaskPlanItemList = ref([])
+// 获取代处理的计划任务列表
+const GetPlantTaskItemList = async () => {
+  const res = await request({
+    url: 'PlanTasks/GetPlanTask_Items/GetPlanTask_Items',
+    method: 'GET'
+  })
+  if (res.code === 200) {
+    pendingEmailCount.value += res.data.length;
+    res.data.forEach(item => {
+      pendingTaskPlanItemList.value.push({
+        taskId: item.taskId,
+        itemId: item.itemId,
+        taskName: item.taskName,
+        phaseName: item.phaseName,
+        itemName: item.itemName,
+        timePoint: item.timePoint
+      })
+    })
+  }
+}
 // 获取24小时内需要回复的邮件数量
 const getWithin24hoursEmailCount = async () => {
   try {
@@ -4115,7 +4170,7 @@ const getWithin24hoursEmailCount = async () => {
       }
     })
     if (response.code === 200) {
-      pendingEmailCount.value = response.data.length
+      pendingEmailCount.value += response.data.length
       pendingEmailList.value = response.data
     } else {
       console.error('获取待处理邮件数量失败:', response.msg)
@@ -4158,6 +4213,7 @@ onMounted(async () => {
   });
   try {
     await Promise.all([
+      GetPlantTaskItemList(),
       getWithin24hoursEmailCount(),
       getOutside24hoursEmailCount(),
       fetchTaskReminderData(),
@@ -4219,6 +4275,17 @@ const handleOverdueEmailRowDblClick = (row) => {
     path: '/email',
     query: {
       id: row.id
+    }
+  })
+}
+
+// 处理行双击事件
+const handleRowDblClick = (row) => {
+  // 打开标签页到 Plantask.vue
+  router.push({
+    path: '/plantask',
+    query: {
+      taskId: row.taskId
     }
   })
 }

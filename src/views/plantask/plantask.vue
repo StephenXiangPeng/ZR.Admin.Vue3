@@ -260,6 +260,8 @@
 		<el-divider></el-divider>
 		<!-- 任务列表 -->
 		<el-table v-loading="loading" :data="dataPlanTasks" style="width: 100%" border>
+			<el-table-column prop="id" label="任务ID" min-width="120" v-if="false">
+			</el-table-column>
 			<el-table-column prop="create_time" label="创建日期" min-width="120">
 				<template #default="{ row }">
 					<span>{{ formatDate(row.create_time) }}</span>
@@ -554,7 +556,8 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { reactive, ref, getCurrentInstance, watch } from 'vue'
+import { reactive, ref, getCurrentInstance, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElMessage, DrawerProps, ElDrawer,
 	ElMessageBox, ElTimeline, ElTimelineItem, FormInstance, FormRules, ElLoading, ElRadioGroup, ElRadioButton
@@ -1745,6 +1748,22 @@ const handleItemDeadlineChange = (value, stageIndex, itemIndex) => {
 watch(PlanTaskStatusRadio, (newValue) => {
 	getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
 });
+
+const route = useRoute()
+
+// 在组件挂载时检查是否有taskId参数
+onMounted(async () => {
+	const taskId = route.query.taskId
+	if (taskId) {
+		// 先获取任务列表
+		await getPlanTasksList(queryParams.pageNum, queryParams.pageSize)
+		// 查找对应的任务
+		const task = dataPlanTasks.value.find(t => t.id.toString() === taskId.toString())
+		if (task) {
+			showTaskDetail(task)
+		}
+	}
+})
 </script>
 
 <style scoped>
