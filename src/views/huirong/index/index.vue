@@ -1870,8 +1870,27 @@
             </el-table-column>
           </el-table>
         </el-tab-pane>
+        <el-tab-pane v-if="userStore.userInfo && userStore.userInfo.deptId === 210">
+          <template #label>
+            <span class="custom-tabs-label">
+              <el-icon>
+                <document />
+              </el-icon>
+              <span>询价需求</span>
+            </span>
+          </template>
+          <el-table :data="inquiryList" :height="400" style="width: 100%" @row-dblclick="handleInquiryRowDblClick">
+            <el-table-column prop="inquiryNumber" label="询价单号" width="120"></el-table-column>
+            <el-table-column prop="productName" label="产品名称" width="180"></el-table-column>
+            <!-- <el-table-column prop="quoteQuantity" label="报价数量" width="120"></el-table-column> -->
+            <el-table-column prop="create_time" label="创建时间" width="180">
+              <template #default="scope">
+                {{ scope.row.create_time }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
       </el-tabs>
-
     </el-dialog>
     <el-dialog v-model="overdueEmailDialogVisible" title="超时未处理邮件" :close-on-click-modal="false" class="custom-dialog"
       width="700px">
@@ -4139,6 +4158,7 @@ const pendingEmailDialogVisible = ref(false)
 const overdueEmailDialogVisible = ref(false)
 const userStore = useUserStore()
 const pendingTaskPlanItemList = ref([])
+console.log(userStore.userInfo);
 // 获取代处理的计划任务列表
 const GetPlantTaskItemList = async () => {
   const res = await request({
@@ -4289,6 +4309,48 @@ const handleRowDblClick = (row) => {
     }
   })
 }
+
+// 询价列表数据
+const inquiryList = ref([])
+
+// 获取询价列表
+const getInquiryList = async () => {
+  try {
+    const res = await request({
+      url: 'Inquiry/GetInquiryProductListByBuyer/GetInquiryProductList',
+      method: 'get',
+      params: {
+        PageNum: 1,
+        PageSize: 10,
+        Status: 0
+      }
+    })
+    if (res.code === 200) {
+      inquiryList.value = res.data.result
+      pendingEmailCount.value += res.data.result.length
+    }
+  } catch (error) {
+    console.error('获取询价列表失败', error)
+  }
+}
+
+// 处理询价需求表格的双击事件
+const handleInquiryRowDblClick = (row) => {
+  // 使用路由导航到requestquote页面，并通过query参数传递数据
+  router.push({
+    path: '/purchase/requestquote',
+    query: {
+      inquiryId: row.id,
+      fromDashboard: 'true'
+    }
+  })
+}
+
+onMounted(() => {
+  if (userStore.userInfo && userStore.userInfo.deptId === 210) {
+    getInquiryList()
+  }
+})
 
 </script>
 
