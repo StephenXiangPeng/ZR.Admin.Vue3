@@ -103,6 +103,7 @@
           ]">
             {{ data.day.split('-').slice(1).join('-') }}
             <span v-if="isToday(data.day)" class="today-icon">今日</span>
+            <span v-if="getDateTasks(data.day).length > 0" class="task-count">{{ getDateTasks(data.day).length }}</span>
           </div>
 
           <!-- 任务列表部分 -->
@@ -4602,8 +4603,17 @@ onMounted(() => {
 
 /* 任务数量样式 */
 .task-count {
-  text-align: right;
-  font-weight: bold;
+  display: inline-block;
+  margin-left: 5px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  background-color: #E6A23C;
+  color: white;
+  font-size: 12px;
+  text-align: center;
+  border-radius: 9px;
+  padding: 0 4px;
 }
 
 /* 有任务时的样式 */

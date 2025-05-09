@@ -23,9 +23,6 @@
 			<el-date-picker v-model="SearchRealQuotationDate" type="date" placeholder="请选择报价日期止" style="width: 15%" />
 		</div>
 		<div style="width: 100%; margin-top: 5px;">
-			<el-checkbox v-model="showAllVersions" @change="refreshQuotationList">显示所有版本</el-checkbox>
-		</div>
-		<div style="width: 100%; margin-top: 5px;">
 		</div>
 		<div style="width: 100%; margin-top: 20px; text-align: right;">
 			<el-row class="mb-4">
@@ -38,19 +35,10 @@
 		</div>
 		<el-divider></el-divider>
 		<el-table :data="quotationData" stripe>
-			<!-- <el-table-column prop="quotationNum" label="报价单号" :width="150">
+			<el-table-column prop="quotationNum" label="报价单号" :width="150">
 				<template #default="scope">
 					<span>{{ scope.row.quotationNum }}</span>
 					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-				</template>
-</el-table-column> -->
-			<el-table-column prop="quotationNum" label="报价单号" :width="200">
-				<template #default="scope">
-					<span>{{ scope.row.quotationNum }}</span>
-					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-					<el-tag v-if="scope.row.version > 1" type="success" style="margin-left: 5px;" size="small">
-						{{ getVersionText(scope.row.version) }}
-					</el-tag>
 				</template>
 			</el-table-column>
 			<el-table-column prop="inquiryDate" label="询价日期" :width="180" :formatter="formatDate" />
@@ -81,16 +69,7 @@
 
 		<el-dialog v-model="quotationDialog" title="创建报价单" :close-on-click-modal=false style="width: 70%;"
 			@close="quotationDialogHandClose">
-			<div v-if="quotationDialogform.version > 1" style="margin-bottom: 15px;">
-				<el-alert type="info" :closable="false">
-					<template #default>
-						<div>
-							<span>基础报价单号: {{ quotationDialogform.baseQuotationNum }}</span>
-							<el-button type="text" @click="showHistoryVersions">查看历史版本</el-button>
-						</div>
-					</template>
-				</el-alert>
-			</div>
+
 
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
@@ -581,10 +560,6 @@
 						@click="EditSaveQuotation(quotationDialogformRef)">
 						提交
 					</el-button>
-					<!-- 新增创建修订版按钮 -->
-					<el-button type="info" v-show="showCreateRevisionBtn" @click="CreateRevision">
-						创建{{ getNextVersionText() }}
-					</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -610,36 +585,6 @@
 					<el-button type="danger" @click="SearchProcutDialog = false">
 						关闭
 					</el-button>
-				</span>
-			</template>
-		</el-dialog>
-		<!-- 历史版本对话框 -->
-		<el-dialog v-model="historyVersionsDialog" title="历史版本" width="70%">
-			<el-table :data="versionHistory" stripe>
-				<el-table-column prop="quotationNum" label="报价单号" :width="180">
-					<template #default="scope">
-						<span>{{ scope.row.quotationNum }}</span>
-						<el-tag v-if="scope.row.isLatestVersion" type="success" size="small">最新</el-tag>
-					</template>
-				</el-table-column>
-				<el-table-column label="报价次数" :width="120">
-					<template #default="scope">
-						{{ getVersionText(scope.row.version) }}
-					</template>
-				</el-table-column>
-				<el-table-column prop="realQuotationDate" label="报价日期" :width="150" :formatter="formatDate" />
-				<el-table-column prop="createBy" label="创建人" :width="120" />
-				<el-table-column prop="totalValueOfGoods" label="货值合计" :width="120" />
-				<el-table-column prop="profitAmount" label="利润金额" :width="120" />
-				<el-table-column fixed="right" label="操作" :width="200">
-					<template #default="scope">
-						<el-button link type="primary" size="small" @click="viewVersionDetail(scope.row)">查看</el-button>
-					</template>
-				</el-table-column>
-			</el-table>
-			<template #footer>
-				<span class="dialog-footer">
-					<el-button type="info" @click="historyVersionsDialog = false">关闭</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -800,14 +745,8 @@ interface quotationDialogform {
 	//文件杂费
 	DocumentationFees: number,
 	//是否草稿
-	isDraft: number,
-	// 新增字段
-	//原始报价单号
-	baseQuotationNum: string,
-	//版本
-	version: number,
-	//是否最新版本
-	isLatestVersion: boolean
+	isDraft: number
+
 }
 const quotationDialogformRef = ref<FormInstance>()
 //报价单from参数
@@ -909,14 +848,7 @@ const quotationDialogform = reactive<quotationDialogform>({
 	//文件杂费
 	DocumentationFees: null,
 	//是否草稿
-	isDraft: null,
-	// 新增字段
-	//原始报价单号
-	baseQuotationNum: '',
-	//版本
-	version: 1,
-	//是否最新版本
-	isLatestVersion: true
+	isDraft: null
 })
 
 const quotationDialogformRules = reactive<FormRules<quotationDialogform>>({
@@ -1504,10 +1436,7 @@ const addQuotationRequest = reactive({
 	quotationProductDetailsList: [],
 	bankfee: null,
 	documentationfees: null,
-	isDraft: null,
-	baseQuotationNum: '',
-	version: 1,
-	isLatestVersion: true
+	isDraft: null
 });
 const AddQuotation = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
@@ -1562,10 +1491,6 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 			addQuotationRequest.bankfee = quotationDialogform.BankFee;
 			addQuotationRequest.documentationfees = quotationDialogform.DocumentationFees;
 			addQuotationRequest.quotationProductDetailsList = [];
-			// 添加版本相关字段
-			addQuotationRequest.baseQuotationNum = quotationDialogform.baseQuotationNum || quotationDialogform.quotationnum;
-			addQuotationRequest.version = quotationDialogform.version || 1;
-			addQuotationRequest.isLatestVersion = quotationDialogform.isLatestVersion !== false;
 			productData.value.forEach(item => {
 				addQuotationRequest.quotationProductDetailsList.push({
 					productNum: item.productNum,
@@ -1624,7 +1549,6 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 					isSaveBtnShow.value = false;
 					isReviewBtnShow.value = false;
 					showEditBtn.value = false;
-					showSaveDraftBtn.value = false;
 					GetQuotationList(currentPage.value, pageSize.value);
 				} else {
 					console.error('新增报价单出错');
@@ -1721,10 +1645,6 @@ const SaveDraft = async () => {
 	addQuotationRequest.bankfee = quotationDialogform.BankFee || 0;
 	addQuotationRequest.documentationfees = quotationDialogform.DocumentationFees || 0;
 	addQuotationRequest.isDraft = 1; // 设置为草稿状态
-	// 添加版本相关字段
-	addQuotationRequest.baseQuotationNum = quotationDialogform.baseQuotationNum || quotationDialogform.quotationnum;
-	addQuotationRequest.version = quotationDialogform.version || 1;
-	addQuotationRequest.isLatestVersion = quotationDialogform.isLatestVersion !== false;
 	productData.value.forEach((item) => {
 		addQuotationRequest.quotationProductDetailsList.push({
 			id: item.id || 0,
@@ -1854,8 +1774,7 @@ function GetQuotationList(start, end) {
 				quotationnum: SearchQuotationNum.value,
 				customerid: SechaerCustomerSelect.value,
 				inquiryDate: SearchInquiryDate.value,
-				realQuotationDate: SearchRealQuotationDate.value,
-				showAllVersions: showAllVersions.value // 添加是否显示所有版本参数
+				realQuotationDate: SearchRealQuotationDate.value
 			}
 		}).then(response => {
 			if (response.data.result.length > 0) {
@@ -1953,13 +1872,6 @@ const ChcekDetails = async (row) => {
 	quotationDialogform.Totalprofitmargin = row.totalprofitmargin;
 	quotationDialogform.BankFee = row.bankFee;
 	quotationDialogform.DocumentationFees = row.documentationFees;
-	// 设置版本相关字段
-	quotationDialogform.baseQuotationNum = row.baseQuotationNum || row.quotationNum;
-	quotationDialogform.version = row.version || 1;
-	quotationDialogform.isLatestVersion = row.isLatestVersion !== false;
-
-	// 只有非草稿且是最新版本的报价单才显示创建次报价按钮
-	showCreateRevisionBtn.value = row.isDraft === 0 && row.isLatestVersion !== false;
 	GetQuotationDetailsList(row.id);
 	quotationDialog.value = true;
 }
@@ -2094,10 +2006,6 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 			addQuotationRequest.totalprofitmargin = quotationDialogform.Totalprofitmargin;
 			addQuotationRequest.bankfee = quotationDialogform.BankFee;
 			addQuotationRequest.documentationfees = quotationDialogform.DocumentationFees;
-			// 添加版本相关字段
-			addQuotationRequest.baseQuotationNum = quotationDialogform.baseQuotationNum || quotationDialogform.quotationnum;
-			addQuotationRequest.version = quotationDialogform.version || 1;
-			addQuotationRequest.isLatestVersion = quotationDialogform.isLatestVersion !== false;
 			productData.value.forEach((item) => {
 				addQuotationRequest.quotationProductDetailsList.push({
 					id: item.id,
@@ -2153,7 +2061,6 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 					showEditSaveBtn.value = false;
 					showEditBtn.value = false;
 					isReviewBtnShow.value = false;
-					showSaveDraftBtn.value = false;
 					GetQuotationList(currentPage.value, pageSize.value);
 				} else {
 					console.error('编辑报价单出错');
@@ -2231,201 +2138,5 @@ const formatDate = (row, column) => {
 		return date.replace(/^(\d{4}-\d{2}-\d{2}).*$/, '$1');
 	}
 	return '';
-};
-
-// 新增状态变量
-const showAllVersions = ref(false); // 是否显示所有版本
-const showCreateRevisionBtn = ref(false); // 是否显示创建次报价按钮
-const historyVersionsDialog = ref(false); // 历史版本对话框
-const versionHistory = ref([]); // 历史版本列表
-
-// 获取版本文字显示
-const getVersionText = (version) => {
-	if (version === 1) return "一次报价";
-	if (version === 2) return "二次报价";
-	if (version === 3) return "三次报价";
-	if (version === 4) return "四次报价";
-	if (version === 5) return "五次报价";
-	if (version === 6) return "六次报价";
-	if (version === 7) return "七次报价";
-	if (version === 8) return "八次报价";
-	if (version === 9) return "九次报价";
-	if (version === 10) return "十次报价";
-	return `${version}次报价`;
-};
-
-// 获取下一个版本文字
-const getNextVersionText = () => {
-	const nextVersion = (quotationDialogform.version || 0) + 1;
-	return getVersionText(nextVersion);
-};
-
-// 获取对话框标题
-const getDialogTitle = () => {
-	if (!quotationDialogform.version || quotationDialogform.version <= 1) {
-		return "报价单详情 (一次报价)";
-	}
-	return `报价单详情 (${getVersionText(quotationDialogform.version)})`;
-};
-
-// 刷新报价单列表
-const refreshQuotationList = () => {
-	GetQuotationList(currentPage.value, pageSize.value);
-};
-
-// 查看历史版本
-const showHistoryVersions = () => {
-	if (!quotationDialogform.baseQuotationNum) return;
-
-	const baseNum = quotationDialogform.baseQuotationNum || quotationDialogform.quotationnum;
-
-	request({
-		url: 'Quotation/GetVersionHistory/GetVersionHistory',
-		method: 'GET',
-		params: {
-			baseQuotationNum: baseNum
-		}
-	}).then(response => {
-		if (response.code == 200) {
-			versionHistory.value = response.data;
-			versionHistory.value.forEach(item => {
-				item.createBy = item.createBy = optionss.value.sql_all_user.find(sql_all_user => sql_all_user.dictValue === item.createBy)?.dictLabel;;
-			});
-			historyVersionsDialog.value = true;
-		} else {
-			ElMessage.error("获取历史版本失败");
-		}
-	}).catch(error => {
-		console.error(error);
-		ElMessage.error("获取历史版本失败");
-	});
-};
-
-// 查看特定版本的详情
-const viewVersionDetail = (version) => {
-	historyVersionsDialog.value = false;
-	ChcekDetails(version);
-};
-
-// 创建次报价
-const CreateRevision = () => {
-	ElMessageBox.confirm(`确定要创建${getNextVersionText()}吗?`, '提示', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'info'
-	}).then(() => {
-		// 获取修订版报价单号
-		request({
-			url: 'Quotation/GetRevisionQuotationNum/GetRevisionQuotationNum',
-			method: 'GET',
-			params: {
-				baseQuotationNum: quotationDialogform.baseQuotationNum || quotationDialogform.quotationnum
-			}
-		}).then(response => {
-			if (response.code == 200) {
-				// 关闭当前窗口
-				quotationDialog.value = false;
-				// 存储当前报价单的关键信息
-				const currentVersion = quotationDialogform.version || 1;
-				const baseQuotationNum = quotationDialogform.baseQuotationNum || quotationDialogform.quotationnum;
-				const originalId = EditQuotationId.value;
-
-				// 设置新报价单信息
-				setTimeout(() => {
-					// 打开新的报价单窗体
-					quotationDialog.value = true;
-					isSaveBtnShow.value = true;
-					showEditBtn.value = false;
-					showEditSaveBtn.value = false;
-					isDisabled.value = false;
-					showSaveDraftBtn.value = true;
-					showCreateRevisionBtn.value = false;
-					isViewDetails.value = false;
-
-					// 填充原报价单数据，但使用新的报价单号
-					quotationDialogform.quotationnum = response.data.quotationNum;
-					// 设置版本信息
-					quotationDialogform.baseQuotationNum = baseQuotationNum;
-					quotationDialogform.version = currentVersion + 1;
-					quotationDialogform.isLatestVersion = true;
-
-					// 重新获取产品数据，因为它们不是直接从quotationDialogform中来的
-					request({
-						url: 'Quotation/GetQuotationDetailsListByQuotationID/GetQuotationDetailsList',
-						method: 'GET',
-						params: {
-							ID: originalId
-						}
-					}).then(resp => {
-						if (resp.data.length > 0) {
-							productData.value = [];
-							resp.data.forEach(element => {
-								productData.value.push({
-									productNum: element.productNum,
-									customerNum: element.customerNum,
-									cproductname: element.cProductName,
-									cspecification: element.cSpecification,
-									quotationnum: element.quotationNum,
-									exportunitprice: element.exportUnitPrice,
-									exporttotalprice: element.exportTotalPrice,
-									unitofmeasurement: state.optionss["hr_calculate_unit"].filter(hr_calculate_unit => hr_calculate_unit.dictValue == element.unitOfMeasurement).map(item => item.dictValue).values().next().value,
-									purchasecurrency: state.optionss["hr_export_currency"].filter(hr_export_currency => hr_export_currency.dictValue == element.purchaseCurrency).map(item => item.dictValue).values().next().value,
-									purchaseunitprice: element.purchaseUnitPrice,
-									onepacking: element.onePacking,
-									isInvoicingc: state.optionss['hr_yes_no'].filter(hr_yes_no => hr_yes_no.dictValue == element.invoice).map(item => item.dictValue).values().next().value,
-									packaging: element.packaging,
-									specialrequirements: element.specialRequirements,
-									rebaterate: element.rebateRate,
-									outerboxloading: element.outerBoxLoading,
-									outerboxunit: element.outerBoxUnit,
-									outerboxlength: element.outerBoxLength.toFixed(1),
-									outerboxwidth: element.outerBoxWidth.toFixed(1),
-									outerboxheight: element.outerBoxHeight.toFixed(1),
-									outerboxnetweight: element.outerBoxNetWeight.toFixed(1),
-									outerboxgrossweight: element.outerBoxGrossWeight.toFixed(1),
-									NumberOfBoxes: element.numberOfBoxes.toFixed(1),
-									OtherFees: element.otherFees,
-									additionalpackagingcosts: element.additionalPackagingCosts,
-									innerBoxLoading: element.innerBoxLoading,
-									singleProductGrossProfit: element.singleProductGrossProfit,
-									singleProductGrossProfitTotal: element.singleProductGrossProfitTotal,
-									grossProfitRate: element.grossProfitRate,
-									totalNetWeight: element.totalNetWeight.toFixed(1),
-									totalGrossWeight: element.totalGrossWeight.toFixed(1),
-									totalVolume: element.totalVolume,
-									SinglesalesrevenueA: element.singlesalesrevenue,
-									Singleproductvolume: element.singleproductvolume,
-									Oceanfreightforasingleproduct: element.oceanfreightforasingleproduct,
-									Portchargesforindividualproducts: element.portchargesforindividualproducts,
-									Inlandfreightforasingleproduct: element.inlandfreightforasingleproduct,
-									outerboxvolume: element.outerBoxVolume,
-									inlandfreightprice: element.inlandfreightprice,
-									IsNewProduct: element.IsNewProduct,
-									ProfitMargin: element.profitMargin,
-									isImported: true
-								});
-							});
-							calculateTotal(); // 重新计算总值
-						}
-					}).catch(error => {
-						console.error('获取产品数据失败:', error);
-						ElMessage.error('获取产品数据失败');
-					});
-
-					ElMessage({
-						message: `已创建${getVersionText(currentVersion + 1)}窗体，请修改后保存`,
-						type: 'success'
-					});
-				}, 300);
-			} else {
-				ElMessage.error("获取次报价单号失败");
-			}
-		}).catch(error => {
-			console.error(error);
-			ElMessage.error("创建次报价失败");
-		});
-	}).catch(() => {
-		// 用户取消操作
-	});
 };
 </script>

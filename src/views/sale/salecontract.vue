@@ -374,7 +374,7 @@
 				</el-row>
 				<span style="font-size: 20px; font-weight: bold;">辅助信息</span>
 				<el-divider></el-divider>
-				<el-row>
+				<el-row v-if="false">
 					<el-col :span="8" v-if="false">
 						<el-form-item label="签约地点">
 							<el-select filterable v-model="Newcontractform.signingLocation" placeholder="请选择签约地点"
@@ -384,7 +384,7 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="可否分批">
 							<el-select filterable v-model="Newcontractform.canPartial" placeholder="请选择可否分批"
 								:disabled="isDisabled" style="width: 300px">
@@ -393,7 +393,7 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="可否转运">
 							<el-select filterable v-model="Newcontractform.canTransit" placeholder="请选择可否转运"
 								:disabled="isDisabled" style="width: 300px">
@@ -402,7 +402,7 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="佣金比率">
 							<el-input v-model="Newcontractform.commissionRate" style="width: 300px"
 								:disabled="isDisabled"></el-input>
@@ -410,13 +410,13 @@
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="保险加成">
 							<el-input v-model="Newcontractform.insuranceAddition" style="width: 300px"
 								:disabled="isDisabled"></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="保险比率">
 							<el-input v-model="Newcontractform.insuranceRate" style="width: 300px"
 								:disabled="isDisabled"></el-input>
@@ -428,8 +428,6 @@
 								@change="calculateTotal" :disabled="isDisabled" />
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="海运费币种" prop="shippingCurrency">
 							<el-select v-model="Newcontractform.shippingCurrency" filterable placeholder="选择运费币种"
@@ -445,24 +443,18 @@
 								:disabled="isDisabled" @change="calculateTotal" />
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="港杂费/m³">
 							<el-input v-model="Newcontractform.portMiscellaneousFees" style="width: 300px;"
 								@change="calculateTotal" :disabled="isDisabled" />
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="货代报关杂费">
 							<el-input v-model="Newcontractform.freightForwarderCustomsClearanceFees"
 								style="width: 300px;" :disabled="isDisabled" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="收汇银行">
-							<el-input v-model="Newcontractform.receivingBank" style="width: 300px"
-								:disabled="isDisabled"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -471,6 +463,15 @@
 								:disabled="isDisabled" />
 						</el-form-item>
 					</el-col>
+					<el-col :span="8" v-if="false">
+						<el-form-item label="收汇银行">
+							<el-input v-model="Newcontractform.receivingBank" style="width: 300px"
+								:disabled="isDisabled"></el-input>
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<el-row>
+
 					<el-col :span="8">
 						<el-form-item label="文件杂费">
 							<el-input v-model="Newcontractform.DocumentationFees" style="width: 300px;"
@@ -529,13 +530,19 @@
 									<span>{{ scope.row.exporttotalprice }}</span>
 								</template>
 							</el-table-column>
-							<el-table-column prop="unitofmeasurement" label="计量单位" width="100">
+							<el-table-column prop="unitofmeasurement" label="计量单位编号" width="100" v-if="false">
 								<template #default="scope">
 									<el-select v-model="scope.row.unitofmeasurement" filterable placeholder="单位"
 										style="width: 100%;" disabled>
 										<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
+								</template>
+							</el-table-column>
+							<el-table-column label="计量单位" width="100">
+								<template #default="scope">
+									{{scope.row.unitOfMeasurementLabel || state.optionss.hr_calculate_unit.find(x =>
+										x.dictValue == scope.row.unitofmeasurement)?.dictLabel || '-'}}
 								</template>
 							</el-table-column>
 							<el-table-column prop="purchasecurrency" label="采购币种" width="110">
@@ -955,23 +962,65 @@
 				</span>
 			</template>
 		</el-dialog>
-		<el-dialog v-model="SearchProcutDialog" title="选择产品" :close-on-click-modal=false :width="'50%'"
+		<el-dialog v-model="SearchProcutDialog" title="选择产品" :close-on-click-modal=false :width="'60%'"
 			@close="handleCloseSearchProcutDialog">
-			<el-input v-model="searchProductNameText" placeholder="请输入产品关键字进行搜索" style="margin-bottom: 10px;"
+			<el-input v-model="searchProductNameText" clearable placeholder="请输入产品关键字进行搜索" style="margin-bottom: 10px;"
 				@input="searchProductNameTextChange" />
-			<el-table :data="productDatatwo" :default-sort="{ prop: 'productCode', order: 'descending' }"
-				style="width: 100%" @row-dblclick="handleRowDblClick" stripe>
-				<el-table-column prop="productCode" label="产品编号" sortable width="120" />
-				<el-table-column prop="customerGoodsNumber" label="客户货号" width="120" />
-				<el-table-column prop="chineseProductName" label="中文品名" width="150" />
-				<el-table-column prop="englishProductName" label="英文品名" width="180" />
-				<el-table-column prop="chineseSpecification" label="中文规格" width="150" />
-				<el-table-column prop="englishSpecification" label="英文规格" width="180" />
-				<el-table-column prop="unitOfMeasurement" label="计量单位" width="120" />
-			</el-table>
-			<el-pagination @current-change="SearchProducthandlePageChange" :current-page="SearchProductCurrentPage"
-				:page-size="SearchProductpageSize" :total="SearchProducttotalItems" background
-				layout="prev, pager, next" style="margin-top: 5px;" />
+			<el-tabs v-model="activeSearchProductTab">
+				<el-tab-pane label="产品资料库" name="productInfoTab">
+					<el-table :data="productDatatwo" :default-sort="{ prop: 'productCode', order: 'descending' }"
+						style="width: 100%" @row-dblclick="handleRowDblClick" stripe>
+						<el-table-column prop="productCode" label="产品编号" sortable width="120" />
+						<el-table-column prop="customerGoodsNumber" label="客户货号" width="120" />
+						<el-table-column prop="chineseProductName" label="中文品名" width="150" />
+						<el-table-column prop="englishProductName" label="英文品名" width="180" />
+						<el-table-column prop="chineseSpecification" label="中文规格" width="150" />
+						<el-table-column prop="englishSpecification" label="英文规格" width="180" />
+						<el-table-column prop="unitOfMeasurement" label="计量单位编号" width="120" v-if="false" />
+						<el-table-column label="计量单位" width="120">
+							<template #default="scope">
+								{{state.optionss.hr_calculate_unit.find(x => x.dictValue ==
+									scope.row.unitOfMeasurement)?.dictLabel || '-'}}
+							</template>
+						</el-table-column>
+					</el-table>
+					<el-pagination @current-change="SearchProducthandlePageChange"
+						:current-page="SearchProductCurrentPage" :page-size="SearchProductpageSize"
+						:total="SearchProducttotalItems" background layout="prev, pager, next"
+						style="margin-top: 5px;" />
+				</el-tab-pane>
+				<el-tab-pane label="历史成交产品记录" name="productImageTab">
+					<template v-if="selectedCustomerId">
+						<el-table :data="historicalProducts" style="width: 100%" stripe
+							@row-dblclick="handleHistoricalProductRowDblClick">
+							<el-table-column prop="productCode" label="产品编号" sortable width="120" />
+							<el-table-column prop="customerCode" label="客户货号" width="120" />
+							<el-table-column prop="chineseProductName" label="中文品名" width="150" />
+							<el-table-column prop="englishProductName" label="英文品名" width="180" />
+							<el-table-column prop="chineseSpecification" label="中文规格" width="150" />
+							<el-table-column prop="unitOfMeasurement" label="计量单位编号" width="120" v-if="false" />
+							<el-table-column label="计量单位" width="120">
+								<template #default="scope">
+									{{state.optionss.hr_calculate_unit.find(x => x.dictValue ==
+										scope.row.unitOfMeasurement)?.dictLabel || '-'}}
+								</template>
+							</el-table-column>
+							<el-table-column prop="contractDate" label="成交日期" width="120" />
+						</el-table>
+						<el-pagination @current-change="historyProductHandlePageChange"
+							:current-page="historyProductCurrentPage" :page-size="historyProductPageSize"
+							:total="historyProductTotalItems" background layout="prev, pager, next"
+							style="margin-top: 10px;" />
+					</template>
+					<template v-else>
+						<div style="display: flex; justify-content: center; align-items: center; height: 200px;">
+							<el-empty description="请先选择客户后查看历史成交产品记录"></el-empty>
+						</div>
+					</template>
+				</el-tab-pane>
+			</el-tabs>
+
+
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="danger" @click="SearchProcutDialog = false">
@@ -1005,7 +1054,7 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, watch, computed } from 'vue'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn,
 	ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile,
@@ -1020,6 +1069,26 @@ import { JsonHubProtocol } from '@microsoft/signalr';
 import { get } from 'sortablejs';
 import useUserStore from "@/store/modules/user";
 import { Row } from 'element-plus/es/components/table-v2/src/components';
+
+const activeSearchProductTab = ref('productInfoTab');
+const selectedCustomerId = ref(null);
+const historicalProducts = ref([]);
+
+// 监听标签页切换
+watch(activeSearchProductTab, (newTabName) => {
+	if (newTabName === 'productImageTab') {
+		if (!selectedCustomerId.value) {
+			// 如果切换到历史成交产品记录标签页但没有选择客户，提示用户
+			ElMessage.warning('请先选择客户后查看历史成交产品记录');
+		} else {
+			// 使用当前的搜索文本加载历史产品数据
+			loadHistoricalProducts(selectedCustomerId.value, 1, searchProductNameText.value);
+		}
+	} else if (newTabName === 'productInfoTab') {
+		// 切换到产品资料库标签页时，使用当前搜索文本加载产品数据
+		GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
+	}
+});
 
 const isCurrentUserSalesperson = computed(() => {
 	return Newcontractform.salesperson == userId;
@@ -1207,8 +1276,16 @@ function GetProductInfoList(start, end) {
 }
 
 const searchProductNameTextChange = () => {
-	SearchProductCurrentPage.value = 1; // 搜索时重置到第一页
-	GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
+	// 根据当前活动的标签页执行相应的搜索
+	if (activeSearchProductTab.value === 'productInfoTab') {
+		// 搜索产品资料库
+		SearchProductCurrentPage.value = 1
+		GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value)
+	} else if (activeSearchProductTab.value === 'productImageTab') {
+		// 搜索历史成交产品记录
+		historyProductCurrentPage.value = 1
+		loadHistoricalProducts(selectedCustomerId.value, 1, searchProductNameText.value)
+	}
 }
 
 const handleRowDblClick = (row) => {
@@ -1217,6 +1294,9 @@ const handleRowDblClick = (row) => {
 		ElMessage.error("产品【" + row.chineseProductName + "】已存在报价单的产品列表中，请重新选择");
 		return;
 	} else {
+		// 获取计量单位的dictValue作为编号，dictLabel作为显示值
+		const unitMeasurement = state.optionss.hr_calculate_unit.find(x => x.dictValue == row.unitOfMeasurement.toString());
+
 		productData.value.push({
 			productID: row.id,
 			productNum: row.productCode,
@@ -1226,7 +1306,8 @@ const handleRowDblClick = (row) => {
 			contractQuantity: 0,
 			exportunitprice: 0,
 			exporttotalprice: 0,
-			unitofmeasurement: state.optionss.hr_calculate_unit.find(x => x.dictValue == row.unitOfMeasurement.toString()).dictValue,
+			unitofmeasurement: unitMeasurement?.dictValue,
+			unitOfMeasurementLabel: unitMeasurement?.dictLabel || '-',
 			purchaseinquiry: 0,
 			purchaseunitprice: 0,
 			onepacking: 0,
@@ -1243,6 +1324,7 @@ const handleRowDblClick = (row) => {
 			outerboxvolume: 0,
 			NumberOfBoxes: 0,
 			OtherFees: 0,
+			AdditionalPackagingCosts: 0,
 			additionalpackagingcosts: 0,
 			singleProductGrossProfit: 0,
 			grossProfitRate: 0,
@@ -1439,6 +1521,7 @@ const onAddquotationProductItem = () => {
 		exportunitprice: 0,
 		exporttotalprice: 0,
 		unitofmeasurement: '',
+		unitOfMeasurementLabel: '-',
 		purchaseinquiry: 0,
 		purchaseunitprice: 0,
 		onepacking: 0,
@@ -1455,6 +1538,7 @@ const onAddquotationProductItem = () => {
 		outerboxvolume: 0,
 		NumberOfBoxes: 0,
 		OtherFees: 0,
+		AdditionalPackagingCosts: 0,
 		additionalpackagingcosts: 0,
 		singleProductGrossProfit: 0,
 		grossProfitRate: 0,
@@ -1469,7 +1553,17 @@ const onAddquotationProductItem = () => {
 }
 
 const handleCloseSearchProcutDialog = () => {
+	// 只清空搜索文本，不清空客户选择
 	searchProductNameText.value = '';
+	// 重置标签页
+	activeSearchProductTab.value = 'productInfoTab';
+	// 不清空selectedCustomerId，保留历史记录
+
+	// 如下代码已移除，不再清空客户选择状态
+	// selectedCustomerId.value = null;
+	// historicalProducts.value = [];
+	// historyProductCurrentPage.value = 1;
+	// historyProductTotalItems.value = 0;
 }
 
 // 销售合同窗体		
@@ -1891,6 +1985,9 @@ const handleCustomerSelection = (value) => {
 	Newcontractform.customerid = value;
 	Newcontractform.contactPerson = null;
 	Newcontractform.contactEmail = '';
+	// 设置当前选中的客户ID
+	selectedCustomerId.value = value;
+
 	request({
 		url: 'CustomerInfoMation/getCustomerInfoByID/GetCustomerInfo',
 		method: 'GET',
@@ -1912,6 +2009,14 @@ const handleCustomerSelection = (value) => {
 					email: item.email
 				}));
 			}
+
+			// 获取该客户的历史成交产品记录
+			// 重置分页参数
+			historyProductCurrentPage.value = 1;
+			// 如果当前是在历史产品标签页，就加载历史产品数据
+			if (activeSearchProductTab.value === 'productImageTab') {
+				loadHistoricalProducts(value, 1, searchProductNameText.value);
+			}
 		} else {
 			ElMessage.error("获取客户信息失败，请重新打开客户建档窗体");
 		}
@@ -1920,28 +2025,35 @@ const handleCustomerSelection = (value) => {
 	});
 }
 
-//获取客户联系人
-const GetCustomerContactPerson = (CustomerId) => {
+// 加载历史成交产品记录
+const loadHistoricalProducts = (customerId, page = 1, productName = null) => {
+	if (!customerId) return;
+
 	request({
-		url: 'CustomerInfoMation/getCustomerInfoByID/GetCustomerInfo',
+		url: 'Contracts/GetCustomerHistoryProducts/CustomerHistoryProducts',
 		method: 'GET',
 		params: {
-			ID: CustomerId
+			CustomerId: customerId,
+			PageNum: page,
+			PageSize: historyProductPageSize.value,
+			productCode: null,
+			startDate: null,
+			endDate: null,
+			productName: productName || searchProductNameText.value
 		}
 	}).then(response => {
-		if (response != null) {
-			if (response.contactPerson != null) {
-				contactpersonSelectOptions.value = response.contactPerson.map(item => ({
-					value: item.id,
-					label: item.name,
-					email: item.email
-				}));
-			}
+		if (response && response.data && response.data.data) {
+			historicalProducts.value = response.data.data;
+			historyProductTotalItems.value = response.data.totalNum || 0;
+			historyProductCurrentPage.value = page;
 		} else {
-			ElMessage.error("获取客户联系人失败!");
+			historicalProducts.value = [];
+			historyProductTotalItems.value = 0;
 		}
 	}).catch(error => {
-		console.log(error)
+		console.error('获取历史成交产品记录失败:', error);
+		historicalProducts.value = [];
+		historyProductTotalItems.value = 0;
 	});
 }
 
@@ -3010,12 +3122,11 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 			Inlandfreightprice: item.inlandfreightprice,
 			IsNewProduct: 0,
 			Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct,
-			Onepacking: '',
+			Onepacking: item.AdditionalPackagingCosts,
 			OtherFees: item.OtherFees,
 			outerboxunit: item.outerboxunit,
 			Portchargesforindividualproducts: item.Portchargesforindividualproducts,
 			Purchasecurrency: item.purchasecurrency,
-			Remark: '',
 			singleProductGrossProfit: item.singleProductGrossProfit,
 			singleProductGrossProfitTotal: item.singleProductGrossProfitTotal,
 			Singleproductvolume: item.Singleproductvolume,
@@ -3467,6 +3578,143 @@ const SaveContractDraft = async (formEl: FormInstance | undefined) => {
 		}
 	}).catch(() => {
 		// 用户取消操作
+	});
+}
+
+const handleRowDblClickProductImageTab = (row) => {
+	selectedCustomerId.value = row.customerId;
+	historicalProducts.value = [
+		{
+			productCode: 'P001',
+			customerGoodsNumber: 'C001',
+			chineseProductName: '产品A',
+			englishProductName: 'Product A',
+			chineseSpecification: '规格A',
+			englishSpecification: 'Specification A',
+			unitOfMeasurement: 'm³',
+			unitPrice: 100,
+			contractNumber: 'C001',
+			contractDate: '2023-01-01'
+		},
+		{
+			productCode: 'P002',
+			customerGoodsNumber: 'C002',
+			chineseProductName: '产品B',
+			englishProductName: 'Product B',
+			chineseSpecification: '规格B',
+			englishSpecification: 'Specification B',
+			unitOfMeasurement: 'm³',
+			unitPrice: 150,
+			contractNumber: 'C002',
+			contractDate: '2023-02-01'
+		},
+		{
+			productCode: 'P003',
+			customerGoodsNumber: 'C003',
+			chineseProductName: '产品C',
+			englishProductName: 'Product C',
+			chineseSpecification: '规格C',
+			englishSpecification: 'Specification C',
+			unitOfMeasurement: 'm³',
+			unitPrice: 200,
+			contractNumber: 'C003',
+			contractDate: '2023-03-01'
+		}
+	];
+}
+
+// 处理历史成交产品记录表格行双击事件
+const handleHistoricalProductRowDblClick = (row) => {
+	// 与产品资料库双击处理相同的逻辑
+	const existingProduct = productData.value.find(p => p.productNum === row.productCode);
+	if (existingProduct) {
+		ElMessage.error("产品【" + row.chineseProductName + "】已存在报价单的产品列表中，请重新选择");
+		return;
+	} else {
+		// 获取计量单位的dictValue作为编号，dictLabel作为显示值
+		const unitMeasurement = state.optionss.hr_calculate_unit.find(x => x.dictValue == row.unitOfMeasurement.toString());
+
+		productData.value.push({
+			productID: row.id,
+			productNum: row.productCode,
+			customerNum: row.customerCode,
+			cproductname: row.chineseProductName,
+			cspecification: row.chineseSpecification,
+			contractQuantity: 0,
+			exportunitprice: 0,
+			exporttotalprice: 0,
+			unitofmeasurement: unitMeasurement?.dictValue,
+			unitOfMeasurementLabel: unitMeasurement?.dictLabel || '-',
+			purchaseinquiry: 0,
+			purchaseunitprice: 0,
+			onepacking: 0,
+			invoice: '',
+			packaging: '',
+			specialrequirements: '',
+			rebaterate: 0,
+			outerboxunit: '',
+			outerboxlength: 0,
+			outerboxwidth: 0,
+			outerboxheight: 0,
+			outerboxnetweight: 0,
+			outerboxgrossweight: 0,
+			outerboxvolume: 0,
+			NumberOfBoxes: 0,
+			OtherFees: 0,
+			AdditionalPackagingCosts: 0,
+			additionalpackagingcosts: 0,
+			singleProductGrossProfit: 0,
+			grossProfitRate: 0,
+			totalNetWeight: 0,
+			totalGrossWeight: 0,
+			totalVolume: 0,
+			innerBoxLoading: 0,
+			outerboxloading: 0,
+			inlandfreightprice: 0,
+			isImported: true
+		});
+		ElMessage.success("已添加产品【" + row.chineseProductName + "】到产品列表");
+	}
+}
+
+const historyProductSearchText = ref('');
+const historyProductHandlePageChange = (newPage) => {
+	loadHistoricalProducts(selectedCustomerId.value, newPage, searchProductNameText.value);
+}
+const historyProductPageSize = ref(10);
+const historyProductTotalItems = ref(0);
+const historyProductCurrentPage = ref(1);
+const searchHistoryProductTextChange = () => {
+	// 重置到第一页
+	historyProductCurrentPage.value = 1;
+	loadHistoricalProducts(selectedCustomerId.value, 1, historyProductSearchText.value);
+}
+
+// 定义获取客户联系人的函数
+const GetCustomerContactPerson = (customerId) => {
+	request({
+		url: 'CustomerInfoMation/getCustomerInfoByID/GetCustomerInfo',
+		method: 'GET',
+		params: {
+			ID: customerId
+		}
+	}).then(response => {
+		if (response != null) {
+			if (response.contactPerson != null) {
+				contactpersonSelectOptions.value = response.contactPerson.map(item => ({
+					value: item.id,
+					label: item.name,
+					email: item.email
+				}));
+			} else {
+				contactpersonSelectOptions.value = [];
+			}
+		} else {
+			ElMessage.error("获取客户联系人失败");
+		}
+	}).catch(error => {
+		console.error('获取客户联系人失败:', error);
+		contactpersonSelectOptions.value = [];
 	});
 }
 </script>
