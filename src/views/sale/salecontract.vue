@@ -1296,6 +1296,9 @@ const handleRowDblClick = (row) => {
 	} else {
 		// 获取计量单位的dictValue作为编号，dictLabel作为显示值
 		const unitMeasurement = state.optionss.hr_calculate_unit.find(x => x.dictValue == row.unitOfMeasurement.toString());
+		// 根据价格条款设置invoice值
+		const invoiceValue = Newcontractform.priceTerms == 7 ? "1" : "0";
+		const invoiceOption = state.optionss.hr_pricing_term.find(x => x.dictValue === invoiceValue);
 
 		productData.value.push({
 			productID: row.id,
@@ -1311,7 +1314,7 @@ const handleRowDblClick = (row) => {
 			purchaseinquiry: 0,
 			purchaseunitprice: 0,
 			onepacking: 0,
-			invoice: '',
+			isInvoicingc: invoiceOption?.dictValue || '',
 			packaging: '',
 			specialrequirements: '',
 			rebaterate: 0,
@@ -2408,7 +2411,7 @@ const SaveContract = async (formEl: FormInstance | undefined) => {
 				PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
 				Packaging: item.packaging,
 				SpecialRequirements: item.specialrequirements,
-				Invoice: item.isInvoicingc === 'Y' ? 1 : 0,
+				Invoice: item.isInvoicingc === '1' ? 1 : 0,
 				TaxRefundRate: item.rebaterate,
 				InnerBoxQuantity: item.innerBoxLoading,
 				OuterBoxQuantity: item.outerboxloading,
@@ -3101,7 +3104,7 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 			PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
 			Packaging: item.packaging,
 			SpecialRequirements: item.specialrequirements,
-			Invoice: item.isInvoicingc === 'Y' ? 1 : 0,
+			Invoice: item.isInvoicingc === '1' ? 1 : 0,
 			TaxRefundRate: item.rebaterate,
 			InnerBoxQuantity: item.innerBoxLoading,
 			OuterBoxQuantity: item.outerboxloading,
@@ -3504,7 +3507,7 @@ const SaveContractDraft = async (formEl: FormInstance | undefined) => {
 			PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
 			Packaging: item.packaging || 0,
 			SpecialRequirements: item.specialrequirements,
-			Invoice: item.isInvoicingc === 'Y' ? 1 : 0,
+			Invoice: item.isInvoicingc === '1' ? 1 : 0,
 			TaxRefundRate: item.rebaterate,
 			InnerBoxQuantity: item.innerBoxLoading || 0,
 			OuterBoxQuantity: item.outerboxloading || 0,
@@ -3633,7 +3636,10 @@ const handleHistoricalProductRowDblClick = (row) => {
 	} else {
 		// 获取计量单位的dictValue作为编号，dictLabel作为显示值
 		const unitMeasurement = state.optionss.hr_calculate_unit.find(x => x.dictValue == row.unitOfMeasurement.toString());
-
+		var Invoice = 0;
+		if (Newcontractform.priceTerms == 7) {
+			Invoice = 1;
+		}
 		productData.value.push({
 			productID: row.id,
 			productNum: row.productCode,
@@ -3648,7 +3654,7 @@ const handleHistoricalProductRowDblClick = (row) => {
 			purchaseinquiry: 0,
 			purchaseunitprice: 0,
 			onepacking: 0,
-			invoice: '',
+			invoice: Invoice,
 			packaging: '',
 			specialrequirements: '',
 			rebaterate: 0,

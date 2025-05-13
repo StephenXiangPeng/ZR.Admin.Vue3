@@ -1904,7 +1904,7 @@ const AddContactLog = async () => {
 	// 重置表单
 	contactLogForm.contactDate = new Date()
 	contactLogForm.contactPerson = ''
-	contactLogForm.ourStaff = ''
+	contactLogForm.ourStaff = state.optionss.sql_hr_sale.find(item => item.dictValue == useUserStore().userId).dictValue
 	contactLogForm.contactContent = ''
 	contactLogForm.remark = ''
 	contactLogForm.attachmentURLs = ''

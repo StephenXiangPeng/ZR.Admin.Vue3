@@ -277,19 +277,64 @@
       </el-col>
     </el-row> -->
     <el-dialog v-model="AgencyProcessdialogTableVisible" title="待办流程" width="800">
-      <el-table :data="AgencyProcesstableData">
-        <el-table-column prop="documentType" label="单据类型ID" width="150" align="center" v-if="false" />
-        <el-table-column prop="documentID" label="单据编号ID" width="150" align="center" v-if="false" />
-        <el-table-column prop="documentTypeName" label="单据类型" width="150" align="center" />
-        <el-table-column prop="documentNumber" label="单据编号" width="150" align="center" />
-        <el-table-column prop="createBy" label="发起人" width="150" align="center" />
-        <el-table-column prop="createTime" label="发起时间" width="180" align="center" />
-        <el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;" align="center">
-          <template v-slot:default="scope">
-            <el-button link type="primary" size="small" @click="openSaleContractDialog(scope.row)">查看详情</el-button>
+      <el-tabs v-model="AgencyProcessdialogTableActiveName" type="card">
+        <el-tab-pane label="待审批单据" name="first">
+          <el-table :data="AgencyProcesstableData">
+            <el-table-column prop="documentType" label="单据类型ID" width="150" align="center" v-if="false" />
+            <el-table-column prop="documentID" label="单据编号ID" width="150" align="center" v-if="false" />
+            <el-table-column prop="documentTypeName" label="单据类型" width="150" align="center" />
+            <el-table-column prop="documentNumber" label="单据编号" width="150" align="center" />
+            <el-table-column prop="createBy" label="发起人" width="150" align="center" />
+            <el-table-column prop="createTime" label="发起时间" width="180" align="center" />
+            <el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;" align="center">
+              <template v-slot:default="scope">
+                <el-button link type="primary" size="small" @click="openSaleContractDialog(scope.row)">查看详情</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane v-if="userStore.userInfo && userStore.userInfo.deptId === 210">
+          <template #label>
+            <span class="custom-tabs-label">
+              <el-icon>
+                <document />
+              </el-icon>
+              <span>询价需求</span>
+            </span>
           </template>
-        </el-table-column>
-      </el-table>
+          <el-table :data="inquiryList" :height="400" style="width: 100%" @row-dblclick="handleInquiryRowDblClick">
+            <el-table-column prop="inquiryNumber" label="询价单号" width="120"></el-table-column>
+            <el-table-column prop="productName" label="产品名称" width="180"></el-table-column>
+            <!-- <el-table-column prop="quoteQuantity" label="报价数量" width="120"></el-table-column> -->
+            <el-table-column prop="create_time" label="创建时间" width="180">
+              <template #default="scope">
+                {{ scope.row.create_time }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane v-if="userStore.userInfo && userStore.userInfo.deptId === 210">
+          <template #label>
+            <span class="custom-tabs-label">
+              <el-icon>
+                <document />
+              </el-icon>
+              <span>采购需求</span>
+            </span>
+          </template>
+          <el-table :data="shoppinglisttableData" style="width: 100%" :span-method="mergeCells"
+            @row-dblclick="shoppinglisttableDatahandleRowDblClick">
+            <el-table-column prop="contractNumber" label="销售合同号" width="150"></el-table-column>
+            <el-table-column prop="contractId" label="销售合同ID" width="150" v-if="false"></el-table-column>
+            <el-table-column prop="productId" label="产品ID" width="150" v-if="false"></el-table-column>
+            <el-table-column prop="productName" label="产品名称" width="150"></el-table-column>
+            <el-table-column prop="quantity" label="数量" width="150"></el-table-column>
+            <el-table-column prop="unitPrice" label="采购单价" width="150" v-if="false"></el-table-column>
+            <el-table-column prop="totalPrice" label="采购总价" width="150" v-if="false"></el-table-column>
+            <el-table-column prop="salesperson" label="销售员" width="150" v-if="false"></el-table-column>
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
     </el-dialog>
     <el-dialog v-model="contractDialog" title="销售合同审批" :close-on-click-modal=false style="width: 70%;">
       <span style="font-size: 20px; font-weight: bold;">基本信息</span>
@@ -1871,26 +1916,7 @@
             </el-table-column>
           </el-table>
         </el-tab-pane>
-        <el-tab-pane v-if="userStore.userInfo && userStore.userInfo.deptId === 210">
-          <template #label>
-            <span class="custom-tabs-label">
-              <el-icon>
-                <document />
-              </el-icon>
-              <span>询价需求</span>
-            </span>
-          </template>
-          <el-table :data="inquiryList" :height="400" style="width: 100%" @row-dblclick="handleInquiryRowDblClick">
-            <el-table-column prop="inquiryNumber" label="询价单号" width="120"></el-table-column>
-            <el-table-column prop="productName" label="产品名称" width="180"></el-table-column>
-            <!-- <el-table-column prop="quoteQuantity" label="报价数量" width="120"></el-table-column> -->
-            <el-table-column prop="create_time" label="创建时间" width="180">
-              <template #default="scope">
-                {{ scope.row.create_time }}
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-tab-pane>
+
       </el-tabs>
     </el-dialog>
     <el-dialog v-model="overdueEmailDialogVisible" title="超时未处理邮件" :close-on-click-modal="false" class="custom-dialog"
@@ -1925,6 +1951,7 @@ import { useRouter } from 'vue-router'
 import { eventBus } from '@/utils/eventBus'
 
 
+const AgencyProcessdialogTableActiveName = ref('first')
 // 添加一个 Set 来记录已经显示过的消息 ID
 const displayedMessages = new Set();
 
@@ -3368,6 +3395,7 @@ proxy.getDicts(dictParams).then((response) => {
   getFinancialTasksList(1, 10);
 })
 
+//获取待办流程数量
 const getPendingCount = () => {
   AgencyProcesstableData.value = [];
   request({
@@ -3375,7 +3403,7 @@ const getPendingCount = () => {
     method: 'GET'
   }).then(response => {
     if (response.code == "200") {
-      pendingCount.value = response.data.length;
+      pendingCount.value += response.data.length;
       if (response.data.length > 0) {
         AgencyProcesstableData.value = response.data;
         AgencyProcesstableData.value.forEach(item => {
@@ -4328,7 +4356,7 @@ const getInquiryList = async () => {
     })
     if (res.code === 200) {
       inquiryList.value = res.data.result
-      pendingEmailCount.value += res.data.result.length
+      pendingCount.value += res.data.result.length
     }
   } catch (error) {
     console.error('获取询价列表失败', error)
@@ -4347,9 +4375,88 @@ const handleInquiryRowDblClick = (row) => {
   })
 }
 
+const shoppinglisttableData = ref([])
+
+const GetProcurementequirements = async () => {
+  try {
+    const response = await request({
+      url: 'PurchaseContracts/GetProcurementRequirements/GetList',
+      method: 'GET',
+      params: {
+        PageNum: 1,
+        PageSize: 10
+      }
+    })
+    // 检查响应数据
+    if (!response.data) {
+      throw new Error('返回数据格式错误')
+    }
+    // 清空现有数据
+    shoppinglisttableData.value = []
+    // 如果有数据则处理
+    if (response.data.result && response.data.result.length > 0) {
+      shoppinglisttableData.value = response.data.result.map(element => ({
+        contractId: element.contractId,
+        productId: element.productId,
+        procurementId: element.procurementId,
+        contractNumber: element.contractNumber,
+        productName: element.productName,
+        quantity: element.quantity,
+        unitPrice: element.unitPrice,
+        totalPrice: element.totalPrice,
+        status: element.status,
+        salesperson: state.optionss.sql_hr_sale.find(item => item.dictValue === element.salesperson.toString())?.dictLabel || '未知',
+        createTime: formatDate(element.createTime),
+        remark: element.remark
+      }))
+    }
+  } catch (error) {
+    console.error('获取采购需求列表失败:', error)
+    ElMessage.error('获取数据失败，请重试')
+    throw error
+  }
+  pendingCount.value += shoppinglisttableData.value.length;
+}
+
+// 动态合并单元格
+const mergeCells = ({ row, columnIndex, rowIndex }) => {
+  // 合并销售合同号列（第1列）
+  if (columnIndex === 0) {
+    if (rowIndex === getFirstRowIndex(row.contractNumber)) {
+      const rowspan = getRowSpan(row.contractNumber);
+      return [rowspan, 1];
+    } else {
+      return [0, 0];
+    }
+  }
+};
+
+// 获取当前合同号的第一行索引
+const getFirstRowIndex = (contractNumber) => {
+  return shoppinglisttableData.value.findIndex(
+    (item) => item.contractNumber === contractNumber
+  );
+};
+
+// 获取当前合同号的合并行数
+const getRowSpan = (contractNumber) => {
+  return shoppinglisttableData.value.filter(
+    (item) => item.contractNumber === contractNumber
+  ).length;
+};
+
+// 处理采购需求表格的双击事件
+const shoppinglisttableDatahandleRowDblClick = (row) => {
+  // 跳转到采购合同页面
+  router.push({
+    path: '/purchase/procurementplansandcontracts'
+  })
+}
+
 onMounted(() => {
   if (userStore.userInfo && userStore.userInfo.deptId === 210) {
-    getInquiryList()
+    getInquiryList();
+    GetProcurementequirements();
   }
 })
 

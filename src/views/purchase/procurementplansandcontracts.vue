@@ -230,8 +230,8 @@
 							<template #default="scope">
 								<el-select :disabled="isFormDisabled" v-model="scope.row.vendorCode"
 									placeholder="请选择供应商" filterable>
-									<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
-										:label="dict.dictLabel" :value="dict.dictValue">
+									<el-option v-for="dict in (supplierCache[scope.row.productId] || [])"
+										:key="dict.dictValue" :label="dict.dictLabel" :value="dict.dictValue">
 									</el-option>
 								</el-select>
 							</template>
@@ -466,7 +466,7 @@
 						通知销售
 					</el-button>
 					<el-button type="primary" v-if="!hasPriceChanges"
-						@click="GenerateContractPurchase(currentDetailRow)">
+						@click="GeneratePurchaseContract(currentDetailRow)">
 						生成采购合同
 					</el-button>
 				</span>
@@ -487,20 +487,190 @@ import { invoke } from '@vueuse/core';
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer } from 'element-plus'
 
 
-const GeneratePurchaseContract = (row) => {
-	// 在这里添加生成PDF的逻辑
-	console.log('正在为以下数据生成PDF:', row);
-	request({
-		url: 'PurchaseContracts/CreatePurchaseContentsPDF/CreatePDF',
-		method: 'GET',
-		params: {
-			PurchaseContractID: row.id
+
+// 产品供应商选项
+const ProductSupplierOptions = ref([]);
+
+// 添加供应商缓存
+const supplierCache = reactive({});
+
+// 根据产品ID获取供应商列表
+const getSupplierListByProduct = async (productID: number) => {
+	console.log('Getting supplier list for product:', productID);
+	if (!productID) {
+		console.log('No product ID provided');
+		return [];
+	}
+
+	// 如果缓存中有数据，直接返回
+	if (supplierCache[productID]) {
+		console.log('Found cached data for product:', productID);
+		return supplierCache[productID];
+	}
+
+	try {
+		console.log('Fetching supplier data from API for product:', productID);
+		const res = await request({
+			url: 'ProductInformation/GetSupplierListByProductID/GetProductSupplierList',
+			method: 'get',
+			params: {
+				productID: productID
+			}
+		});
+		console.log('API response:', res);
+		if (res.code == 200) {
+			// 将数据存入缓存
+			supplierCache[productID] = res.data;
+			console.log('Cached supplier data for product:', productID, res.data);
+			return res.data;
+		} else {
+			ElMessage.error(res.msg || '获取供应商列表失败');
+			return [];
 		}
-	}).then(response => {
-		console.log(response);
-	}).catch(error => {
-		console.error('生成PDF失败:', error);
+	} catch (error) {
+		console.error('获取供应商列表失败', error);
+		ElMessage.error('获取供应商列表失败');
+		return [];
+	}
+};
+
+// 在表格数据加载时预加载供应商数据
+const loadSupplierData = async (products) => {
+	console.log('Loading supplier data for products:', products);
+	if (!products || !Array.isArray(products)) {
+		console.log('Invalid products data');
+		return;
+	}
+
+	for (const product of products) {
+		console.log('Processing product:', product);
+		if (product.productId && !supplierCache[product.productId]) {
+			console.log('Loading supplier data for product:', product.productId);
+			await getSupplierListByProduct(product.productId);
+		}
+	}
+};
+
+const GeneratePurchaseContract = (row) => {
+	ElMessageBox.confirm('确定生成采购合同吗?', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(async () => {
+		try {
+			isGeneratedFromRequirement.value = true; // 设置标志
+			isSaveBtnShow.value = true;           // 显示确定保存按钮
+			showEditBtn.value = false;
+			showEditSaveBtn.value = false;
+			showSubmitReviewBtn.value = true;
+			isFormDisabled.value = false;
+			// 先获取新的采购合同号
+			await GetNewPurchaseContractNumber();
+
+			// 获取销售合同详情
+			const response = await request({
+				url: 'Contracts/GetContractDetailsById/GetContractDetails',
+				method: 'GET',
+				params: {
+					contractId: row.contractId
+				}
+			});
+
+			if (response.code === 200 && response.data) {
+				// 绑定基本信息
+				Addcontractofpurchaseform.value.purchaser = userId.toString();
+				Addcontractofpurchaseform.value.contractStatus = "1";
+				Addcontractofpurchaseform.value.salesContract = row.contractId;
+				Addcontractofpurchaseform.value.customerContract = response.data.contract.customerContract;
+				Addcontractofpurchaseform.value.customerid = response.data.contract.customerId;
+				Addcontractofpurchaseform.value.customerAbbreviation = response.data.contract.customerAbbreviation;
+				Addcontractofpurchaseform.value.deliveryDate = response.data.contract.deliveryDate;
+				Addcontractofpurchaseform.value.purchaseCurrency = response.data.contract.foreignCurrency.toString();
+				Addcontractofpurchaseform.value.deposit = "0";
+				Addcontractofpurchaseform.value.salesperson = response.data.contract.salesperson.toString();
+				Addcontractofpurchaseform.value.priceTerms = response.data.contract.priceTerms.toString();
+
+				// 绑定商品信息
+				if (response.data.contractProducts && response.data.contractProducts.length > 0) {
+					productinfotableData.value = response.data.contractProducts.map(product => ({
+						id: product.id,
+						productId: product.productID,
+						productCode: product.productCode,
+						chineseName: product.chineseName,
+						chineseSpec: product.chineseSpec,
+						contractQuantity: product.contractQuantity,
+						unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === product.unit.toString())?.dictLabel || '无',
+						purchasecurrency: state.optionss.hr_export_currency.find(item => item.dictValue === product.purchasecurrency.toString())?.dictLabel || '无',
+						purchaseUnitPrice: product.purchaseUnitPrice,
+						purchaseTotalPrice: product.purchaseTotalPrice,
+						deliveryDate: response.data.contract.deliveryDate,
+						productionLeadTime: '',
+						packaging: state.optionss.hr_packing.find(item => item.dictValue === product.packaging.toString())?.dictLabel || '无',
+						specialRequirements: product.specialRequirements,
+						innerBoxQuantity: product.innerBoxQuantity,
+						outerBoxQuantity: product.outerBoxQuantity,
+						outerboxunit: product.outerboxunit,
+						boxCount: product.boxCount,
+						outerBoxLength: product.outerBoxLength,
+						outerBoxWidth: product.outerBoxWidth,
+						outerBoxHeight: product.outerBoxHeight,
+						outerBoxVolume: product.outerBoxVolume,
+						outerBoxNetWeight: product.outerBoxNetWeight,
+						outerBoxGrossWeight: product.outerBoxGrossWeight,
+						totalVolume: product.totalVolume,
+						totalNetWeight: product.totalNetWeight,
+						totalGrossWeight: product.totalGrossWeight,
+						remark: product.remark,
+						invoice: product.invoice == 1 ? '是' : '否'
+					}));
+					// 新增：加载供应商数据
+					await loadSupplierData(productinfotableData.value);
+				}
+
+				// 绑定合计信息
+				Totalvalueofgoodsform.value.totalValue = response.data.contract.goodsValue;
+				Totalvalueofgoodsform.value.totalQuantity = response.data.contract.quantity;
+				Totalvalueofgoodsform.value.totalBoxCount = response.data.contract.boxCount;
+				Totalvalueofgoodsform.value.totalGrossWeight = response.data.contract.grossWeight;
+				Totalvalueofgoodsform.value.totalNetWeight = response.data.contract.netWeight;
+				Totalvalueofgoodsform.value.totalVolume = response.data.contract.volume;
+				Totalvalueofgoodsform.value.appliedPayment = "0";
+				Totalvalueofgoodsform.value.availablePayment = "0";
+				Totalvalueofgoodsform.value.paidAmount = "0";
+				Totalvalueofgoodsform.value.unpaidAmount = "0";
+
+				// 关闭采购需求对话框
+				viewDetailsDialog.value = false;  // 假设这是采购需求对话框的控制变量
+				SaleContractID.value = row.contractId;
+				// 打开对话框
+				Addcontractofpurchasedialog.value = true;
+			} else {
+				ElMessage.error('获取销售合同详情失败');
+			}
+		} catch (error) {
+			console.error('生成采购合同失败:', error);
+			ElMessage.error('生成采购合同失败，请重试');
+		}
+	}).catch(() => {
+		ElMessage({
+			type: 'info',
+			message: '已取消生成采购合同'
+		});
 	});
+}
+
+const OpenAddcontractofpurchasedialog = async () => {
+	isGeneratedFromRequirement.value = false; // 重置标志
+	clearAll();
+	await GetNewPurchaseContractNumber();
+	Addcontractofpurchaseform.value.purchaser = userId.toString();
+	Addcontractofpurchaseform.value.contractStatus = '1';
+	Addcontractofpurchasedialog.value = true;
+	isSaveBtnShow.value = true;
+	// 新增：如果有产品数据，加载供应商数据
+	if (productinfotableData.value.length > 0) {
+		await loadSupplierData(productinfotableData.value);
+	}
 }
 
 // 添加新的响应式变量
@@ -537,7 +707,7 @@ const ViewDetails = (row) => {
 				purchaseTotalPrice: item.purchaseTotalPrice,
 				packaging: state.optionss.hr_packing.find(p => p.dictValue === item.packaging.toString())?.dictLabel || '',
 				specialRequirements: item.specialRequirements,
-				invoice: item.invoice,
+				invoice: item.invoice == 1 ? '是' : '否',
 				innerBoxQuantity: item.innerBoxQuantity,
 				outerBoxQuantity: item.outerBoxQuantity,
 				remark: item.remark,
@@ -885,7 +1055,7 @@ const submitPurchaseContract = () => {
 		productionLeadTime: product.productionLeadTime,
 		packaging: state.optionss.hr_packing.find(item => item.dictLabel === product.packaging.toString())?.dictValue,
 		specialRequirements: product.specialRequirements || '',
-		invoice: product.invoice,
+		invoice: product.invoice == 1 ? '是' : '否',
 		innerBoxQuantity: parseInt(product.innerBoxQuantity),
 		outerBoxQuantity: parseInt(product.outerBoxQuantity),
 		remark: product.remark || '',
@@ -1429,111 +1599,6 @@ const formatDate = (dateString) => {
 
 const SaleContractID = ref(0);
 const isGeneratedFromRequirement = ref(false); // 是否通过生成采购合同按钮触发
-const GenerateContractPurchase = (row) => {
-	ElMessageBox.confirm('确定生成采购合同吗?', '提示', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'warning'
-	}).then(async () => {
-		try {
-			isGeneratedFromRequirement.value = true; // 设置标志
-			isSaveBtnShow.value = true;           // 显示确定保存按钮
-			showEditBtn.value = false;
-			showEditSaveBtn.value = false;
-			showSubmitReviewBtn.value = true;
-			isFormDisabled.value = false;
-			// 先获取新的采购合同号
-			await GetNewPurchaseContractNumber();
-
-			// 获取销售合同详情
-			const response = await request({
-				url: 'Contracts/GetContractDetailsById/GetContractDetails',
-				method: 'GET',
-				params: {
-					contractId: row.contractId
-				}
-			});
-
-			if (response.code === 200 && response.data) {
-				// 绑定基本信息
-				Addcontractofpurchaseform.value.purchaser = userId.toString();
-				Addcontractofpurchaseform.value.contractStatus = "1";
-				Addcontractofpurchaseform.value.salesContract = row.contractId;
-				Addcontractofpurchaseform.value.customerContract = response.data.contract.customerContract;
-				Addcontractofpurchaseform.value.customerid = response.data.contract.customerId;
-				Addcontractofpurchaseform.value.customerAbbreviation = response.data.contract.customerAbbreviation;
-				Addcontractofpurchaseform.value.deliveryDate = response.data.contract.deliveryDate;
-				Addcontractofpurchaseform.value.purchaseCurrency = response.data.contract.foreignCurrency.toString();
-				Addcontractofpurchaseform.value.deposit = "0";
-				Addcontractofpurchaseform.value.salesperson = response.data.contract.salesperson.toString();
-				Addcontractofpurchaseform.value.priceTerms = response.data.contract.priceTerms.toString();
-
-				// 绑定商品信息
-				if (response.data.contractProducts && response.data.contractProducts.length > 0) {
-					productinfotableData.value = response.data.contractProducts.map(product => ({
-						id: product.id,
-						productId: product.productID,
-						productCode: product.productCode,
-						chineseName: product.chineseName,
-						chineseSpec: product.chineseSpec,
-						contractQuantity: product.contractQuantity,
-						unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === product.unit.toString())?.dictLabel || '无',
-						purchasecurrency: state.optionss.hr_export_currency.find(item => item.dictValue === product.purchasecurrency.toString())?.dictLabel || '无',
-						purchaseUnitPrice: product.purchaseUnitPrice,
-						purchaseTotalPrice: product.purchaseTotalPrice,
-						deliveryDate: response.data.contract.deliveryDate,
-						productionLeadTime: '',
-						packaging: state.optionss.hr_packing.find(item => item.dictValue === product.packaging.toString())?.dictLabel || '无',
-						specialRequirements: product.specialRequirements,
-						innerBoxQuantity: product.innerBoxQuantity,
-						outerBoxQuantity: product.outerBoxQuantity,
-						outerboxunit: product.outerboxunit,
-						boxCount: product.boxCount,
-						outerBoxLength: product.outerBoxLength,
-						outerBoxWidth: product.outerBoxWidth,
-						outerBoxHeight: product.outerBoxHeight,
-						outerBoxVolume: product.outerBoxVolume,
-						outerBoxNetWeight: product.outerBoxNetWeight,
-						outerBoxGrossWeight: product.outerBoxGrossWeight,
-						totalVolume: product.totalVolume,
-						totalNetWeight: product.totalNetWeight,
-						totalGrossWeight: product.totalGrossWeight,
-						remark: product.remark
-					}));
-				}
-
-				// 绑定合计信息
-				Totalvalueofgoodsform.value.totalValue = response.data.contract.goodsValue;
-				Totalvalueofgoodsform.value.totalQuantity = response.data.contract.quantity;
-				Totalvalueofgoodsform.value.totalBoxCount = response.data.contract.boxCount;
-				Totalvalueofgoodsform.value.totalGrossWeight = response.data.contract.grossWeight;
-				Totalvalueofgoodsform.value.totalNetWeight = response.data.contract.netWeight;
-				Totalvalueofgoodsform.value.totalVolume = response.data.contract.volume;
-				Totalvalueofgoodsform.value.appliedPayment = "0";
-				Totalvalueofgoodsform.value.availablePayment = "0";
-				Totalvalueofgoodsform.value.paidAmount = "0";
-				Totalvalueofgoodsform.value.unpaidAmount = "0";
-
-				// 关闭采购需求对话框
-				viewDetailsDialog.value = false;  // 假设这是采购需求对话框的控制变量
-				SaleContractID.value = row.contractId;
-				// 打开对话框
-				Addcontractofpurchasedialog.value = true;
-			} else {
-				ElMessage.error('获取销售合同详情失败');
-			}
-		} catch (error) {
-			console.error('生成采购合同失败:', error);
-			ElMessage.error('生成采购合同失败，请重试');
-		}
-	}).catch(() => {
-		ElMessage({
-			type: 'info',
-			message: '已取消生成采购合同'
-		});
-	});
-}
-
 
 ///采购合同表格数据
 const contractofpurchasetableData = ref([])
@@ -1659,6 +1724,7 @@ const handleAddcontractofpurchasedialogclose = async () => {
 
 // 查看详情
 const CheckDetails = async (row) => {
+	console.log('Checking details for row:', row);
 	// 先检查编辑锁
 	const lockStatus = await getPurchaseContractEditLock(row.id);
 	if (lockStatus.data.isEditLock == true) {
@@ -1718,12 +1784,14 @@ const CheckDetails = async (row) => {
 			params: {
 				PurchaseContracID: row.id
 			}
-		}).then(response => {
+		}).then(async response => {
+			console.log('Contract details response:', response);
 			if (response.data.purchaseContractProducts.length > 0) {
-				productinfotableData.value = [];
-				response.data.purchaseContractProducts.forEach(element => {
-					productinfotableData.value.push({
+				const products = response.data.purchaseContractProducts.map(element => {
+					console.log('Processing product element:', element);
+					return {
 						id: element.id,
+						productId: element.productNumber, // 确保这里设置了productId
 						vendorCode: state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictValue,
 						productCode: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
 						chineseName: element.chineseName,
@@ -1740,11 +1808,19 @@ const CheckDetails = async (row) => {
 						outerBoxQuantity: element.outerBoxQuantity,
 						invoice: element.invoke == 1 ? '是' : '否',
 						remark: element.remark
-					});
+					};
 				});
+
+				console.log('Mapped products:', products);
+				// 先加载供应商数据
+				await loadSupplierData(products);
+				// 然后设置产品数据
+				productinfotableData.value = products;
+				console.log('Final product table data:', productinfotableData.value);
 			}
 			if (response.data.purchaseContractVendorExpenses.length > 0) {
 				CustomerRelaterExoensesTableData.value = [];
+
 				CustomerRelaterExoensesTableData.value = response.data.purchaseContractVendorExpenses;
 			}
 			Addcontractofpurchasedialog.value = true;
@@ -1773,16 +1849,6 @@ const GetNewPurchaseContractNumber = () => {
 			reject(error);
 		});
 	});
-}
-
-const OpenAddcontractofpurchasedialog = () => {
-	isGeneratedFromRequirement.value = false; // 重置标志
-	clearAll();
-	GetNewPurchaseContractNumber();
-	Addcontractofpurchaseform.value.purchaser = userId.toString();
-	Addcontractofpurchaseform.value.contractStatus = '1';
-	Addcontractofpurchasedialog.value = true;
-	isSaveBtnShow.value = true;
 }
 
 const clearAll = () => {

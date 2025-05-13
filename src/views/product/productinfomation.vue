@@ -3070,6 +3070,8 @@ const EditSaveDraft = async () => {
 		});
 	}
 };
+
+
 </script>
 <style lang="scss" scoped>
 .image-preview-container {
