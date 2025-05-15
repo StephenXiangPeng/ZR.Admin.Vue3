@@ -409,6 +409,11 @@
 										type="success" size="default" @click="handleTaskComplete(row)">
 										确认完成
 									</el-button>
+									<el-button
+										v-if="!isCurrentUserExecutor(row.executorId) && !row.realTimePoint && !selectedTask?.isDraft && selectedTask?.planTaskStatus !== 2"
+										type="warning" size="default" @click="handleTaskExpediting(row)">
+										催办
+									</el-button>
 									<el-button v-if="row.realTimePoint" type="primary" link
 										@click="showCompletionDetails(row)">
 										查看完成详情
@@ -759,6 +764,39 @@ const formatDate = (dateStr: string) => {
 const handleTaskComplete = (task) => {
 	currentTask.value = task
 	confirmDialogVisible.value = true
+}
+
+const handleTaskExpediting = async (task) => {
+	if (!task || !task.id) {
+		ElMessage.error('无效的任务信息');
+		return;
+	}
+	try {
+		const loadingInstance = ElLoading.service({
+			lock: true,
+			text: '正在发送催办通知...',
+			background: 'rgba(0, 0, 0, 0.7)'
+		});
+
+		try {
+			const res = await request.get(`PlanTasks/ExpeditingTaskItem/Expediting`, {
+				params: {
+					ID: task.id
+				}
+			}) as unknown as { data: ApiResponse };
+
+			if (res.code === 200) {
+				ElMessage.success(res.msg || '催办通知发送成功');
+			} else {
+				ElMessage.error(res.msg || '催办失败');
+			}
+		} finally {
+			loadingInstance.close();
+		}
+	} catch (error) {
+		console.error('催办失败:', error);
+		ElMessage.error('催办操作失败，请稍后重试');
+	}
 }
 
 // 处理任务完成附件变更

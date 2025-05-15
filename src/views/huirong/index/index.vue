@@ -1919,18 +1919,55 @@
 
       </el-tabs>
     </el-dialog>
-    <el-dialog v-model="overdueEmailDialogVisible" title="超时未处理邮件" :close-on-click-modal="false" class="custom-dialog"
-      width="700px">
-      <el-table :data="overdueEmailList" :height="400" style="width: 100%"
-        @row-dblclick="handleOverdueEmailRowDblClick">
-        <el-table-column prop="customerName" label="客户名称" width="200"></el-table-column>
-        <el-table-column prop="emailsubject" label="邮件标题" width="200"></el-table-column>
-        <el-table-column prop="create_time" label="时间" width="250">
-          <template #default="scope">
-            {{ scope.row.createTime }}
+    <el-dialog v-model="overdueEmailDialogVisible" title="超时未处理" :close-on-click-modal="false" class="custom-dialog"
+      width="900px">
+      <el-tabs type="border-card" class="demo-tabs">
+        <el-tab-pane>
+          <template #label>
+            <span class="custom-tabs-label">
+              <el-icon>
+                <calendar />
+              </el-icon>
+              <span>计划任务</span>
+            </span>
           </template>
-        </el-table-column>
-      </el-table>
+          <el-table :data="overduePendingTaskPlanItemList" :height="400" style="width: 100%"
+            @row-dblclick="handleRowDblClick">
+            <el-table-column prop="taskId" label="任务ID" width="200" v-if="false"></el-table-column>
+            <el-table-column prop="taskName" label="任务名称" width="200"></el-table-column>
+            <el-table-column prop="phaseName" label="阶段名称" width="200"></el-table-column>
+            <el-table-column prop="itemId" label="事项ID" width="200" v-if="false"></el-table-column>
+            <el-table-column prop="itemName" label="事项名称" width="200"></el-table-column>
+            <el-table-column prop="timePoint" label="截止时间" width="200">
+              <template #default="scope">
+                {{ scope.row.timePoint }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane>
+          <template #label>
+            <span class="custom-tabs-label">
+              <el-icon>
+                <calendar />
+              </el-icon>
+              <span>邮件</span>
+            </span>
+          </template>
+          <el-table :data="overdueEmailList" :height="400" style="width: 100%"
+            @row-dblclick="handleOverdueEmailRowDblClick">
+            <el-table-column prop="customerName" label="客户名称" width="200"></el-table-column>
+            <el-table-column prop="emailsubject" label="邮件标题" width="200"></el-table-column>
+            <el-table-column prop="create_time" label="时间" width="250">
+              <template #default="scope">
+                {{ scope.row.createTime }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+      </el-tabs>
+
     </el-dialog>
   </div>
 
@@ -4238,7 +4275,7 @@ const getOutside24hoursEmailCount = async () => {
       }
     })
     if (response.code === 200) {
-      overdueEmailCount.value = response.data.length
+      overdueEmailCount.value += response.data.length
       overdueEmailList.value = response.data
     }
   } catch (error) {
@@ -4265,6 +4302,7 @@ onMounted(async () => {
       GetPlantTaskItemList(),
       getWithin24hoursEmailCount(),
       getOutside24hoursEmailCount(),
+      getOverduePendingTaskPlanItemList(),
       fetchTaskReminderData(),
       fetchDashboardData(),
       getUnreadMessages()
@@ -4285,7 +4323,7 @@ onUnmounted(() => {
 
 const showPendingEmails = async () => {
   if (pendingEmailCount.value === 0) {
-    ElMessage.warning('没有待处理邮件')
+    ElMessage.warning('没有待处理工作任务')
     return;
   } else {
     await getWithin24hoursEmailCount();
@@ -4295,7 +4333,7 @@ const showPendingEmails = async () => {
 
 const showOverdueEmails = async () => {
   if (overdueEmailCount.value === 0) {
-    ElMessage.warning('没有超时未处理邮件')
+    ElMessage.warning('没有超时未处理工作任务')
     return;
   } else {
     await getOutside24hoursEmailCount();
@@ -4459,6 +4497,28 @@ onMounted(() => {
     GetProcurementequirements();
   }
 })
+
+const overduePendingTaskPlanItemList = ref([])
+
+const getOverduePendingTaskPlanItemList = async () => {
+  const res = await request({
+    url: 'PlanTasks/GetPlanTask_ItemsOverTimeData/GetPlanTask_Items',
+    method: 'GET'
+  })
+  if (res.code === 200) {
+    overdueEmailCount.value += res.data.length;
+    res.data.forEach(item => {
+      overduePendingTaskPlanItemList.value.push({
+        taskId: item.taskId,
+        itemId: item.itemId,
+        taskName: item.taskName,
+        phaseName: item.phaseName,
+        itemName: item.itemName,
+        timePoint: item.timePoint
+      })
+    })
+  }
+}
 
 </script>
 
