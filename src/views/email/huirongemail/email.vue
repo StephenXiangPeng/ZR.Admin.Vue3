@@ -657,9 +657,11 @@
 				</el-form-item>
 			</el-form>
 			<template #footer>
-				<span class="dialog-footer">
-					<el-button @click="ConfigEmaildialog = false">取消</el-button>
-					<el-button type="primary" @click="ConfigUserEmail">保存</el-button>
+				<span>
+					<el-button size="default" @click="ConfigEmaildialog = false">取消</el-button>
+					<el-button size="default" type="primary" @click="ConfigUserEmail">保存</el-button>
+					<el-button size="default" type="danger" @click="UnbindUserEmail"
+						v-if="ConfigEmailForm.id != 0">解绑</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -787,6 +789,7 @@ import { h } from 'vue'
 import { ElSelect, ElOption } from 'element-plus'
 import { stringify } from 'qs';
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
+import { id } from 'element-plus/es/locale';
 
 // #region 商机选择
 const BusinessOpportunitySelectionDialog = ref(false);
@@ -1655,6 +1658,8 @@ const EmailInboxArray = ref([]);
 const EmailTagIndex = ref(0);
 const ConfigEmaildialog = ref(false);
 const ConfigEmailForm = reactive({
+	id: 0,
+	userID: 0,
 	email: '',
 	password: '',
 	smtpPort: 0,
@@ -1667,6 +1672,8 @@ const ConfigEmailForm = reactive({
 const initEmailConfig = async () => {
 	const response = await checkUserEmailConfig();
 	if (response && response.data) {
+		ConfigEmailForm.id = response.data.id;
+		ConfigEmailForm.userID = response.data.userID;
 		ConfigEmailForm.email = response.data.userEmail;
 		ConfigEmailForm.password = response.data.userEmailAuth;
 		ConfigEmailForm.emailSendServer = response.data.userEmailSendServer;
@@ -1679,22 +1686,43 @@ initEmailConfig();
 
 const openUserEmailConfigDialog = async () => {
 	try {
-		const response = await checkUserEmailConfig();
+		// 显示加载指示器
+		const loading = ElLoading.service({
+			lock: true,
+			text: '正在获取邮箱配置...',
+			background: 'rgba(0, 0, 0, 0.7)',
+		})
+
+		// 强制重新获取最新配置
+		const response = await request({
+			url: 'Email/GetEmailConfigByUser/GetEmailConfigByUser',
+			method: 'GET',
+			params: { timestamp: new Date().getTime() } // 添加时间戳避免缓存
+		})
+
+		loading.close()
+
 		if (response && response.data) {
-			ConfigEmailForm.email = response.data.userEmail;
-			ConfigEmailForm.password = response.data.userEmailAuth;
-			ConfigEmailForm.emailSendServer = response.data.userEmailSendServer;
-			ConfigEmailForm.smtpPort = response.data.userEmailSendPort;
-			ConfigEmailForm.emailReceiveServer = response.data.userEmailReceiveServer;
-			ConfigEmailForm.imapPort = response.data.userEmailReceivePort;
-			IsEditUserEmailConfig.value = true;
+			// 更新所有字段，确保完整加载
+			ConfigEmailForm.id = response.data.id || 0
+			ConfigEmailForm.userID = response.data.userID || 0
+			ConfigEmailForm.email = response.data.userEmail || ''
+			ConfigEmailForm.password = response.data.userEmailAuth || ''
+			ConfigEmailForm.emailSendServer = response.data.userEmailSendServer || ''
+			ConfigEmailForm.smtpPort = response.data.userEmailSendPort || 0
+			ConfigEmailForm.emailReceiveServer = response.data.userEmailReceiveServer || ''
+			ConfigEmailForm.imapPort = response.data.userEmailReceivePort || 0
+			IsEditUserEmailConfig.value = true
+			ConfigEmaildialog.value = true
 		} else {
-			IsEditUserEmailConfig.value = false;
-			console.error('No data in response');
+			IsEditUserEmailConfig.value = false
+			ConfigEmaildialog.value = true
+			ElMessage.warning('未能获取邮箱配置数据')
 		}
-		ConfigEmaildialog.value = true;
 	} catch (error) {
-		console.error('Error fetching email config:', error);
+		console.error('获取邮箱配置失败:', error)
+		ElMessage.error('获取邮箱配置失败')
+		ConfigEmaildialog.value = true
 	}
 }
 
@@ -1723,6 +1751,8 @@ function ConfigUserEmail() {
 	})
 	try {
 		var requestData = {
+			id: ConfigEmailForm.id,
+			UserID: ConfigEmailForm.userID,
 			UserEmail: ConfigEmailForm.email,
 			UserEmailSendServer: ConfigEmailForm.emailSendServer,
 			UserEmailReceiveServer: ConfigEmailForm.emailReceiveServer,
@@ -1785,6 +1815,105 @@ function ConfigUserEmail() {
 	}
 }
 
+function UnbindUserEmail() {
+	// 弹出确认对话框，提示用户确认解绑操作
+	ElMessageBox.confirm('确定要解绑当前邮箱吗？解绑后将无法收发邮件。', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(async () => {
+		try {
+			// 显示加载动画
+			const loading = ElLoading.service({
+				lock: true,
+				text: '正在解绑邮箱，请稍等...',
+				background: 'rgba(0, 0, 0, 0.7)',
+			})
+
+			var requestData = {
+				id: ConfigEmailForm.id,
+				UserEmail: ConfigEmailForm.email,
+				UserEmailSendServer: ConfigEmailForm.emailSendServer,
+				UserEmailReceiveServer: ConfigEmailForm.emailReceiveServer,
+				UserEmailAuth: ConfigEmailForm.password,
+				UserEmailSendPort: ConfigEmailForm.smtpPort,
+				UserEmailReceivePort: ConfigEmailForm.imapPort,
+				UserID: 0
+			}
+
+			// 调用解绑邮箱API
+			const response = await request({
+				url: 'Email/UnbindEmail/UnbindEmail',
+				method: 'POST',
+				data: requestData
+			})
+
+			loading.close()
+
+			if (response.code === 200) {
+				// 解绑成功，显示成功消息
+				ElMessage.success(response.msg || '解绑邮箱成功')
+
+				// 清空所有邮件相关数据
+				EmailTableData.value = []
+				originalEmailData.value = []
+				totalItems.value = 0
+
+				// 清空标签相关数据
+				UserEmailTagList.value = []
+				EmailTagcheckboxoptions.value = []
+				EmailTagcheckboxGroup.value = []
+
+				// 清空文件夹数据
+				customFolders.value = []
+
+				// 重置表单数据
+				ConfigEmailForm.id = 0
+				ConfigEmailForm.userID = 0
+				ConfigEmailForm.email = ''
+				ConfigEmailForm.password = ''
+				ConfigEmailForm.emailSendServer = ''
+				ConfigEmailForm.emailReceiveServer = ''
+				ConfigEmailForm.smtpPort = 0
+				ConfigEmailForm.imapPort = 0
+
+				// 重置当前邮件详情
+				showEmailDetail.value = false
+				currentEmail.value = {
+					id: '',
+					subject: '',
+					from: '',
+					to: '',
+					cc: '',
+					date: '',
+					content: '',
+					attachments: []
+				}
+
+				// 关闭配置对话框
+				ConfigEmaildialog.value = false
+
+				// 重置邮箱配置状态
+				IsEditUserEmailConfig.value = false
+
+				// 关闭当前邮箱页面并返回首页
+				closePage().then(() => {
+					console.log('关闭邮箱页面')
+				})
+			} else {
+				// 解绑失败，显示错误消息
+				ElMessage.error(response.msg || '解绑邮箱失败')
+			}
+		} catch (error) {
+			// 捕获并处理异常
+			console.error('解绑邮箱失败:', error)
+			ElMessage.error('解绑邮箱失败，请重试')
+		}
+	}).catch(() => {
+		// 用户取消操作，不做任何处理
+	})
+}
+
 const VerifyUserEmailConfigurationExists = () => {
 	return request({
 		url: 'Email/VerifyUserEmailConfigurationExists/VerifyUserEmailConfigurationExists',
@@ -1796,6 +1925,7 @@ const VerifyUserEmailConfigurationExists = () => {
 				type: 'warning'
 			})
 			ConfigEmaildialog.value = true;
+
 		} else {
 			ConfigEmaildialog.value = false;
 			getInboxEmail(currentPage.value, pageSize.value, 1);
