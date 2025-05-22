@@ -1054,7 +1054,7 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { createApp, getCurrentInstance, reactive, toRefs, ref, watch, computed } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, watch, computed, onMounted } from 'vue'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn,
 	ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile,
@@ -1069,6 +1069,7 @@ import { JsonHubProtocol } from '@microsoft/signalr';
 import { get } from 'sortablejs';
 import useUserStore from "@/store/modules/user";
 import { Row } from 'element-plus/es/components/table-v2/src/components';
+import { useRoute } from 'vue-router'
 
 const activeSearchProductTab = ref('productInfoTab');
 const selectedCustomerId = ref(null);
@@ -3723,6 +3724,43 @@ const GetCustomerContactPerson = (customerId) => {
 		contactpersonSelectOptions.value = [];
 	});
 }
+
+// 在现有的import语句附近添加
+// 在script setup部分添加route定义
+const route = useRoute()
+
+// 添加自动加载合同详情的函数
+const autoLoadContractDetail = () => {
+	// 检查URL参数
+	const contractId = route.query.contractId
+	const contractNumber = route.query.contractNumber
+	const viewDetail = route.query.viewDetail
+
+	if (contractId && viewDetail === 'true') {
+		console.log('自动加载合同详情, ID:', contractId, '合同编号:', contractNumber)
+
+		// 查找匹配的合同
+		GetContractList(1, 100).then(() => {
+			const contract = contractsTableData.value.find(item =>
+				item.id.toString() === contractId.toString() ||
+				(contractNumber && item.contractNumber === contractNumber)
+			)
+
+			if (contract) {
+				// 调用查看详情的函数
+				checkContractsDetails(contract)
+			} else {
+				console.error('未找到匹配的合同:', contractId, contractNumber)
+			}
+		})
+	}
+}
+
+// 添加onMounted钩子
+onMounted(() => {
+	console.log('销售合同页面挂载，检查路由参数')
+	autoLoadContractDetail()
+})
 </script>
 <style scoped>
 /* 基础红色文本 */

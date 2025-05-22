@@ -461,12 +461,19 @@
 				</el-tab-pane>
 				<el-tab-pane label="联系日志" name="ContactLogTable">
 					<el-button type="primary" @click="AddContactLog">添加联系日志</el-button>
-					<el-table :data="ContactLogData" height="200" style="width: 100%">
+					<el-table :data="ContactLogData" height="200" style="width: 100%"
+						@row-dblclick="handleContactLogRowDblClick">
 						<el-table-column prop="conactTag" label="日志标签" width="130" />
 						<el-table-column prop="emailDate" label="联系日期" width="130" />
 						<el-table-column prop="logSouce" label="来源" width="150" />
 						<el-table-column prop="contact" label="联系人" width="180" />
 						<el-table-column prop="ourPersonnel" label="我方人员" width="180" />
+						<el-table-column prop="relatedDocumentType" label="关联单据类型" width="180">
+							<template #default="{ row }">
+								{{ row.relatedDocumentType === 1 ? '销售合同' : row.relatedDocumentType === 2 ? '出运合同' : '无'
+								}}
+							</template>
+						</el-table-column>
 						<el-table-column prop="contactDetails" label="联系内容" show-overflow-tooltip />
 						<el-table-column label="图片" width="100">
 							<template #default="{ row }">
@@ -492,23 +499,44 @@
 						style="margin-top: 5px;" />
 				</el-tab-pane>
 				<el-tab-pane label="报价记录" name="QuoteRecordTable">
-					<el-table :data="QuotationRecordData">
-						<el-table-column prop="quotationNum" label="报价单号" style="width: 8%;" />
+					<el-table :data="QuotationRecordData" @row-dblclick="handleQuoteRowDblClick">
+						<el-table-column prop="id" label="ID" width="100" v-if="false"></el-table-column>
+						<el-table-column prop="quotationNum" label="报价单号" :width="200">
+							<template #default="scope">
+								<span>{{ scope.row.quotationNum }}</span>
+								<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+									size="small">草稿</el-tag>
+								<el-tag v-if="scope.row.version > 1" type="success" style="margin-left: 5px;"
+									size="small">
+									{{ getVersionText(scope.row.version) }}
+								</el-tag>
+							</template>
+						</el-table-column>
 						<el-table-column prop="realQuotationDate" label="报价日期" style="width: 8%;" />
 						<el-table-column prop="validityPeriod" label="有效期" style="width: 8%;" />
 					</el-table>
+					<el-pagination @current-change="QuotationRecordHandlePageChange"
+						:current-page="QuotationRecordCurrentPage" :page-size="QuotationRecordPageSize"
+						:total="QuotationRecordTotalItems" background layout="prev, pager, next, total"
+						style="margin-top: 5px;" :pager-count="5" :hide-on-single-page="false" />
 				</el-tab-pane>
 				<el-tab-pane label="销售记录" name="saleRecordTable">
-					<el-table :data="SalesContractRecordData">
+					<el-table :data="SalesContractRecordData" @row-dblclick="handleSalesContractRowDblClick">
 						<el-table-column prop="contractNumber" label="销售合同" style="width: 8%;" />
 						<el-table-column prop="contractDate" label="合同日期" style="width: 8%;" />
 						<el-table-column prop="effectiveDate" label="生效日期" style="width: 8%;" />
 						<el-table-column prop="deliveryDate" label="交货日期" style="width: 8%;" />
 						<el-table-column prop="goodsValue" label="货值合计" style="width: 8%;" />``
 					</el-table>
+					<el-pagination @current-change="SalesContractRecordHandlePageChange"
+						:current-page="SalesContractRecordCurrentPage" :page-size="SalesContractRecordPageSize"
+						:total="SalesContractRecordTotalItems" background layout="prev, pager, next"
+						style="margin-top: 5px;" />
 				</el-tab-pane>
 				<el-tab-pane label="收寄样历史" name="SampleCollectionHistory">
-					<el-table :data="CustomerSendSampleData" style="width: 100%">
+					<el-table :data="CustomerSendSampleData" style="width: 100%"
+						@row-dblclick="handleSampleRowDblClick">
+						<el-table-column prop="id" label="ID" width="100" v-if="false"></el-table-column>
 						<el-table-column prop="type" label="寄样/收样" width="100"></el-table-column>
 						<el-table-column prop="waybillNumber" label="运单号" width="150"></el-table-column>
 						<el-table-column prop="expressCompany" label="快递公司" width="120"></el-table-column>
@@ -522,7 +550,12 @@
 							</template>
 						</el-table-column>
 						<el-table-column prop="remark" label="备注"></el-table-column>
-					</el-table></el-tab-pane>
+					</el-table>
+					<el-pagination @current-change="CustomerSendSampleHandlePageChange"
+						:current-page="CustomerSendSampleCurrentPage" :page-size="CustomerSendSamplePageSize"
+						:total="CustomerSendSampleTotalItems" background layout="prev, pager, next"
+						style="margin-top: 5px;" />
+				</el-tab-pane>
 				<el-tab-pane label="出货记录" name="ShippingRecordTable">
 					<el-table :data="ShipRecoreData">
 						<el-table-column prop="Cnum" label="发票号码" style="width: 8%;" />
@@ -572,6 +605,19 @@
 							:label="item.dictLabel" :value="item.dictValue" />
 					</el-select>
 				</el-form-item>
+				<el-form-item label="关联单据">
+					<el-radio-group v-model="contactLogForm.relatedDocumentType" @change="RelatedDocumentsChange">
+						<el-radio :value="1">销售合同</el-radio>
+						<el-radio :value="2">出运合同</el-radio>
+					</el-radio-group>
+					<el-select v-model="contactLogForm.relatedDocumentID" filterable
+						:placeholder="contactLogForm.relatedDocumentType === 1 ? '请选择销售合同' : '请选择出运合同'"
+						style="width: 100%;">
+						<el-option
+							v-for="item in contactLogForm.relatedDocumentType === 1 ? state.optionss.sql_sale_contracts : state.optionss.sql_shipping_contracts"
+							:key="item.dictValue" :label="item.dictLabel" :value="item.dictValue" />
+					</el-select>
+				</el-form-item>
 				<el-form-item label="联系内容" prop="contactContent">
 					<el-input v-model="contactLogForm.contactContent" type="textarea" :rows="4" placeholder="请输入联系内容" />
 				</el-form-item>
@@ -607,18 +653,95 @@
 				</span>
 			</template>
 		</el-dialog>
+		<!-- 添加联系日志详情对话框 -->
+		<el-dialog v-model="contactLogDetailDialogVisible" title="联系日志详情" width="600px" :close-on-click-modal="false">
+			<el-descriptions :column="1" border>
+				<el-descriptions-item label="联系日期">{{ selectedContactLog.emailDate }}</el-descriptions-item>
+				<el-descriptions-item label="日志标签">{{ selectedContactLog.conactTag }}</el-descriptions-item>
+				<el-descriptions-item label="来源">{{ selectedContactLog.logSouce }}</el-descriptions-item>
+				<el-descriptions-item label="联系人">{{ selectedContactLog.contact }}</el-descriptions-item>
+				<el-descriptions-item label="我方人员">{{ selectedContactLog.ourPersonnel }}</el-descriptions-item>
+				<el-descriptions-item label="关联单据类型">
+					{{
+						selectedContactLog.relatedDocumentType === 1
+							? '销售合同'
+							: selectedContactLog.relatedDocumentType === 2
+								? '出运合同'
+								: '无'
+					}}
+				</el-descriptions-item>
+				<el-descriptions-item label="关联单据">
+					{{
+						selectedContactLog.relatedDocumentID && selectedContactLog.relatedDocumentID !== 0
+							? (
+								selectedContactLog.relatedDocumentType === 1
+									? (state.optionss.sql_sale_contracts.find(
+										item => item.dictValue.toString() === selectedContactLog.relatedDocumentID.toString()
+									)?.dictLabel || selectedContactLog.relatedDocumentID)
+									: selectedContactLog.relatedDocumentType === 2
+										? (state.optionss.sql_shippingdeliveries.find(
+											item => item.dictValue.toString() === selectedContactLog.relatedDocumentID.toString()
+										)?.dictLabel || selectedContactLog.relatedDocumentID)
+										: '无'
+							)
+							: '无'
+					}}
+				</el-descriptions-item>
+				<el-descriptions-item label="联系内容">
+					<div style="white-space: pre-wrap;">{{ selectedContactLog.contactDetails }}</div>
+				</el-descriptions-item>
+				<el-descriptions-item label="图片" v-if="selectedContactLog.images">
+					<el-image style="width: 100px; height: 100px; margin-right: 10px;"
+						v-for="(url, index) in selectedContactLog.images.split(',')" :key="index" :src="url"
+						:preview-src-list="selectedContactLog.images.split(',')" fit="cover" />
+				</el-descriptions-item>
+				<el-descriptions-item label="附件" v-if="selectedContactLog.attachments">
+					<div v-for="(url, index) in selectedContactLog.attachments.split(',')" :key="index">
+						<el-button type="primary" link @click="downloadAttachment(url)">
+							{{ url.split('/').pop() }}
+						</el-button>
+					</div>
+				</el-descriptions-item>
+			</el-descriptions>
+		</el-dialog>
 	</div>
 </template>
 
 <script setup lang="ts">
 import { getCurrentInstance, reactive, toRefs, ref, onMounted, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, UploadUserFile, ElMessage, UploadFile, FormInstance, FormRules } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import request from '@/utils/request';
 import useUserStore from "@/store/modules/user";
 import { number } from 'echarts';
 import { fa } from 'element-plus/es/locale';
 import { start } from 'nprogress';
+
+// 定义接口类型
+interface ContactLog {
+	emailDate: string;
+	conactTag: string;
+	logSouce: string;
+	contact: string;
+	ourPersonnel: string;
+	contactDetails: string;
+	relatedDocumentType: number;
+	relatedDocumentID: number;
+	images?: string;
+	attachments?: string;
+}
+
+interface ApiResponse<T> {
+	code: number;
+	msg: string;
+	data: T;
+}
+
+// 扩展 UploadFile 类型
+interface CustomUploadFile extends UploadFile {
+	isChanged?: boolean;
+}
 
 const activeTab = ref('ContactInfoTable');
 const isEditCustomerInfo = ref(false);
@@ -639,7 +762,9 @@ const state = reactive({
 		hr_express_payment_method: [],
 		hr_contract_status: [],
 		hr_ourcompany: [],
-		sql_user_customers: []
+		sql_user_customers: [],
+		sql_sale_contracts: [],
+		sql_shippingdeliveries: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -658,7 +783,9 @@ var dictParams = [
 	{ dictType: 'hr_express_delivery_company' },
 	{ dictType: 'hr_express_payment_method' },
 	{ dictType: 'hr_contract_status' },
-	{ dictType: 'hr_ourcompany' }
+	{ dictType: 'hr_ourcompany' },
+	{ dictType: 'sql_sale_contracts' },
+	{ dictType: 'sql_shippingdeliveries' }
 ]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
@@ -674,7 +801,8 @@ const getUserCustomerData = async () => {
 		const response = await request({
 			url: 'CustomerInfoMation/GetCustomerAllNameDataByUserId/GetSelectCustomerAllNameData',
 			method: 'get'
-		})
+		}) as ApiResponse<any>
+
 		if (response.code === 200) {
 			state.optionss.sql_user_customers = response.data.map(item => ({
 				dictValue: item.dictValue,
@@ -1020,10 +1148,10 @@ const UploadUrl = 'Common/UploadFile'
 const dialogImageUrl = ref('')
 const dialogVisible = ref(false)
 const disabled = ref(false)
-const fileList = ref<UploadUserFile[]>([])
+const fileList = ref<CustomUploadFile[]>([])
 const uploadedFiles = ref([]);  // 用于存储已上传的文件
 // 删除客户图片
-const handleRemove = (file: UploadFile) => {
+const handleRemove = (file: CustomUploadFile) => {
 	ElMessageBox.confirm('确定删除该图片吗？', '提示', {
 		confirmButtonText: '确定',
 		cancelButtonText: '取消',
@@ -1064,20 +1192,18 @@ const handleRemove = (file: UploadFile) => {
 };
 
 // 检查上传客户图片数量
-const handleChange = (file, fileList) => {
-	// 先检查文件数量限制
+const handleChange = (file: CustomUploadFile, fileList: CustomUploadFile[]) => {
 	if (fileList.length > 3) {
 		ElMessage({
 			type: 'info',
 			message: '最多上传3张图片！'
 		});
-		fileList.splice(3); // 保留前三个文件，移除其余文件
-		return; // 不再继续执行后面的代码
+		fileList.splice(3);
+		return;
 	}
 
-	// 检查是否是新文件
 	if (file.raw) {
-		const isDuplicate = fileList.value.some(f =>
+		const isDuplicate = fileList.some(f =>
 			f !== file && f.name === file.name && !f.raw
 		);
 		if (isDuplicate) {
@@ -1090,13 +1216,12 @@ const handleChange = (file, fileList) => {
 				fileList.splice(index, 1);
 			}
 		} else {
-			// 为新文件创建预览URL
 			file.url = URL.createObjectURL(file.raw);
 		}
 	}
-};
+}
 
-const handlePictureCardPreview = (file: UploadFile) => {
+const handlePictureCardPreview = (file: CustomUploadFile) => {
 	dialogImageUrl.value = file.url!
 	dialogVisible.value = true
 }
@@ -1764,18 +1889,44 @@ const DuplicationCheckReset = () => {
 	CustomerDuplicationCheckData.value = [];
 }
 
+// 获取版本文字显示
+const getVersionText = (version) => {
+	if (version === 1) return "一次报价";
+	if (version === 2) return "二次报价";
+	if (version === 3) return "三次报价";
+	if (version === 4) return "四次报价";
+	if (version === 5) return "五次报价";
+	if (version === 6) return "六次报价";
+	if (version === 7) return "七次报价";
+	if (version === 8) return "八次报价";
+	if (version === 9) return "九次报价";
+	if (version === 10) return "十次报价";
+	return `${version}次报价`;
+};
 // 获取报价历史记录
-const loadQuotationHistory = async (customerId: number) => {
+const loadQuotationHistory = async (customerId: number, pageNum: number = 1, pageSize: number = 10) => {
 	try {
 		const response = await request({
-			url: 'Quotation/GetQuotaionHistoryByCustomerID/GetHistory',
+			url: 'Quotation/GetQuotaionList/GetList',
 			method: 'GET',
-			params: { CustomerID: customerId }
+			params: {
+				PageNum: pageNum,
+				PageSize: pageSize,
+				quotationnum: '',
+				customerid: customerId,
+				inquiryDate: '',
+				realQuotationDate: '',
+				showAllVersions: false // 添加是否显示所有版本参数
+			}
 		});
 		if (response.code === 200) {
 			QuotationRecordData.value = [];
+			// 设置分页信息
+			QuotationRecordCurrentPage.value = response.data.pageIndex || pageNum
+			QuotationRecordPageSize.value = response.data.pageSize || pageSize
+			QuotationRecordTotalItems.value = response.data.totalNum || 0
 			// 转换数据
-			QuotationRecordData.value = response.data;
+			QuotationRecordData.value = response.data.result;
 		} else {
 			ElMessage.error(response.msg || '获取报价历史失败');
 		}
@@ -1787,18 +1938,26 @@ const loadQuotationHistory = async (customerId: number) => {
 //销售合同记录
 const SalesContractRecordData = ref([]);
 // 获取销售历史记录
-const loadContractHistory = async (customerId: number) => {
+const loadContractHistory = async (customerId: number, pageNum: number = 1, pageSize: number = 10) => {
 	try {
 		const response = await request({
 			url: 'Contracts/GetContractHistoryByCustomerID/GetHistory',
 			method: 'GET',
-			params: { CustomerID: customerId }
+			params: {
+				CustomerID: customerId,
+				PageNum: pageNum,
+				PageSize: pageSize
+			}
 		});
 
 		if (response.code === 200) {
 			SalesContractRecordData.value = [];
+			// 设置分页信息
+			SalesContractRecordCurrentPage.value = response.data.pageIndex || pageNum
+			SalesContractRecordPageSize.value = response.data.pageSize || pageSize
+			SalesContractRecordTotalItems.value = response.data.totalNum || 0
 			// 转换数据
-			SalesContractRecordData.value = response.data;
+			SalesContractRecordData.value = response.data.result || response.data;
 		} else {
 			ElMessage.error(response.msg || '获取销售历史失败');
 		}
@@ -1825,17 +1984,27 @@ interface SampleHistoryItem {
 }
 const CustomerSendSampleData = ref([]) //收寄样历史
 // 获取客户寄样历史
-const loadCustomerSendSampleHistory = async (customerId) => {
+const loadCustomerSendSampleHistory = async (customerId, pageNum: number = 1, pageSize: number = 10) => {
 	try {
 		const response = await request({
 			url: 'ProductSample/GetCustomerHistoryByCustomerID/GetHistory',
 			method: 'GET',
-			params: { CustomerID: customerId }
+			params: {
+				CustomerID: customerId,
+				PageNum: pageNum,
+				PageSize: pageSize
+			}
 		});
 
 		if (response.code === 200) {
+			// 设置分页信息
+			CustomerSendSampleCurrentPage.value = response.data.pageIndex || pageNum
+			CustomerSendSamplePageSize.value = response.data.pageSize || pageSize
+			CustomerSendSampleTotalItems.value = response.data.totalNum || 0
+
 			// 转换数据
-			CustomerSendSampleData.value = response.data.map((item: SampleHistoryItem) => ({
+			const data = response.data.result || response.data;
+			CustomerSendSampleData.value = data.map((item: SampleHistoryItem) => ({
 				type: item.type === 1 ? '寄样' : '收样',
 				waybillNumber: item.waybill_Number,
 				expressCompany: state.optionss.hr_express_delivery_company.find(
@@ -1850,7 +2019,8 @@ const loadCustomerSendSampleHistory = async (customerId) => {
 					method => method.dictValue === item.payment_Method.toString()
 				)?.dictLabel || '',
 				paidExpressFee: item.paid_Express_Fee?.toFixed(2) || '0.00',
-				remark: item.remark || ''
+				remark: item.remark || '',
+				id: item.id
 			}));
 		} else {
 			ElMessage.error(response.msg || '获取收寄样历史失败');
@@ -1878,6 +2048,8 @@ interface ContactLogForm {
 	remark: string
 	attachmentURLs: string
 	imageURLs: string
+	relatedDocumentType: number
+	relatedDocumentID: number
 }
 
 const contactLogForm = reactive<ContactLogForm>({
@@ -1888,8 +2060,22 @@ const contactLogForm = reactive<ContactLogForm>({
 	contactContent: '',
 	remark: '',
 	attachmentURLs: '',
-	imageURLs: ''
+	imageURLs: '',
+	relatedDocumentType: 1,
+	relatedDocumentID: null
 })
+
+const RelatedDocumentsChange = (value) => {
+	// 清空当前选择的值
+	contactLogForm.relatedDocumentID = null;
+	if (value === 1) {
+		// 切换到销售合同选项
+		state.optionss.sql_sale_contracts = state.optionss.sql_sale_contracts || [];
+	} else {
+		// 切换到出运合同选项
+		state.optionss.sql_shippingdeliveries = state.optionss.sql_shippingdeliveries || [];
+	}
+}
 
 const contactLogRules = reactive<FormRules>({
 	contactDate: [{ required: true, message: '请选择联系日期', trigger: 'change' }],
@@ -1995,7 +2181,9 @@ const submitContactLog = async (formEl: FormInstance | undefined) => {
 					OurStaff: contactLogForm.ourStaff,
 					AttachmentURLs: attachmentUrlStr,
 					ImageURLs: imageUrlStr,
-					Remark: contactLogForm.remark
+					Remark: contactLogForm.remark,
+					relatedDocumentType: contactLogForm.relatedDocumentType,
+					relatedDocumentID: contactLogForm.relatedDocumentID
 				}
 
 				// 发送请求保存联系日志
@@ -2395,5 +2583,100 @@ const loadContactLogTagData = async () => {
 	} catch (error) {
 		console.error('获取联系日志失败:', error)
 	}
+}
+
+// 在 script setup 部分添加以下代码
+const contactLogDetailDialogVisible = ref(false)
+const selectedContactLog = ref<ContactLog>({} as ContactLog)
+
+const handleContactLogRowDblClick = (row) => {
+	selectedContactLog.value = row
+	contactLogDetailDialogVisible.value = true
+}
+
+onMounted(() => {
+	console.log('sql_sale_contracts:', state.optionss.sql_sale_contracts)
+});
+
+const router = useRouter()
+
+const handleQuoteRowDblClick = (row) => {
+	if (row.id) {
+		router.push({
+			name: 'customerquotation', // 请确保路由名称为QuoteDetail
+			query: { id: row.id }
+		})
+	}
+}
+
+const handleSalesContractRowDblClick = (row) => {
+	if (row.contractNumber) {
+		try {
+			router.push({
+				path: 'sale/salecontract',
+				query: {
+					contractNumber: row.contractNumber,
+					contractId: row.id,
+					viewDetail: 'true'
+				}
+			}).catch(err => {
+				console.error('Router navigation error:', err);
+				window.location.href = `#/sale/salecontract?contractNumber=${row.contractNumber}&contractId=${row.id}&viewDetail=true`;
+			});
+		} catch (err) {
+			console.error('Navigation error:', err);
+			window.location.href = `#/sale/salecontract?contractNumber=${row.contractNumber}&contractId=${row.id}&viewDetail=true`;
+		}
+	}
+}
+
+const handleSampleRowDblClick = (row) => {
+	if (row.id) {
+		console.log('Navigating to productsamplecollection with id:', row.id);
+		try {
+			router.push({
+				path: '/product/productsamplecollection',
+				query: {
+					id: row.id,
+					viewDetail: 'true' // Add viewDetail parameter to trigger auto-opening of details
+				}
+			}).catch(err => {
+				console.error('Router navigation error:', err);
+				window.location.href = `#/product/productsamplecollection?id=${row.id}&viewDetail=true`;
+			});
+		} catch (err) {
+			console.error('Navigation error:', err);
+			window.location.href = `#/product/productsamplecollection?id=${row.id}&viewDetail=true`;
+		}
+	} else {
+		ElMessage.warning('样品记录ID不存在，无法查看详情');
+	}
+}
+
+// 报价记录分页
+const QuotationRecordCurrentPage = ref(1)
+const QuotationRecordPageSize = ref(10)
+const QuotationRecordTotalItems = ref(0)
+const QuotationRecordHandlePageChange = async (newPage) => {
+	QuotationRecordCurrentPage.value = newPage
+	await loadQuotationHistory(selectCustomerID.value, newPage, QuotationRecordPageSize.value)
+}
+
+// 销售合同记录分页
+const SalesContractRecordCurrentPage = ref(1)
+const SalesContractRecordPageSize = ref(10)
+const SalesContractRecordTotalItems = ref(0)
+const SalesContractRecordHandlePageChange = async (newPage) => {
+	SalesContractRecordCurrentPage.value = newPage
+	await loadContractHistory(selectCustomerID.value, newPage, SalesContractRecordPageSize.value)
+}
+
+// 收寄样历史分页
+const CustomerSendSampleCurrentPage = ref(1)
+const CustomerSendSamplePageSize = ref(10)
+const CustomerSendSampleTotalItems = ref(0)
+const CustomerSendSampleHandlePageChange = async (newPage) => {
+	CustomerSendSampleCurrentPage.value = newPage
+	await loadCustomerSendSampleHistory(selectCustomerID.value, newPage, CustomerSendSamplePageSize.value)
 }
 </script>

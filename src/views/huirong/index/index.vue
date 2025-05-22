@@ -215,10 +215,20 @@
           <el-card v-for="item in stage.details" :key="item.id" style="margin: 3px;" class="box-card">
             <template #header>
               <div class="card-header">
-                <span>商机编号：{{ item.opportunityNumber }}</span>
+                <span v-if="item.sourceType === 'api' && (stage.salesStage === '初次报价' || stage.salesStage === '再次报价')">
+                  报价单号：{{ item.opportunityNumber }}
+                </span>
+                <span v-else-if="item.sourceType === 'api' && stage.salesStage === '合同确定'">
+                  合同编号：{{ item.opportunityNumber }}
+                </span>
+                <span v-else>
+                  商机编号：{{ item.opportunityNumber }}
+                </span>
               </div>
             </template>
-            <div class="text item">商机名称：
+            <div class="text item">
+              <span v-if="item.sourceType === 'api'">客户名称：</span>
+              <span v-else>商机名称：</span>
               <el-tooltip :content="item.businessName" placement="top" :disabled="item.businessName.length <= 8">
                 <span class="truncate-text">{{ truncateText(item.businessName, 8) }}</span>
               </el-tooltip>
@@ -231,7 +241,15 @@
             <div class="text item">创建时间：{{ formatDateTime(item.create_time) }}</div>
             <!-- 根据销售阶段显示不同信息 -->
             <div class="text item" v-if="shouldShowAmount(stage.salesStage)">
-              预估金额：{{ formatAmount(item.amount) }}
+              <span v-if="item.sourceType === 'api' && (stage.salesStage === '初次报价' || stage.salesStage === '再次报价')">
+                报价金额：{{ formatAmount(item.amount) }}
+              </span>
+              <span v-else-if="item.sourceType === 'api' && stage.salesStage === '合同确定'">
+                合同金额：{{ formatAmount(item.amount) }}
+              </span>
+              <span v-else>
+                预估金额：{{ formatAmount(item.amount) }}
+              </span>
             </div>
             <div class="text item" v-if="stage.salesStage === '沟通需求' && item.emailcreatetime">
               最后沟通：{{ formatDateTime(item.emailcreatetime) }}
@@ -2076,12 +2094,30 @@ const truncateText = (text, length) => {
   return text.slice(0, length) + '...'
 }
 
+// 获取商机看板数据
 function getBusinessDashboard() {
   return request({
     url: 'BusinessOpportunity/GetBusinessOpportunityDashboardDataByUser/GetDashboardData',
     method: 'get'
   })
 }
+
+// 获取报价单看板数据
+function getQuotationsKanBanData() {
+  return request({
+    url: 'Quotation/GetKanBanData/GetKanBanData',
+    method: 'get'
+  })
+}
+
+// 获取合同确定阶段数据
+function getContractConfirmedKanBanData() {
+  return request({
+    url: 'Contracts/GetKanBanData/GetContactKanBanData',
+    method: 'get'
+  })
+}
+
 // 定义固定的阶段顺序
 const stageOrder = ['询盘', '初次报价', '沟通需求', '再次报价', '合同确定']
 
@@ -2120,24 +2156,116 @@ const formatAmount = (amount) => {
 // 获取看板数据
 const fetchDashboardData = async () => {
   try {
+    // 获取商机看板数据
     const response = await getBusinessDashboard()
+    console.log('商机看板数据:', response)
     if (response.code === 200) {
-      const stages = response.data.map(stageData => ({
-        salesStage: stageData.salesStage,
-        count: stageData.count,
-        details: stageData.details,
-        totalAmount: shouldShowAmount(stageData.salesStage)
-          ? stageData.details.reduce((sum, item) => sum + (item.amount || 0), 0)
-          : 0
-      }))
-
+      // 用stageOrder补全所有阶段
+      const stages = stageOrder.map(stageName => {
+        const existingStage = response.data.find(s => s.salesStage === stageName)
+        return existingStage || {
+          salesStage: stageName,
+          count: 0,
+          details: [],
+          totalAmount: 0
+        }
+      })
       businessStages.value = stages
+      console.log('处理后的商机看板数据:', businessStages.value)
+    }
+    // 获取报价单数据
+    const quotationResponse = await getQuotationsKanBanData()
+    console.log('报价单看板数据:', quotationResponse)
+    if (quotationResponse.code === 200) {
+      // 处理初次报价数据
+      const initialQuotes = quotationResponse.data.initialQuotes || []
+      // 处理最终报价数据
+      const finalQuotes = quotationResponse.data.finalQuotes || []
+      console.log('初次报价数据:', initialQuotes)
+      console.log('最终报价数据:', finalQuotes)
+
+      // 找到初次报价和再次报价的索引
+      const initialQuoteIndex = businessStages.value.findIndex(stage => stage.salesStage === '初次报价')
+      const finalQuoteIndex = businessStages.value.findIndex(stage => stage.salesStage === '再次报价')
+      console.log('初次报价索引:', initialQuoteIndex)
+      console.log('最终报价索引:', finalQuoteIndex)
+
+      // 更新初次报价数据
+      if (initialQuoteIndex !== -1) {
+        // 添加报价数据到初次报价部分
+        const initialQuoteDetails = initialQuotes.map(quote => ({
+          id: quote.id,
+          opportunityNumber: quote.quotationNum || '无编号',
+          businessName: quote.customerName || '无客户名称',
+          customer: quote.contactPersonEmail || quote.customerName || '无客户信息',
+          amount: quote.totalValueOfGoods * quote.exchangeRate || 0,
+          create_time: quote.createTime || new Date().toISOString(),
+          sourceType: 'api'
+        }))
+        console.log('处理后的初次报价数据:', initialQuoteDetails)
+
+        // 直接合并数据
+        businessStages.value[initialQuoteIndex].details = [
+          ...businessStages.value[initialQuoteIndex].details,
+          ...initialQuoteDetails
+        ]
+        businessStages.value[initialQuoteIndex].count = businessStages.value[initialQuoteIndex].details.length
+        businessStages.value[initialQuoteIndex].totalAmount = businessStages.value[initialQuoteIndex].details.reduce((sum, item) => sum + (item.amount || 0), 0)
+        console.log('更新后的初次报价阶段:', businessStages.value[initialQuoteIndex])
+      }
+
+      // 更新再次报价数据
+      if (finalQuoteIndex !== -1) {
+        // 添加报价数据到再次报价部分
+        const finalQuoteDetails = finalQuotes.map(quote => ({
+          id: quote.id,
+          opportunityNumber: quote.quotationNum || '无编号',
+          businessName: quote.customerName || '无客户名称',
+          customer: quote.contactPersonEmail || quote.customerName || '无客户信息',
+          amount: quote.totalValueOfGoods * quote.exchangeRate || 0,
+          create_time: quote.createTime || new Date().toISOString(),
+          sourceType: 'api'
+        }))
+        console.log('处理后的最终报价数据:', finalQuoteDetails)
+
+        // 直接合并数据
+        businessStages.value[finalQuoteIndex].details = [
+          ...businessStages.value[finalQuoteIndex].details,
+          ...finalQuoteDetails
+        ]
+        businessStages.value[finalQuoteIndex].count = businessStages.value[finalQuoteIndex].details.length
+        businessStages.value[finalQuoteIndex].totalAmount = businessStages.value[finalQuoteIndex].details.reduce((sum, item) => sum + (item.amount || 0), 0)
+        console.log('更新后的最终报价阶段:', businessStages.value[finalQuoteIndex])
+      }
+    }
+    // 获取合同确定阶段数据
+    const contractConfirmedResponse = await getContractConfirmedKanBanData()
+    console.log('合同确定看板数据:', contractConfirmedResponse)
+    if (contractConfirmedResponse.code === 200) {
+      const contractConfirmedQuotes = contractConfirmedResponse.data || []
+      const contractConfirmedIndex = businessStages.value.findIndex(stage => stage.salesStage === '合同确定')
+      if (contractConfirmedIndex !== -1) {
+        const contractConfirmedDetails = contractConfirmedQuotes.map(quote => ({
+          id: quote.id,
+          opportunityNumber: quote.contractNumber || '无编号',
+          businessName: quote.customerAbbreviation || quote.customerName || '无客户名称',
+          customer: quote.contactEmail || '无客户邮箱',
+          amount: (quote.amountTotal || 0) * (quote.exchangeRate || 1),
+          create_time: quote.createTime || new Date().toISOString(),
+          sourceType: 'api'
+        }))
+        businessStages.value[contractConfirmedIndex].details = [
+          ...businessStages.value[contractConfirmedIndex].details,
+          ...contractConfirmedDetails
+        ]
+        businessStages.value[contractConfirmedIndex].count = businessStages.value[contractConfirmedIndex].details.length
+        businessStages.value[contractConfirmedIndex].totalAmount = businessStages.value[contractConfirmedIndex].details.reduce((sum, item) => sum + (item.amount || 0), 0)
+      }
     }
   } catch (error) {
     console.error('获取看板数据失败:', error)
   }
 }
-
 // #endregion
 
 // 添加当前日期的响应式引用

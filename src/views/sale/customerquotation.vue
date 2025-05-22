@@ -10,11 +10,12 @@
 		</div>
 		<el-divider></el-divider>
 		<div style="width: 100%; margin-top: 30px;">
-			<el-select v-model="SearchQuotationNum" filterable placeholder="选择报价单号（可输入查询）" style="width: 15%">
+			<el-select v-model="SearchQuotationNum" filterable clearable placeholder="选择报价单号（可输入查询）" style="width: 15%">
 				<el-option v-for="dict in optionss.sql_hr_all_quotationnum" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue" />
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="SechaerCustomerSelect" filterable placeholder="选择客户（可输入查询）" style="width: 15%">
+			<el-select v-model="SechaerCustomerSelect" filterable clearable placeholder="选择客户（可输入查询）"
+				style="width: 15%">
 				<el-option v-for="dict in optionss.sql_hr_customer_name" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue" />
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -38,12 +39,7 @@
 		</div>
 		<el-divider></el-divider>
 		<el-table :data="quotationData" stripe>
-			<!-- <el-table-column prop="quotationNum" label="报价单号" :width="150">
-				<template #default="scope">
-					<span>{{ scope.row.quotationNum }}</span>
-					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-				</template>
-</el-table-column> -->
+			<el-table-column prop="id" label="ID" :width="100" v-if="false"></el-table-column>
 			<el-table-column prop="quotationNum" label="报价单号" :width="200">
 				<template #default="scope">
 					<span>{{ scope.row.quotationNum }}</span>
@@ -672,7 +668,26 @@ import DictData from '../components/dictData.vue';
 import { isNumber } from '@vueuse/core';
 import useUserStore from "@/store/modules/user";
 import { number } from 'echarts';
+import { onMounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router';
 
+const route = useRoute();
+
+onMounted(async () => {
+	// 如果有报价单号，自动弹窗并查详情
+	const id = route.query.id;
+	if (id) {
+		// 查找表格数据中是否有该报价单
+		await GetQuotationList(currentPage.value, pageSize.value);
+		await nextTick();
+		const row = quotationData.value.find(item => item.id == id);
+		if (row) {
+			ChcekDetails(row);
+		} else {
+			ElMessage.warning('未找到该报价单');
+		}
+	}
+});
 const isSaveBtnShow = ref(false);
 const showEditBtn = ref(false);
 const showEditSaveBtn = ref(false);
@@ -2270,6 +2285,7 @@ const getDialogTitle = () => {
 
 // 刷新报价单列表
 const refreshQuotationList = () => {
+	currentPage.value = 1;
 	GetQuotationList(currentPage.value, pageSize.value);
 };
 

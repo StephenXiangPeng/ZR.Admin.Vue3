@@ -449,7 +449,8 @@
 			</template>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button v-if="selectedTask?.isDraft" type="primary" @click="handleEditTask">编辑</el-button>
+					<el-button v-if="selectedTask?.planTaskStatus !== 2 && isCurrentUserCreator(selectedTask)"
+						type="primary" @click="handleEditTask">编辑</el-button>
 					<el-button @click="taskDetailDialogVisible = false">关闭</el-button>
 				</span>
 			</template>
@@ -1076,6 +1077,12 @@ const isCurrentUserTotalLeader = (totalLeaderIds: string) => {
 	return leaderIds.includes(user?.dictLabel || '');
 }
 
+// 检查当前用户是否是任务创建人
+const isCurrentUserCreator = (task) => {
+	if (!task || !task.create_by) return false;
+	return task.create_by.toString() === currentUser.value.toString();
+}
+
 // 修改获取相对路径的函数
 const getRelativePathFromUrl = (url: string) => {
 	if (!url) return '';
@@ -1442,7 +1449,8 @@ const SubmitPlanTaskForm = async (formEl: FormInstance | undefined, isDraft: boo
 					attachmentUrls: mainTaskUrlsStr,
 					imageUrls: mainTaskImageUrls.join(','), // 添加图片URL
 					planTask_Phases: [],
-					isDraft: isDraft ? 1 : 0
+					isDraft: isDraft ? 1 : 0, // 如果点击提交按钮，直接设为非草稿状态
+					planTaskStatus: isEditMode.value ? selectedTask.value.planTaskStatus : 0
 				};
 
 				// 4. 处理各阶段和事项
@@ -1480,13 +1488,18 @@ const SubmitPlanTaskForm = async (formEl: FormInstance | undefined, isDraft: boo
 							itemUrlsStr = uploadedUrls.split(',').map(url => getRelativePathFromUrl(url)).join(',');
 						}
 
+						// 检查是否是编辑模式，且当前事项已经完成
+						const existingItem = isEditMode.value && selectedTaskPhases.value[stageIndex]?.items[itemIndex];
 						phaseData.planTask_Items.push({
-							id: isEditMode.value && selectedTaskPhases.value[stageIndex]?.items[itemIndex]?.id || 0,
+							id: existingItem?.id || 0,
 							itemName: item.name?.trim() || '',
 							executorId: Number(item.executor) || 0,
 							timePoint: item.deadline ? new Date(item.deadline).toISOString() : null,
 							attachmentUrls: itemUrlsStr,
-							finishattachmentUrls: '',
+							// 保留已完成事项的相关信息
+							finishattachmentUrls: existingItem?.finishattachmentUrls || '',
+							realTimePoint: existingItem?.realTimePoint || null,
+							remark: existingItem?.remark || '',
 							relatedCustomers: Array.isArray(item.customer) ? item.customer.join(',') : item.customer || null // 将数组转换为逗号分隔的字符串
 						})
 					}

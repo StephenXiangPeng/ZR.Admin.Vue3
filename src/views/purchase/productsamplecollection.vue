@@ -262,13 +262,17 @@
 </template>
 
 <script setup lang="ts">
-import { createApp, ref } from 'vue'
+import { createApp, ref, reactive, onMounted, getCurrentInstance, computed, toRefs } from 'vue'
+import { useRoute } from 'vue-router'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer,
 	ElMessageBox, UploadUserFile, ElMessage, UploadFile, FormInstance, FormRules
 } from 'element-plus'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import request from '@/utils/request';
+
+// 获取路由实例
+const route = useRoute()
 
 //查询条件
 const SearchwaybillNumber = ref('');
@@ -960,6 +964,23 @@ const addSampleRow = () => {
 		// 添加其他可能需要的字段
 	});
 };
+
+// 添加在fetchDataAndExecute函数后
+// 检查URL参数并自动加载样品详情
+onMounted(async () => {
+	// 检查URL中的参数
+	const id = route.query.id
+	const viewDetail = route.query.viewDetail
+
+	// 如果有id和viewDetail参数，则自动打开详情
+	if (id && viewDetail === 'true') {
+		console.log('自动加载样品详情, ID:', id)
+		// 确保数据已加载完成
+		await fetchDataAndExecute();
+		// 打开详情
+		handleView(id);
+	}
+})
 </script>
 
 <style scoped></style>

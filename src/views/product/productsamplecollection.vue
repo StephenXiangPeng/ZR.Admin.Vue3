@@ -265,7 +265,8 @@
 </template>
 
 <script setup lang="ts">
-import { createApp, ref } from 'vue'
+import { createApp, ref, reactive, onMounted, getCurrentInstance, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer,
 	ElMessageBox, UploadUserFile, ElMessage, UploadFile, FormInstance, FormRules
@@ -273,7 +274,8 @@ import {
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import request from '@/utils/request';
 
-
+// 获取路由实例
+const route = useRoute()
 
 const isEditBtnShow = ref(false);//编辑按钮
 const isSaveDraftBtnShow = ref(false);//保存草稿按钮
@@ -1006,7 +1008,6 @@ const addSampleRow = () => {
 
 const handleSaveDraft = async () => {
 	if (loading.value) return;
-
 	// 1. 构建请求数据
 	const requestData = {
 		ID: currentEditId.value || 0,  // 如果是编辑模式，使用当前ID
@@ -1098,6 +1099,23 @@ watch(() => CreateDialogform.value.paymentMethod, (newValue) => {
 		CreateDialogform.value.paidExpressCost = '0';
 	}
 });
+
+// 在fetchDataAndExecute函数后添加
+// 检查URL参数并自动加载样品详情
+onMounted(async () => {
+	// 检查URL中的参数
+	const id = route.query.id
+	const viewDetail = route.query.viewDetail
+
+	// 如果有id和viewDetail参数，则自动打开详情
+	if (id && viewDetail === 'true') {
+		console.log('自动加载样品详情, ID:', id)
+		// 确保数据已加载完成
+		await fetchDataAndExecute();
+		// 打开详情
+		handleView(id);
+	}
+})
 </script>
 
 <style scoped></style>
