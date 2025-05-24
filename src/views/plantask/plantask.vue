@@ -191,6 +191,15 @@
 								</el-form-item>
 							</el-col>
 						</el-row>
+						<el-row>
+							<el-col :span="24">
+								<el-form-item :label="'事项备注'"
+									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.ItemRemark'">
+									<el-input v-model="item.ItemRemark" type="textarea" :rows="5" placeholder="请输入备注信息"
+										style="width: 300px" />
+								</el-form-item>
+							</el-col>
+						</el-row>
 						<!-- 添加事项附件上传 -->
 						<el-row>
 							<el-col :span="12">
@@ -213,7 +222,6 @@
 								<el-button type="danger" @click="removeItem(stageIndex, itemIndex)">删除事项</el-button>
 							</el-col>
 						</el-row>
-
 					</div>
 				</div>
 			</el-form>
@@ -393,6 +401,11 @@
 							<el-table-column prop="realTimePoint" label="实际完成时间" min-width="150">
 								<template #default="{ row }">
 									{{ row.realTimePoint ? formatDate(row.realTimePoint) : '未完成' }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="istemRemark" label="事项备注" min-width="150">
+								<template #default="{ row }">
+									{{ row.itemRemark }}
 								</template>
 							</el-table-column>
 							<el-table-column label="状态" width="100">
@@ -1045,7 +1058,8 @@ const handleEditTask = async () => {
 					url: getRelativePathFromUrl(url),
 					isExisting: true
 				})) : [],
-				customerOptions: customerOptions // 保存客户选项到事项中
+				customerOptions: customerOptions, // 保存客户选项到事项中
+				ItemRemark: item.itemRemark
 			};
 		}));
 
@@ -1500,7 +1514,8 @@ const SubmitPlanTaskForm = async (formEl: FormInstance | undefined, isDraft: boo
 							finishattachmentUrls: existingItem?.finishattachmentUrls || '',
 							realTimePoint: existingItem?.realTimePoint || null,
 							remark: existingItem?.remark || '',
-							relatedCustomers: Array.isArray(item.customer) ? item.customer.join(',') : item.customer || null // 将数组转换为逗号分隔的字符串
+							relatedCustomers: Array.isArray(item.customer) ? item.customer.join(',') : item.customer || null, // 将数组转换为逗号分隔的字符串
+							ItemRemark: item.ItemRemark || '' // 确保这里使用正确的字段名
 						})
 					}
 					requestData.planTask_Phases.push(phaseData)
@@ -1557,7 +1572,8 @@ const OpenPlanTaskDialog = () => {
 				customer: '',
 				deadline: '',
 				fileList: [], // 初始化文件列表
-				customerOptions: [] // 初始化客户选项
+				customerOptions: [], // 初始化客户选项
+				ItemRemark: '' // 初始化备注字段
 			}]
 		}];
 	}
@@ -1572,6 +1588,7 @@ interface StageItem {
 	attachments?: { fileName: string; fileUrl: string }[]; // 添加附件属性
 	finishAttachments?: { fileName: string; fileUrl: string }[]; // 添加完成附件属性
 	customerOptions?: any[]; // 添加客户选项属性
+	ItemRemark?: string; // 添加备注属性
 }
 
 interface Stage {
@@ -1588,7 +1605,8 @@ const stages = ref<Stage[]>([{
 		customer: '',
 		deadline: '',
 		fileList: [], // 初始化文件列表
-		customerOptions: [] // 初始化客户选项
+		customerOptions: [], // 初始化客户选项
+		ItemRemark: '' // 初始化备注字段
 	}]
 }]);
 
@@ -1606,7 +1624,8 @@ const handleStageNumberChange = (value: number) => {
 					customer: '',
 					deadline: '',
 					fileList: [], // 初始化文件列表
-					customerOptions: [] // 初始化客户选项
+					customerOptions: [], // 初始化客户选项
+					ItemRemark: '' // 初始化备注字段
 				}]
 			});
 		}
@@ -1623,7 +1642,8 @@ const addItem = (stageIndex: number) => {
 		customer: '',
 		deadline: '',
 		fileList: [], // 初始化文件列表
-		customerOptions: [] // 初始化客户选项
+		customerOptions: [], // 初始化客户选项
+		ItemRemark: '' // 初始化备注字段
 	});
 }
 

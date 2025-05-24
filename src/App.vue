@@ -6,11 +6,13 @@
 <script setup>
 import useUserStore from './store/modules/user'
 import useAppStore from './store/modules/app'
-import { ElConfigProvider } from 'element-plus'
+import { ElConfigProvider, ElMessage } from 'element-plus'
 import zh from 'element-plus/dist/locale/zh-cn.mjs' // 中文语言
 import en from 'element-plus/dist/locale/en.mjs' // 英文语言
 import tw from 'element-plus/dist/locale/zh-tw.mjs' //繁体
 import defaultSettings from '@/settings'
+import { eventBus } from '@/utils/eventBus'
+import { useRouter, useRoute } from 'vue-router'
 const { proxy } = getCurrentInstance()
 
 const token = computed(() => {
@@ -30,7 +32,16 @@ watch(
     if (val) {
       proxy.signalr.start().then(async (res) => {
         if (res) {
-          await proxy.signalr.SR.invoke('logOut')
+          try {
+            await proxy.signalr.safeInvoke('logOut')
+          } catch (error) {
+            console.error('调用 logOut 失败:', error)
+            ElMessage({
+              message: '操作失败，请稍后重试',
+              type: 'error',
+              duration: 3000
+            })
+          }
         }
       })
     }
@@ -57,6 +68,19 @@ watch(
     immediate: true
   }
 )
+
+const route = useRoute();
+const router = useRouter();
+
+// 监听通知导航事件
+eventBus.on('notification-navigate', ({ path, data, action, contactId }) => {
+  if (action === 'openSaleContactApproval' && route.path === '/index') {
+    eventBus.emit('open-sale-contact-approval', { contactId });
+  } else {
+    router.push(path);
+  }
+});
+
 console.log('🎉源码地址: https://gitee.com/izory/ZrAdminNetCore')
 console.log('📖官方文档：http://www.izhaorui.cn/doc')
 console.log('💰打赏作者：http://www.izhaorui.cn/doc/support.html')

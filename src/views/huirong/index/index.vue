@@ -1992,7 +1992,7 @@
 </template>
 
 <script lang="ts" setup>
-import { getCurrentInstance, reactive, toRefs, ref, onMounted, h } from 'vue'
+import { getCurrentInstance, reactive, toRefs, ref, onMounted, h, watch } from 'vue'
 import { ElMessage, ElMessageBox, ElDatePicker, ElLoading, ElNotification } from "element-plus";
 import request from '@/utils/request';
 import dayjs from 'dayjs';
@@ -2004,6 +2004,7 @@ import { Picture } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { useRouter } from 'vue-router'
 import { eventBus } from '@/utils/eventBus'
+import { useRoute } from 'vue-router'
 
 
 const AgencyProcessdialogTableActiveName = ref('first')
@@ -2040,7 +2041,55 @@ const getUnreadMessages = async () => {
           message: h('div', {
             class: 'notification-content',
           }, [
-            h('div', { class: 'notification-message' }, msg.content), // 使用 content 字段
+            h('div', {
+              class: 'notification-message',
+              style: { cursor: 'pointer' },
+              onClick: async () => {
+                try {
+                  await request({
+                    url: '/MessageRecord/UpdateIsReadByMessageID/UpdateIsRead',
+                    method: 'get',
+                    params: {
+                      MessagesID: msg.id
+                    }
+                  });
+                } catch (error) {
+                  console.error('调用更新已读接口失败:', error);
+                }
+                let targetPath = '';
+                switch (msg.type) {
+                  case 'TaskItem':
+                    targetPath = `/plantask?taskId=${msg.targetId}`;
+                    break;
+                  case 'saleContact':
+                    targetPath = `/index?contactId=${msg.targetId}`;
+                    break;
+                  case 'purchaseContract':
+                    targetPath = `/purchaseContract?customerId=${msg.targetId}`;
+                    break;
+                  case 'paymentApplication':
+                    targetPath = `/paymentrequest?orderId=${msg.targetId}`;
+                    break;
+                  case 'Shipping':
+                    targetPath = `/shippingdelivery?productId=${msg.targetId}`;
+                    break;
+                  case 'Settlement':
+                    targetPath = `/settlementcenter?contractId=${msg.targetId}`;
+                    break;
+                  case 'Inquiry':
+                    targetPath = `/requestquote?invoiceId=${msg.targetId}`;
+                    break;
+                  default:
+                    targetPath = '/index';
+                }
+                // 用事件总线通知 App.vue 跳转
+                eventBus.emit('notification-navigate', {
+                  path: targetPath,
+                  data: msg
+                });
+                notification.close();
+              }
+            }, msg.content),
             h('div', { class: 'notification-footer' }, [
               h('button', {
                 class: 'custom-btn',
@@ -4647,6 +4696,61 @@ const getOverduePendingTaskPlanItemList = async () => {
     })
   }
 }
+
+const route = useRoute();
+
+// onMounted(() => {
+//   if (route.query.contactId) {
+//     openAgencyProcessdialogTableVisible();
+//     const row = AgencyProcesstableData.value.find(item => item.documentID === route.query.contactId && item.documentType === 1)
+//     openSaleContractDialog(row);
+//   }
+// });
+
+// eventBus.on('open-sale-contact-approval', ({ contactId }) => {
+//   openAgencyProcessdialogTableVisible();
+//   const row = AgencyProcesstableData.value.find(item => item.documentID === route.query.contactId && item.documentType === 1)
+//   openSaleContractDialog(row);
+// });
+
+// 添加一个标记
+const needOpenSaleContract = ref(null);
+
+onMounted(() => {
+  if (route.query.contactId) {
+    needOpenSaleContract.value = route.query.contactId;
+  }
+});
+
+// 监听数据变化
+watch(AgencyProcesstableData, (newData) => {
+  if (newData.length > 0 && needOpenSaleContract.value) {
+    const row = newData.find(
+      item => item.documentID == needOpenSaleContract.value && item.documentType == "1"
+    );
+    if (row) {
+      openAgencyProcessdialogTableVisible();
+      openSaleContractDialog(row);
+      needOpenSaleContract.value = null; // 清除标记
+    }
+  }
+});
+
+eventBus.on('open-sale-contact-approval', ({ contactId }) => {
+  openAgencyProcessdialogTableVisible();
+
+  if (AgencyProcesstableData.value.length > 0) {
+    const row = AgencyProcesstableData.value.find(
+      item => item.documentID == contactId && item.documentType == "1"
+    );
+    if (row) {
+      openSaleContractDialog(row);
+    }
+  } else {
+    // 数据还没加载，设置标记
+    needOpenSaleContract.value = contactId;
+  }
+});
 
 </script>
 

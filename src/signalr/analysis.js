@@ -6,6 +6,7 @@ import { webNotify } from '@/utils/index'
 import { eventBus } from '@/utils/eventBus'
 import request from '@/utils/request'  // 添加这行，导入 request
 import { h } from 'vue'  // 添加这行，因为使用了 h 函数
+import { useRouter } from 'vue-router'
 
 export default {
   onMessage(connection) {
@@ -152,14 +153,14 @@ export default {
     })
 
     // 添加系统通知监听
-    // 添加系统通知监听
-    connection.on('SystemNotification', (data) => {  // 修复这里的拼写错误，之前是 onnection
+    connection.on('SystemNotification', (data) => {
       console.log('接收到系统通知', data);
       const currentUser = useUserStore().userId;
       if (data.toUserId.toString() === currentUser.toString()) {
         useSocketStore().setSystemNotice(data);
         eventBus.emit('updatePlanTaskItems');
         eventBus.emit('updatePendingCount');
+
         // 创建通知并获取关闭函数
         const notification = ElNotification({
           title: data.title,
@@ -167,7 +168,56 @@ export default {
           duration: 0,
           position: 'bottom-right',
           message: h('div', { class: 'notification-content' }, [
-            h('div', { class: 'notification-message' }, data.message),
+            h('div', {
+              class: 'notification-message',
+              style: { cursor: 'pointer' },
+              onClick: async () => {
+                // 1. 先调用已读接口
+                try {
+                  await request({
+                    url: 'MessageRecord/UpdateIsReadByMessageID/UpdateIsRead',
+                    method: 'get',
+                    params: {
+                      MessagesID: data.messageID
+                    }
+                  });
+                } catch (error) {
+                  console.error('调用更新已读接口失败:', error);
+                }
+                // 2. 再跳转
+                let targetPath = '';
+                switch (data.type) {
+                  case 'TaskItem':
+                    targetPath = `/plantask?taskId=${data.targetId}`;
+                    break;
+                  case 'saleContact':
+                    targetPath = `/index?contactId=${data.targetId}`;
+                    break;
+                  case 'purchaseContract':
+                    targetPath = `/purchaseContract?customerId=${data.targetId}`;
+                    break;
+                  case 'paymentApplication':
+                    targetPath = `/paymentrequest?orderId=${data.targetId}`;
+                    break;
+                  case 'Shipping':
+                    targetPath = `/shippingdelivery?productId=${data.targetId}`;
+                    break;
+                  case 'Settlement':
+                    targetPath = `/settlementcenter?contractId=${data.targetId}`;
+                    break;
+                  case 'Inquiry':
+                    targetPath = `/requestquote?invoiceId=${data.targetId}`;
+                    break;
+                  default:
+                    targetPath = '/index';
+                }
+                eventBus.emit('notification-navigate', {
+                  path: targetPath,
+                  data: data
+                });
+                notification.close();
+              }
+            }, data.message),
             h('div', { class: 'notification-footer' }, [
               h('button', {
                 class: 'custom-btn',
@@ -175,7 +225,7 @@ export default {
                   try {
                     // 调用更新已读状态的接口
                     const response = await request({
-                      url: 'MessageRecord/UpdateIsReadByMessageID/UpdateIsRead',  // 修改API路径
+                      url: 'MessageRecord/UpdateIsReadByMessageID/UpdateIsRead',
                       method: 'get',
                       params: {
                         MessagesID: data.messageID
@@ -184,7 +234,7 @@ export default {
                   } catch (error) {
                     console.error('调用更新已读接口失败:', error);
                   } finally {
-                    notification.close();  // 无论成功失败都关闭通知
+                    notification.close();
                   }
                 }
               }, '我知道了')

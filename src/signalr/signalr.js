@@ -10,67 +10,131 @@ export default {
   SR: {},
   // 失败连接重试次数
   failNum: 4,
+  // 连接状态
+  connectionState: 'Disconnected',
+  // 重连延迟时间（毫秒）
+  reconnectDelay: 5000,
+  // 最大重试次数
+  maxRetries: 5,
   init(url) {
     var socketUrl = window.location.origin + url + '?clientId=' + cache.local.get('clientId')
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(socketUrl, { accessTokenFactory: () => getToken() })
-      .withAutomaticReconnect() //自动重新连接
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 20000]) // 自定义重连间隔
       .configureLogging(signalR.LogLevel.Warning)
       .build()
+
     this.SR = connection
-    // 断线重连
+
+    // 监听连接状态变化
     connection.onclose(async (error) => {
-      console.error('断开连接了' + error)
-      console.assert(connection.state === signalR.HubConnectionState.Disconnected)
-      // 建议用户重新刷新浏览器
+      this.connectionState = 'Disconnected'
+      console.error('连接断开:', error)
+      ElMessage({
+        message: '与服务器连接已断开，正在尝试重新连接...',
+        type: 'warning',
+        duration: 2000
+      })
       await this.start()
     })
 
     connection.onreconnected((connectionId) => {
+      this.connectionState = 'Connected'
       ElMessage({
         message: '与服务器通讯已连接成功',
         type: 'success',
         duration: 2000
       })
-      console.log('断线重新连接成功' + connectionId)
+      console.log('断线重新连接成功:', connectionId)
     })
 
     connection.onreconnecting(async () => {
-      console.log('断线重新连接中... ')
-
-      await this.start()
+      this.connectionState = 'Reconnecting'
+      console.log('正在重新连接...')
+      ElMessage({
+        message: '正在重新连接服务器...',
+        type: 'info',
+        duration: 2000
+      })
     })
+
     analysis.onMessage(connection)
-    // this.receiveMsg(connection)
-    // 启动
-    // this.start();
   },
+
   /**
-   * 调用 this.signalR.start().then(async () => { await this.SR.invoke("method")})
-   * @returns
+   * 启动连接
+   * @returns {Promise<boolean>}
    */
   async start() {
     try {
-      console.log('signalR-1', this.SR.state)
-      //使用async和await 或 promise的then 和catch 处理来自服务端的异常
-      if (this.SR.state === signalR.HubConnectionState.Disconnected) {
-        await this.SR.start()
+      if (this.SR.state === signalR.HubConnectionState.Connected) {
+        return true
       }
 
-      console.log('signalR-2', this.SR.state)
-      return true
-    } catch (error) {
-      console.error(error)
-      this.failNum--
-      // console.log(`失败重试剩余次数${that.failNum}`, error)
-      if (this.failNum > 0 && this.SR.state.Disconnected) {
-        setTimeout(async () => {
-          await this.start()
-        }, 5000)
+      if (this.SR.state === signalR.HubConnectionState.Disconnected) {
+        await this.SR.start()
+        this.connectionState = 'Connected'
+        return true
       }
+
+      return false
+    } catch (error) {
+      console.error('SignalR 连接失败:', error)
+      this.failNum--
+
+      if (this.failNum > 0) {
+        ElMessage({
+          message: `连接失败，${this.reconnectDelay / 1000}秒后重试...`,
+          type: 'warning',
+          duration: 2000
+        })
+
+        await new Promise(resolve => setTimeout(resolve, this.reconnectDelay))
+        return this.start()
+      }
+
+      ElMessage({
+        message: '连接服务器失败，请刷新页面重试',
+        type: 'error',
+        duration: 3000
+      })
       return false
     }
   },
+
+  /**
+   * 安全调用 SignalR 方法
+   * @param {string} method - 方法名
+   * @param {any[]} args - 参数
+   * @returns {Promise<any>}
+   */
+  async safeInvoke(method, ...args) {
+    let retries = 0
+
+    while (retries < this.maxRetries) {
+      try {
+        if (this.SR.state !== signalR.HubConnectionState.Connected) {
+          await this.start()
+        }
+
+        if (this.SR.state === signalR.HubConnectionState.Connected) {
+          return await this.SR.invoke(method, ...args)
+        }
+
+        throw new Error('Connection not ready')
+      } catch (error) {
+        retries++
+        console.error(`调用 ${method} 失败 (尝试 ${retries}/${this.maxRetries}):`, error)
+
+        if (retries === this.maxRetries) {
+          throw error
+        }
+
+        await new Promise(resolve => setTimeout(resolve, this.reconnectDelay))
+      }
+    }
+  },
+
   // 接收消息处理
-  receiveMsg(connection) {}
+  receiveMsg(connection) { }
 }
