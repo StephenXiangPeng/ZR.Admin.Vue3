@@ -8,7 +8,6 @@
 				<el-option v-for="dict in optionss.sql_settlement_center_shipping" :key="dict.dictCode"
 					:label="dict.dictLabel" :value="dict.dictValue" />
 			</el-select>
-
 			<el-button style="margin-left: 20px;" type="warning" @click="CloseSettlement"
 				:disabled="isCloseButtonDisabled">关账</el-button>
 			<!-- 状态显示 -->
@@ -16,6 +15,34 @@
 				:type="getSettlementStatusType(SettlementStatus)">
 				{{ getSettlementStatusText(SettlementStatus) }}
 			</el-tag>
+			<!-- 审核流程弹窗 -->
+			<el-popover placement="right" :width="400" trigger="click" v-if="hasQueried">
+				<template #reference>
+					<el-tag size="large" style="margin-left: 20px; cursor: pointer"
+						:type="getApprovalStatusType(SettlementApprovalStatus)"
+						@click="getApprovalFlow(Number(settlement_center_shipping))">
+						{{ getApprovalStatusText(SettlementApprovalStatus) }}
+					</el-tag>
+				</template>
+
+				<!-- 有审批步骤才显示步骤条 -->
+				<template #default>
+					<div v-if="approvalSteps.length > 0" class="status-popover">
+						<el-steps :active="approvalSteps.length" size="small">
+							<el-step v-for="step in approvalSteps" :key="step.stageID" :title="step.approverUserName"
+								:description="getStatusText(step.status)" :status="getStatus(step.status)" />
+						</el-steps>
+					</div>
+					<div v-else>暂无审批流程</div>
+				</template>
+			</el-popover>
+			&nbsp;
+			<el-button type="danger" v-show="showApproveRejectBtn" @click="ApproveReject">
+				驳回
+			</el-button>
+			<el-button type="success" v-show="showApprovePassBtn" @click="Approvepass">
+				通过
+			</el-button>
 		</div>
 		<div style="width: 100%; margin-top: 20px; text-align: right;">
 			<el-row class="mb-4">
@@ -489,9 +516,36 @@
 </template>
 <script setup lang="ts">
 import { createApp, ref } from 'vue'
-import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElTabs, UploadUserFile, UploadProps, ElMessage } from 'element-plus'
+import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElTabs, UploadUserFile, UploadProps, ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request';
+import { useRoute } from 'vue-router'
+import useUserStore from '@/store/modules/user'
+const userStore = useUserStore()
 
+const route = useRoute()
+const showApproveRejectBtn = ref(false)//驳回按钮
+const showApprovePassBtn = ref(false)//通过按钮	
+// 添加onMounted钩子
+onMounted(() => {
+	console.log('结算中心页面挂载，检查路由参数')
+	autoLoadSettlementCenterDetail()
+})
+
+// 添加自动加载付款申请详情的函数
+const autoLoadSettlementCenterDetail = async () => {
+	// 检查URL参数
+	const contractId = route.query.contractId
+	const viewDetail = route.query.viewDetail
+	if (contractId && viewDetail === 'true') {
+		try {
+			settlement_center_shipping.value = contractId.toString()
+			hasQueried.value = true
+			handleSearch();
+		} catch (error) {
+			console.error('加载结算中心详情失败:', error)
+		}
+	}
+}
 const hasQueried = ref(false)
 // 计算属性：关账按钮是否禁用
 const isCloseButtonDisabled = computed(() => {
@@ -655,6 +709,8 @@ const ForeignExpensesDataTable = ref([]); //国外已付费用表格数据
 const handleReset = () => {
 	// 重置查询状态
 	hasQueried.value = false;
+	showApproveRejectBtn.value = false;
+	showApprovePassBtn.value = false;
 	// Reset the filter value
 	settlement_center_shipping.value = ''
 	// Reset all form values to empty state
@@ -992,6 +1048,21 @@ const handleSearch = () => {
 			ElMessage.error('获取国内已付费用数据失败，请稍后重试');
 		});
 		//#endregion
+		getApprovalFlow(Number(settlement_center_shipping.value)).then(() => {
+			const isCurrentUserApprover = checkIfCurrentUserIsApprover();
+
+			// 只有当前用户是审批人且合同在审核中时才显示审核按钮
+			if (isCurrentUserApprover && SettlementApprovalStatus.value.toString() == '1') {
+				showApproveRejectBtn.value = true;
+				showApprovePassBtn.value = true;
+				// 设置文档类型（结算单）
+				ApproveDocumentRequest.DocumentType = 6;//6结算单
+			} else {
+				// 如果不是审核中状态，隐藏审批按钮
+				showApproveRejectBtn.value = false;
+				showApprovePassBtn.value = false;
+			}
+		});
 		hasQueried.value = true;
 	}
 	else {
@@ -1010,14 +1081,20 @@ const handleSearch = () => {
 			// 显示结算单状态
 			SettlementStatus.value = settlementData.status;
 			SettlementApprovalStatus.value = settlementData.approvalStatus;
+
+			// 更新状态显示
 			const statusText = getSettlementStatusText(settlementData.status);
 			const statusType = getSettlementStatusType(settlementData.status);
+			const approvalText = getApprovalStatusText(settlementData.approvalStatus);
+			const approvalType = getApprovalStatusType(settlementData.approvalStatus);
 
+			// 更新关账按钮状态
+			isCloseButtonDisabled.value = settlementData.status === SETTLEMENT_STATUS.CLOSED ||
+				settlementData.approvalStatus === APPROVAL_STATUS.PROCESSING;
 		} else {
 			ElMessage.warning('获取结算单数据失败：无效的响应数据');
 		}
 	}).catch(error => {
-		isCloseButtonDisabled.value = false;
 		console.error('获取结算单数据失败：', error);
 		ElMessage.error('获取结算单数据失败，请稍后重试');
 	});
@@ -1029,6 +1106,14 @@ const SettlementApprovalStatus = ref('');
 const SETTLEMENT_STATUS = {
 	OPEN: 0,    // 未关账
 	CLOSED: 1   // 已关账
+};
+
+// 审核状态常量
+const APPROVAL_STATUS = {
+	PENDING: 0,     // 待提审
+	PROCESSING: 1,  // 审核中
+	APPROVED: 2,    // 已通过
+	REJECTED: 3     // 已拒绝
 };
 
 // 获取结算单状态文本
@@ -1052,6 +1137,38 @@ const getSettlementStatusType = (status) => {
 			return 'success';  // 已关账 - 绿色成功
 		default:
 			return 'info';     // 未知状态 - 灰色信息
+	}
+};
+
+// 获取审核状态文本
+const getApprovalStatusText = (status) => {
+	switch (status) {
+		case APPROVAL_STATUS.PENDING:
+			return '待提审';
+		case APPROVAL_STATUS.PROCESSING:
+			return '审核中';
+		case APPROVAL_STATUS.APPROVED:
+			return '已通过';
+		case APPROVAL_STATUS.REJECTED:
+			return '已拒绝';
+		default:
+			return '待提审';
+	}
+};
+
+// 获取审核状态对应的标签类型
+const getApprovalStatusType = (status) => {
+	switch (status) {
+		case APPROVAL_STATUS.PENDING:
+			return 'info';     // 待提审 - 灰色
+		case APPROVAL_STATUS.PROCESSING:
+			return 'warning';  // 审核中 - 黄色
+		case APPROVAL_STATUS.APPROVED:
+			return 'success';  // 已通过 - 绿色
+		case APPROVAL_STATUS.REJECTED:
+			return 'danger';   // 已拒绝 - 红色
+		default:
+			return 'info';     // 未知状态 - 灰色
 	}
 };
 
@@ -1297,4 +1414,178 @@ const CloseSettlement = async () => {
 		ElMessage.error('关账失败，请稍后重试');
 	}
 }
+
+// 存储审批步骤数据
+const approvalSteps = ref([])
+// 获取审批流程
+const getApprovalFlow = async (documentId: number) => {
+	try {
+		const res = await request({
+			url: 'ShippingDeliveries/GetShippingDeliveriesApprovalFlowByID/GetApprovalFlow',
+			method: 'get',
+			params: {
+				DocumentID: documentId
+			}
+		})
+
+		if (res.code === 200) {
+			approvalSteps.value = res.data
+		} else {
+			ElMessage.error('获取审批流程失败')
+		}
+	} catch (error) {
+		console.error('获取审批流程失败:', error)
+		ElMessage.error('获取审批流程失败')
+	}
+}
+
+// 获取状态文本
+const getStatusText = (status: number) => {
+	switch (status) {
+		case 0: return '待审批'
+		case 1: return '已通过'
+		case 2: return '已拒绝'
+		case 3: return '等待上一阶段'
+		case 4: return '已终止'
+		default: return '未知状态'
+	}
+}
+
+// 获取状态类型
+const getStatus = (status: number) => {
+	switch (status) {
+		case 0: return 'wait'
+		case 1: return 'success'
+		case 2: return 'error'
+		case 3: return 'danger'
+		case 4: return 'error'
+		default: return 'wait'
+	}
+}
+
+
+
+// 审批文档请求对象
+const ApproveDocumentRequest = reactive({
+	ApprovalRecordID: 0,
+	DocumentType: 0,
+	DocumentID: 0,
+	StageID: 0,
+	ApproverID: 0,
+	ApproveStatus: false
+});
+
+var userId = useUserStore().userId;
+var CheckUser = ref(userId.toString()); // 初始化为当前用户ID
+// 审核通过
+const Approvepass = async () => {
+	try {
+		await ElMessageBox.confirm('确定通过该付款申请的审批吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 设置审批参数
+		ApproveDocumentRequest.ApproveStatus = true;
+		ApproveDocumentRequest.DocumentID = Number(settlement_center_shipping.value);
+		ApproveDocumentRequest.ApproverID = userId;
+
+		// 从审批流程中获取当前步骤信息
+		const currentStep = approvalSteps.value.find(step => step.status === 0);
+		if (currentStep) {
+			ApproveDocumentRequest.StageID = currentStep.stageID;
+			ApproveDocumentRequest.ApprovalRecordID = currentStep.recordID || 0;
+		}
+
+		request.post('ApprovalFlow/ApprovalDocument/ApprovalDocument', ApproveDocumentRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.data,
+					type: 'success'
+				});
+				// 刷新结算中心列表
+				handleSearch();
+			} else {
+				console.error('审批失败');
+				ElMessage.error('审批失败');
+			}
+		}).catch(error => {
+			console.error('审批失败', error);
+			ElMessage.error('审批失败，请重试');
+		});
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('审批确认失败:', error);
+		}
+	}
+}
+
+// 审核驳回
+const ApproveReject = async () => {
+	try {
+		await ElMessageBox.confirm('确定驳回该付款申请的审批吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 设置审批参数
+		ApproveDocumentRequest.ApproveStatus = false;
+		ApproveDocumentRequest.DocumentID = 0;
+		ApproveDocumentRequest.ApproverID = 0;
+
+		// 从审批流程中获取当前步骤信息
+		const currentStep = approvalSteps.value.find(step => step.status === 0);
+		if (currentStep) {
+			ApproveDocumentRequest.StageID = currentStep.stageID;
+			ApproveDocumentRequest.ApprovalRecordID = currentStep.recordID;
+		}
+
+		request.post('ApprovalFlow/ApprovalDocument/ApprovalDocument', ApproveDocumentRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.data,
+					type: 'success'
+				});
+				// 刷新结算中心列表
+				handleSearch();
+			} else {
+				console.error('驳回失败');
+				ElMessage.error('驳回失败');
+			}
+		}).catch(error => {
+			console.error('驳回失败', error);
+			ElMessage.error('驳回失败，请重试');
+		});
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('驳回确认失败:', error);
+		}
+	}
+}
+
+
+// 检查当前用户是否是当前审批人
+const checkIfCurrentUserIsApprover = () => {
+	if (!approvalSteps.value || approvalSteps.value.length === 0) {
+		return false;
+	}
+
+	// 查找状态为待审批(0)的步骤，这表示当前需要审批的步骤
+	const currentStep = approvalSteps.value.find(step => step.status === 0);
+
+	if (currentStep) {
+		// 检查当前步骤的审批人是否是当前用户
+		return currentStep.approverID.toString() === userId.toString();
+	}
+
+	return false;
+}
 </script>
+
+<style scoped>
+.status-popover {
+	padding: 10px;
+}
+</style>

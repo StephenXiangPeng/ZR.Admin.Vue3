@@ -48,7 +48,38 @@
 			<el-table-column prop="createTime" label="制单日期" width="150px"></el-table-column>
 			<el-table-column prop="shippingStatus" label="出运状态" width="150px"></el-table-column>
 			<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="ReviewStatusStr" label="审核状态" width="150"></el-table-column>
+			<el-table-column prop="reviewStatusStr" label="审核状态" width="150" align="center">
+				<template #default="{ row }">
+					<template v-if="row.id"> <!-- 有ID才显示popover -->
+						<el-popover placement="right" :width="400" trigger="click">
+							<template #reference>
+								<el-tag :type="getStatusType(row.reviewStatusStr)" @click="getApprovalFlow(row.id)"
+									style="cursor: pointer">
+									{{ row.reviewStatusStr }}
+								</el-tag>
+							</template>
+							<!-- 有审批步骤才显示步骤条 -->
+							<template #default>
+								<div v-if="approvalSteps.length > 0" class="status-popover">
+									<el-steps :active="approvalSteps.length" size="small">
+										<el-step v-for="step in approvalSteps" :key="step.stageID"
+											:title="step.approverUserName" :description="getStatusText(step.status)"
+											:status="getStatus(step.status)" />
+									</el-steps>
+								</div>
+								<div v-else>暂无审批流程</div>
+							</template>
+						</el-popover>
+					</template>
+
+					<!-- 没有ID时只显示tag -->
+					<template v-else>
+						<el-tag :type="getStatusType(row.contractReviewStatusStr)">
+							{{ row.contractReviewStatusStr }}
+						</el-tag>
+					</template>
+				</template>
+			</el-table-column>
 			<el-table-column prop="shippingDate" label="出运日期" width="150px"></el-table-column>
 			<el-table-column prop="invoiceDate" label="发票日期" width="150px"></el-table-column>
 			<el-table-column prop="customerNumber" label="客户编号" width="150px"></el-table-column>
@@ -309,7 +340,7 @@
 				<el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
 				<el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
 				<el-table-column prop="RemainingQuantityToBeShipped" label="剩余待出货数量" width="150"
-					v-if="false"></el-table-column>
+					vif="false"></el-table-column>
 				<el-table-column prop="shipmentQuantity" label="出货数量" width="150">
 					<template #default="scope">
 						<el-input v-model="scope.row.shipmentQuantity" :disabled="IsEditable" style="width: 100%"
@@ -340,7 +371,7 @@
 				<el-table-column prop="outerBoxGrossWeight" label="外箱毛重" width="150"></el-table-column>
 				<el-table-column prop="totalNetWeight" label="总净重" width="150"></el-table-column>
 				<el-table-column prop="totalGrossWeight" label="总毛重" width="150"></el-table-column>
-				<el-table-column prop="singlesalesrevenue" label="单个销售收入" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="singlesalesrevenue" label="单个销售收入" width="150" vif="false"></el-table-column>
 				<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small"
@@ -354,7 +385,7 @@
 			<el-table :data="shippingDeliveryPurchaseDetailsTableData">
 				<el-table-column prop="purchaseContractID" label="采购合同ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="purchaseContractProductID" label="采购合同明细ID" width="150"
-					vif="false"></el-table-column>
+					v-if="false"></el-table-column>
 				<el-table-column prop="purchaseContractNumber" label="采购合同" width="150"></el-table-column>
 				<el-table-column prop="vendorAbbreviation" label="厂商简称" width="150"></el-table-column>
 				<el-table-column prop="productNumber" label="产品编号" width="150"></el-table-column>
@@ -463,12 +494,14 @@
 					</el-button>
 					<el-button type="success" v-show="isEditSaveBtnShow && userId.toString() === CreateByUser"
 						@click="EditSaveClick(false)">
-						编辑提交
+						提交
 					</el-button>
-					<!-- <el-button type="danger" v-show="isReviewBtnShow && userId.toString() === CreateByUser"
-						@click="SubmitReview">
-						提交审核
-					</el-button> -->
+					<el-button type="danger" v-show="showApproveRejectBtn" @click="ApproveReject">
+						驳回
+					</el-button>
+					<el-button type="success" v-show="showApprovePassBtn" @click="Approvepass">
+						通过
+					</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -483,6 +516,47 @@ import { get } from 'sortablejs';
 import Supperinfomation from '../purchase/supperinfomation.vue';
 import dayjs from 'dayjs';
 import useUserStore from "@/store/modules/user";
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+// 添加onMounted钩子
+onMounted(() => {
+	console.log('出运发货单页面挂载，检查路由参数')
+	autoLoadShippingDeliveryRequestDetail()
+})
+
+// 添加自动加载出运发货单详情的函数
+const autoLoadShippingDeliveryRequestDetail = async () => {
+	// 检查URL参数
+	const contractId = route.query.contractId
+	const viewDetail = route.query.viewDetail
+	if (contractId && viewDetail === 'true') {
+		console.log('自动加载出运发货单详情, ID:', contractId)
+
+		try {
+			// 等待获取出运发货单列表
+			await GetShippingDeliveriesList(1, 100)
+
+			// 查找匹配的出运发货单
+			const shippingdelivery = shippingDeliveryTableData.value.find(item =>
+				item.id.toString() === contractId.toString()
+			)
+
+			if (shippingdelivery) {
+				// 调用查看详情的函数
+				await CheckShipingDelivery(shippingdelivery)
+				// 确保对话框显示
+				CreateshippingdeliveryDialog.value = true
+			} else {
+				console.error('未找到匹配的出运发货单:', contractId)
+				ElMessage.error('未找到匹配的出运发货单')
+			}
+		} catch (error) {
+			console.error('加载出运发货单详情失败:', error)
+			ElMessage.error('加载出运发货单详情失败')
+		}
+	}
+}
 
 //获取当前登录用户ID
 var userId = useUserStore().userId;
@@ -492,6 +566,8 @@ const isReviewBtnShow = ref(false) //提交审核按钮是否显示
 const isEditBtnShow = ref(false) //编辑按钮是否显示
 const isSaveBtnShow = ref(true) //保存按钮是否显示
 const isEditSaveBtnShow = ref(false) //编辑保存按钮是否显示
+const showApproveRejectBtn = ref(false) //驳回按钮是否显示
+const showApprovePassBtn = ref(false) //通过按钮是否显示
 
 //查询条件
 const SearchCustomerID = ref('')
@@ -1355,17 +1431,18 @@ const paymentrequesttableDataHandlePageChange = async (newPage) => {
 	const end = ShippingDeliveriesTableDataPageSize.value;
 	const newData = await GetShippingDeliveriesList(start, end);
 };
-function GetShippingDeliveriesList(start, end) {
-	request({
-		url: 'ShippingDeliveries/GetShippingDeliveriesList/GetList',
-		method: 'GET',
-		params: {
-			CustomerID: SearchCustomerID.value,
-			SaleContractID: SearchSaleContractID.value,
-			ShippingDateStart: SearchShippingDateStart.value,
-			ShippingDateEnd: SearchShippingDateEnd.value
-		}
-	}).then(response => {
+async function GetShippingDeliveriesList(start, end) {
+	try {
+		const response = await request({
+			url: 'ShippingDeliveries/GetShippingDeliveriesList/GetList',
+			method: 'GET',
+			params: {
+				CustomerID: SearchCustomerID.value,
+				SaleContractID: SearchSaleContractID.value,
+				ShippingDateStart: SearchShippingDateStart.value,
+				ShippingDateEnd: SearchShippingDateEnd.value
+			}
+		});
 		if (response.data != null) {
 			shippingDeliveryTableData.value = response.data.result;
 			shippingDeliveryTableData.value.forEach(item => {
@@ -1387,23 +1464,25 @@ function GetShippingDeliveriesList(start, end) {
 				item.createTime = item.createTime ? dayjs(item.createTime).format('YYYY-MM-DD') : '';
 				switch (item.reviewStatus) {
 					case 0:
-						item.ReviewStatusStr = '待提审';
+						item.reviewStatusStr = '待提审';
 						break;
 					case 1:
-						item.ReviewStatusStr = '审核中';
+						item.reviewStatusStr = '审核中';
 						break;
 					case 2:
-						item.ReviewStatusStr = '已批准';
+						item.reviewStatusStr = '已批准';
 						break;
 					case 3:
-						item.ReviewStatusStr = '已拒绝';
+						item.reviewStatusStr = '已拒绝';
 						break;
 				}
 			});
 		}
-	}).catch(error => {
+		return shippingDeliveryTableData.value;
+	} catch (error) {
 		console.error(error);
-	});
+		return [];
+	}
 }
 
 // 	获取出运发货单编辑锁状态
@@ -1451,8 +1530,11 @@ const RemoveShippingDeliveriesContractEditLock = async (contractId) => {
 
 // 单据创建人
 var CreateByUser;
+//出运发货单选中数据ID
+var ShippingDeliveriesID = ref(0);
 //检查出运发货单
 const CheckShipingDelivery = async (row) => {
+	ShippingDeliveriesID.value = row.id;
 	CreateByUser = row.createBy;
 	// 先检查编辑锁
 	const lockStatus = await GetShippingDeliveriesContractEditLock(row.id);
@@ -1632,6 +1714,21 @@ const CheckShipingDelivery = async (row) => {
 			});
 		}
 		GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
+
+		getApprovalFlow(row.id).then(() => {
+			const isCurrentUserApprover = checkIfCurrentUserIsApprover();
+			// 只有当前用户是审批人且出运发货单在审核中时才显示审核按钮
+			if (isCurrentUserApprover && row.reviewStatusStr === '审核中') {
+				showApproveRejectBtn.value = true;
+				showApprovePassBtn.value = true;
+				// 设置文档类型（出运发货单）
+				ApproveDocumentRequest.DocumentType = 3;//3出运发货单
+			} else {
+				// 如果不是审核中状态，隐藏审批按钮
+				showApproveRejectBtn.value = false;
+				showApprovePassBtn.value = false;
+			}
+		});
 		// 确保弹窗显示
 		CreateshippingdeliveryDialog.value = true;
 	}).catch(error => {
@@ -1922,4 +2019,181 @@ const handleExpenseChange = (row) => {
 	row.amount = (rate * expense).toFixed(3)
 }
 
+// 检查当前用户是否是当前审批人
+const checkIfCurrentUserIsApprover = () => {
+	if (!approvalSteps.value || approvalSteps.value.length === 0) {
+		return false;
+	}
+
+	// 查找状态为待审批(0)的步骤，这表示当前需要审批的步骤
+	const currentStep = approvalSteps.value.find(step => step.status === 0);
+
+	if (currentStep) {
+		// 检查当前步骤的审批人是否是当前用户
+		return currentStep.approverID.toString() === userId.toString();
+	}
+
+	return false;
+}
+
+// 存储审批步骤数据
+const approvalSteps = ref([])
+// 获取审批流程
+const getApprovalFlow = async (documentId: number) => {
+	try {
+		const res = await request({
+			url: 'ShippingDeliveries/GetShippingDeliveriesApprovalFlowByPaymentRequestID/GetApprovalFlow',
+			method: 'get',
+			params: {
+				DocumentID: documentId
+			}
+		})
+
+		if (res.code === 200) {
+			approvalSteps.value = res.data
+		} else {
+			ElMessage.error('获取审批流程失败')
+		}
+	} catch (error) {
+		console.error('获取审批流程失败:', error)
+		ElMessage.error('获取审批流程失败')
+	}
+}
+
+// 获取状态文本
+const getStatusText = (status: number) => {
+	switch (status) {
+		case 0: return '待审批'
+		case 1: return '已通过'
+		case 2: return '已拒绝'
+		case 3: return '等待上一阶段'
+		case 4: return '已终止'
+		default: return '未知状态'
+	}
+}
+
+// 获取状态类型
+const getStatus = (status: number) => {
+	switch (status) {
+		case 0: return 'wait'
+		case 1: return 'success'
+		case 2: return 'error'
+		case 3: return 'danger'
+		case 4: return 'error'
+		default: return 'wait'
+	}
+}
+
+// 获取标签类型
+const getStatusType = (status: string) => {
+	switch (status) {
+		case '待提审': return 'warning'
+		case '审核中': return 'wait'
+		case '已批准': return 'success'
+		case '已拒绝': return 'error'
+		default: return 'info'
+	}
+}
+
+// 审批文档请求对象
+const ApproveDocumentRequest = reactive({
+	ApprovalRecordID: 0,
+	DocumentType: 0,
+	DocumentID: 0,
+	StageID: 0,
+	ApproverID: 0,
+	ApproveStatus: false
+});
+
+var userId = useUserStore().userId;
+var CheckUser = ref(userId.toString()); // 初始化为当前用户ID
+// 审核通过
+const Approvepass = async () => {
+	try {
+		await ElMessageBox.confirm('确定通过该付款申请的审批吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 设置审批参数
+		ApproveDocumentRequest.ApproveStatus = true;
+		ApproveDocumentRequest.DocumentID = ShippingDeliveriesID.value;
+		ApproveDocumentRequest.ApproverID = userId;
+
+		// 从审批流程中获取当前步骤信息
+		const currentStep = approvalSteps.value.find(step => step.status === 0);
+		if (currentStep) {
+			ApproveDocumentRequest.StageID = currentStep.stageID;
+			ApproveDocumentRequest.ApprovalRecordID = currentStep.recordID || 0;
+		}
+
+		request.post('ApprovalFlow/ApprovalDocument/ApprovalDocument', ApproveDocumentRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.data,
+					type: 'success'
+				});
+				CreateshippingdeliveryDialog.value = false;
+				// 刷新合同列表
+				GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
+			} else {
+				console.error('审批失败');
+				ElMessage.error('审批失败');
+			}
+		}).catch(error => {
+			console.error('审批失败', error);
+			ElMessage.error('审批失败，请重试');
+		});
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('审批确认失败:', error);
+		}
+	}
+}
+
+// 审核驳回
+const ApproveReject = async () => {
+	try {
+		await ElMessageBox.confirm('确定驳回该付款申请的审批吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 设置审批参数
+		ApproveDocumentRequest.ApproveStatus = false;
+		ApproveDocumentRequest.DocumentID = 0;
+		ApproveDocumentRequest.ApproverID = 0;
+
+		// 从审批流程中获取当前步骤信息
+		const currentStep = approvalSteps.value.find(step => step.status === 0);
+		if (currentStep) {
+			ApproveDocumentRequest.StageID = currentStep.stageID;
+			ApproveDocumentRequest.ApprovalRecordID = currentStep.recordID;
+		}
+
+		request.post('ApprovalFlow/ApprovalDocument/ApprovalDocument', ApproveDocumentRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.data,
+					type: 'success'
+				});
+				CreateshippingdeliveryDialog.value = false;
+				// 刷新合同列表
+				GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
+			} else {
+				console.error('驳回失败');
+				ElMessage.error('驳回失败');
+			}
+		}).catch(error => {
+			console.error('驳回失败', error);
+			ElMessage.error('驳回失败，请重试');
+		});
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('驳回确认失败:', error);
+		}
+	}
+}
 </script>

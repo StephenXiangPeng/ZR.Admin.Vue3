@@ -903,7 +903,7 @@ onMounted(() => {
 		nextTick(() => {
 			setTimeout(() => {
 				const inquiryId = route.query.inquiryId as string;
-				const targetInquiry = inquiryList.value.find(item => item.id.toString() == inquiryId.toString());
+				const targetInquiry = inquiryList.value.find(item => item.inquiryID.toString() == inquiryId.toString());
 				if (targetInquiry) {
 					handleRowClick(targetInquiry);
 					// 如果状态是待处理，则自动打开处理窗口

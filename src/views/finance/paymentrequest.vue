@@ -42,7 +42,39 @@
 				</template>
 			</el-table-column>
 			<el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="reviewStatusStr" label="审核状态" width="150"></el-table-column>
+			<el-table-column prop="reviewStatusStr" label="审核状态" width="150" align="center">
+				<template #default="{ row }">
+					<template v-if="row.id"> <!-- 有ID才显示popover -->
+						<el-popover placement="right" :width="400" trigger="click">
+							<template #reference>
+								<el-tag :type="getStatusType(row.reviewStatusStr)" @click="getApprovalFlow(row.id)"
+									style="cursor: pointer">
+									{{ row.reviewStatusStr }}
+								</el-tag>
+							</template>
+
+							<!-- 有审批步骤才显示步骤条 -->
+							<template #default>
+								<div v-if="approvalSteps.length > 0" class="status-popover">
+									<el-steps :active="approvalSteps.length" size="small">
+										<el-step v-for="step in approvalSteps" :key="step.stageID"
+											:title="step.approverUserName" :description="getStatusText(step.status)"
+											:status="getStatus(step.status)" />
+									</el-steps>
+								</div>
+								<div v-else>暂无审批流程</div>
+							</template>
+						</el-popover>
+					</template>
+
+					<!-- 没有ID时只显示tag -->
+					<template v-else>
+						<el-tag :type="getStatusType(row.contractReviewStatusStr)">
+							{{ row.contractReviewStatusStr }}
+						</el-tag>
+					</template>
+				</template>
+			</el-table-column>
 			<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
 			<el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
 			<el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
@@ -70,7 +102,7 @@
 			@close="Closeaddpaymentrequestdialog()">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
-			<el-form :model="addpaymentrequestform" label-width="120px">
+			<el-form :model="addpaymentrequestform" label-width="120px" ref="paymentFormRef">
 				<el-row :gutter="20">
 					<el-col :span="8">
 						<el-form-item label="申请单号">
@@ -292,18 +324,23 @@
 			</el-tabs>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="primary" v-show="isSaveBtnShow" @click="SavePaymentRequest()">
-						确定保存
+					<el-button type="warning" v-show="isSaveBtnShow" @click="SavePaymentRequest()">
+						保存草稿
 					</el-button>
-					<el-button type="primary" v-show="isEditSaveBtnShow" @click="EditSavePaymentRequest()">
-						编辑保存
+					<el-button type="warning" v-show="isEditSaveBtnShow" @click="EditSavePaymentRequest()">
+						保存草稿
 					</el-button>
-					<!-- 查看详情时的编辑按钮 -->
 					<el-button type="primary" v-show="showEditBtn" @click="EditPayment">
 						编辑
 					</el-button>
 					<el-button type="success" v-show="showSubmitReviewBtn" @click="submitForReview">
-						提交审核
+						提交
+					</el-button>
+					<el-button type="danger" v-show="showApproveRejectBtn" @click="ApproveReject">
+						驳回
+					</el-button>
+					<el-button type="success" v-show="showApprovePassBtn" @click="Approvepass">
+						通过
 					</el-button>
 				</span>
 			</template>
@@ -322,7 +359,230 @@ import { JsonHubProtocol } from '@microsoft/signalr';
 import { get } from 'sortablejs';
 import { RefSymbol } from '@vue/reactivity';
 import useUserStore from '@/store/modules/user'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
+// 添加onMounted钩子
+onMounted(() => {
+	console.log('付款申请页面挂载，检查路由参数')
+	autoLoadPaymentRequestDetail()
+})
+
+// 添加自动加载付款申请详情的函数
+const autoLoadPaymentRequestDetail = async () => {
+	// 检查URL参数
+	const paymentRequestId = route.query.PaymentRequestID
+	const viewDetail = route.query.viewDetail
+	if (paymentRequestId && viewDetail === 'true') {
+		console.log('自动加载付款申请详情, ID:', paymentRequestId)
+
+		try {
+			// 等待获取付款申请列表
+			await GetPaymentRequestList(1, 100)
+
+			// 查找匹配的付款申请
+			const paymentrequest = paymentrequesttableData.value.find(item =>
+				item.id.toString() === paymentRequestId.toString()
+			)
+
+			if (paymentrequest) {
+				// 调用查看详情的函数
+				await CheckPaymentRequest(paymentrequest)
+				// 确保对话框显示
+				addpaymentrequestdialog.value = true
+			} else {
+				console.error('未找到匹配的付款申请:', paymentRequestId)
+				ElMessage.error('未找到匹配的付款申请')
+			}
+		} catch (error) {
+			console.error('加载付款申请详情失败:', error)
+			ElMessage.error('加载付款申请详情失败')
+		}
+	}
+}
+
+// 存储审批步骤数据
+const approvalSteps = ref([])
+// 获取审批流程
+const getApprovalFlow = async (documentId: number) => {
+	try {
+		const res = await request({
+			url: 'PaymentRequest/GetPaymentRequestApprovalFlowByPaymentRequestID/GetApprovalFlow',
+			method: 'get',
+			params: {
+				DocumentID: documentId
+			}
+		})
+
+		if (res.code === 200) {
+			approvalSteps.value = res.data
+		} else {
+			ElMessage.error('获取审批流程失败')
+		}
+	} catch (error) {
+		console.error('获取审批流程失败:', error)
+		ElMessage.error('获取审批流程失败')
+	}
+}
+
+// 获取状态文本
+const getStatusText = (status: number) => {
+	switch (status) {
+		case 0: return '待审批'
+		case 1: return '已通过'
+		case 2: return '已拒绝'
+		case 3: return '等待上一阶段'
+		case 4: return '已终止'
+		default: return '未知状态'
+	}
+}
+
+// 获取状态类型
+const getStatus = (status: number) => {
+	switch (status) {
+		case 0: return 'wait'
+		case 1: return 'success'
+		case 2: return 'error'
+		case 3: return 'danger'
+		case 4: return 'error'
+		default: return 'wait'
+	}
+}
+
+// 获取标签类型
+const getStatusType = (status: string) => {
+	switch (status) {
+		case '待提审': return 'warning'
+		case '审核中': return 'wait'
+		case '已批准': return 'success'
+		case '已拒绝': return 'error'
+		default: return 'info'
+	}
+}
+
+
+const showApproveRejectBtn = ref(false);
+const showApprovePassBtn = ref(false);
+
+// 审批文档请求对象
+const ApproveDocumentRequest = reactive({
+	ApprovalRecordID: 0,
+	DocumentType: 0,
+	DocumentID: 0,
+	StageID: 0,
+	ApproverID: 0,
+	ApproveStatus: false
+});
+
+var userId = useUserStore().userId;
+var CheckUser = ref(userId.toString()); // 初始化为当前用户ID
+// 审核通过
+const Approvepass = async () => {
+	try {
+		await ElMessageBox.confirm('确定通过该付款申请的审批吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 设置审批参数
+		ApproveDocumentRequest.ApproveStatus = true;
+		ApproveDocumentRequest.DocumentID = PaymentRequestID.value;
+		ApproveDocumentRequest.ApproverID = userId;
+
+		// 从审批流程中获取当前步骤信息
+		const currentStep = approvalSteps.value.find(step => step.status === 0);
+		if (currentStep) {
+			ApproveDocumentRequest.StageID = currentStep.stageID;
+			ApproveDocumentRequest.ApprovalRecordID = currentStep.recordID || 0;
+		}
+
+		request.post('ApprovalFlow/ApprovalDocument/ApprovalDocument', ApproveDocumentRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.data,
+					type: 'success'
+				});
+				addpaymentrequestdialog.value = false;
+				// 刷新合同列表
+				GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);
+			} else {
+				console.error('审批失败');
+				ElMessage.error('审批失败');
+			}
+		}).catch(error => {
+			console.error('审批失败', error);
+			ElMessage.error('审批失败，请重试');
+		});
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('审批确认失败:', error);
+		}
+	}
+}
+
+// 审核驳回
+const ApproveReject = async () => {
+	try {
+		await ElMessageBox.confirm('确定驳回该付款申请的审批吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 设置审批参数
+		ApproveDocumentRequest.ApproveStatus = false;
+		ApproveDocumentRequest.DocumentID = 0;
+		ApproveDocumentRequest.ApproverID = 0;
+
+		// 从审批流程中获取当前步骤信息
+		const currentStep = approvalSteps.value.find(step => step.status === 0);
+		if (currentStep) {
+			ApproveDocumentRequest.StageID = currentStep.stageID;
+			ApproveDocumentRequest.ApprovalRecordID = currentStep.recordID;
+		}
+
+		request.post('ApprovalFlow/ApprovalDocument/ApprovalDocument', ApproveDocumentRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.data,
+					type: 'success'
+				});
+				addpaymentrequestdialog.value = false;
+				// 刷新合同列表
+				GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);
+			} else {
+				console.error('驳回失败');
+				ElMessage.error('驳回失败');
+			}
+		}).catch(error => {
+			console.error('驳回失败', error);
+			ElMessage.error('驳回失败，请重试');
+		});
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('驳回确认失败:', error);
+		}
+	}
+}
+
+
+// 检查当前用户是否是当前审批人
+const checkIfCurrentUserIsApprover = () => {
+	if (!approvalSteps.value || approvalSteps.value.length === 0) {
+		return false;
+	}
+
+	// 查找状态为待审批(0)的步骤，这表示当前需要审批的步骤
+	const currentStep = approvalSteps.value.find(step => step.status === 0);
+
+	if (currentStep) {
+		// 检查当前步骤的审批人是否是当前用户
+		return currentStep.approverID.toString() === userId.toString();
+	}
+
+	return false;
+}
 // 获取用户信息
 const userInfo = useUserStore().userInfo
 
@@ -596,7 +856,7 @@ const paymentrequesttableDataHandlePageChange = async (newPage) => {
 	const newData = await GetPaymentRequestList(start, end);
 };
 function GetPaymentRequestList(start, end) {
-	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
+	return new Promise((resolve, reject) => {
 		request({
 			url: 'PaymentRequest/GetPaymentRequestList/GetList',
 			method: 'GET',
@@ -613,14 +873,22 @@ function GetPaymentRequestList(start, end) {
 				paymentrequesttableData.value = response.data.result;
 				paymentrequesttableData.value.forEach((element) => {
 					element.applicationDate = element.applicationDate.substring(0, 10);
-					element.paymentName = GetPaymentName(element.paymentCategory, element.paymentName);
-					element.paymentCategory = state.optionss.hr_payment_category.find((item) => item.dictValue == element.paymentCategory).dictLabel;
-					element.ourCompany = state.optionss.hr_ourcompany.find((item) => item.dictValue == element.ourCompany).dictLabel;
-					element.currencyCode = state.optionss.hr_currency_code.find((item) => item.dictValue == element.currencyCode).dictLabel;
-					element.applicant = state.optionss.sql_all_user.find((item) => item.dictValue == element.applicant).dictLabel;
-					element.applicationDepartment = state.optionss.sql_hr_dept.find((item) => item.dictValue == element.applicationDepartment).dictLabel;
-					element.handler = state.optionss.sql_all_user.find((item) => item.dictValue == element.handler).dictLabel;
-					element.reviewStatusStr = reviewStatusMap[element.reviewStatus.toString()];
+					// 确保字典数据已加载
+					if (state.optionss.hr_payment_category &&
+						state.optionss.hr_ourcompany &&
+						state.optionss.hr_currency_code &&
+						state.optionss.sql_all_user &&
+						state.optionss.sql_hr_dept) {
+
+						element.paymentName = GetPaymentName(element.paymentCategory, element.paymentName);
+						element.paymentCategory = state.optionss.hr_payment_category.find((item) => item.dictValue == element.paymentCategory)?.dictLabel || '';
+						element.ourCompany = state.optionss.hr_ourcompany.find((item) => item.dictValue == element.ourCompany)?.dictLabel || '';
+						element.currencyCode = state.optionss.hr_currency_code.find((item) => item.dictValue == element.currencyCode)?.dictLabel || '';
+						element.applicant = state.optionss.sql_all_user.find((item) => item.dictValue == element.applicant)?.dictLabel || '';
+						element.applicationDepartment = state.optionss.sql_hr_dept.find((item) => item.dictValue == element.applicationDepartment)?.dictLabel || '';
+						element.handler = state.optionss.sql_all_user.find((item) => item.dictValue == element.handler)?.dictLabel || '';
+					}
+					element.reviewStatusStr = reviewStatusMap[element.reviewStatus.toString()] || '';
 				});
 				resolve(response.data.data);
 			} else {
@@ -629,11 +897,11 @@ function GetPaymentRequestList(start, end) {
 				} else {
 					paymentrequesttableData.value = [];
 				}
-				reject(new Error('无数据'));  // Reject the promise if the response is null
+				reject(new Error('无数据'));
 			}
 		}).catch(error => {
 			console.error(error);
-			reject(error);  // Reject the promise if an error occurs
+			reject(error);
 		});
 	});
 }
@@ -642,7 +910,7 @@ const PaymentRequestID = ref(0);
 const showEditBtn = ref(false);
 const showSubmitReviewBtn = ref(false);
 //查看详情
-const CheckPaymentRequest = (row) => {
+const CheckPaymentRequest = async (row) => {
 	IsDisabled.value = true;
 	isCheckAndEdit.value = true;
 	if (row.reviewStatus == "0" || row.reviewStatus == "3") {
@@ -655,14 +923,17 @@ const CheckPaymentRequest = (row) => {
 	isSaveBtnShow.value = false;
 	isEditSaveBtnShow.value = false;
 
-	request({
-		url: 'PaymentRequest/GetPaymentRequestDetailsByID/GetDetails',
-		method: 'GET',
-		params: {
-			id: row.id
-		}
-	}).then(response => {
-		PaymentRequestID.value = response.data.paymentRequest.id;
+	PaymentRequestID.value = row.id;
+
+	try {
+		const response = await request({
+			url: 'PaymentRequest/GetPaymentRequestDetailsByID/GetDetails',
+			method: 'GET',
+			params: {
+				id: row.id
+			}
+		});
+
 		addpaymentrequestform.value.applicationNumber = response.data.paymentRequest.applicationNumber;
 		addpaymentrequestform.value.applicationDate = response.data.paymentRequest.applicationDate;
 		addpaymentrequestform.value.paymentCategory = response.data.paymentRequest.paymentCategory.toString();
@@ -695,32 +966,51 @@ const CheckPaymentRequest = (row) => {
 			element.specificpaymentitems = response.data.paymentRequestDetails[index].specificPaymentItems.toString();
 			element.remark = response.data.paymentRequestDetails[index].remark;
 		});
-
+		getApprovalFlow(row.id).then(() => {
+			const isCurrentUserApprover = checkIfCurrentUserIsApprover();
+			// 只有当前用户是审批人且合同在审核中时才显示审核按钮
+			if (isCurrentUserApprover && row.reviewStatusStr === '审核中') {
+				showApproveRejectBtn.value = true;
+				showApprovePassBtn.value = true;
+				// 设置文档类型（付款申请单）
+				ApproveDocumentRequest.DocumentType = 5;//5付款申请单
+			} else {
+				// 如果不是审核中状态，隐藏审批按钮
+				showApproveRejectBtn.value = false;
+				showApprovePassBtn.value = false;
+			}
+		});
 		addpaymentrequestdialog.value = true;
-	}).catch(error => {
+	} catch (error) {
 		console.error(error);
-	});
-
-
+	}
 }
 //获取付款申请单名称
 const GetPaymentName = (paymentCategory, paymentName) => {
-	var Name = '';
+	if (!paymentCategory || !paymentName) {
+		return '';
+	}
+
+	let dictList = [];
 	switch (paymentCategory.toString()) {
 		case '1':
-			Name = state.optionss.hr_factory_payment.find((item) => item.dictValue == paymentName).dictLabel;
+			dictList = state.optionss.hr_factory_payment;
 			break;
 		case '2':
-			Name = state.optionss.hr_domestic_charges.find((item) => item.dictValue == paymentName).dictLabel;
+			dictList = state.optionss.hr_domestic_charges;
 			break;
 		case '3':
-			Name = state.optionss.hr_foreign_charges.find((item) => item.dictValue == paymentName).dictLabel;
+			dictList = state.optionss.hr_foreign_charges;
 			break;
 		case '4':
-			Name = state.optionss.hr_daily_expenses.find((item) => item.dictValue == paymentName).dictLabel;
+			dictList = state.optionss.hr_daily_expenses;
 			break;
+		default:
+			return '';
 	}
-	return Name;
+
+	const foundItem = dictList?.find((item) => item.dictValue == paymentName);
+	return foundItem?.dictLabel || '';
 }
 var AssociatedOrderNumberOptionsArrar = ref([]);
 //获取关联单号
@@ -839,7 +1129,7 @@ const ResetClick = () => {
 const IsDisabled = ref(true);
 const EditPayment = () => {
 	showEditBtn.value = false;
-	showSubmitReviewBtn.value = false;
+	showSubmitReviewBtn.value = true;
 	IsDisabled.value = false;
 	isEditSaveBtnShow.value = true;
 }
@@ -869,6 +1159,10 @@ const AddPaymentDialog = async () => {
 	resetForm();
 	await getNextPaymentNumber();
 	IsDisabled.value = false;
+	isSaveBtnShow.value = true;
+	showSubmitReviewBtn.value = true;
+	showEditBtn.value = false;
+	isEditSaveBtnShow.value = false;
 
 	// 设置默认申请日期为当天
 	const today = new Date();
@@ -887,57 +1181,156 @@ const AddPaymentDialog = async () => {
 	addpaymentrequestdialog.value = true;
 }
 
+// 添加表单ref
+const paymentFormRef = ref();
+
+// 表单验证规则
+const rules = {
+	paymentCategory: [{ required: true, message: '请选择付款类别', trigger: 'change' }],
+	paymentName: [{ required: true, message: '请选择款项名称', trigger: 'change' }],
+	payeeCode: [{ required: true, message: '请选择收款单位', trigger: 'change' }],
+	ourCompany: [{ required: true, message: '请选择我方公司', trigger: 'change' }],
+	currencyCode: [{ required: true, message: '请选择货币代码', trigger: 'change' }],
+	applicant: [{ required: true, message: '请选择申请人', trigger: 'change' }],
+	applicationDepartment: [{ required: true, message: '请选择申请部门', trigger: 'change' }],
+	handler: [{ required: true, message: '请选择经手人', trigger: 'change' }]
+};
+
 // 提交审核方法
 const submitForReview = () => {
-	ElMessageBox.confirm('确定提交审核吗?', '提示', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'warning'
-	}).then(() => {
-		// 发送提交审核请求
-		request({
-			url: 'PaymentRequest/SubmitForReview/SubmitPaymentReview',
-			method: 'GET',
-			params: {
-				PaymentID: PaymentRequestID.value
-			}
-		}).then(response => {
-			if (response.code === 200) {
-				ElMessage({
-					message: response.msg || "付款申请单已提交审核！",
-					type: "success"
+	paymentFormRef.value.validate((valid) => {
+		if (valid) {
+			ElMessageBox.confirm('确定提交审核吗?', '提示', {
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning'
+			}).then(() => {
+				// 构造请求数据（与保存草稿的数据结构保持一致）
+				const requestData = {
+					id: PaymentRequestID.value || 0, // 新增时为0，更新时为实际ID
+					ApplicationNumber: addpaymentrequestform.value.applicationNumber,
+					ApplicationDate: addpaymentrequestform.value.applicationDate,
+					PaymentCategory: Number(addpaymentrequestform.value.paymentCategory),
+					PaymentName: Number(addpaymentrequestform.value.paymentName),
+					PayeeCode: Number(addpaymentrequestform.value.payeeCode),
+					PayeeName: addpaymentrequestform.value.payeeName,
+					BankName: addpaymentrequestform.value.bankName,
+					BankAccount: addpaymentrequestform.value.bankAccount,
+					OurCompany: Number(addpaymentrequestform.value.ourCompany),
+					CurrencyCode: Number(addpaymentrequestform.value.currencyCode),
+					TotalAmount: Number(addpaymentrequestform.value.totalAmount),
+					PaidAmount: Number(addpaymentrequestform.value.paidAmount),
+					UnpaidAmount: Number(addpaymentrequestform.value.unpaidAmount),
+					Applicant: Number(addpaymentrequestform.value.applicant),
+					ApplicationDepartment: Number(addpaymentrequestform.value.applicationDepartment),
+					FinancialApproval: Number(addpaymentrequestform.value.financialApproval),
+					Handler: Number(addpaymentrequestform.value.handler),
+					Remark: addpaymentrequestform.value.remarks, // 注意字段名映射
+					PaymentRequestDetails: CostDetailsTbaleData.value || []
+				};
+
+				// 发送保存并提交审核请求
+				request({
+					url: 'PaymentRequest/SaveAndSubmitForReview/SaveAndSubmitForReview',
+					method: 'POST',
+					data: requestData
+				}).then(response => {
+					if (response.code === 200) {
+						ElMessage({
+							message: response.msg || "付款申请单已保存并提交审核！",
+							type: "success"
+						});
+						// 隐藏所有按钮
+						showEditBtn.value = false;
+						showSubmitReviewBtn.value = false;
+						IsDisabled.value = true;
+						isEditSaveBtnShow.value = false;
+						isSaveBtnShow.value = false;
+						isCheckAndEdit.value = false;
+						PaymentRequestID.value = 0;
+						// 关闭对话框
+						addpaymentrequestdialog.value = false;
+						// 刷新列表
+						GetPaymentRequestList(
+							paymentrequesttableDataCurrentPage.value,
+							paymentrequesttableDataPageSize.value
+						);
+					} else {
+						ElMessage.error(response.msg || '提交审核失败');
+					}
+				}).catch(error => {
+					console.error('提交审核失败:', error);
+					ElMessage.error('提交审核失败，请重试');
 				});
-				// 隐藏所有按钮
-				showEditBtn.value = false;
-				showSubmitReviewBtn.value = false;
-				IsDisabled.value = true;
-				isEditSaveBtnShow.value = false;
-				isSaveBtnShow.value = false;
-				isCheckAndEdit.value = false;
-				PaymentRequestID.value = 0;
-
-				// 关闭对话框
-				addpaymentrequestdialog.value = false;
-
-				// 刷新列表
-				GetPaymentRequestList(
-					paymentrequesttableDataCurrentPage.value,
-					paymentrequesttableDataPageSize.value
-				);
-			} else {
-				ElMessage.error(response.msg || '提交审核失败');
-			}
-		}).catch(error => {
-			console.error('提交审核失败:', error);
-			ElMessage.error('提交审核失败，请重试');
-		});
-	}).catch(() => {
-		ElMessage({
-			type: 'info',
-			message: '已取消提交审核'
-		});
+			}).catch(() => {
+				ElMessage({
+					type: 'info',
+					message: '已取消提交审核'
+				});
+			});
+		} else {
+			ElMessage.error('请填写必填项');
+			return false;
+		}
 	});
 };
+// const submitForReview = () => {
+// 	paymentFormRef.value.validate((valid) => {
+// 		if (valid) {
+// 			ElMessageBox.confirm('确定提交审核吗?', '提示', {
+// 				confirmButtonText: '确定',
+// 				cancelButtonText: '取消',
+// 				type: 'warning'
+// 			}).then(() => {
+// 				// 发送提交审核请求
+// 				request({
+// 					url: 'PaymentRequest/SubmitForReview/SubmitPaymentReview',
+// 					method: 'GET',
+// 					params: {
+// 						PaymentID: PaymentRequestID.value
+// 					}
+// 				}).then(response => {
+// 					if (response.code === 200) {
+// 						ElMessage({
+// 							message: response.msg || "付款申请单已提交审核！",
+// 							type: "success"
+// 						});
+// 						// 隐藏所有按钮
+// 						showEditBtn.value = false;
+// 						showSubmitReviewBtn.value = false;
+// 						IsDisabled.value = true;
+// 						isEditSaveBtnShow.value = false;
+// 						isSaveBtnShow.value = false;
+// 						isCheckAndEdit.value = false;
+// 						PaymentRequestID.value = 0;
+
+// 						// 关闭对话框
+// 						addpaymentrequestdialog.value = false;
+
+// 						// 刷新列表
+// 						GetPaymentRequestList(
+// 							paymentrequesttableDataCurrentPage.value,
+// 							paymentrequesttableDataPageSize.value
+// 						);
+// 					} else {
+// 						ElMessage.error(response.msg || '提交审核失败');
+// 					}
+// 				}).catch(error => {
+// 					console.error('提交审核失败:', error);
+// 					ElMessage.error('提交审核失败，请重试');
+// 				});
+// 			}).catch(() => {
+// 				ElMessage({
+// 					type: 'info',
+// 					message: '已取消提交审核'
+// 				});
+// 			});
+// 		} else {
+// 			ElMessage.error('请填写必填项');
+// 			return false;
+// 		}
+// 	});
+// };
 
 // 清空表单数据的方法
 const resetForm = () => {
@@ -948,7 +1341,14 @@ const resetForm = () => {
 	isSaveBtnShow.value = true;
 	isCheckAndEdit.value = false;
 	PaymentRequestID.value = 0;
+
+	if (paymentFormRef.value) {
+		paymentFormRef.value.resetFields();
+	}
+
 	addpaymentrequestform.value = {
+		paymentContractType: '',
+		paymentContractID: 0,
 		applicationNumber: '',
 		applicationDate: '',
 		applicationDepartment: '',

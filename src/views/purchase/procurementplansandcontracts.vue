@@ -423,6 +423,12 @@
 						@click="submitForReview">
 						提交
 					</el-button>
+					<el-button type="danger" v-show="showApproveRejectBtn" @click="ApproveReject">
+						驳回
+					</el-button>
+					<el-button type="success" v-show="showApprovePassBtn" @click="Approvepass">
+						通过
+					</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -485,7 +491,38 @@ import useUserStore from "@/store/modules/user";
 import { FormInstance } from 'element-plus'
 import { invoke } from '@vueuse/core';
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer } from 'element-plus'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
+// 添加onMounted钩子
+onMounted(() => {
+	console.log('采购合同页面挂载，检查路由参数')
+	autoLoadpurchaseContractDetail()
+})
+
+// 添加自动加载合同详情的函数
+const autoLoadpurchaseContractDetail = () => {
+	// 检查URL参数
+	const purchaseContractId = route.query.purchaseContractId
+	const viewDetail = route.query.viewDetail
+	if (purchaseContractId && viewDetail === 'true') {
+		console.log('自动加载合同详情, ID:', purchaseContractId)
+
+		// 查找匹配的合同
+		GetpurchaseContractList(1, 100).then(() => {
+			const contract = contractofpurchasetableData.value.find(item =>
+				item.id.toString() === purchaseContractId.toString()
+			)
+
+			if (contract) {
+				// 调用查看详情的函数
+				CheckDetails(contract)
+			} else {
+				console.error('未找到匹配的合同:', purchaseContractId)
+			}
+		})
+	}
+}
 
 
 // 产品供应商选项
@@ -496,20 +533,16 @@ const supplierCache = reactive({});
 
 // 根据产品ID获取供应商列表
 const getSupplierListByProduct = async (productID: number) => {
-	console.log('Getting supplier list for product:', productID);
 	if (!productID) {
-		console.log('No product ID provided');
 		return [];
 	}
 
 	// 如果缓存中有数据，直接返回
 	if (supplierCache[productID]) {
-		console.log('Found cached data for product:', productID);
 		return supplierCache[productID];
 	}
 
 	try {
-		console.log('Fetching supplier data from API for product:', productID);
 		const res = await request({
 			url: 'ProductInformation/GetSupplierListByProductID/GetProductSupplierList',
 			method: 'get',
@@ -517,11 +550,9 @@ const getSupplierListByProduct = async (productID: number) => {
 				productID: productID
 			}
 		});
-		console.log('API response:', res);
 		if (res.code == 200) {
 			// 将数据存入缓存
 			supplierCache[productID] = res.data;
-			console.log('Cached supplier data for product:', productID, res.data);
 			return res.data;
 		} else {
 			ElMessage.error(res.msg || '获取供应商列表失败');
@@ -536,16 +567,12 @@ const getSupplierListByProduct = async (productID: number) => {
 
 // 在表格数据加载时预加载供应商数据
 const loadSupplierData = async (products) => {
-	console.log('Loading supplier data for products:', products);
 	if (!products || !Array.isArray(products)) {
-		console.log('Invalid products data');
 		return;
 	}
 
 	for (const product of products) {
-		console.log('Processing product:', product);
 		if (product.productId && !supplierCache[product.productId]) {
-			console.log('Loading supplier data for product:', product.productId);
 			await getSupplierListByProduct(product.productId);
 		}
 	}
@@ -578,7 +605,7 @@ const GeneratePurchaseContract = (row) => {
 
 			if (response.code === 200 && response.data) {
 				// 绑定基本信息
-				Addcontractofpurchaseform.value.purchaser = userId.toString();
+				Addcontractofpurchaseform.value.purchaser = state.optionss.sql_hr_purchase.find(item => item.dictValue === userId.toString())?.dictValue;
 				Addcontractofpurchaseform.value.contractStatus = "1";
 				Addcontractofpurchaseform.value.salesContract = row.contractId;
 				Addcontractofpurchaseform.value.customerContract = response.data.contract.customerContract;
@@ -594,36 +621,25 @@ const GeneratePurchaseContract = (row) => {
 				if (response.data.contractProducts && response.data.contractProducts.length > 0) {
 					productinfotableData.value = response.data.contractProducts.map(product => ({
 						id: product.id,
-						productId: product.productID,
+						productId: product.productID, // 确保这里设置了productId
+						vendorCode: product.vendorCode,
 						productCode: product.productCode,
 						chineseName: product.chineseName,
-						chineseSpec: product.chineseSpec,
-						contractQuantity: product.contractQuantity,
+						chineseSpecification: product.chineseSpecification,
 						unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === product.unit.toString())?.dictLabel || '无',
-						purchasecurrency: state.optionss.hr_export_currency.find(item => item.dictValue === product.purchasecurrency.toString())?.dictLabel || '无',
+						contractQuantity: product.contractQuantity,
 						purchaseUnitPrice: product.purchaseUnitPrice,
 						purchaseTotalPrice: product.purchaseTotalPrice,
-						deliveryDate: response.data.contract.deliveryDate,
-						productionLeadTime: '',
+						deliveryDate: product.deliveryDate,
+						productionLeadTime: product.productionLeadTime,
 						packaging: state.optionss.hr_packing.find(item => item.dictValue === product.packaging.toString())?.dictLabel || '无',
 						specialRequirements: product.specialRequirements,
 						innerBoxQuantity: product.innerBoxQuantity,
 						outerBoxQuantity: product.outerBoxQuantity,
-						outerboxunit: product.outerboxunit,
-						boxCount: product.boxCount,
-						outerBoxLength: product.outerBoxLength,
-						outerBoxWidth: product.outerBoxWidth,
-						outerBoxHeight: product.outerBoxHeight,
-						outerBoxVolume: product.outerBoxVolume,
-						outerBoxNetWeight: product.outerBoxNetWeight,
-						outerBoxGrossWeight: product.outerBoxGrossWeight,
-						totalVolume: product.totalVolume,
-						totalNetWeight: product.totalNetWeight,
-						totalGrossWeight: product.totalGrossWeight,
-						remark: product.remark,
-						invoice: product.invoice == 1 ? '是' : '否'
+						invoice: product.invoice == 1 ? '是' : '否',
+						remark: product.remark
 					}));
-					// 新增：加载供应商数据
+					// 先加载供应商数据
 					await loadSupplierData(productinfotableData.value);
 				}
 
@@ -667,6 +683,8 @@ const OpenAddcontractofpurchasedialog = async () => {
 	Addcontractofpurchaseform.value.contractStatus = '1';
 	Addcontractofpurchasedialog.value = true;
 	isSaveBtnShow.value = true;
+	showApproveRejectBtn.value = false;
+	showApprovePassBtn.value = false;
 	// 新增：如果有产品数据，加载供应商数据
 	if (productinfotableData.value.length > 0) {
 		await loadSupplierData(productinfotableData.value);
@@ -859,6 +877,8 @@ const showEditBtn = ref(false);          // 编辑按钮
 const showEditSaveBtn = ref(false);      // 编辑保存按钮
 const showSubmitReviewBtn = ref(false);  // 提交审核按钮
 const isFormDisabled = ref(true);        // 表单是否禁用
+const showApproveRejectBtn = ref(false);      // 驳回按钮
+const showApprovePassBtn = ref(false);        // 审核按钮
 
 /*动态下拉框start*/
 const proxy = getCurrentInstance().proxy
@@ -1040,13 +1060,14 @@ const submitPurchaseContract = () => {
 	// 映射产品数据以匹配后端模型
 	const mappedProducts = productinfotableData.value.map(product => ({
 		id: product.id || 0,
-		SupplierID: product.vendorCode,
+		productId: product.productId || 0,
+		SupplierID: product.vendorCode || 0,
 		purchaseContractId: 0, // 新增时为0
 		productCode: state.optionss.sql_product.find(item => item.dictLabel === product.productCode.toString())?.dictValue,
-		customerCode: product.customerCode,
-		chineseName: product.chineseName,
+		customerCode: product.customerCode || '',
+		chineseName: product.chineseName || '',
 		englishName: product.englishName || '',
-		chineseSpec: product.chineseSpec,
+		chineseSpec: product.chineseSpec || '',
 		contractQuantity: parseFloat(product.contractQuantity),
 		unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
 		purchasePrice: parseFloat(product.purchaseUnitPrice),
@@ -1055,7 +1076,7 @@ const submitPurchaseContract = () => {
 		productionLeadTime: product.productionLeadTime,
 		packaging: state.optionss.hr_packing.find(item => item.dictLabel === product.packaging.toString())?.dictValue,
 		specialRequirements: product.specialRequirements || '',
-		invoice: product.invoice == 1 ? '是' : '否',
+		invoice: product.invoice == '是' ? 1 : 0,
 		innerBoxQuantity: parseInt(product.innerBoxQuantity),
 		outerBoxQuantity: parseInt(product.outerBoxQuantity),
 		remark: product.remark || '',
@@ -1097,7 +1118,7 @@ const submitPurchaseContract = () => {
 		purchaseCurrency: parseInt(Addcontractofpurchaseform.value.purchaseCurrency),
 		deposit: parseFloat(Addcontractofpurchaseform.value.deposit || '0'),
 		salesperson: Addcontractofpurchaseform.value.salesperson,
-		purchaser: Addcontractofpurchaseform.value.purchaser,
+		purchaser: userId.toString(), // 确保设置采购员为当前用户ID
 		paymentDays: parseInt(Addcontractofpurchaseform.value.paymentDays),
 		priceTerms: Addcontractofpurchaseform.value.priceTerms,
 		totalGoodsValue: parseFloat(Totalvalueofgoodsform.value.totalValue),
@@ -1179,11 +1200,12 @@ const saveEditContract = () => {
 		cancelButtonText: '取消',
 		type: 'warning'
 	}).then(() => {
-		console.log(productinfotableData.value)
 		// 构建产品数据
 		const mappedProducts = productinfotableData.value.map(product => ({
 			Id: product.id || 0,
+			ProductId: product.productId || 0,
 			PurchaseContractId: currentContractId.value,
+			SupplierID: parseInt(product.vendorCode) || 0,
 			ProductCode: product.productCode || '',
 			CustomerCode: product.customerCode || '',
 			ChineseName: product.chineseName || '',
@@ -1316,13 +1338,14 @@ const submitForReview = () => {
 				// 映射产品数据以匹配后端模型
 				const mappedProducts = productinfotableData.value.map(product => ({
 					id: product.id || 0,
-					SupplierID: product.vendorCode,
+					ProductID: product.productId || 0,
+					SupplierID: product.vendorCode || 0,
 					purchaseContractId: 0, // 新增时为0
 					productCode: state.optionss.sql_product.find(item => item.dictLabel === product.productCode.toString())?.dictValue,
-					customerCode: product.customerCode,
-					chineseName: product.chineseName,
+					customerCode: product.customerCode || '',
+					chineseName: product.chineseName || '',
 					englishName: product.englishName || '',
-					chineseSpec: product.chineseSpec,
+					chineseSpec: product.chineseSpec || '',
 					contractQuantity: parseFloat(product.contractQuantity),
 					unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
 					purchasePrice: parseFloat(product.purchaseUnitPrice),
@@ -1331,7 +1354,7 @@ const submitForReview = () => {
 					productionLeadTime: product.productionLeadTime,
 					packaging: state.optionss.hr_packing.find(item => item.dictLabel === product.packaging.toString())?.dictValue,
 					specialRequirements: product.specialRequirements || '',
-					invoice: product.invoice,
+					invoice: product.invoice == '否' ? 0 : 1,
 					innerBoxQuantity: parseInt(product.innerBoxQuantity),
 					outerBoxQuantity: parseInt(product.outerBoxQuantity),
 					remark: product.remark || '',
@@ -1373,7 +1396,7 @@ const submitForReview = () => {
 					purchaseCurrency: parseInt(Addcontractofpurchaseform.value.purchaseCurrency),
 					deposit: parseFloat(Addcontractofpurchaseform.value.deposit || '0'),
 					salesperson: Addcontractofpurchaseform.value.salesperson,
-					purchaser: Addcontractofpurchaseform.value.purchaser,
+					purchaser: userId.toString(), // 确保设置采购员为当前用户ID
 					paymentDays: parseInt(Addcontractofpurchaseform.value.paymentDays),
 					priceTerms: Addcontractofpurchaseform.value.priceTerms,
 					totalGoodsValue: parseFloat(Totalvalueofgoodsform.value.totalValue),
@@ -1474,7 +1497,7 @@ const submitForReview = () => {
 
 
 const handleClick = (tab: TabsPaneContext, event: Event) => {
-	console.log(tab, event)
+
 }
 
 const productinfotableData = ref([])
@@ -1716,6 +1739,8 @@ const removePurchaseContractEditLock = async (contractId) => {
 
 // 采购合同窗体关闭
 const handleAddcontractofpurchasedialogclose = async () => {
+	showApproveRejectBtn.value = false;
+	showApprovePassBtn.value = false;
 	if (CheckUser.toString() == userId.toString()) {
 		await removePurchaseContractEditLock(currentContractId.value);
 	}
@@ -1724,7 +1749,6 @@ const handleAddcontractofpurchasedialogclose = async () => {
 
 // 查看详情
 const CheckDetails = async (row) => {
-	console.log('Checking details for row:', row);
 	// 先检查编辑锁
 	const lockStatus = await getPurchaseContractEditLock(row.id);
 	if (lockStatus.data.isEditLock == true) {
@@ -1785,14 +1809,12 @@ const CheckDetails = async (row) => {
 				PurchaseContracID: row.id
 			}
 		}).then(async response => {
-			console.log('Contract details response:', response);
 			if (response.data.purchaseContractProducts.length > 0) {
 				const products = response.data.purchaseContractProducts.map(element => {
-					console.log('Processing product element:', element);
 					return {
 						id: element.id,
 						productId: element.productNumber, // 确保这里设置了productId
-						vendorCode: state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictValue,
+						vendorCode: element.supplierID, // 存储供应商ID
 						productCode: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
 						chineseName: element.chineseName,
 						chineseSpecification: element.chineseSpecification,
@@ -1806,17 +1828,14 @@ const CheckDetails = async (row) => {
 						specialRequirements: element.specialRequirements,
 						innerBoxQuantity: element.innerBoxQuantity,
 						outerBoxQuantity: element.outerBoxQuantity,
-						invoice: element.invoke == 1 ? '是' : '否',
+						invoice: element.invoke == '是' ? 1 : 0,
 						remark: element.remark
 					};
 				});
-
-				console.log('Mapped products:', products);
 				// 先加载供应商数据
 				await loadSupplierData(products);
 				// 然后设置产品数据
 				productinfotableData.value = products;
-				console.log('Final product table data:', productinfotableData.value);
 			}
 			if (response.data.purchaseContractVendorExpenses.length > 0) {
 				CustomerRelaterExoensesTableData.value = [];
@@ -1824,6 +1843,17 @@ const CheckDetails = async (row) => {
 				CustomerRelaterExoensesTableData.value = response.data.purchaseContractVendorExpenses;
 			}
 			Addcontractofpurchasedialog.value = true;
+			// 异步获取审批流程并设置审核按钮状态
+			getApprovalFlow(row.id).then(() => {
+				const isCurrentUserApprover = checkIfCurrentUserIsApprover();
+				// 只有当前用户是审批人且合同在审核中时才显示审核按钮
+				if (isCurrentUserApprover && row.reviewStatusStr === '审核中') {
+					showApproveRejectBtn.value = true;
+					showApprovePassBtn.value = true;
+					// 设置文档类型（采购合同）
+					ApproveDocumentRequest.DocumentType = 2;
+				}
+			});
 		}).catch(error => {
 			console.error(error);
 			reject(error);
@@ -1937,5 +1967,122 @@ const getStatusType = (status: string) => {
 		case '已拒绝': return 'error'
 		default: return 'info'
 	}
+}
+
+// 审批文档请求对象
+const ApproveDocumentRequest = reactive({
+	ApprovalRecordID: 0,
+	DocumentType: 0,
+	DocumentID: 0,
+	StageID: 0,
+	ApproverID: 0,
+	ApproveStatus: false
+});
+
+// 审核通过
+const Approvepass = async () => {
+	try {
+		await ElMessageBox.confirm('确定通过该采购合同的审批吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 设置审批参数
+		ApproveDocumentRequest.ApproveStatus = true;
+		ApproveDocumentRequest.DocumentID = currentContractId.value;
+		ApproveDocumentRequest.ApproverID = userId;
+
+		// 从审批流程中获取当前步骤信息
+		const currentStep = approvalSteps.value.find(step => step.status === 0);
+		if (currentStep) {
+			ApproveDocumentRequest.StageID = currentStep.stageID;
+			ApproveDocumentRequest.ApprovalRecordID = currentStep.recordID || 0;
+		}
+
+		request.post('ApprovalFlow/ApprovalDocument/ApprovalDocument', ApproveDocumentRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.data,
+					type: 'success'
+				});
+				Addcontractofpurchasedialog.value = false;
+				// 刷新合同列表
+				GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
+			} else {
+				console.error('审批失败');
+				ElMessage.error('审批失败');
+			}
+		}).catch(error => {
+			console.error('审批失败', error);
+			ElMessage.error('审批失败，请重试');
+		});
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('审批确认失败:', error);
+		}
+	}
+}
+
+// 审核驳回
+const ApproveReject = async () => {
+	try {
+		await ElMessageBox.confirm('确定驳回该采购合同的审批吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 设置审批参数
+		ApproveDocumentRequest.ApproveStatus = false;
+		ApproveDocumentRequest.DocumentID = currentContractId.value;
+		ApproveDocumentRequest.ApproverID = userId;
+
+		// 从审批流程中获取当前步骤信息
+		const currentStep = approvalSteps.value.find(step => step.status === 0);
+		if (currentStep) {
+			ApproveDocumentRequest.StageID = currentStep.stageID;
+			ApproveDocumentRequest.ApprovalRecordID = currentStep.recordID;
+		}
+
+		request.post('ApprovalFlow/ApprovalDocument/ApprovalDocument', ApproveDocumentRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.data,
+					type: 'success'
+				});
+				Addcontractofpurchasedialog.value = false;
+				// 刷新合同列表
+				GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
+			} else {
+				console.error('驳回失败');
+				ElMessage.error('驳回失败');
+			}
+		}).catch(error => {
+			console.error('驳回失败', error);
+			ElMessage.error('驳回失败，请重试');
+		});
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('驳回确认失败:', error);
+		}
+	}
+}
+
+// 检查当前用户是否是当前审批人
+const checkIfCurrentUserIsApprover = () => {
+	if (!approvalSteps.value || approvalSteps.value.length === 0) {
+		return false;
+	}
+
+	// 查找状态为待审批(0)的步骤，这表示当前需要审批的步骤
+	const currentStep = approvalSteps.value.find(step => step.status === 0);
+
+	if (currentStep) {
+		// 检查当前步骤的审批人是否是当前用户
+		return currentStep.approverID.toString() === userId.toString();
+	}
+
+	return false;
 }
 </script>

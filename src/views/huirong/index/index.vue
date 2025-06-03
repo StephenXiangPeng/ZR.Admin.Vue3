@@ -1777,7 +1777,6 @@
           </el-tab-pane>
         </el-tabs>
       </div>
-
       <!-- 底部操作按钮 -->
       <template #footer>
         <span class="dialog-footer">
@@ -2062,22 +2061,22 @@ const getUnreadMessages = async () => {
                     targetPath = `/plantask?taskId=${msg.targetId}`;
                     break;
                   case 'saleContact':
-                    targetPath = `/index?contactId=${msg.targetId}`;
+                    targetPath = `/sale/sale/salecontract?contractId=${msg.targetId}&viewDetail=true`;
                     break;
                   case 'purchaseContract':
-                    targetPath = `/purchaseContract?customerId=${msg.targetId}`;
+                    targetPath = `/purchase/procurementplansandcontracts?purchaseContractId=${msg.targetId}&viewDetail=true`;
                     break;
                   case 'paymentApplication':
-                    targetPath = `/paymentrequest?orderId=${msg.targetId}`;
+                    targetPath = `/paymentrequest?PaymentRequestID=${msg.targetId}&viewDetail=true`;
                     break;
                   case 'Shipping':
-                    targetPath = `/shippingdelivery?productId=${msg.targetId}`;
+                    targetPath = `/sale/shippingdelivery?contractId=${msg.targetId}&viewDetail=true`;
                     break;
                   case 'Settlement':
-                    targetPath = `/settlementcenter?contractId=${msg.targetId}`;
+                    targetPath = `/finance/settlementcenter?contractId=${msg.targetId}&viewDetail=true`;
                     break;
                   case 'Inquiry':
-                    targetPath = `/requestquote?invoiceId=${msg.targetId}`;
+                    targetPath = `/purchase/requestquote?inquiryId=${msg.targetId}&fromDashboard=true`;
                     break;
                   default:
                     targetPath = '/index';
@@ -4584,7 +4583,7 @@ const handleInquiryRowDblClick = (row) => {
   router.push({
     path: '/purchase/requestquote',
     query: {
-      inquiryId: row.id,
+      inquiryId: row.inquiryID,
       fromDashboard: 'true'
     }
   })

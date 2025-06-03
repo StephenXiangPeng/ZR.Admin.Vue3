@@ -959,6 +959,12 @@
 					<el-button v-show="isAuditBtnShow" type="success" @click="SaveContract(NewcontractformRef)">
 						提交
 					</el-button>
+					<el-button v-show="showRejectBtn" type="danger" @click="ApproveReject">
+						驳回
+					</el-button>
+					<el-button v-show="showApprovalBtn" type="success" @click="Approvepass">
+						通过
+					</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -1186,6 +1192,8 @@ const handlecontractDialogclose = async () => {
 	showEditBtn.value = false;
 	showEditSaveBtn.value = false;
 	isSaveBtnShow.value = true;
+	showApprovalBtn.value = false;
+	showRejectBtn.value = false;
 	GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
 	clearAll();
 	// 重置表单验证状态
@@ -1222,6 +1230,19 @@ const showEditSaveBtn = ref(false);
 const isDisabled = ref(false);
 //审核按钮
 const isAuditBtnShow = ref(false);
+//审核和驳回按钮
+const showApprovalBtn = ref(false);
+const showRejectBtn = ref(false);
+
+// 审批文档请求对象
+const ApproveDocumentRequest = reactive({
+	ApprovalRecordID: 0,
+	DocumentType: 0,
+	DocumentID: 0,
+	StageID: 0,
+	ApproverID: 0,
+	ApproveStatus: false
+});
 
 //产品资料tab&客户相关费用tab
 const activeTab = ref('productMaterialtab');
@@ -2596,6 +2617,8 @@ const openContractDialog = () => {
 	showEditSaveBtn.value = false;
 	isSaveBtnShow.value = true;
 	isAuditBtnShow.value = true;
+	showApprovalBtn.value = false;
+	showRejectBtn.value = false;
 	const currentDate = new Date();
 	const formattedDate = currentDate.toISOString().split('T')[0];
 	Newcontractform.contractDate = formattedDate;
@@ -2884,17 +2907,38 @@ const checkContractsDetails = async (row) => {
 			}
 			getReceivedExpenseDetails(row.id);
 			contractReviewStatus.value = row.contractReviewStatusStr;
-			if (row.reviewStatus == 0 || row.reviewStatus == 3) {
+
+			// 检查当前用户是否是该合同的销售员
+			const isCurrentUserSalesperson = row.salesperson.toString() === userId.toString();
+
+			// 设置基本按钮状态
+			if (isCurrentUserSalesperson && (row.reviewStatus == 0 || row.reviewStatus == 3)) {
 				isSaveBtnShow.value = false;
 				showEditSaveBtn.value = true;
 				showEditBtn.value = true;
 				isAuditBtnShow.value = false;
+				showApprovalBtn.value = false;
+				showRejectBtn.value = false;
 			} else {
 				showEditSaveBtn.value = false;
 				isSaveBtnShow.value = false;
 				showEditBtn.value = false;
 				isAuditBtnShow.value = false;
+				showApprovalBtn.value = false;
+				showRejectBtn.value = false;
 			}
+
+			// 异步获取审批流程并设置审核按钮状态
+			getApprovalFlow(row.id).then(() => {
+				const isCurrentUserApprover = checkIfCurrentUserIsApprover();
+				// 只有当前用户是审批人且合同在审核中时才显示审核按钮
+				if (isCurrentUserApprover && row.contractReviewStatusStr === '审核中') {
+					showApprovalBtn.value = true;
+					showRejectBtn.value = true;
+					// 设置文档类型（销售合同）
+					ApproveDocumentRequest.DocumentType = 1; // 假设1代表销售合同，具体值需要根据系统定义
+				}
+			});
 			isDisabled.value = true;
 			contractDialog.value = true;
 		}).catch(error => {
@@ -2912,6 +2956,8 @@ const EditContract = () => {
 	showEditSaveBtn.value = true;
 	isDisabled.value = false;
 	isAuditBtnShow.value = false;
+	showApprovalBtn.value = false;
+	showRejectBtn.value = false;
 }
 
 const EditContractsRequest = reactive({
@@ -3321,12 +3367,15 @@ const getApprovalFlow = async (documentId: number) => {
 		})
 		if (res.code === 200) {
 			approvalSteps.value = res.data
+			return res.data
 		} else {
 			ElMessage.error('获取审批流程失败')
+			return null
 		}
 	} catch (error) {
 		console.error('获取审批流程失败:', error)
 		ElMessage.error('获取审批流程失败')
+		return null
 	}
 }
 
@@ -3407,6 +3456,115 @@ const canWithdraw = (row: any) => {
 	// 根据状态判断是否可以撤回
 	return row.contractReviewStatusStr === '待审核'
 }
+
+// 审核通过
+const Approvepass = async () => {
+	try {
+		await ElMessageBox.confirm('确定通过该销售合同的审批吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 设置审批参数
+		ApproveDocumentRequest.ApproveStatus = true;
+		ApproveDocumentRequest.DocumentID = SelctedContractId.value;
+		ApproveDocumentRequest.ApproverID = userId;
+
+		// 从审批流程中获取当前步骤信息
+		const currentStep = approvalSteps.value.find(step => step.status === 0);
+		if (currentStep) {
+			ApproveDocumentRequest.StageID = currentStep.stageID;
+			ApproveDocumentRequest.ApprovalRecordID = currentStep.recordID || 0;
+		}
+
+		request.post('ApprovalFlow/ApprovalDocument/ApprovalDocument', ApproveDocumentRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.data,
+					type: 'success'
+				});
+				contractDialog.value = false;
+				// 刷新合同列表
+				GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+			} else {
+				console.error('审批失败');
+				ElMessage.error('审批失败');
+			}
+		}).catch(error => {
+			console.error('审批失败', error);
+			ElMessage.error('审批失败，请重试');
+		});
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('审批确认失败:', error);
+		}
+	}
+}
+
+// 审核驳回
+const ApproveReject = async () => {
+	try {
+		await ElMessageBox.confirm('确定驳回该销售合同的审批吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		});
+
+		// 设置审批参数
+		ApproveDocumentRequest.ApproveStatus = false;
+		ApproveDocumentRequest.DocumentID = SelctedContractId.value;
+		ApproveDocumentRequest.ApproverID = userId;
+
+		// 从审批流程中获取当前步骤信息
+		const currentStep = approvalSteps.value.find(step => step.status === 0);
+		if (currentStep) {
+			ApproveDocumentRequest.StageID = currentStep.stageID;
+			ApproveDocumentRequest.ApprovalRecordID = currentStep.recordID;
+		}
+
+		request.post('ApprovalFlow/ApprovalDocument/ApprovalDocument', ApproveDocumentRequest).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.data,
+					type: 'success'
+				});
+				contractDialog.value = false;
+				// 刷新合同列表
+				GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+			} else {
+				console.error('驳回失败');
+				ElMessage.error('驳回失败');
+			}
+		}).catch(error => {
+			console.error('驳回失败', error);
+			ElMessage.error('驳回失败，请重试');
+		});
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('驳回确认失败:', error);
+		}
+	}
+}
+
+// 检查当前用户是否是当前审批人
+const checkIfCurrentUserIsApprover = () => {
+	if (!approvalSteps.value || approvalSteps.value.length === 0) {
+		return false;
+	}
+
+	// 查找状态为待审批(0)的步骤，这表示当前需要审批的步骤
+	const currentStep = approvalSteps.value.find(step => step.status === 0);
+
+	if (currentStep) {
+		// 检查当前步骤的审批人是否是当前用户
+		return currentStep.approverID.toString() === userId.toString();
+	}
+
+	return false;
+}
+
+
 
 const SaveContractDraft = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
@@ -3735,7 +3893,6 @@ const autoLoadContractDetail = () => {
 	const contractId = route.query.contractId
 	const contractNumber = route.query.contractNumber
 	const viewDetail = route.query.viewDetail
-
 	if (contractId && viewDetail === 'true') {
 		console.log('自动加载合同详情, ID:', contractId, '合同编号:', contractNumber)
 

@@ -8,6 +8,7 @@ import request from '@/utils/request'  // 添加这行，导入 request
 import { h } from 'vue'  // 添加这行，因为使用了 h 函数
 import { useRouter } from 'vue-router'
 
+
 export default {
   onMessage(connection) {
     connection.on(MsgType.M001, (data) => {
@@ -191,22 +192,22 @@ export default {
                     targetPath = `/plantask?taskId=${data.targetId}`;
                     break;
                   case 'saleContact':
-                    targetPath = `/index?contactId=${data.targetId}`;
+                    targetPath = `/sale/sale/salecontract?contractId=${data.targetId}&viewDetail=true`;
                     break;
                   case 'purchaseContract':
-                    targetPath = `/purchaseContract?customerId=${data.targetId}`;
+                    targetPath = `/purchase/procurementplansandcontracts?purchaseContractId=${data.targetId}&viewDetail=true`;
                     break;
                   case 'paymentApplication':
-                    targetPath = `/paymentrequest?orderId=${data.targetId}`;
+                    targetPath = `/paymentrequest?PaymentRequestID=${data.targetId}&viewDetail=true`;
                     break;
                   case 'Shipping':
-                    targetPath = `/shippingdelivery?productId=${data.targetId}`;
+                    targetPath = `/sale/shippingdelivery?contractId=${msg.targetId}&viewDetail=true`;
                     break;
                   case 'Settlement':
-                    targetPath = `/settlementcenter?contractId=${data.targetId}`;
+                    targetPath = `/finance/settlementcenter?contractId=${data.targetId}&viewDetail=true`;
                     break;
                   case 'Inquiry':
-                    targetPath = `/requestquote?invoiceId=${data.targetId}`;
+                    targetPath = `/purchase/requestquote?inquiryId=${data.targetId}`;
                     break;
                   default:
                     targetPath = '/index';
