@@ -104,7 +104,7 @@
 							<template #default="scope">
 								<el-button link type="primary" size="small" v-if="!scope.row.isSubProduct"
 									@click="OpenProductInfoDetailDialog(scope.row)">查看详情</el-button>
-								<el-button link type="primary" size="small"
+								<el-button link type="danger" size="small"
 									v-if="isDelteBtnShow && userId.toString() === '1' && !scope.row.isSubProduct"
 									@click="DeleteProduct(scope.row)">删除产品</el-button>
 							</template>

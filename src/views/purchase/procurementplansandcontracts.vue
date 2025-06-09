@@ -10,6 +10,7 @@
 		</div>
 		<el-divider> </el-divider>
 		<el-table :data="shoppinglisttableData" style="width: 100%" :span-method="mergeCells">
+			<el-table-column prop="procurementId" label="ID" width="150" v-if="false"></el-table-column>
 			<el-table-column prop="contractNumber" label="销售合同号" width="150"></el-table-column>
 			<el-table-column prop="contractId" label="销售合同ID" width="150" v-if="false"></el-table-column>
 			<el-table-column prop="productId" label="产品ID" width="150" v-if="false"></el-table-column>
@@ -87,11 +88,13 @@
 			<el-table-column prop="salesperson" label="销售员" width="150"></el-table-column>
 			<el-table-column prop="purchaser" label="采购员" width="150"></el-table-column>
 			<el-table-column prop="createTime" label="创建日期" width="150"></el-table-column>
-			<el-table-column fixed="right" label="操作" width="250">
+			<el-table-column fixed="right" label="操作" width="280">
 				<template #default="scope">
 					<el-button type="text" size="small" @click="CheckDetails(scope.row)">查看详情</el-button>
 					<el-button type="text" size="small"
 						@click="GeneratePurchaseContract(scope.row)">生成采购合同PDF</el-button>
+					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
+						type="danger" size="small" @click="DeletePurchaseContract(scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -696,8 +699,10 @@ const viewDetailsDialog = ref(false)
 const detailsTableData = ref([])
 const hasPriceChanges = ref(false)
 const currentDetailRow = ref(null)
+const ProcurementRequirementID = ref(0);
 // 查看采购需求详情方法
 const ViewDetails = (row) => {
+	ProcurementRequirementID.value = row.procurementId;
 	currentDetailRow.value = row
 	hasPriceChanges.value = false
 	// 获取该合同的详细信息
@@ -1139,9 +1144,9 @@ const submitPurchaseContract = () => {
 		updateBy: userId,
 		purchaseContractProducts: mappedProducts,
 		purchaseContractVendorExpenses: mappedExpenses,
-		isDraft: 1
+		isDraft: 1,
+		ProcurementRequirementID: ProcurementRequirementID.value
 	};
-
 	// 提交采购合同
 	request.post("PurchaseContracts/AddPurchaseContracts/Add", contractRequest)
 		.then(response => {
@@ -1153,7 +1158,9 @@ const submitPurchaseContract = () => {
 				Addcontractofpurchasedialog.value = false;
 				GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
 				if (isGeneratedFromRequirement.value) {
-					updateGenerateStatusByContractId(SaleContractID.value);
+					if (contractRequest.isDraft == 0) {
+						updateGenerateStatusByContractId(SaleContractID.value);
+					}
 					ProcurementRequirements(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
 				}
 			} else {
@@ -1269,7 +1276,8 @@ const saveEditContract = () => {
 			IsDelete: 0,
 			PurchaseContractProducts: mappedProducts,
 			PurchaseContractVendorExpenses: mappedExpenses,
-			isDraft: 1
+			isDraft: 1,
+			ProcurementRequirementID: ProcurementRequirementID.value
 		};
 
 		// 发送请求
@@ -1417,9 +1425,9 @@ const submitForReview = () => {
 					updateBy: userId,
 					purchaseContractProducts: mappedProducts,
 					purchaseContractVendorExpenses: mappedExpenses,
-					isDraft: 1
+					isDraft: 1,
+					ProcurementRequirementID: ProcurementRequirementID.value
 				};
-
 				// 提交采购合同
 				request.post("PurchaseContracts/AddPurchaseContracts/Add", contractRequest)
 					.then(async response => {
@@ -1431,7 +1439,6 @@ const submitForReview = () => {
 									ContractID: response.data
 								}
 							});
-
 							if (Reviewresponse.code === 200) {
 								ElMessage.success(Reviewresponse.msg || '提交审核成功');
 								Addcontractofpurchasedialog.value = false;  // 关闭对话框
@@ -1440,10 +1447,9 @@ const submitForReview = () => {
 									purchasecontractsTableDatacurrentPage.value,
 									purchasecontractsTableDatapageSize.value
 								);
-								if (isGeneratedFromRequirement.value) {
-									await updateGenerateStatusByContractId(SaleContractID.value);
-									await ProcurementRequirements(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
-								}
+								await updateGenerateStatusByContractId(SaleContractID.value);
+								await ProcurementRequirements(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+
 							} else {
 								ElMessage.error(Reviewresponse.msg || '提交审核失败');
 							}
@@ -1473,17 +1479,18 @@ const submitForReview = () => {
 				params: {
 					ContractID: currentContractId.value // 需要添加这个响应式变量来存储当前合同ID
 				}
-			}).then(response => {
+			}).then(async response => {
 				if (response.code === 200) {
-					ElMessage.success(response.msg || '提交审核成功');
+					ElMessage.success('提交审核成功');
 					Addcontractofpurchasedialog.value = false;  // 关闭对话框
 					// 刷新采购合同列表
 					GetpurchaseContractList(
 						purchasecontractsTableDatacurrentPage.value,
 						purchasecontractsTableDatapageSize.value
 					);
+					await ProcurementRequirements(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
 				} else {
-					ElMessage.error(response.msg || '提交审核失败');
+					ElMessage.error('提交审核失败');
 				}
 			}).catch(error => {
 				console.error('提交审核失败:', error);
@@ -2085,4 +2092,30 @@ const checkIfCurrentUserIsApprover = () => {
 
 	return false;
 }
+
+// 删除采购合同
+const DeletePurchaseContract = (row) => {
+	ElMessageBox.confirm('确定要删除该采购合同吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'PurchaseContracts/DeletePurchaseContracts/Delete',
+			method: 'post',
+			data: { PurchaseContractID: row.id }
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage.success(response.msg || '删除成功');
+				GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
+			} else {
+				ElMessage.error(res.msg || '删除失败');
+			}
+		}).catch(() => {
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消删除');
+	});
+};
 </script>

@@ -54,9 +54,12 @@
 			<el-table-column prop="payment_Method" label="付费方式" width="150"></el-table-column>
 			<el-table-column prop="company_ID" label="我方公司" width="150"></el-table-column>
 			<el-table-column prop="paid_Express_Fee" label="已付快件费" width="150"></el-table-column>
-			<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
+			<el-table-column prop="createBy" label="创建人" width="150" v-if="true"></el-table-column>
+			<el-table-column fixed="right" prop="operate" label="操作" width="150">
 				<template v-slot:default="scope">
 					<el-button link type="primary" size="small" @click="handleView(scope.row.id)">查看/编辑</el-button>
+					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
+						type="danger" size="small" @click="DeleteProductSample(scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -270,6 +273,7 @@ import {
 } from 'element-plus'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import request from '@/utils/request';
+import useUserStore from "@/store/modules/user";
 
 // 获取路由实例
 const route = useRoute()
@@ -981,6 +985,32 @@ onMounted(async () => {
 		handleView(id);
 	}
 })
+
+const DeleteProductSample = (row) => {
+	ElMessageBox.confirm('确定要删除该收样/寄样记录吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'ProductSample/DeleteProductSample/Delete',
+			method: 'post',
+			data: { ID: row.id }
+		}).then(response => {
+			const res = response.data || response;
+			if (res.code === 200) {
+				ElMessage.success(res.msg || '删除成功');
+				GetProductSampleList(currentPage.value, pageSize.value);
+			} else {
+				ElMessage.error(res.msg || '删除失败');
+			}
+		}).catch(() => {
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消删除');
+	});
+};
 </script>
 
 <style scoped></style>

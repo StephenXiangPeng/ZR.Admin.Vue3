@@ -79,6 +79,8 @@
 				<template v-slot:default="scope">
 					<el-button link type="primary" size="small"
 						@click=OpenCustomerProfileDetailDialog(scope.row)>查看详情</el-button>
+					<el-button v-if="scope.row.create_by === useUserStore().userName && scope.row.isDraft" link
+						type="danger" size="small" @click="DeleteCustomerProfile(scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -166,7 +168,7 @@
 				</el-form-item>
 				<el-form-item label="销售人员：" prop="salesPerson">
 					<el-select filterable v-model="CustomerProfileform.salesPerson" placeholder="选择销售员"
-						style="width: 300px;" disabled>
+						style="width: 300px;">
 						<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode" :label="dict.dictLabel"
 							:value="dict.dictValue"></el-option>
 					</el-select>
@@ -593,7 +595,7 @@
 					</el-select>
 				</el-form-item>
 				<el-form-item label="联系人" prop="contactPerson">
-					<el-select v-model="contactLogForm.contactPerson" filterable placeholder="选择联系人"
+					<el-select v-model="contactLogForm.contactPerson" filterable allow-create placeholder="选择联系人"
 						style="width: 100%;">
 						<el-option v-for="item in ContactPersonData" :key="item.id" :label="item.name"
 							:value="item.id" />
@@ -614,7 +616,7 @@
 						:placeholder="contactLogForm.relatedDocumentType === 1 ? '请选择销售合同' : '请选择出运合同'"
 						style="width: 100%;">
 						<el-option
-							v-for="item in contactLogForm.relatedDocumentType === 1 ? state.optionss.sql_sale_contracts : state.optionss.sql_shipping_contracts"
+							v-for="item in contactLogForm.relatedDocumentType === 1 ? state.optionss.customer_contract_data : state.optionss.sql_shippingdeliveries"
 							:key="item.dictValue" :label="item.dictLabel" :value="item.dictValue" />
 					</el-select>
 				</el-form-item>
@@ -764,7 +766,8 @@ const state = reactive({
 		hr_ourcompany: [],
 		sql_user_customers: [],
 		sql_sale_contracts: [],
-		sql_shippingdeliveries: []
+		sql_shippingdeliveries: [],
+		customer_contract_data: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -785,7 +788,8 @@ var dictParams = [
 	{ dictType: 'hr_contract_status' },
 	{ dictType: 'hr_ourcompany' },
 	{ dictType: 'sql_sale_contracts' },
-	{ dictType: 'sql_shippingdeliveries' }
+	{ dictType: 'sql_shippingdeliveries' },
+	{ dictType: 'customer_contract_data' }
 ]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
@@ -816,6 +820,30 @@ const getUserCustomerData = async () => {
 	}
 }
 getUserCustomerData();//获取用户相关的客户数据
+
+//获取特定的客户合同数据
+const GetVisibleContractSelectList = async (customerId = 0) => {
+	state.optionss.customer_contract_data = [];
+	try {
+		const response = await request({
+			url: 'Contracts/GetVisibleContractSelectList/GetVisibleContractSelectList',
+			method: 'get',
+			params: {
+				CustomerID: customerId
+			}
+		})
+		if (response.code === 200) {
+			state.optionss.customer_contract_data = response.data
+		} else {
+			ElMessage.error(response.msg || '获取销售合同数据失败')
+		}
+	} catch (error) {
+		console.error('获取销售合同数据失败:', error)
+		ElMessage.error('获取销售合同数据失败')
+	}
+}
+GetVisibleContractSelectList();
+
 
 //线索导入窗体
 const LeadImportDialog = ref(false)
@@ -2651,6 +2679,42 @@ const handleSampleRowDblClick = (row) => {
 	} else {
 		ElMessage.warning('样品记录ID不存在，无法查看详情');
 	}
+}
+
+// 删除客户资料
+const DeleteCustomerProfile = (row) => {
+	ElMessageBox.confirm('确定要删除该客户资料吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'CustomerInfoMation/DeleteCustomerInfo/Delete',
+			method: 'post',
+			data: {
+				CustomerID: row.id
+			}
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage({
+					message: '删除成功',
+					type: 'success'
+				});
+				// 刷新列表
+				GetCustomeInfoList(currentPage.value, pageSize.value);
+			} else {
+				ElMessage.error(response.msg || '删除失败');
+			}
+		}).catch(error => {
+			console.error('删除客户资料失败:', error);
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage({
+			type: 'info',
+			message: '已取消删除'
+		});
+	});
 }
 
 // 报价记录分页

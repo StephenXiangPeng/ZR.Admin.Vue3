@@ -89,9 +89,11 @@
 			<el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
 			<el-table-column prop="handler" label="经手人" width="150"></el-table-column>
 			<el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
-			<el-table-column fixed="right" label="操作" width="100">
+			<el-table-column fixed="right" label="操作" width="150">
 				<template #default="scope">
 					<el-button type="text" size="small" @click="CheckPaymentRequest(scope.row)">查看/编辑</el-button>
+					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
+						type="danger" size="small" @click="DeleteCustomerProfile(scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -1391,4 +1393,29 @@ const CalculatetotalAmount = () => {
 	const paidAmount = parseFloat(addpaymentrequestform.value.paidAmount) || 0;
 	addpaymentrequestform.value.unpaidAmount = (total - paidAmount).toFixed(2);
 }
+
+const DeleteCustomerProfile = (row) => {
+	ElMessageBox.confirm('确定要删除该付款申请单吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'PaymentRequest/DeletePaymentRequest/Delete',
+			method: 'post',
+			data: { PaymentRequestID: row.id }
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage.success(response.msg || '删除成功');
+				GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);
+			} else {
+				ElMessage.error(response.msg || '删除失败');
+			}
+		}).catch(() => {
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消删除');
+	});
+};
 </script>

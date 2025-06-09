@@ -128,6 +128,9 @@
 							<el-button type="text" size="small" icon="Back"
 								v-if="scope.row.contractReviewStatusStr === '审核中'"
 								@click="withdrawalApproval(scope.row)">撤回审批</el-button>
+							<el-button
+								v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
+								type="danger" size="small" @click="DeleteContract(scope.row)">删除</el-button>
 						</template>
 						<template v-else>
 							<el-button type="text" size="small"
@@ -3918,6 +3921,35 @@ onMounted(() => {
 	console.log('销售合同页面挂载，检查路由参数')
 	autoLoadContractDetail()
 })
+
+// 删除销售合同
+const DeleteContract = (row) => {
+	ElMessageBox.confirm('确定要删除该销售合同吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'Contracts/DeleteContract/Delete',
+			method: 'post',
+			data: { ContractID: row.id }
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage({
+					message: '删除成功',
+					type: 'success'
+				});
+				GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+			} else {
+				ElMessage.error(response.msg || '删除失败');
+			}
+		}).catch(() => {
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消删除');
+	});
+};
 </script>
 <style scoped>
 /* 基础红色文本 */

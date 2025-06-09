@@ -179,6 +179,9 @@
                 <el-radio v-for="dict in statusOptions" :key="dict.dictValue" :label="parseInt(dict.dictValue)">{{
                   dict.dictLabel }}</el-radio>
               </el-radio-group>
+              <el-button v-if="form.status === 1" type="warning" size="default" @click="handleDataMigration">
+                数据迁移
+              </el-button>
             </el-form-item>
           </el-col>
           <el-col :lg="24">
@@ -240,6 +243,63 @@
         <el-button type="primary" @click="submitFileForm">{{ $t('btn.submit') }}</el-button>
       </template>
     </el-dialog>
+
+    <!-- 数据迁移用户选择对话框 -->
+    <el-dialog title="选择目标用户" v-model="data.migrationDialog.visible" width="800px" append-to-body>
+      <div class="mb-3">
+        <span>当前用户：{{ data.migrationDialog.currentUser?.userName }}</span>
+      </div>
+
+      <el-checkbox-group v-model="data.migrationDialog.migrationTypes" class="mb-3">
+        <el-checkbox label="email">邮件迁移</el-checkbox>
+        <el-checkbox label="customer">客户信息迁移</el-checkbox>
+      </el-checkbox-group>
+
+      <el-form :model="data.migrationDialog.queryParams" :inline="true">
+        <el-form-item label="用户名称">
+          <el-input v-model="data.migrationDialog.queryParams.userName" placeholder="请输入用户名称" clearable
+            @keyup.enter="getMigrationUserList" />
+        </el-form-item>
+        <el-form-item label="手机号码">
+          <el-input v-model="data.migrationDialog.queryParams.phonenumber" placeholder="请输入手机号码" clearable
+            @keyup.enter="getMigrationUserList" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" icon="search" @click="getMigrationUserList">搜索</el-button>
+          <el-button icon="refresh" @click="() => {
+            data.migrationDialog.queryParams = {
+              pageNum: 1,
+              pageSize: 10,
+              userName: undefined,
+              phonenumber: undefined,
+              status: -1
+            }
+            getMigrationUserList()
+          }">重置</el-button>
+        </el-form-item>
+      </el-form>
+
+      <el-table v-loading="data.migrationDialog.loading" :data="data.migrationDialog.userList"
+        @current-change="handleMigrationUserSelect" :row-key="row => row.userId" highlight-current-row>
+        <el-table-column label="用户编号" align="center" prop="userId" />
+        <el-table-column label="用户名称" align="center" prop="userName" :show-overflow-tooltip="true" />
+        <el-table-column label="用户昵称" align="center" prop="nickName" :show-overflow-tooltip="true" />
+        <el-table-column label="手机号码" align="center" prop="phonenumber" width="120" />
+        <el-table-column label="状态" align="center">
+          <template #default="scope">
+            <dict-tag :options="statusOptions" :value="scope.row.status" />
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <pagination :total="data.migrationDialog.total" v-model:page="data.migrationDialog.queryParams.pageNum"
+        v-model:limit="data.migrationDialog.queryParams.pageSize" @pagination="getMigrationUserList" />
+
+      <template #footer>
+        <el-button @click="cancelMigration">取 消</el-button>
+        <el-button type="primary" @click="confirmMigration">确认迁移</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -247,6 +307,7 @@
 import { getToken } from '@/utils/auth'
 import { treeselect } from '@/api/system/dept'
 import { changeUserStatus, listUser, resetUserPwd, delUser, getUser, updateUser, addUser, exportUser } from '@/api/system/user'
+import request from '@/utils/request'
 
 const { proxy } = getCurrentInstance()
 
@@ -312,6 +373,22 @@ const data = reactive({
     phonenumber: undefined,
     status: -1,
     deptId: undefined
+  },
+  migrationDialog: {
+    visible: false,
+    loading: false,
+    userList: [],
+    total: 0,
+    queryParams: {
+      pageNum: 1,
+      pageSize: 10,
+      userName: undefined,
+      phonenumber: undefined,
+      status: -1
+    },
+    targetUser: null,
+    migrationTypes: ['email', 'customer'],
+    currentUser: null
   },
   rules: {
     userName: [
@@ -590,11 +667,128 @@ function submitForm() {
 function selectRole(e) {
   proxy.$forceUpdate()
 }
+/** 数据迁移按钮操作 */
+function handleDataMigration() {
+  proxy.$modal.confirm('是否确认进行数据迁移操作？').then(() => {
+    data.migrationDialog.currentUser = {
+      userId: form.value.userId,
+      userName: form.value.userName
+    }
+    data.migrationDialog.visible = true
+    getMigrationUserList()
+  }).catch(() => { })
+}
+
+/** 获取可迁移用户列表 */
+function getMigrationUserList() {
+  data.migrationDialog.loading = true
+  listUser(proxy.addDateRange(data.migrationDialog.queryParams, [])).then((res) => {
+    // 过滤掉当前编辑的用户
+    data.migrationDialog.userList = res.data.result.filter(user => user.userId !== data.migrationDialog.currentUser.userId)
+    data.migrationDialog.total = res.data.totalNum
+    data.migrationDialog.loading = false
+  })
+}
+
+/** 处理迁移用户选择 */
+function handleMigrationUserSelect(selection) {
+  data.migrationDialog.targetUser = selection
+}
+
+/** 确认迁移操作 */
+async function confirmMigration() {
+  let confirmMessage = ''
+  if (!data.migrationDialog.targetUser) {
+    confirmMessage = `未选择目标用户，系统将自动选择上级领导作为目标用户`
+  } else {
+    confirmMessage = `是否确认将用户"${data.migrationDialog.currentUser.userName}"的${data.migrationDialog.migrationTypes.includes('email') ? '邮件' : ''
+      }${data.migrationDialog.migrationTypes.includes('email') && data.migrationDialog.migrationTypes.includes('customer') ? '和' : ''
+      }${data.migrationDialog.migrationTypes.includes('customer') ? '客户信息' : ''
+      }迁移到用户"${data.migrationDialog.targetUser.userName}"？`
+  }
+  // 添加二次确认
+
+  try {
+    await proxy.$modal.confirm(confirmMessage)
+  } catch {
+    return
+  }
+  const originUser = data.migrationDialog.currentUser.userId
+  const toUser = data.migrationDialog.targetUser?.userId || 0
+  try {
+    const results = []
+    // Perform email migration if selected
+    if (data.migrationDialog.migrationTypes.includes('email')) {
+      const response = await migrateEmails(originUser, toUser)
+      results.push({
+        type: 'email',
+        success: response.code === 200,
+        message: response.data
+      })
+    }
+    // Perform customer info migration if selected
+    if (data.migrationDialog.migrationTypes.includes('customer')) {
+      const response = await migrateCustomerInfos(originUser, toUser)
+      results.push({
+        type: 'customer',
+        success: response.code === 200,
+        message: response.data
+      })
+    }
+    // Show results summary
+    const successCount = results.filter(r => r.success).length
+    const totalCount = results.length
+    if (successCount === totalCount) {
+      proxy.$modal.msgSuccess(results.map(r => r.message).join('\n'))
+    } else {
+      proxy.$modal.msgWarning(`数据迁移部分成功：${successCount}/${totalCount}`)
+    }
+    data.migrationDialog.visible = false
+    resetMigrationDialog()
+  } catch (error) {
+    proxy.$modal.msgError('数据迁移失败')
+  }
+}
+
+/** 重置迁移对话框状态 */
+function resetMigrationDialog() {
+  data.migrationDialog.targetUser = null
+  data.migrationDialog.currentUser = null
+  data.migrationDialog.migrationTypes = ['email', 'customer']
+}
+
+/** 取消迁移操作 */
+function cancelMigration() {
+  data.migrationDialog.visible = false
+  resetMigrationDialog()
+}
+
+// Add migration API functions
+const migrateEmails = (originUser, toUser) => {
+  return request({
+    url: '/Email/MigrateEmailsToSpecifiedUser/MigrateEmails',
+    method: 'get',
+    params: { originUser, toUser }
+  })
+}
+
+const migrateCustomerInfos = (originUser, toUser) => {
+  return request({
+    url: '/CustomerInfoMation/MigrateCustomerInfosToSpecifiedUser/MigrateCustomerInfos',
+    method: 'get',
+    params: { originUser, toUser }
+  })
+}
+
 getTreeselect()
 getList()
 </script>
 <style scoped>
 .avatar {
   width: 40px;
+}
+
+.mb-3 {
+  margin-bottom: 15px;
 }
 </style>

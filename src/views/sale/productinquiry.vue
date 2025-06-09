@@ -41,7 +41,8 @@
 				<el-table-column fixed="right" prop="operate" label="操作" :width="200">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small" @click="ChcekDetails(scope.row)">查看详情</el-button>
-						<el-button link type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
+						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
+							link type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
 					</template>
 				</el-table-column>
 			</el-table>

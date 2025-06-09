@@ -56,6 +56,8 @@
 			<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
 				<template v-slot:default="scope">
 					<el-button link type="primary" size="small" @click="handleView(scope.row.id)">查看/编辑</el-button>
+					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
+						type="danger" size="small" @click="DeleteProductSample(scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -116,14 +118,14 @@
 				<el-row>
 					<el-col :span="8">
 						<el-form-item :label="sampleObjectLabel">
-							<el-select v-model="CreateDialogform.sampleObject" placeholder="请选择" style="width: 300px;"
-								:disabled="!isEditable">
+							<el-select v-model="CreateDialogform.sampleObject" filterable placeholder="请选择"
+								style="width: 300px;" :disabled="!isEditable">
 								<el-option v-for="item in getObjectOptions" :key="item.dictCode" :label="item.dictLabel"
 									:value="item.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="对方简称">
 							<el-input v-model="CreateDialogform.partnerAbbreviation" style="width: 300px;"
 								:disabled="!isEditable"></el-input>
@@ -138,8 +140,6 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="业务员">
 							<el-select v-model="CreateDialogform.salesperson" placeholder="请选择" style="width: 300px;"
@@ -149,6 +149,8 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="付费方式">
 							<el-select v-model="CreateDialogform.paymentMethod" placeholder="请选择快递付费方式"
@@ -273,6 +275,7 @@ import {
 } from 'element-plus'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import request from '@/utils/request';
+import useUserStore from "@/store/modules/user";
 
 // 获取路由实例
 const route = useRoute()
@@ -383,6 +386,7 @@ const handleCreate = () => {
 	isSaveDraftBtnShow.value = true;
 	isEditSubmitBtnShow.value = false;
 	isSubmitBtnShow.value = true;
+	CreateDialogform.value.salesperson = useUserStore().userId ? useUserStore().userId.toString() : '';
 	dialogVisible.value = true;     // 打开对话框
 };
 
@@ -805,7 +809,7 @@ const resetForm = () => {
 		sampleObject: '',
 		partnerAbbreviation: '',
 		ourCompany: '',
-		salesperson: '',
+		salesperson: useUserStore().userId ? useUserStore().userId.toString() : '', // 这里设置默认业务员,
 		paymentMethod: '',
 		paidExpressCost: '',
 		photos: [],
@@ -1116,6 +1120,31 @@ onMounted(async () => {
 		handleView(id);
 	}
 })
+
+const DeleteProductSample = (row) => {
+	ElMessageBox.confirm('确定要删除该收样/寄样记录吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'ProductSample/DeleteProductSample/Delete',
+			method: 'post',
+			data: { ID: row.id }
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage.success('删除成功');
+				GetProductSampleList(currentPage.value, pageSize.value);
+			} else {
+				ElMessage.error('删除失败');
+			}
+		}).catch(() => {
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消删除');
+	});
+};
 </script>
 
 <style scoped></style>

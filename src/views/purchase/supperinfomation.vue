@@ -54,9 +54,11 @@
 			<el-table-column prop="developmentDate" label="开发时间" width="150"></el-table-column>
 			<el-table-column prop="lastTransaction" label="最近交易" width="150"></el-table-column>
 			<el-table-column prop="quoteSuccessRate" label="报价成交率" width="150"></el-table-column>
-			<el-table-column fixed="right" label="详情" width="100">
+			<el-table-column fixed="right" label="详情" width="150px">
 				<template #default="scope">
 					<el-button type="text" size="small" @click="checkSupplierDetails(scope.row)">查看详情</el-button>
+					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
+						type="danger" size="small" @click="DeleteSupplier(scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -425,6 +427,7 @@ import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from
 import request from '@/utils/request';
 import { get } from 'sortablejs';
 import qs from 'qs';
+import useUserStore from "@/store/modules/user";
 
 const supperinfoBankAccountInfoTableData = ref([]) //银行账号
 const supperinfoProductTableData = ref([]) //产品清单
@@ -1384,4 +1387,32 @@ const SubmitSupperinfo = () => {
 		});
 	}
 }
+const DeleteSupplier = (row) => {
+	ElMessageBox.confirm('确定要删除该供应商吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'Supplierinfo/DeleteSupplierinfo/Delete',
+			method: 'post',
+			data: { SupplierID: row.id }
+		}).then(response => {
+			const res = response;
+			if (res.code == 200) {
+				ElMessage({
+					message: '删除成功',
+					type: 'success'
+				});
+				GetSupplierInfoList(SupplierInfoTableDatacurrentPage.value, SupplierInfoTableDatapageSize.value);
+			} else {
+				ElMessage.error('删除失败');
+			}
+		}).catch(() => {
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消删除');
+	});
+};
 </script>

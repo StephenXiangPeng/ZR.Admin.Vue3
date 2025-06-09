@@ -69,6 +69,8 @@
 			<el-table-column fixed="right" prop="operate" label="操作" :width="150">
 				<template v-slot:default="scope">
 					<el-button link type="primary" size="small" @click="ChcekDetails(scope.row)">查看详情</el-button>
+					<el-button v-if="scope.row.createBy === useUserStore().userName && scope.row.isDraft" link
+						type="danger" size="small" @click="DeleteQuotation(scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -2442,6 +2444,35 @@ const CreateRevision = () => {
 		});
 	}).catch(() => {
 		// 用户取消操作
+	});
+};
+
+// 删除报价单
+const DeleteQuotation = (row) => {
+	ElMessageBox.confirm('确定要删除该报价单吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'Quotation/DeleteQuotation/Delete',
+			method: 'post',
+			data: { QuotationID: row.id }
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage({
+					message: '删除成功',
+					type: 'success'
+				});
+				GetQuotationList(currentPage.value, pageSize.value);
+			} else {
+				ElMessage.error(response.msg || '删除失败');
+			}
+		}).catch(() => {
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消删除');
 	});
 };
 </script>

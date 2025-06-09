@@ -96,9 +96,11 @@
 			<el-table-column prop="settlementMethod" label="结汇方式" width="150px"></el-table-column>
 			<el-table-column prop="transportationMethod" label="运输方式" width="150px"></el-table-column>
 			<el-table-column prop="receivableDate" label="应收汇日" width="150px"></el-table-column>
-			<el-table-column fixed="right" label="操作" width="100">
+			<el-table-column fixed="right" label="操作" width="150px">
 				<template #default="scope">
 					<el-button type="text" size="small" @click="CheckShipingDelivery(scope.row)">查看/编辑</el-button>
+					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
+						type="danger" size="small" @click="DeleteShipingDelivery(scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -385,7 +387,7 @@
 			<el-table :data="shippingDeliveryPurchaseDetailsTableData">
 				<el-table-column prop="purchaseContractID" label="采购合同ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="purchaseContractProductID" label="采购合同明细ID" width="150"
-					v-if="false"></el-table-column>
+					vif="false"></el-table-column>
 				<el-table-column prop="purchaseContractNumber" label="采购合同" width="150"></el-table-column>
 				<el-table-column prop="vendorAbbreviation" label="厂商简称" width="150"></el-table-column>
 				<el-table-column prop="productNumber" label="产品编号" width="150"></el-table-column>
@@ -2196,4 +2198,33 @@ const ApproveReject = async () => {
 		}
 	}
 }
+
+// 删除出运发货单
+const DeleteShipingDelivery = (row) => {
+	ElMessageBox.confirm('确定要删除该出运发货单吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'ShippingDeliveries/DeleteShippingDeliveries/Delete',
+			method: 'post',
+			data: { ShippingDeliveriesID: row.id }
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage({
+					message: '删除成功',
+					type: 'success'
+				});
+				GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
+			} else {
+				ElMessage.error(response.msg || '删除失败');
+			}
+		}).catch(() => {
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消删除');
+	});
+};
 </script>
