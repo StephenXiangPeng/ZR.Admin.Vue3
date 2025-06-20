@@ -125,7 +125,7 @@
 							<el-button type="text" size="small"
 								@click="checkContractsDetails(scope.row)">查看详情</el-button>
 							<el-button type="text" size="small" @click="GeneratePDF(scope.row)">生成PDF</el-button>
-							<el-button type="text" size="small" icon="Back"
+							<el-button type="warning" size="small" icon="Back" link
 								v-if="scope.row.contractReviewStatusStr === '审核中'"
 								@click="withdrawalApproval(scope.row)">撤回审批</el-button>
 							<el-button
@@ -864,7 +864,7 @@
 								} : {}"></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="退税总额">
 							<el-input v-model="Newcontractform.TotalTaxRefund" style="width: 300px" :style="hasChangedProducts ? {
 								'--el-input-text-color': 'red',
@@ -878,19 +878,19 @@
 								disabled></el-input>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
-						<el-form-item label="金额合计">
-							<el-input v-model="Newcontractform.amountTotal" style="width: 300px" :style="hasChangedProducts ? {
+						<el-form-item label="美金/欧元换算">
+							<el-input v-model="Newcontractform.usdConversion" style="width: 300px" :style="hasChangedProducts ? {
 								'--el-input-text-color': 'red',
 								'--el-disabled-text-color': 'red',
 							} : {}" disabled></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
-						<el-form-item label="美金/欧元换算">
-							<el-input v-model="Newcontractform.usdConversion" style="width: 300px" :style="hasChangedProducts ? {
+				</el-row>
+				<el-row>
+					<el-col :span="8" v-if="false">
+						<el-form-item label="金额合计">
+							<el-input v-model="Newcontractform.amountTotal" style="width: 300px" :style="hasChangedProducts ? {
 								'--el-input-text-color': 'red',
 								'--el-disabled-text-color': 'red',
 							} : {}" disabled></el-input>
@@ -904,8 +904,6 @@
 							} : {}" />
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="其它费用合计">
 							<el-input v-model="Newcontractform.TotalOtherFees" disabled style="width: 300px;" :style="hasChangedProducts ? {
@@ -914,6 +912,9 @@
 							} : {}" />
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
+
 				</el-row>
 				<span style="font-size: 20px; font-weight: bold;">利润预估</span>
 				<el-divider></el-divider>
@@ -1548,7 +1549,7 @@ const onAddquotationProductItem = () => {
 		contractQuantity: 0,
 		exportunitprice: 0,
 		exporttotalprice: 0,
-		unitofmeasurement: '',
+		unitofmeasurement: 0,
 		unitOfMeasurementLabel: '-',
 		purchaseinquiry: 0,
 		purchaseunitprice: 0,
@@ -2698,13 +2699,15 @@ const checkContractsDetails = async (row) => {
 	if (row.contractStatus.toString() != "") {
 		Newcontractform.contractStatus = state.optionss.hr_contract_status.find(item => item.dictLabel === row.contractStatus.toString()).dictValue;
 	}
-
+	const CustomerID = ref(0);
 	if (row.customerNumber != null && row.customerNumber != "") {
-		Newcontractform.customerNumber = state.optionss.sql_hr_customer.find(item => item.dictLabel === row.customerNumber.toString()).dictValue;
+		CustomerID.value = state.optionss.sql_hr_customer.find(item => item.dictLabel === row.customerNumber.toString()).dictValue;
+		Newcontractform.customerNumber = CustomerID.value.toString();
 	}
 
 	if (row.customerAbbreviation != null && row.customerAbbreviation != "") {
-		Newcontractform.customerAbbreviation = state.optionss.sql_hr_customer.find(item => item.dictLabel === row.customerAbbreviation.toString()).dictValue;
+		CustomerID.value = state.optionss.sql_hr_customer.find(item => item.dictLabel === row.customerAbbreviation.toString()).dictValue;
+		Newcontractform.customerAbbreviation = CustomerID.value.toString();
 	}
 	if (row.customerId != 0) {
 		Newcontractform.customerid = row.customerId;

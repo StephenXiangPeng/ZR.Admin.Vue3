@@ -441,6 +441,14 @@
 				<el-table-column prop="SaleContractID" label="采购合同ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="id" label="id" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="productId" label="产品ID" width="150" v-if="false"></el-table-column>
+				<el-table-column label="操作" width="150" v-if="showOperationColumn">
+					<template #default="scope">
+						<el-button v-if="scope.row.productId === 0 || scope.row.productId === null" type="primary"
+							size="small" @click="handleAddNewProduct(scope.row)">
+							添加新产品
+						</el-button>
+					</template>
+				</el-table-column>
 				<el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
 				<el-table-column prop="customerCode" label="客户货号" width="150"></el-table-column>
 				<el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
@@ -474,7 +482,7 @@
 					<el-button type="warning" v-if="hasPriceChanges" @click="notifySales">
 						通知销售
 					</el-button>
-					<el-button type="primary" v-if="!hasPriceChanges"
+					<el-button type="primary" v-if="!hasPriceChanges && GeneratePurchaseContractBtnShow"
 						@click="GeneratePurchaseContract(currentDetailRow)">
 						生成采购合同
 					</el-button>
@@ -489,14 +497,14 @@ import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
 import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 import { get } from 'sortablejs';
-import { el } from 'element-plus/es/locale';
+import { el, fa } from 'element-plus/es/locale';
 import useUserStore from "@/store/modules/user";
 import { FormInstance } from 'element-plus'
 import { invoke } from '@vueuse/core';
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer } from 'element-plus'
-import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 
-const route = useRoute()
+const router = useRouter()
 // 添加onMounted钩子
 onMounted(() => {
 	console.log('采购合同页面挂载，检查路由参数')
@@ -506,8 +514,8 @@ onMounted(() => {
 // 添加自动加载合同详情的函数
 const autoLoadpurchaseContractDetail = () => {
 	// 检查URL参数
-	const purchaseContractId = route.query.purchaseContractId
-	const viewDetail = route.query.viewDetail
+	const purchaseContractId = router.query.purchaseContractId
+	const viewDetail = router.query.viewDetail
 	if (purchaseContractId && viewDetail === 'true') {
 		console.log('自动加载合同详情, ID:', purchaseContractId)
 
@@ -527,6 +535,9 @@ const autoLoadpurchaseContractDetail = () => {
 	}
 }
 
+const showOperationColumn = computed(() => {
+	return detailsTableData.value.some(row => row.productId === 0 || row.productId === null);
+});
 
 // 产品供应商选项
 const ProductSupplierOptions = ref([]);
@@ -700,6 +711,7 @@ const detailsTableData = ref([])
 const hasPriceChanges = ref(false)
 const currentDetailRow = ref(null)
 const ProcurementRequirementID = ref(0);
+const GeneratePurchaseContractBtnShow = ref(false)
 // 查看采购需求详情方法
 const ViewDetails = (row) => {
 	ProcurementRequirementID.value = row.procurementId;
@@ -736,6 +748,12 @@ const ViewDetails = (row) => {
 				remark: item.remark,
 				originalPrice: item.purchaseUnitPrice// 保存原始价格用于比较
 			}))
+			GeneratePurchaseContractBtnShow.value = detailsTableData.value.every(
+				item => item.productId !== 0 && item.productId !== null
+			)
+			if (GeneratePurchaseContractBtnShow.value == false) {
+				ElMessage.warning('当前采购需求列表中存在新产品，请先点击“添加新产品”按钮添加产品信息,再生成采购合同');
+			}
 			viewDetailsDialog.value = true
 		} else {
 			ElMessage.error('获取详情失败，请重试')
@@ -779,7 +797,7 @@ const notifySales = () => {
 		// 调用更新价格接口
 		request.post("contracts/ContractPurchasePriceChanges/UpdatePrice", editRequest)
 			.then(response => {
-				if (response.code === 200) {
+				if (response.code == 200) {
 					ElMessage.success('已通知销售价格变动！')
 					viewDetailsDialog.value = false
 					//更新生成采购合同状态
@@ -2118,4 +2136,11 @@ const DeletePurchaseContract = (row) => {
 		ElMessage.info('已取消删除');
 	});
 };
+
+const handleAddNewProduct = (row) => {
+	viewDetailsDialog.value = false;
+	// 跳转到产品信息页面，可以带参数
+	router.push({ path: '/product/productinfomation', query: { from: 'purchase', contractProductsId: row.id } })
+
+}
 </script>

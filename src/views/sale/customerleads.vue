@@ -72,7 +72,7 @@
 			<el-table-column fixed="right" label="操作" style="width: 12%;">
 				<template v-slot:default="scope">
 					<el-button link type="primary" size="small" @click="viewDetails(scope.row)">详情</el-button>
-					<el-button link type="primary" size="small" @click="DelCustomerleads(scope.row)">删除</el-button>
+					<el-button link type="danger" size="small" @click="DelCustomerleads(scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
 		</el-table>

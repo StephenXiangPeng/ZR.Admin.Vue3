@@ -69,21 +69,59 @@
 						<el-divider />
 
 						<!-- Folders 部分 -->
-
 						<div class="menu-section-title">
 							<span>邮件分类</span>
+							<el-button class="add-button" link size="small" @click="showAddFolderDialog = true">
+								<el-icon>
+									<Plus />
+								</el-icon>
+							</el-button>
 						</div>
-						<el-menu-item v-for="folder in customFolders" :key="folder.id" :index="`folder-${folder.id}`"
-							@click="filterByFolder(folder.id)">
-							<el-icon>
-								<Folder />
-							</el-icon>
-							<span>{{ folder.fromEmail }}</span>
-						</el-menu-item>
+						<el-tree :data="emailFolders" :props="defaultProps" @node-click="handleNodeClick"
+							:default-expanded-keys="['1']" node-key="id" :expand-on-click-node="false"
+							class="email-folder-tree">
+							<template #default="{ node, data }">
+								<div class="custom-tree-node">
+									<el-icon>
+										<Folder />
+									</el-icon>
+									<span>{{ node.label }}</span>
+									<div class="folder-actions" v-if="!data.isSystem">
+										<el-button link type="danger" size="small"
+											@click.stop="handleDeleteFolder(node, data)">
+											<el-icon>
+												<Delete />
+											</el-icon>
+										</el-button>
+									</div>
+								</div>
+							</template>
+						</el-tree>
 
 					</el-menu>
 				</el-scrollbar>
 			</el-aside>
+
+			<!-- 添加文件夹对话框 -->
+			<el-dialog v-model="showAddFolderDialog" title="新建文件夹" width="30%" :close-on-click-modal="false">
+				<el-form :model="newFolderForm" label-width="80px">
+					<el-form-item label="名称">
+						<el-input v-model="newFolderForm.name" placeholder="请输入文件夹名称" />
+					</el-form-item>
+					<el-form-item label="父文件夹">
+						<el-cascader v-model="newFolderForm.parentId" :options="cascaderOptions"
+							:props="{ checkStrictly: true, emitPath: true }" placeholder="请选择父文件夹" clearable
+							style="width: 100%" />
+					</el-form-item>
+				</el-form>
+				<template #footer>
+					<span class="dialog-footer">
+						<el-button @click="showAddFolderDialog = false">取消</el-button>
+						<el-button type="primary" @click="handleAddFolder">确定</el-button>
+					</span>
+				</template>
+			</el-dialog>
+
 			<el-container>
 				<el-header style="text-align: left; font-size: 12px; height: 50px;">
 					<div class="search-container" style="width: 70%;">
@@ -143,10 +181,50 @@
 									</template>
 								</el-alert>
 							</div>
-							<el-table :data="EmailTableData" @selection-change="handleSelectionChange"
+
+							<!-- 批量操作按钮区域 -->
+							<div v-if="selectedRows.length > 0" class="batch-actions">
+								<div class="batch-info">
+									<el-icon>
+										<InfoFilled />
+									</el-icon>
+									<span>已选择 {{ selectedRows.length }} 封邮件</span>
+								</div>
+								<div class="batch-buttons">
+									<el-button-group>
+										<el-button type="primary" @click="handleBatchArchive"
+											:loading="isBatchProcessing">
+											<el-icon>
+												<Box />
+											</el-icon>
+											归档
+										</el-button>
+										<!-- 新增：移动至按钮 -->
+										<el-button type="warning" @click="showBatchMoveDialog"
+											:loading="isBatchProcessing">
+											<el-icon>
+												<Folder />
+											</el-icon>
+											移动至
+										</el-button>
+										<el-button type="danger" @click="handleBatchDelete"
+											:loading="isBatchProcessing">
+											<el-icon>
+												<Delete />
+											</el-icon>
+											删除
+										</el-button>
+									</el-button-group>
+									<el-button @click="clearSelection" size="small">
+										取消选择
+									</el-button>
+								</div>
+							</div>
+
+							<el-table ref="emailTable" :data="EmailTableData" @selection-change="handleSelectionChange"
 								@row-click="handleRowClick" :row-class-name="tableRowClassName" style="width: 100%;">
 								<!-- 选择列 -->
-								<!-- <el-table-column type="selection" fixed min-width="50" align="center" /> -->
+								<el-table-column type="selection" fixed min-width="50" align="center" />
 								<!-- 邮件ID列 -->
 								<el-table-column prop="id" label="邮件编号" min-width="200" v-if="false"
 									show-overflow-tooltip />
@@ -164,7 +242,6 @@
 								<el-table-column prop="toEmail" label="收件人" min-width="200" show-overflow-tooltip
 									v-if="false" />
 								<!-- 主题列 -->
-								<!-- <el-table-column prop="subject" label="主题" min-width="400" show-overflow-tooltip /> -->
 								<el-table-column prop="subject" min-width="400" label="主题" show-overflow-tooltip>
 									<template #default="{ row }">
 										<div style="display: flex; align-items: center;">
@@ -192,20 +269,6 @@
 										</div>
 									</template>
 								</el-table-column>
-
-								<!-- 操作按钮列 -->
-								<!-- <el-table-column fixed="right" min-width="120">
-									<template #default="{ row }">
-										<div class="operation-buttons"
-											v-if="selectedRows.some(selected => selected.id === row.id)">
-											<el-button-group>
-												<el-button icon="Delete" circle />
-												<el-button icon="MessageBox" circle />
-												<el-button icon="Timer" circle />
-											</el-button-group>
-										</div>
-									</template>
-								</el-table-column> -->
 							</el-table>
 							<!-- 添加分页组件 -->
 							<div class="pagination-container">
@@ -338,17 +401,6 @@
 									</div>
 								</div>
 							</div>
-							<!-- <div class="email-body">
-								<el-skeleton :loading="!currentEmail.content" animated>
-									<template #template>
-										<el-skeleton-item variant="text" style="width: 100%; height: 400px;" />
-									</template>
-									<template #default>
-										<div v-html="currentEmail.content"></div>
-									</template>
-								</el-skeleton>
-							</div> -->
-
 
 							<!-- 附件区域 -->
 							<div v-if="currentEmail.attachments?.length" class="attachments">
@@ -426,7 +478,7 @@
 			<!-- 自定义标题栏，添加全屏按钮 -->
 			<template #header>
 				<div class="dialog-header">
-					<span>新邮件</span>
+					<span>{{ dialogTitle }}</span>
 					<div class="dialog-header-actions">
 						<el-tooltip :content="isFullscreen ? '退出全屏' : '全屏'" placement="bottom">
 							<el-button :icon="isFullscreen ? 'FullScreen' : 'Rank'" circle @click="toggleFullScreen" />
@@ -491,7 +543,6 @@
 									<Document />
 								</el-icon>
 								<span class="filename">{{ file.name }}</span>
-								<!-- <span class="filesize">{{ formatFileSize(file.size) }}</span> -->
 								<el-icon class="remove-icon" @click="handleFileRemove(file)">
 									<Close />
 								</el-icon>
@@ -535,12 +586,6 @@
 											{{ showCc ? '已启用' : '未启用' }}
 										</el-tag>
 									</el-dropdown-item>
-									<!-- 可以在这里添加其他邮件选项，比如：
-                    <el-dropdown-item>
-                        <el-icon><Timer /></el-icon>
-                        <span style="margin-left: 8px">定时发送</span>
-                    </el-dropdown-item>
-                    -->
 								</el-dropdown-menu>
 							</template>
 						</el-dropdown>
@@ -579,20 +624,6 @@
 					<el-input v-model="searchForm.excludeWords" placeholder="请输入要排除的关键词"></el-input>
 				</el-form-item>
 
-				<!-- <el-form-item label="大小">
-					<el-select v-model="searchForm.sizeOperator" style="width: 120px">
-						<el-option label="大于" value="gt"></el-option>
-						<el-option label="小于" value="lt"></el-option>
-						<el-option label="等于" value="eq"></el-option>
-					</el-select>
-					<el-input-number v-model="searchForm.size" :min="0"
-						style="width: 150px; margin-left: 10px"></el-input-number>
-					<el-select v-model="searchForm.sizeUnit" style="width: 120px; margin-left: 10px">
-						<el-option label="MB" value="MB"></el-option>
-						<el-option label="KB" value="KB"></el-option>
-					</el-select>
-				</el-form-item> -->
-
 				<el-form-item label="日期范围">
 					<el-select v-model="searchForm.dateRange" style="width: 120px">
 						<el-option label="1天" value="1"></el-option>
@@ -624,7 +655,6 @@
 
 			<template #footer>
 				<div>
-					<!-- <el-button @click="createSearchFilter">创建过滤器</el-button> -->
 					<div style="display: flex; justify-content: flex-end; ">
 						<el-button @click="resetSearchForm">重置</el-button>
 						<el-button @click="showAdvancedSearch = false">取消</el-button>
@@ -767,120 +797,73 @@
 				</span>
 			</template>
 		</el-dialog>
+		<!-- 批量移动至文件夹对话框 -->
+		<el-dialog v-model="showBatchMoveToFolderDialog" title="移动邮件至文件夹" width="50%" :close-on-click-modal="false">
+			<div class="move-to-folder-dialog">
+				<div class="selected-emails-info">
+					<el-alert title="提示" type="info" :closable="false" style="margin-bottom: 20px;">
+						<template #default>
+							将移动 <strong>{{ selectedRows.length }}</strong> 封邮件到选定的文件夹
+						</template>
+					</el-alert>
+				</div>
+				<el-form label-width="100px">
+					<el-form-item label="目标文件夹">
+						<el-tree :data="flattenedFolderOptions" :props="folderTreeProps"
+							@node-click="handleFolderSelect" node-key="value" highlight-current
+							:default-expanded-keys="['1']"
+							style="max-height: 300px; overflow-y: auto; border: 1px solid #dcdfe6; border-radius: 4px; padding: 10px;">
+							<template #default="{ node, data }">
+								<div class="folder-tree-node">
+									<el-icon>
+										<Folder />
+									</el-icon>
+									<span style="margin-left: 8px;">{{ node.label }}</span>
+									<el-tag v-if="data.isSystem" size="small" type="info" style="margin-left: 8px;">
+										系统
+									</el-tag>
+								</div>
+							</template>
+						</el-tree>
+					</el-form-item>
+
+					<el-form-item label="选中文件夹">
+						<el-input v-model="selectedFolderName" readonly placeholder="请选择目标文件夹" />
+					</el-form-item>
+				</el-form>
+			</div>
+			<template #footer>
+				<div class="dialog-footer">
+					<el-button @click="showBatchMoveToFolderDialog = false">取消</el-button>
+					<el-button type="primary" @click="handleBatchMoveToFolder" :loading="isBatchMovingToFolder"
+						:disabled="!selectedFolderData">
+						移动邮件
+					</el-button>
+				</div>
+			</template>
+		</el-dialog>
 	</div>
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue'
-import { ElMessage, ElMessageBox, ElLoading, checkboxEmits } from 'element-plus'
+import { ref, watch, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import {
 	Menu as IconMenu, Message, Setting, EditPen, Delete, Position, Search, FullScreen, Rank, Close,
-	ArrowDown,
-	User,
-	SwitchButton, Operation, Plus,
-	Box, Share, DocumentAdd
-} from '@element-plus/icons-vue';
-import { closePage } from '@/plugins/tab';
-import { QuillEditor } from '@vueup/vue-quill';
-import '@vueup/vue-quill/dist/vue-quill.snow.css';
+	ArrowDown, ArrowLeft, Right, Bell, ChatRound, Share, DocumentAdd, InfoFilled, User, SwitchButton,
+	Operation, Plus, Box, Edit, Paperclip, Document, Folder, CollectionTag
+} from '@element-plus/icons-vue'
+import { closePage } from '@/plugins/tab'
+import { QuillEditor } from '@vueup/vue-quill'
+import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import request from '@/utils/request'
 import DOMPurify from 'dompurify'
-import { h } from 'vue'
-import { ElSelect, ElOption } from 'element-plus'
-import { stringify } from 'qs';
-import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { id } from 'element-plus/es/locale';
+import { useRouter } from 'vue-router'
 
-// #region 商机选择
-const BusinessOpportunitySelectionDialog = ref(false);
-const BusinessOpportunityList = ref([]);
-const quotationList = ref([]);
-const contractList = ref([]);
-const BusinessOpportunityForm = ref({
-	opportunityId: null,
-	quotationId: null,
-	contractId: null,
-	type: '', // 'quotation', 'contract', 'communication'
-	tagNames: []
-});
+// 路由实例
+const router = useRouter()
 
-// 打开商机选择对话框
-const openBusinessOpportunitySelectionDialog = async (type, tagNames) => {
-	BusinessOpportunityForm.value = {
-		opportunityId: null,
-		quotationId: null,
-		contractId: null,
-		type,
-		tagNames
-	};
-
-	try {
-		// 获取商机下拉框数据
-		const listResponse = await request({
-			url: '/BusinessOpportunity/GetBusinessOpportunityListByUser/GetBusinessOpportunityList',
-			method: 'GET'
-		});
-		if (listResponse.code === 200 && listResponse.data?.length > 0) {
-			// 如果是报价或合同类型，需要获取相关列表
-			await handleOpportunityChange(listResponse.data[0].id);
-			BusinessOpportunityList.value = listResponse.data;
-			BusinessOpportunitySelectionDialog.value = true;
-		} else {
-			ElMessage.warning('未找到相关商机');
-		}
-	} catch (error) {
-		console.error('获取商机列表失败:', error);
-		ElMessage.error('获取商机列表失败');
-	}
-}
-
-// 获取商机列表
-const GetBusinessOpportunityList = async () => {
-	try {
-		const response = await request({
-			url: '/BusinessOpportunity/GetBusinessOpportunityListByUser/GetBusinessOpportunityList',
-			method: 'GET'
-		});
-		if (response.code === 200) {
-			BusinessOpportunityList.value = response.data;
-		}
-	} catch (error) {
-		console.error('获取商机列表失败:', error);
-		ElMessage.error('获取商机列表失败');
-	}
-}
-
-// 商机选择变更时的处理
-const handleOpportunityChange = async (opportunityId) => {
-	if (!opportunityId) return;
-	try {
-		if (BusinessOpportunityForm.value.type === 'quotation') {
-			// 获取报价单列表
-			const response = await request({
-				url: '/Quotation/GetQuotaionListByUser/GetQuotaionList',
-				method: 'GET'
-			});
-			if (response.code === 200) {
-				quotationList.value = response.data;
-			}
-		} else if (BusinessOpportunityForm.value.type === 'contract') {
-			// 获取合同列表
-			const response = await request({
-				url: '/Contracts/GetContractListByUser/GetContractList',
-				method: 'GET'
-			});
-			if (response.code === 200) {
-				contractList.value = response.data;
-			}
-		}
-	} catch (error) {
-		console.error('获取关联数据失败:', error);
-		ElMessage.error('获取关联数据失败');
-	}
-}
-// endregion 商机选择
-
-// 定义系统标签列表
+// #region 系统标签定义
 const systemTags = [
 	'开发信',
 	'询盘',
@@ -895,19 +878,2389 @@ const isSystemTag = (tagName) => {
 	return systemTags.includes(tagName)
 }
 
-// 修改编辑草稿方法，确保设置草稿ID
+// 定义标签类型映射
+const tagTypeMap = {
+	'询盘': 'info',
+	'初次报价': 'success',
+	'沟通需求': 'warning',
+	'再次报价': 'danger',
+	'合同确定': 'primary',
+	'开发信': ''
+}
+
+// 获取标签类型的方法
+const getTagType = (tagName) => {
+	return tagTypeMap[tagName] || ''
+}
+// #endregion
+
+// #region 商机选择相关
+const BusinessOpportunitySelectionDialog = ref(false)
+const BusinessOpportunityList = ref([])
+const quotationList = ref([])
+const contractList = ref([])
+const BusinessOpportunityForm = ref({
+	opportunityId: null,
+	quotationId: null,
+	contractId: null,
+	type: '',
+	tagNames: []
+})
+
+// 打开商机选择对话框
+const openBusinessOpportunitySelectionDialog = async (type, tagNames) => {
+	BusinessOpportunityForm.value = {
+		opportunityId: null,
+		quotationId: null,
+		contractId: null,
+		type,
+		tagNames
+	}
+
+	try {
+		const listResponse = await request({
+			url: '/BusinessOpportunity/GetBusinessOpportunityListByUser/GetBusinessOpportunityList',
+			method: 'GET'
+		})
+		if (listResponse.code === 200 && listResponse.data?.length > 0) {
+			await handleOpportunityChange(listResponse.data[0].id)
+			BusinessOpportunityList.value = listResponse.data
+			BusinessOpportunitySelectionDialog.value = true
+		} else {
+			ElMessage.warning('未找到相关商机')
+		}
+	} catch (error) {
+		console.error('获取商机列表失败:', error)
+		ElMessage.error('获取商机列表失败')
+	}
+}
+
+// 商机选择变更时的处理
+const handleOpportunityChange = async (opportunityId) => {
+	if (!opportunityId) return
+	try {
+		if (BusinessOpportunityForm.value.type === 'quotation') {
+			const response = await request({
+				url: '/Quotation/GetQuotaionListByUser/GetQuotaionList',
+				method: 'GET'
+			})
+			if (response.code === 200) {
+				quotationList.value = response.data
+			}
+		} else if (BusinessOpportunityForm.value.type === 'contract') {
+			const response = await request({
+				url: '/Contracts/GetContractListByUser/GetContractList',
+				method: 'GET'
+			})
+			if (response.code === 200) {
+				contractList.value = response.data
+			}
+		}
+	} catch (error) {
+		console.error('获取关联数据失败:', error)
+		ElMessage.error('获取关联数据失败')
+	}
+}
+
+// 增强的确认选择方法 - 添加本地数据更新
+const handleConfirmSelection = async () => {
+	if (!BusinessOpportunityForm.value.opportunityId) {
+		ElMessage.warning('请选择商机编号')
+		return
+	}
+
+	if (BusinessOpportunityForm.value.type === 'quotation' && !BusinessOpportunityForm.value.quotationId) {
+		ElMessage.warning('请选择报价单号')
+		return
+	}
+
+	if (BusinessOpportunityForm.value.type === 'contract' && !BusinessOpportunityForm.value.contractId) {
+		ElMessage.warning('请选择合同编号')
+		return
+	}
+
+	try {
+		let salesStage = ''
+		let docuementID = 0
+		if (BusinessOpportunityForm.value.type === 'quotation') {
+			salesStage = BusinessOpportunityForm.value.tagNames.includes('初次报价') ? '初次报价' : '再次报价'
+			docuementID = BusinessOpportunityForm.value.quotationId
+		} else if (BusinessOpportunityForm.value.type === 'contract') {
+			salesStage = '合同确定'
+			docuementID = BusinessOpportunityForm.value.contractId
+		} else if (BusinessOpportunityForm.value.type === 'communication') {
+			salesStage = '沟通需求'
+			docuementID = 0
+		}
+
+		const response = await request({
+			url: '/BusinessOpportunity/UpdateBusinessOpportunitySalesStage/UpdateSalesStage',
+			method: 'GET',
+			params: {
+				BusinessOpportunityID: BusinessOpportunityForm.value.opportunityId,
+				SalesStage: salesStage,
+				DocuementID: docuementID
+			}
+		})
+
+		if (response.code === 200) {
+			await EditEmailTags()
+			BusinessOpportunitySelectionDialog.value = false
+			ElMessage.success('设置成功')
+
+			// 成功后立即更新本地标签数据，避免需要刷新才能看到
+			await updateLocalEmailTags(EmailModel.id, EmailTagcheckboxGroup.value)
+
+		} else {
+			ElMessage.error(response.msg || '更新销售阶段失败')
+		}
+	} catch (error) {
+		console.error('设置失败:', error)
+		ElMessage.error('设置失败')
+	}
+}
+// #endregion
+
+// #region 邮件相关状态管理
+const EmailTableData = ref([])
+const originalEmailData = ref([])
+const activeMenu = ref('1')
+const showEmailDetail = ref(false)
+const currentEmail = ref({
+	id: '',
+	subject: '',
+	from: '',
+	to: '',
+	cc: '',
+	date: '',
+	content: '',
+	attachments: [],
+	tags: []
+})
+
+// 邮件列表相关
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalItems = ref(0)
+const selectedRows = ref([])
+const isBatchProcessing = ref(false)
+
+// 搜索相关
+const input1 = ref('')
+const isSearchMode = ref(false)
+const lastSearchParams = ref(null)
+const showAdvancedSearch = ref(false)
+const searchForm = reactive({
+	sender: '',
+	receiver: '',
+	subject: '',
+	includeWords: '',
+	excludeWords: '',
+	dateRange: '1',
+	customDateRange: [],
+	searchScope: '0',
+	hasAttachment: false
+})
+
+// 其他状态
+const EmailTagIndex = ref(0)
+const folderName = ref(null)
+const SelectEmailID = ref('')
+// #endregion
+
+// #region 邮件配置相关
+const ConfigEmaildialog = ref(false)
+const IsEditUserEmailConfig = ref(false)
+const ConfigEmailForm = reactive({
+	id: 0,
+	userID: 0,
+	email: '',
+	password: '',
+	smtpPort: 0,
+	imapPort: 0,
+	emailSendServer: '',
+	emailReceiveServer: ''
+})
+
+// 初始化邮箱配置
+const initEmailConfig = async () => {
+	const response = await checkUserEmailConfig()
+	if (response && response.data) {
+		Object.assign(ConfigEmailForm, {
+			id: response.data.id,
+			userID: response.data.userID,
+			email: response.data.userEmail,
+			password: response.data.userEmailAuth,
+			emailSendServer: response.data.userEmailSendServer,
+			smtpPort: response.data.userEmailSendPort,
+			emailReceiveServer: response.data.userEmailReceiveServer,
+			imapPort: response.data.userEmailReceivePort
+		})
+	}
+}
+
+// 检查用户邮箱配置
+function checkUserEmailConfig() {
+	return request({
+		url: 'Email/GetEmailConfigByUser/GetEmailConfigByUser',
+		method: 'GET'
+	}).then(response => {
+		return response || null
+	}).catch(error => {
+		console.error(error)
+		return null
+	})
+}
+
+// 验证邮箱配置是否存在
+const VerifyUserEmailConfigurationExists = () => {
+	return request({
+		url: 'Email/VerifyUserEmailConfigurationExists/VerifyUserEmailConfigurationExists',
+		method: 'GET'
+	}).then(response => {
+		if (response.data == 0) {
+			ElMessage({
+				message: '您还没有配置邮箱，请先进行邮箱配置！',
+				type: 'warning'
+			})
+			ConfigEmaildialog.value = true
+		} else {
+			ConfigEmaildialog.value = false
+			// 确保设置为收件箱
+			if (activeMenu.value !== '1') {
+				activeMenu.value = '1'
+			}
+			refreshCurrentView()
+			initEmailTag()
+			fetchCustomFolders()
+		}
+	}).catch(error => {
+		console.error(error)
+		return null
+	})
+}
+
+// 配置邮箱
+function ConfigUserEmail() {
+	const loading = ElLoading.service({
+		lock: true,
+		text: '正在配置邮箱并获取邮件，请稍等.....',
+		background: 'rgba(0, 0, 0, 0.7)',
+	})
+
+	try {
+		const requestData = {
+			id: ConfigEmailForm.id,
+			UserID: ConfigEmailForm.userID,
+			UserEmail: ConfigEmailForm.email,
+			UserEmailSendServer: ConfigEmailForm.emailSendServer,
+			UserEmailReceiveServer: ConfigEmailForm.emailReceiveServer,
+			UserEmailAuth: ConfigEmailForm.password,
+			UserEmailSendPort: ConfigEmailForm.smtpPort,
+			UserEmailReceivePort: ConfigEmailForm.imapPort
+		}
+
+		const url = IsEditUserEmailConfig.value ?
+			'Email/EditUserEmailConfig/EditUserEmailConfig' :
+			'Email/AddUserEmailConfig/AddUserEmailConfig'
+
+		request({
+			url: url,
+			method: 'POST',
+			data: requestData
+		}).then(response => {
+			if (response != null) {
+				ConfigEmaildialog.value = false
+				ElMessage({
+					message: response.msg,
+					type: 'success'
+				})
+				refreshCurrentView()
+				initEmailTag()
+				fetchCustomFolders()
+			}
+		}).catch(error => {
+			console.error('邮箱配置失败:', error)
+		}).finally(() => {
+			loading.close()
+		})
+	} catch (error) {
+		loading.close()
+		console.error('邮箱配置失败:', error)
+	}
+}
+
+// 解绑邮箱
+function UnbindUserEmail() {
+	ElMessageBox.confirm('确定要解绑当前邮箱吗？解绑后将无法收发邮件。', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(async () => {
+		try {
+			const loading = ElLoading.service({
+				lock: true,
+				text: '正在解绑邮箱，请稍等...',
+				background: 'rgba(0, 0, 0, 0.7)',
+			})
+
+			const requestData = {
+				id: ConfigEmailForm.id,
+				UserEmail: ConfigEmailForm.email,
+				UserEmailSendServer: ConfigEmailForm.emailSendServer,
+				UserEmailReceiveServer: ConfigEmailForm.emailReceiveServer,
+				UserEmailAuth: ConfigEmailForm.password,
+				UserEmailSendPort: ConfigEmailForm.smtpPort,
+				UserEmailReceivePort: ConfigEmailForm.imapPort,
+				UserID: 0
+			}
+
+			const response = await request({
+				url: 'Email/UnbindEmail/UnbindEmail',
+				method: 'POST',
+				data: requestData
+			})
+
+			loading.close()
+
+			if (response.code === 200) {
+				ElMessage.success(response.msg || '解绑邮箱成功')
+				// 清空所有数据
+				resetAllData()
+				// 关闭页面
+				closePage().then(() => {
+					console.log('关闭邮箱页面')
+				})
+			} else {
+				ElMessage.error(response.msg || '解绑邮箱失败')
+			}
+		} catch (error) {
+			console.error('解绑邮箱失败:', error)
+			ElMessage.error('解绑邮箱失败，请重试')
+		}
+	}).catch(() => {
+		// 用户取消操作
+	})
+}
+
+// 重置所有数据
+const resetAllData = () => {
+	EmailTableData.value = []
+	originalEmailData.value = []
+	totalItems.value = 0
+	UserEmailTagList.value = []
+	EmailTagcheckboxoptions.value = []
+	EmailTagcheckboxGroup.value = []
+	customFolders.value = []
+	Object.assign(ConfigEmailForm, {
+		id: 0,
+		userID: 0,
+		email: '',
+		password: '',
+		emailSendServer: '',
+		emailReceiveServer: '',
+		smtpPort: 0,
+		imapPort: 0
+	})
+	showEmailDetail.value = false
+	currentEmail.value = {
+		id: '',
+		subject: '',
+		from: '',
+		to: '',
+		cc: '',
+		date: '',
+		content: '',
+		attachments: []
+	}
+	ConfigEmaildialog.value = false
+	IsEditUserEmailConfig.value = false
+}
+
+const openUserEmailConfigDialog = async () => {
+	try {
+		const loading = ElLoading.service({
+			lock: true,
+			text: '正在获取邮箱配置...',
+			background: 'rgba(0, 0, 0, 0.7)',
+		})
+
+		const response = await request({
+			url: 'Email/GetEmailConfigByUser/GetEmailConfigByUser',
+			method: 'GET',
+			params: { timestamp: new Date().getTime() }
+		})
+
+		loading.close()
+
+		if (response && response.data) {
+			Object.assign(ConfigEmailForm, {
+				id: response.data.id || 0,
+				userID: response.data.userID || 0,
+				email: response.data.userEmail || '',
+				password: response.data.userEmailAuth || '',
+				emailSendServer: response.data.userEmailSendServer || '',
+				smtpPort: response.data.userEmailSendPort || 0,
+				emailReceiveServer: response.data.userEmailReceiveServer || '',
+				imapPort: response.data.userEmailReceivePort || 0
+			})
+			IsEditUserEmailConfig.value = true
+		} else {
+			IsEditUserEmailConfig.value = false
+			ElMessage.warning('未能获取邮箱配置数据')
+		}
+		ConfigEmaildialog.value = true
+	} catch (error) {
+		console.error('获取邮箱配置失败:', error)
+		ElMessage.error('获取邮箱配置失败')
+		ConfigEmaildialog.value = true
+	}
+}
+
+const handleEmailInput = () => {
+	const email = ConfigEmailForm.email
+	const atIndex = email.indexOf('@')
+	if (atIndex !== -1) {
+		const domain = email.substring(atIndex + 1)
+		ConfigEmailForm.password = ''
+		ConfigEmailForm.emailSendServer = 'smtp.' + domain
+		ConfigEmailForm.emailReceiveServer = 'imap.' + domain
+		ConfigEmailForm.smtpPort = 465
+		ConfigEmailForm.imapPort = 993
+	}
+}
+
+const handleConfigEmailDialogClose = () => {
+	if (!ConfigEmailForm.email || !ConfigEmailForm.password || !ConfigEmailForm.emailSendServer ||
+		!ConfigEmailForm.emailReceiveServer || !ConfigEmailForm.smtpPort || !ConfigEmailForm.imapPort) {
+		closePage().then(() => {
+			console.log('关闭邮箱标签页')
+		})
+	}
+}
+// #endregion
+
+// #region 邮件数据管理
+const EmailModel = reactive({
+	"id": '',
+	"userID": '',
+	"emailID": '',
+	"emailType": 0,
+	"fromEmail": '',
+	"fromEmailAddress": '',
+	"toEmail": '',
+	"toEmailAddress": '',
+	"emailsubject": '',
+	"emailContent": '',
+	"emaildate": '',
+	"isRead": 0,
+	"EmailTags": '',
+	"EmailTagNames": '',
+	"businessopportunityid": 0
+})
+
+// 统一的数据刷新方法
+const refreshCurrentView = async () => {
+	try {
+		console.log('刷新当前视图, activeMenu:', activeMenu.value)
+
+		// 清除搜索状态
+		isSearchMode.value = false
+		lastSearchParams.value = null
+
+		if (isSearchMode.value && lastSearchParams.value) {
+			// 搜索模式
+			await handleAdvancedSearchRequest()
+		} else if (activeMenu.value.startsWith('tag-')) {
+			// 标签模式
+			const tagId = activeMenu.value.replace('tag-', '')
+			EmailTagIndex.value = tagId
+			await getInboxEmail(currentPage.value, pageSize.value, 1)
+		} else if (activeMenu.value.startsWith('folder-')) {
+			// 文件夹模式
+			const folderId = activeMenu.value.replace('folder-', '')
+			const folderData = findFolderDataById(emailFolders.value, folderId)
+			if (folderData && folderData.type) {
+				await getEmailArchiveList(currentPage.value, pageSize.value, folderData.type, folderId)
+			}
+		} else {
+			// 普通菜单模式
+			await getInboxEmail(currentPage.value, pageSize.value, activeMenu.value)
+		}
+	} catch (error) {
+		console.error('刷新视图失败:', error)
+		ElMessage.error('刷新数据失败')
+	}
+}
+
+// 获取邮件列表的统一方法
+function getInboxEmail(start, end, emailType) {
+	console.log('getInboxEmail 调用 - start:', start, 'end:', end, 'emailType:', emailType)
+
+	EmailTableData.value = []
+	return new Promise((resolve, reject) => {
+		request({
+			url: 'Email/GetEmailInboxList/GetInbox',
+			method: 'GET',
+			params: {
+				PageNum: start,
+				PageSize: end,
+				EmailType: emailType,
+				EmailTagIndex: EmailTagIndex.value,
+				floderName: folderName.value
+			}
+		}).then(response => {
+			if (response.data.result.length > 0) {
+				const processedEmails = response.data.result.map(item => ({
+					id: item.id,
+					subject: item.emailsubject,
+					date: item.emaildate,
+					name: GetFromEmailName(item.fromEmail),
+					tags: item.emailtags,
+					content: item.emailContent,
+					emailTags: item.emailTags,
+					toEmail: item.toEmail,
+					ccEmail: item.ccEmail,
+					fromEmailAddress: item.fromEmailAddress,
+					EmailID: item.emailID,
+					hasAttachments: item.isAttachments === 1,
+					isRead: item.isRead
+				}))
+
+				EmailTableData.value = processedEmails
+				originalEmailData.value = [...processedEmails]
+				totalItems.value = response.data.totalNum
+			} else {
+				if (response.data.totalNum > 0 && start > 1) {
+					getInboxEmail(start - 1, end, emailType)
+					return
+				}
+				EmailTableData.value = []
+				originalEmailData.value = []
+				totalItems.value = 0
+			}
+			resolve(response.data)
+		}).catch(error => {
+			console.error('获取邮件列表失败:', error)
+			reject(error)
+		})
+	})
+}
+
+// 增强的获取归档邮件列表方法 - 添加参数验证
+const getEmailArchiveList = async (pageNum, pageSize, type, dataId) => {
+	try {
+		console.log('获取归档邮件列表 - 参数:', { pageNum, pageSize, type, dataId })
+
+		// 参数验证
+		if (!type) {
+			throw new Error('文件夹类型(type)不能为空')
+		}
+		if (!dataId) {
+			throw new Error('文件夹ID(dataId)不能为空')
+		}
+		if (!pageNum || pageNum < 1) {
+			throw new Error('页码必须大于0')
+		}
+		if (!pageSize || pageSize < 1) {
+			throw new Error('每页数量必须大于0')
+		}
+
+		const response = await request({
+			url: 'Email/GetEmailArchiveList/GetArchive',
+			method: 'GET',
+			params: {
+				PageNum: pageNum,
+				PageSize: pageSize,
+				type: type,
+				dataId: dataId
+			}
+		})
+
+		console.log('归档邮件API响应:', response)
+
+		if (response.data && response.data.result) {
+			const processedEmails = response.data.result.map(item => ({
+				id: item.id,
+				subject: item.emailsubject,
+				date: item.emaildate,
+				name: GetFromEmailName(item.fromEmail),
+				tags: item.emailtags,
+				content: item.emailContent,
+				emailTags: item.emailTags,
+				toEmail: item.toEmail,
+				ccEmail: item.ccEmail,
+				fromEmailAddress: item.fromEmailAddress,
+				EmailID: item.emailID,
+				hasAttachments: item.isAttachments === 1,
+				isRead: item.isRead
+			}))
+
+			console.log('处理后的邮件数据数量:', processedEmails.length)
+			EmailTableData.value = processedEmails
+			originalEmailData.value = [...processedEmails]
+			totalItems.value = response.data.totalNum || 0
+		} else {
+			console.log('API返回空数据')
+			EmailTableData.value = []
+			originalEmailData.value = []
+			totalItems.value = 0
+		}
+	} catch (error) {
+		console.error('获取归档邮件失败:', error)
+		ElMessage.error(`获取邮件失败: ${error.message || '未知错误'}`)
+
+		// 发生错误时清空数据
+		EmailTableData.value = []
+		originalEmailData.value = []
+		totalItems.value = 0
+
+		throw error
+	}
+}
+
+// 获取发件人姓名
+const GetFromEmailName = (fromEmail) => {
+	if (!fromEmail) return '未知'
+
+	const nameMatch = fromEmail.match(/"([^"]+)"/)
+	if (nameMatch && nameMatch[1]) {
+		return nameMatch[1]
+	}
+
+	const emailOnlyMatch = fromEmail.match(/^([^@]+)@/)
+	if (emailOnlyMatch && emailOnlyMatch[1]) {
+		return emailOnlyMatch[1]
+	}
+
+	return fromEmail
+}
+
+// 标记邮件为已读
+const markAsRead = async (row) => {
+	if (!row.id) {
+		ElMessage.warning('无法获取邮件ID')
+		return
+	}
+	try {
+		if (row.isRead == 1) {
+			const response = await request({
+				url: 'Email/EditEmailIsRead/EditEmailIsRead',
+				method: 'POST',
+				data: {
+					id: row.id,
+					isRead: 0
+				}
+			})
+			if (response.code === 200) {
+				row.isRead = 0
+			} else {
+				ElMessage.error(response.msg || '标记已读失败')
+			}
+		}
+	} catch (error) {
+		console.error('标记邮件为已读失败:', error)
+		ElMessage.error('操作失败，请重试')
+	}
+}
+
+// 标记邮件为未读
+const markAsUnread = async (emailId) => {
+	if (!emailId) {
+		ElMessage.warning('无法获取邮件ID')
+		return
+	}
+	try {
+		const response = await request({
+			url: 'Email/EditEmailIsRead/EditEmailIsRead',
+			method: 'POST',
+			data: {
+				id: emailId,
+				isRead: 1
+			}
+		})
+
+		if (response.code === 200) {
+			ElMessage.success(response.msg)
+			await refreshCurrentView()
+		} else {
+			ElMessage.error(response.msg || '标记未读失败')
+		}
+	} catch (error) {
+		console.error('标记邮件为未读失败:', error)
+		ElMessage.error('操作失败，请重试')
+	}
+}
+// #endregion
+
+// #region 菜单操作
+// 5. 优化的 MenuClick 方法
+const MenuClick = async (menuIndex) => {
+	if (await CheckShowEmailDetail() == false) {
+		return
+	}
+
+	console.log('📧 MenuClick - 切换菜单，menuIndex:', menuIndex)
+
+	// 重置所有状态
+	showEmailDetail.value = false
+	isSearchMode.value = false
+	lastSearchParams.value = null
+	currentPage.value = 1
+
+	// 设置系统文件夹状态
+	const systemFolderNames = {
+		'1': '收件箱',
+		'2': '已发邮件',
+		'3': '草稿箱',
+		'4': '垃圾箱',
+		'6': '归档邮件'
+	}
+
+	setCurrentFolderState('system', menuIndex, systemFolderNames[menuIndex.toString()])
+
+	// 清除选择
+	clearSelection()
+
+	// 获取邮件列表
+	await getInboxEmail(currentPage.value, pageSize.value, menuIndex)
+}
+
+// 4. 优化的 filterByTag 方法
+const filterByTag = async (tagId) => {
+	if (await CheckShowEmailDetail() == false) {
+		return
+	}
+
+	try {
+		showEmailDetail.value = false
+		isSearchMode.value = false
+		lastSearchParams.value = null
+		currentPage.value = 1
+
+		// 查找标签名称
+		const tagData = UserEmailTagList.value.find(tag => tag.id == tagId)
+		const tagName = tagData?.emailTagName || `标签${tagId}`
+
+		// 设置统一的标签状态
+		setCurrentFolderState('tag', tagId, tagName, tagData)
+
+		console.log('🏷️ 标签状态设置完成:', currentFolderState.value)
+
+		// 清除选择
+		clearSelection()
+
+		// 获取带有该标签的邮件列表
+		await getInboxEmail(currentPage.value, pageSize.value, 1)
+	} catch (error) {
+		console.error('❌ 按标签过滤邮件失败:', error)
+		ElMessage.error('获取标签邮件失败')
+	}
+}
+
+/// 3. 优化的 filterByFolder 方法
+const filterByFolder = async (folderId, type) => {
+	if (await CheckShowEmailDetail() == false) {
+		return
+	}
+
+	try {
+		console.log('📁 filterByFolder - 开始过滤文件夹，folderId:', folderId, 'type:', type)
+
+		showEmailDetail.value = false
+		isSearchMode.value = false
+		lastSearchParams.value = null
+		currentPage.value = 1
+
+		// 查找文件夹数据
+		const folderData = findFolderDataById(emailFolders.value, folderId)
+		const folderName = folderData?.label || `文件夹${folderId}`
+
+		// 设置统一的文件夹状态
+		setCurrentFolderState('folder', folderId, folderName, folderData, { type })
+
+		console.log('📁 文件夹状态设置完成:', currentFolderState.value)
+
+		// 清除选择
+		clearSelection()
+
+		// 获取归档邮件列表
+		await getEmailArchiveList(currentPage.value, pageSize.value, type, folderId)
+	} catch (error) {
+		console.error('❌ 过滤分类邮件失败:', error)
+		ElMessage.error('获取分类邮件失败')
+	}
+}
+// #endregion
+
+// #region 邮件标签管理
+const EmailTagcheckboxGroup = ref([])
+const EmailTagcheckboxoptions = ref([])
+const UserEmailTagList = ref([])
+const newEmailTagName = ref('')
+const isLoadingTags = ref(false)
+
+// 获取用户邮件标签列表
+const GetUserEmailTagList = () => {
+	return request({
+		url: 'Email/GetUserEmailTagList/GetUserEmailTag',
+		method: 'GET'
+	}).then(response => {
+		if (response != null) {
+			EmailTagcheckboxoptions.value = []
+			if (EmailModel.EmailTags != null && EmailModel.EmailTags != '') {
+				const EmailTagArray = EmailModel.EmailTags.split(',')
+				response.data.forEach(item => {
+					EmailTagcheckboxoptions.value.push({ label: item.emailTagName, value: item.id })
+					if (EmailTagArray.length > 0) {
+						EmailTagArray.forEach(element => {
+							if (element == item.id) {
+								EmailTagcheckboxGroup.value.push(item.id)
+							}
+						})
+					}
+				})
+			} else {
+				response.data.forEach(item => {
+					EmailTagcheckboxoptions.value.push({ label: item.emailTagName, value: item.id })
+				})
+			}
+			UserEmailTagList.value = response.data
+			return response.data.result
+		} else {
+			return null
+		}
+	}).catch(error => {
+		console.error(error)
+		return null
+	})
+}
+
+// 初始化邮件标签
+const initEmailTag = async () => {
+	EmailTagcheckboxGroup.value = []
+	UserEmailTagList.value = []
+	newEmailTagName.value = ''
+
+	const response = await request({
+		url: 'Email/GetUserEmailTagList/GetUserEmailTag',
+		method: 'GET'
+	})
+
+	if (response?.data) {
+		EmailTagcheckboxoptions.value = response.data.map(item => ({
+			label: item.emailTagName,
+			value: item.id
+		}))
+		UserEmailTagList.value = response.data
+	}
+}
+
+// 添加新邮件标签
+const addNewEmailTag = async (type) => {
+	let nameStr = ''
+	if (type == 1) {
+		nameStr = newFolderName.value
+		showNewFolderDialog.value = false
+	} else {
+		nameStr = newEmailTagName.value
+	}
+
+	if (!nameStr) {
+		ElMessage({
+			message: '标签名称不能为空！😒',
+			type: 'warning'
+		})
+		return
+	}
+
+	try {
+		const response = await request({
+			url: 'Email/AddUserEmailTag/AddUserEmailTag',
+			method: 'POST',
+			data: {
+				EmailTagName: nameStr,
+				Type: 0
+			}
+		})
+
+		if (response.code == 200) {
+			ElMessage({
+				message: response.msg,
+				type: 'success'
+			})
+			await initEmailTag()
+			if (type === 1) {
+				newFolderName.value = ''
+			} else {
+				newEmailTagName.value = ''
+			}
+		} else {
+			ElMessage.error('添加新标签失败')
+		}
+	} catch (error) {
+		ElMessage.error('添加失败，请重试')
+	}
+}
+
+// 删除邮件标签
+const deleteEmailTag = async (tagId) => {
+	try {
+		await ElMessageBox.confirm('确定要删除此标签吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning'
+		})
+
+		const response = await request({
+			url: 'Email/DelUserEmailTag/DelUserEmailTag',
+			method: 'Delete',
+			data: { id: tagId }
+		})
+
+		if (response.code == 200) {
+			ElMessage.success(response.msg)
+			initEmailTag()
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('删除标签失败:', error)
+			ElMessage.error('删除标签失败')
+		}
+	}
+}
+
+// 处理标签变化
+const handleTagChange = async (value) => {
+	if (isLoadingTags.value) return
+
+	const lastChangedTagId = value[value.length - 1]
+	const isChecked = EmailTagcheckboxGroup.value.includes(lastChangedTagId)
+
+	if (!isChecked) {
+		EditEmailTags()
+	} else {
+		SelectEmailTags()
+	}
+}
+
+// 选择邮件标签
+const SelectEmailTags = () => {
+	EmailModel.EmailTags = EmailTagcheckboxGroup.value.toString()
+	EmailModel.EmailTagNames = EmailTagcheckboxGroup.value.map(tagId => getTagName(tagId)).join(',')
+
+	// 根据标签名称判断需要打开的对话框类型
+	if (EmailModel.EmailTagNames.includes('初次报价')) {
+		openBusinessOpportunitySelectionDialog('quotation', ['初次报价'])
+		return
+	}
+	if (EmailModel.EmailTagNames.includes('再次报价')) {
+		openBusinessOpportunitySelectionDialog('quotation', ['再次报价'])
+		return
+	}
+	if (EmailModel.EmailTagNames.includes('合同确定')) {
+		openBusinessOpportunitySelectionDialog('contract', ['合同确定'])
+		return
+	}
+	if (EmailModel.EmailTagNames.includes('沟通需求')) {
+		openBusinessOpportunitySelectionDialog('communication', ['沟通需求'])
+		return
+	}
+
+	EditEmailTags()
+}
+
+// 修复标签编辑后的数据同步
+const EditEmailTags = async () => {
+	EmailModel.EmailTags = EmailTagcheckboxGroup.value.toString()
+	EmailModel.EmailTagNames = EmailTagcheckboxGroup.value.map(tagId => getTagName(tagId)).join(',')
+	EmailModel.businessopportunityid = BusinessOpportunityForm.value.opportunityId
+
+	try {
+		const response = await request({
+			url: 'Email/EditEmailTags/EditEmailTags',
+			method: 'POST',
+			data: EmailModel
+		})
+
+		if (response != null) {
+			ElMessage({
+				message: response.msg,
+				type: 'success'
+			})
+
+			// 标签更新成功后，同步更新前端数据
+			await updateLocalEmailTags(EmailModel.id, EmailTagcheckboxGroup.value)
+
+		} else {
+			console.error('更新邮件标签失败')
+		}
+	} catch (error) {
+		console.error('更新邮件标签失败！😔错误内容：', error)
+	}
+}
+
+// 新增：更新本地邮件数据中的标签信息
+const updateLocalEmailTags = async (emailId, newTagIds) => {
+	try {
+		console.log('更新本地邮件标签数据 - 邮件ID:', emailId, '新标签:', newTagIds)
+
+		// 更新 EmailTableData 中的标签
+		const emailIndex = EmailTableData.value.findIndex(email => email.id === emailId)
+		if (emailIndex !== -1) {
+			const newTagsString = newTagIds.join(',')
+			EmailTableData.value[emailIndex].emailTags = newTagsString
+			console.log('已更新EmailTableData中的标签:', EmailTableData.value[emailIndex])
+		}
+
+		// 更新 originalEmailData 中的标签
+		const originalIndex = originalEmailData.value.findIndex(email => email.id === emailId)
+		if (originalIndex !== -1) {
+			const newTagsString = newTagIds.join(',')
+			originalEmailData.value[originalIndex].emailTags = newTagsString
+			console.log('已更新originalEmailData中的标签:', originalEmailData.value[originalIndex])
+		}
+
+		// 更新当前邮件详情中的标签（如果还在详情页）
+		if (currentEmail.value.id === emailId) {
+			currentEmail.value.tags = newTagIds
+			console.log('已更新currentEmail中的标签')
+		}
+
+	} catch (error) {
+		console.error('更新本地邮件标签数据失败:', error)
+	}
+}
+
+// 获取标签行数据
+const getRowTags = (tagsString) => {
+	if (!tagsString) return []
+	return tagsString.split(',').filter(tag => tag && !isNaN(tag)).map(Number)
+}
+
+// 获取标签名称
+const getTagName = (tagId) => {
+	const tag = EmailTagcheckboxoptions.value.find(t => t.value === tagId)
+	return tag ? tag.label : ''
+}
+// #endregion
+
+// #region 邮件文件夹管理
+const emailFolders = ref([])
+const customFolders = ref([])
+const showAddFolderDialog = ref(false)
+const showNewFolderDialog = ref(false)
+const newFolderName = ref('')
+const newFolderForm = ref({
+	name: '',
+	parentId: '1'
+})
+const cascaderOptions = ref([])
+
+const defaultProps = {
+	children: 'children',
+	label: 'label'
+}
+
+// 获取自定义文件夹列表
+const fetchCustomFolders = async () => {
+	try {
+		const response = await request({
+			url: 'Email/GetAllContinent/GetAllContinent',
+			method: 'GET'
+		})
+		if (response.data) {
+			emailFolders.value = response.data
+		}
+	} catch (error) {
+		console.error('获取文件夹列表失败:', error)
+	}
+}
+
+// 处理节点点击
+const handleNodeClick = (data) => {
+	console.log(data)
+	if (data.dataId && data.type) {
+		filterByFolder(data.dataId, data.type)
+	}
+}
+
+// 删除文件夹
+const handleDeleteFolder = async (node, data) => {
+	try {
+		await ElMessageBox.confirm(
+			'确定要删除这个文件夹吗？',
+			'警告',
+			{
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning',
+			}
+		)
+
+		const response = await request({
+			url: '/CustomArchiveSet/DeleteCustomArchiveSet/Del',
+			method: 'GET',
+			params: { id: data.dataId }
+		})
+
+		if (response.code == 200) {
+			ElMessage.success(response.data || '文件夹删除成功')
+			await fetchCascaderOptions()
+			await fetchCustomFolders()
+		} else {
+			ElMessage.error(response.data || '文件夹删除失败')
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			ElMessage.error('删除文件夹失败')
+		}
+	}
+}
+
+// 获取级联选择器选项
+const fetchCascaderOptions = async () => {
+	try {
+		const response = await request({
+			url: '/CustomArchiveSet/GetLevelListByUser/GetLevelList',
+			method: 'GET'
+		})
+		if (response.data) {
+			cascaderOptions.value = response.data
+		}
+	} catch (error) {
+		ElMessage.error('获取父文件夹数据失败')
+	}
+}
+
+// 添加文件夹
+const handleAddFolder = async () => {
+	if (!newFolderForm.value.name) {
+		ElMessage.warning('请输入文件夹名称')
+		return
+	}
+
+	try {
+		let parentType = 5
+		let parentIdValue = 0
+
+		if (Array.isArray(newFolderForm.value.parentId)) {
+			const lastNode = findNodeByPath(cascaderOptions.value, newFolderForm.value.parentId)
+			if (lastNode) {
+				parentType = lastNode.type
+				parentIdValue = Number(lastNode.value)
+			}
+		} else {
+			const parentNode = findNodeById(cascaderOptions.value, newFolderForm.value.parentId)
+			if (parentNode) {
+				parentType = parentNode.type
+				parentIdValue = Number(parentNode.value)
+			}
+		}
+
+		if (parentIdValue === null) {
+			parentIdValue = Array.isArray(newFolderForm.value.parentId) ?
+				Number(newFolderForm.value.parentId[newFolderForm.value.parentId.length - 1]) :
+				Number(newFolderForm.value.parentId)
+		}
+
+		const payload = {
+			Name: newFolderForm.value.name,
+			Description: '手动添加归档集',
+			ParentType: parentType,
+			ParentId: parentIdValue
+		}
+
+		const response = await request({
+			url: '/CustomArchiveSet/AddCustomeArchiveSet/Add',
+			method: 'POST',
+			data: payload
+		})
+
+		if (response.code == 200) {
+			ElMessage.success(response.data || '文件夹创建成功')
+			showAddFolderDialog.value = false
+			newFolderForm.value.name = ''
+			await fetchCascaderOptions()
+			await fetchCustomFolders()
+		} else {
+			ElMessage.error(response.data || '创建文件夹失败')
+		}
+	} catch (error) {
+		ElMessage.error('创建文件夹失败')
+	}
+}
+
+// 辅助函数
+function findNodeById(nodes, id) {
+	for (const node of nodes) {
+		if (String(node.value) === String(id)) return node
+		if (node.children) {
+			const found = findNodeById(node.children, id)
+			if (found) return found
+		}
+	}
+	return null
+}
+
+function findNodeByPath(nodes, pathArr) {
+	let current = nodes
+	let node = null
+	for (const id of pathArr) {
+		node = (current || []).find(n => String(n.value) === String(id))
+		if (!node) return null
+		current = node.children
+	}
+	return node
+}
+
+// 增强的文件夹数据查找方法 - 添加更多调试信息和容错处理
+const findFolderDataById = (folders, id) => {
+	console.log('查找文件夹数据 - ID:', id, '文件夹列表长度:', folders?.length)
+
+	if (!folders || !Array.isArray(folders) || folders.length === 0) {
+		console.warn('文件夹列表为空或无效:', folders)
+		return null
+	}
+
+	// 递归查找函数
+	const searchInFolders = (folderList, searchId, depth = 0) => {
+		const indent = '  '.repeat(depth)
+		console.log(`${indent}在层级 ${depth} 中查找ID: ${searchId}`)
+
+		for (let i = 0; i < folderList.length; i++) {
+			const folder = folderList[i]
+			console.log(`${indent}检查文件夹 ${i}:`, {
+				id: folder.id,
+				dataId: folder.dataId,
+				label: folder.label,
+				type: folder.type
+			})
+
+			// 支持多种ID匹配方式
+			if (String(folder.dataId) === String(searchId) ||
+				String(folder.id) === String(searchId)) {
+				console.log(`${indent}✅ 找到匹配的文件夹:`, folder)
+				return folder
+			}
+
+			// 递归查找子文件夹
+			if (folder.children && Array.isArray(folder.children) && folder.children.length > 0) {
+				console.log(`${indent}递归查找子文件夹，子文件夹数量:`, folder.children.length)
+				const found = searchInFolders(folder.children, searchId, depth + 1)
+				if (found) {
+					return found
+				}
+			}
+		}
+
+		console.log(`${indent}在层级 ${depth} 中未找到匹配项`)
+		return null
+	}
+
+	const result = searchInFolders(folders, id)
+
+	if (!result) {
+		console.warn('❌ 未找到文件夹数据，ID:', id)
+		console.log('可用的文件夹列表:', folders.map(f => ({
+			id: f.id,
+			dataId: f.dataId,
+			label: f.label,
+			type: f.type
+		})))
+	} else {
+		console.log('✅ 成功找到文件夹数据:', result)
+	}
+
+	return result
+}
+// #endregion
+
+// #region 搜索功能
+// 本地搜索处理
+const handleLocalSearch = () => {
+	if (!input1.value) {
+		EmailTableData.value = [...originalEmailData.value]
+		return
+	}
+
+	const searchTerm = input1.value.toLowerCase()
+	EmailTableData.value = originalEmailData.value.filter(email => {
+		return (
+			email.subject?.toLowerCase().includes(searchTerm) ||
+			email.name?.toLowerCase().includes(searchTerm) ||
+			email.fromEmailAddress?.toLowerCase().includes(searchTerm) ||
+			email.toEmail?.toLowerCase().includes(searchTerm)
+		)
+	})
+}
+
+// 清除本地搜索
+const clearLocalSearch = () => {
+	EmailTableData.value = [...originalEmailData.value]
+}
+
+// 重置搜索表单
+const resetSearchForm = () => {
+	Object.assign(searchForm, {
+		sender: '',
+		receiver: '',
+		subject: '',
+		includeWords: '',
+		excludeWords: '',
+		dateRange: '1',
+		customDateRange: [],
+		searchScope: '0',
+		hasAttachment: false
+	})
+
+	isSearchMode.value = false
+	lastSearchParams.value = null
+	currentPage.value = 1
+	pageSize.value = 20
+
+	refreshCurrentView()
+}
+
+// 高级搜索请求
+const handleAdvancedSearchRequest = async () => {
+	try {
+		const searchParams = {
+			...lastSearchParams.value,
+			PageNum: currentPage.value,
+			PageSize: pageSize.value
+		}
+
+		const response = await request({
+			url: 'Email/SearchEmailInboxList/SearchEmailList',
+			method: 'GET',
+			params: searchParams
+		})
+
+		if (response.data) {
+			EmailTableData.value = response.data.result.map(item => ({
+				id: item.id,
+				subject: item.emailsubject,
+				date: item.emaildate,
+				name: GetFromEmailName(item.fromEmail),
+				tags: item.emailtags,
+				content: item.emailContent,
+				emailTags: item.emailTags,
+				toEmail: item.toEmail,
+				fromEmailAddress: item.fromEmailAddress,
+				EmailID: item.emailID,
+				hasAttachments: item.isAttachments === 1,
+				isRead: item.isRead
+			}))
+			originalEmailData.value = [...EmailTableData.value]
+			totalItems.value = response.data.totalNum
+		}
+	} catch (error) {
+		console.error('搜索失败:', error)
+		ElMessage.error('搜索失败，请重试')
+	}
+}
+
+// 处理高级搜索
+const handleAdvancedSearch = async () => {
+	try {
+		const searchParams = {
+			sender: searchForm.sender,
+			receiver: searchForm.receiver,
+			subject: searchForm.subject,
+			includeWords: searchForm.includeWords,
+			excludeWords: searchForm.excludeWords,
+			hasAttachment: searchForm.hasAttachment ? 1 : 0,
+			searchScope: searchForm.searchScope,
+			startDate: null,
+			endDate: null
+		}
+
+		if (searchForm.dateRange === 'custom' && searchForm.customDateRange?.length === 2) {
+			searchParams.startDate = searchForm.customDateRange[0]
+			searchParams.endDate = searchForm.customDateRange[1]
+		} else if (searchForm.dateRange !== 'custom' && searchForm.dateRange) {
+			const days = parseInt(searchForm.dateRange)
+			searchParams.endDate = new Date()
+			searchParams.startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+		}
+
+		// 设置搜索状态
+		setCurrentFolderState('search', 'advanced', '高级搜索结果', null, lastSearchParams.value)
+		isSearchMode.value = true
+		currentPage.value = 1
+
+		await handleAdvancedSearchRequest()
+
+		showAdvancedSearch.value = false
+		ElMessage.success('搜索完成')
+	} catch (error) {
+		console.error('搜索失败:', error)
+		ElMessage.error('搜索失败，请重试')
+	}
+}
+// #endregion
+
+// #region 分页处理 - 修复文件夹分页问题
+const handleCurrentChange = async (newPage) => {
+	try {
+		console.log('📄 分页切换 - 当前状态:', currentFolderState.value, '新页码:', newPage)
+		currentPage.value = newPage
+
+		const state = currentFolderState.value
+
+		if (state.type === 'search') {
+			// 搜索模式分页
+			await handleAdvancedSearchRequest()
+		} else if (state.type === 'folder') {
+			// 文件夹模式分页
+			const folderData = state.folderData || findFolderDataById(emailFolders.value, state.id)
+			if (folderData && folderData.type) {
+				await getEmailArchiveList(newPage, pageSize.value, folderData.type, state.id)
+			} else {
+				throw new Error('文件夹数据丢失')
+			}
+		} else if (state.type === 'tag') {
+			// 标签模式分页
+			EmailTagIndex.value = state.id
+			await getInboxEmail(newPage, pageSize.value, 1)
+		} else if (state.type === 'system') {
+			// 系统文件夹分页
+			await getInboxEmail(newPage, pageSize.value, state.id)
+		} else {
+			throw new Error('未知的分页模式')
+		}
+	} catch (error) {
+		console.error('❌ 分页处理失败:', error)
+		ElMessage.error('分页操作失败，请重试')
+
+		// 错误降级
+		try {
+			await MenuClick(1)
+			currentPage.value = 1
+		} catch (fallbackError) {
+			console.error('❌ 降级处理失败:', fallbackError)
+		}
+	}
+}
+
+
+// 处理每页显示数量改变 - 修复版本
+const handleSizeChange = async (newSize) => {
+	try {
+		console.log('每页数量改变 - 当前模式:', activeMenu.value, '新数量:', newSize)
+		pageSize.value = newSize
+		currentPage.value = 1 // 重置到第一页
+
+		if (isSearchMode.value && lastSearchParams.value) {
+			// 搜索模式
+			console.log('执行搜索模式每页数量变更')
+			await handleAdvancedSearchRequest()
+		} else if (activeMenu.value.startsWith('folder-')) {
+			// 文件夹模式 - 重点修复区域
+			const folderId = activeMenu.value.replace('folder-', '')
+			console.log('文件夹模式每页数量变更 - 文件夹ID:', folderId)
+
+			// 验证文件夹数据
+			const folderData = findFolderDataById(emailFolders.value, folderId)
+			console.log('查找到的文件夹数据:', folderData)
+
+			if (!folderData) {
+				console.error('每页数量变更时找不到文件夹数据:', folderId)
+				ElMessage.warning('文件夹数据丢失，正在重新加载...')
+
+				// 尝试重新获取文件夹数据
+				await fetchCustomFolders()
+				const refreshedFolderData = findFolderDataById(emailFolders.value, folderId)
+
+				if (refreshedFolderData && refreshedFolderData.type) {
+					console.log('重新获取文件夹数据成功:', refreshedFolderData)
+					await getEmailArchiveList(1, newSize, refreshedFolderData.type, folderId)
+				} else {
+					console.error('重新获取文件夹数据仍然失败，切换到收件箱')
+					ElMessage.error('文件夹数据异常，已切换到收件箱')
+					activeMenu.value = '1'
+					await getInboxEmail(1, newSize, 1)
+				}
+				return
+			}
+
+			if (!folderData.type) {
+				console.error('文件夹缺少type属性:', folderData)
+				ElMessage.error('文件夹配置异常，请联系管理员')
+				return
+			}
+
+			console.log('执行文件夹邮件获取（每页数量变更） - type:', folderData.type, 'dataId:', folderId)
+			await getEmailArchiveList(1, newSize, folderData.type, folderId)
+
+		} else {
+			// 普通模式
+			let emailType = activeMenu.value
+			if (activeMenu.value.startsWith('tag-')) {
+				emailType = '1'
+			}
+			console.log('执行普通模式每页数量变更 - emailType:', emailType)
+			await getInboxEmail(1, newSize, emailType)
+		}
+	} catch (error) {
+		console.error('每页数量变更处理失败:', error)
+		ElMessage.error('操作失败，请重试')
+
+		// 错误降级处理
+		try {
+			console.log('执行错误降级处理')
+			activeMenu.value = '1'
+			await getInboxEmail(1, newSize, 1)
+			currentPage.value = 1
+		} catch (fallbackError) {
+			console.error('降级处理也失败:', fallbackError)
+			ElMessage.error('系统异常，请刷新页面')
+		}
+	}
+}
+
+
+// 10. 页面刷新时的状态恢复（可选）
+const restoreStateFromActiveMenu = () => {
+	if (activeMenu.value.startsWith('folder-')) {
+		const folderId = activeMenu.value.replace('folder-', '')
+		const folderData = findFolderDataById(emailFolders.value, folderId)
+		if (folderData) {
+			setCurrentFolderState('folder', folderId, folderData.label, folderData, { type: folderData.type })
+		}
+	} else if (activeMenu.value.startsWith('tag-')) {
+		const tagId = activeMenu.value.replace('tag-', '')
+		const tagData = UserEmailTagList.value.find(tag => tag.id == tagId)
+		if (tagData) {
+			setCurrentFolderState('tag', tagId, tagData.emailTagName, tagData)
+		}
+	} else {
+		const systemFolderNames = {
+			'1': '收件箱',
+			'2': '已发邮件',
+			'3': '草稿箱',
+			'4': '垃圾箱',
+			'6': '归档邮件'
+		}
+		setCurrentFolderState('system', activeMenu.value, systemFolderNames[activeMenu.value])
+	}
+}
+
+// #endregion
+
+// #region 邮件详情处理
+// 获取邮件附件
+const GetEmailAttachment = async (emailId) => {
+	try {
+		const response = await request({
+			url: 'Email/GetEmailAttachments/GetEmailAttachments',
+			method: 'GET',
+			params: { emailId: emailId }
+		})
+		console.log(response.data)
+		return response.data || []
+	} catch (error) {
+		console.error('获取邮件附件失败:', error)
+		return []
+	}
+}
+
+// 优化后的处理行点击方法 - 确保标签数据同步
+const handleRowClick = async (row, column, event) => {
+	if (column.type === 'selection') {
+		return
+	}
+
+	SelectEmailID.value = row.id
+
+	try {
+		const attachmentsList = await GetEmailAttachment(row.EmailID)
+		currentEmail.value = {
+			id: row.id,
+			subject: row.subject,
+			from: row.fromEmailAddress,
+			to: row.toEmail,
+			cc: row.ccEmail || null,
+			date: row.date,
+			content: row.content,
+			attachments: attachmentsList.map(attachment => ({
+				id: attachment.id,
+				name: attachment.attachmentsName,
+				fileUrl: attachment.attachmentsDownLoadUrl
+			}))
+		}
+
+		EmailModel.id = row.id
+		EmailModel.emailsubject = row.subject
+		EmailModel.fromEmail = row.fromEmailAddress
+
+		isLoadingTags.value = true
+		markAsRead(row)
+
+		// 清空并重新获取标签
+		EmailTagcheckboxGroup.value = []
+		EmailTagcheckboxoptions.value = []
+
+		const response = await request({
+			url: 'Email/GetUserEmailTagList/GetUserEmailTag',
+			method: 'GET'
+		})
+
+		if (response?.data) {
+			EmailTagcheckboxoptions.value = response.data.map(item => ({
+				label: item.emailTagName,
+				value: item.id
+			}))
+
+			// 使用最新的标签数据（优先使用当前行数据）
+			if (row.emailTags) {
+				const tagArray = row.emailTags.split(',')
+				tagArray.forEach(tagId => {
+					if (tagId && !isNaN(tagId)) {
+						EmailTagcheckboxGroup.value.push(Number(tagId))
+					}
+				})
+			}
+		}
+
+		showEmailDetail.value = true
+	} catch (error) {
+		console.error('获取标签列表失败:', error)
+		ElMessage.error('获取标签列表失败')
+	} finally {
+		isLoadingTags.value = false
+	}
+}
+
+// 6. 大幅优化的 backToList 方法
+const backToList = async () => {
+	if (await CheckShowEmailDetail() == false) {
+		return
+	}
+
+	console.log('🔙 返回列表 - 当前状态:', currentFolderState.value)
+	showEmailDetail.value = false
+
+	try {
+		const state = currentFolderState.value
+
+		if (state.type === 'folder') {
+			// 文件夹模式
+			console.log('📁 文件夹模式返回，刷新归档邮件列表')
+
+			let folderData = state.folderData
+
+			// 如果没有缓存的文件夹数据，重新查找
+			if (!folderData || !folderData.type) {
+				console.log('📁 重新查找文件夹数据')
+				await fetchCustomFolders()
+				folderData = findFolderDataById(emailFolders.value, state.id)
+
+				// 更新缓存的文件夹数据
+				if (folderData) {
+					currentFolderState.value.folderData = folderData
+				}
+			}
+
+			if (folderData && folderData.type) {
+				await getEmailArchiveList(currentPage.value, pageSize.value, folderData.type, state.id)
+			} else {
+				console.error('❌ 无法找到文件夹数据，执行降级处理')
+				ElMessage.warning('文件夹数据丢失，切换到收件箱')
+				await MenuClick(1)
+			}
+
+		} else if (state.type === 'tag') {
+			// 标签模式
+			console.log('🏷️ 标签模式返回，刷新标签邮件列表')
+			EmailTagIndex.value = state.id
+			await getInboxEmail(currentPage.value, pageSize.value, 1)
+
+		} else if (state.type === 'search') {
+			// 搜索模式
+			console.log('🔍 搜索模式返回，刷新搜索结果')
+			await handleAdvancedSearchRequest()
+
+		} else if (state.type === 'system') {
+			// 系统文件夹模式
+			console.log('📧 系统文件夹模式返回，刷新邮件列表')
+			await getInboxEmail(currentPage.value, pageSize.value, state.id)
+
+		} else {
+			// 降级处理：如果状态异常，切换到收件箱
+			console.warn('⚠️ 未知的文件夹状态，切换到收件箱')
+			await MenuClick(1)
+		}
+
+	} catch (error) {
+		console.error('❌ 返回列表时刷新数据失败:', error)
+		ElMessage.warning('数据刷新失败')
+
+		// 错误降级：切换到收件箱
+		try {
+			await MenuClick(1)
+		} catch (fallbackError) {
+			console.error('❌ 降级处理也失败:', fallbackError)
+			ElMessage.error('系统异常，请刷新页面')
+		}
+	}
+}
+
+// 检查邮件详情是否可以关闭
+const CheckShowEmailDetail = async () => {
+	return new Promise(async (resolve) => {
+		if (!showEmailDetail.value) {
+			resolve(true)
+			return
+		}
+
+		if (currentEmail.value) {
+			try {
+				const res = await request({
+					url: 'Email/CheckEmailTagsByEmailID/CheckEmailTags',
+					method: 'GET',
+					params: { id: currentEmail.value.id }
+				})
+
+				if (res.code === 200 && !res.data) {
+					ElMessageBox.confirm(
+						'当前邮件未添加标签，添加标签后才能关闭。是否现在添加标签？',
+						'提示',
+						{
+							confirmButtonText: '去添加标签',
+							type: 'warning',
+							showCancelButton: false,
+							closeOnClickModal: false,
+							closeOnPressEscape: false,
+							showClose: false
+						}
+					).then(() => {
+						tagPopoverVisible.value = true
+						resolve(false)
+					}).catch(() => {
+						resolve(false)
+					})
+					return
+				}
+				resolve(true)
+			} catch (error) {
+				console.error('检查邮件标签失败:', error)
+				resolve(true)
+			}
+			return
+		}
+		resolve(true)
+	})
+}
+
+// 下载附件
+const downloadAttachment = (id, fileName, fileUrl) => {
+	if (fileUrl) {
+		const link = document.createElement('a')
+		link.href = fileUrl
+		link.download = fileName
+		document.body.appendChild(link)
+		link.click()
+		document.body.removeChild(link)
+	} else {
+		request({
+			url: `Email/DownloadAttachment/DownloadAttachment`,
+			method: 'GET',
+			params: { id: id },
+			responseType: 'blob'
+		}).then(response => {
+			const blob = new Blob([response.data])
+			const link = document.createElement('a')
+			link.href = URL.createObjectURL(blob)
+			link.download = fileName
+			document.body.appendChild(link)
+			link.click()
+			document.body.removeChild(link)
+			URL.revokeObjectURL(link.href)
+		}).catch(error => {
+			console.error('下载失败:', error)
+			ElMessage.error('下载失败，请重试')
+		})
+	}
+}
+
+// HTML 内容样式
+const emailContentStyle = computed(() => ({
+	fontSize: '14px',
+	lineHeight: '1.6',
+	color: '#333',
+	fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+}))
+// #endregion
+
+// #region 邮件操作
+// 移动邮件
+const MoveEmail = async (emailType) => {
+	try {
+		EmailModel.emailType = emailType
+		const response = await request({
+			url: 'Email/MoveEmail/MoveEmail',
+			method: 'POST',
+			data: EmailModel
+		})
+
+		if (response != null) {
+			ElMessage({
+				message: response.msg,
+				type: 'success'
+			})
+		} else {
+			console.error('移动邮件失败')
+		}
+	} catch (error) {
+		console.error('移动邮件失败！😔错误内容：', error)
+	}
+}
+
+// 修复移动邮件后的处理
+const handleMoveEmail = async (command) => {
+	try {
+		await MoveEmail(command)
+		showEmailDetail.value = false
+
+		// 移动邮件后需要刷新当前视图
+		if (activeMenu.value.startsWith('folder-')) {
+			// 文件夹模式特殊处理
+			const folderId = activeMenu.value.replace('folder-', '')
+			const folderData = findFolderDataById(emailFolders.value, folderId)
+
+			if (folderData && folderData.type) {
+				await getEmailArchiveList(currentPage.value, pageSize.value, folderData.type, folderId)
+			} else {
+				await refreshCurrentView()
+			}
+		} else {
+			await refreshCurrentView()
+		}
+	} catch (error) {
+		console.error('移动邮件失败:', error)
+		ElMessage.error('移动邮件失败')
+	}
+}
+
+// 批量操作相关
+const handleSelectionChange = (selection) => {
+	console.log('📝 选择状态变化 - 新选择数量:', selection.length)
+	console.log('📝 选择的邮件 IDs:', selection.map(item => item.id))
+
+	selectedRows.value = selection
+
+	// 调试信息
+	if (selection.length === 0) {
+		console.log('📝 所有选择已清空')
+	} else {
+		console.log('📝 当前选择的邮件:', selection.map(item => ({
+			id: item.id,
+			subject: item.subject
+		})))
+	}
+}
+
+// 5. 带确认的清除选择方法
+const clearSelectionWithConfirm = async () => {
+	if (selectedRows.value.length > 0) {
+		try {
+			await ElMessageBox.confirm(
+				`确定要取消选择这 ${selectedRows.value.length} 封邮件吗？`,
+				'确认取消选择',
+				{
+					confirmButtonText: '确定',
+					cancelButtonText: '取消',
+					type: 'info'
+				}
+			)
+			clearSelection()
+			ElMessage.success('已取消选择')
+		} catch (error) {
+			if (error !== 'cancel') {
+				console.error('❌ 确认取消选择失败:', error)
+			}
+		}
+	} else {
+		ElMessage.info('当前没有选择的邮件')
+	}
+}
+
+const showBatchActions = computed(() => {
+	return selectedRows.value.length > 0
+})
+
+// 6. 监听选择状态变化
+watch(selectedRows, (newSelection, oldSelection) => {
+	console.log('🔍 选择状态监听 - 从', oldSelection?.length || 0, '变为', newSelection.length)
+
+	// 如果选择状态异常，尝试修复
+	if (newSelection.length < 0) {
+		console.warn('⚠️ 检测到异常的选择状态，执行修复')
+		selectedRows.value = []
+	}
+}, { deep: true })
+
+// 7. 页面数据变化时自动清除选择
+watch(EmailTableData, () => {
+	console.log('📊 邮件数据已更新，自动清除选择')
+	clearSelection()
+}, { deep: false })
+
+// 8. 全选和取消全选
+const selectAll = () => {
+	if (emailTable.value) {
+		emailTable.value.toggleAllSelection()
+		console.log('🔄 切换全选状态')
+	}
+}
+
+const selectAllEmails = () => {
+	if (emailTable.value) {
+		EmailTableData.value.forEach(row => {
+			emailTable.value.toggleRowSelection(row, true)
+		})
+		console.log('✅ 已选择所有邮件')
+	}
+}
+
+const unselectAllEmails = () => {
+	if (emailTable.value) {
+		EmailTableData.value.forEach(row => {
+			emailTable.value.toggleRowSelection(row, false)
+		})
+		console.log('✅ 已取消选择所有邮件')
+	}
+}
+
+// 9. 选择指定邮件
+const selectEmailById = (emailId) => {
+	const email = EmailTableData.value.find(item => item.id === emailId)
+	if (email && emailTable.value) {
+		emailTable.value.toggleRowSelection(email, true)
+		console.log('✅ 已选择邮件:', emailId)
+	}
+}
+
+const unselectEmailById = (emailId) => {
+	const email = EmailTableData.value.find(item => item.id === emailId)
+	if (email && emailTable.value) {
+		emailTable.value.toggleRowSelection(email, false)
+		console.log('✅ 已取消选择邮件:', emailId)
+	}
+}
+
+// 10. 表格状态检查和修复
+const checkTableState = () => {
+	console.log('🔍 检查表格状态')
+	console.log('📊 表格引用存在:', !!emailTable.value)
+	console.log('📊 邮件数据数量:', EmailTableData.value.length)
+	console.log('📊 选择数量:', selectedRows.value.length)
+
+	if (emailTable.value) {
+		// 获取表格内部选择状态
+		const tableSelection = emailTable.value.selection || []
+		console.log('📊 表格内部选择数量:', tableSelection.length)
+
+		// 检查数据一致性
+		if (tableSelection.length !== selectedRows.value.length) {
+			console.warn('⚠️ 检测到选择状态不一致，执行同步')
+			selectedRows.value = [...tableSelection]
+		}
+	}
+}
+
+// 11. 组件挂载后的初始化
+onMounted(() => {
+	nextTick(() => {
+		console.log('🚀 组件挂载完成，初始化表格状态')
+
+		if (emailTable.value) {
+			console.log('✅ 邮件表格引用已准备就绪')
+
+			// 设置表格的默认配置
+			console.log('⚙️ 配置表格默认行为')
+		} else {
+			console.warn('⚠️ 邮件表格引用未找到，延迟重试')
+
+			// 延迟重试
+			setTimeout(() => {
+				if (emailTable.value) {
+					console.log('✅ 延迟获取到邮件表格引用')
+				} else {
+					console.error('❌ 仍然无法获取邮件表格引用')
+				}
+			}, 1000)
+		}
+	})
+})
+
+const emailTable = ref(null)
+
+const clearSelection = () => {
+	console.log('🔄 开始清除选择状态')
+	console.log('🔍 清除前选择数量:', selectedRows.value.length)
+
+	try {
+		// 第一步：清除响应式数据
+		selectedRows.value = []
+		console.log('✅ 响应式数据已清除')
+
+		// 第二步：清除表格组件的选择状态
+		if (emailTable.value) {
+			emailTable.value.clearSelection()
+			console.log('✅ 表格选择状态已清除')
+		} else {
+			console.warn('⚠️ 表格引用不存在，尝试通过 DOM 查找')
+
+			// 备用方案：通过 DOM 操作清除选择
+			const tableEl = document.querySelector('.el-table')
+			if (tableEl) {
+				const checkboxes = tableEl.querySelectorAll('.el-checkbox__input')
+				checkboxes.forEach(checkbox => {
+					if (checkbox.classList.contains('is-checked')) {
+						checkbox.click() // 模拟点击取消选择
+					}
+				})
+				console.log('✅ 通过 DOM 操作清除选择')
+			}
+		}
+
+		// 第三步：强制更新界面
+		nextTick(() => {
+			console.log('✅ 清除选择完成，最终选择数量:', selectedRows.value.length)
+		})
+
+	} catch (error) {
+		console.error('❌ 清除选择状态失败:', error)
+
+		// 最后的备用方案：强制重置
+		selectedRows.value = []
+		nextTick(() => {
+			if (emailTable.value) {
+				emailTable.value.clearSelection()
+			}
+		})
+	}
+}
+
+const tableRowClassName = ({ row }) => {
+	const classes = []
+
+	if (row.isRead === 1) {
+		classes.push('unread-row')
+	}
+
+	if (selectedRows.value.some(selected => selected.id === row.id)) {
+		classes.push('selected-row')
+	}
+
+	return classes.join(' ')
+}
+
+// 批量归档
+const handleBatchArchive = async () => {
+	if (selectedRows.value.length === 0) {
+		ElMessage.warning('请先选择要归档的邮件')
+		return
+	}
+
+	try {
+		await ElMessageBox.confirm(
+			`确定要将选中的 ${selectedRows.value.length} 封邮件归档吗？`,
+			'确认归档',
+			{
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning'
+			}
+		)
+
+		isBatchProcessing.value = true
+		const emailIds = selectedRows.value.map(row => row.id)
+
+		const response = await request({
+			url: 'Email/BatchArchiveEmails/BatchArchiveEmails',
+			method: 'POST',
+			data: {
+				emailIds: emailIds,
+				emailType: 6
+			}
+		})
+
+		if (response.code == 200) {
+			ElMessage.success(response.data || '批量归档成功')
+			clearSelection()
+			await refreshCurrentView()
+		} else {
+			ElMessage.error('批量归档失败')
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('批量归档失败:', error)
+			ElMessage.error('批量归档失败，请重试')
+		}
+	} finally {
+		isBatchProcessing.value = false
+	}
+}
+
+// 批量删除
+const handleBatchDelete = async () => {
+	if (selectedRows.value.length === 0) {
+		ElMessage.warning('请先选择要删除的邮件')
+		return
+	}
+
+	try {
+		await ElMessageBox.confirm(
+			`确定要将选中的 ${selectedRows.value.length} 封邮件移动到垃圾箱吗？`,
+			'确认删除',
+			{
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning'
+			}
+		)
+
+		isBatchProcessing.value = true
+		const emailIds = selectedRows.value.map(row => row.id)
+
+		const response = await request({
+			url: 'Email/BatchMoveEmail/BatchMoveEmail',
+			method: 'POST',
+			data: {
+				emailIds: emailIds,
+				emailType: 4
+			}
+		})
+
+		if (response.code == 200) {
+			ElMessage.success(`成功删除 ${selectedRows.value.length} 封邮件`)
+			clearSelection()
+			await refreshCurrentView()
+		} else {
+			ElMessage.error('批量删除失败')
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('批量删除失败:', error)
+			ElMessage.error('批量删除失败，请重试')
+		}
+	} finally {
+		isBatchProcessing.value = false
+	}
+}
+// #endregion
+
+// #region 邮件编写相关
+const showEmailDialog = ref(false)
+const dialogTitle = ref('新邮件')
+const emailType = ref('new')
+const isFullscreen = ref(false)
+const showCc = ref(false)
+const fileList = ref([])
+const fileInput = ref(null)
+const quillEditor = ref(null)
+const recipientTreeData = ref([])
+const isSavingDraft = ref(false)
+
+// 邮件表单数据
+const emailForm = reactive({
+	draftId: null,
+	ToEmail: [],
+	cc: [],
+	bcc: [],
+	subject: '',
+	content: '',
+	emailTags: [],
+	originalMessageId: null
+})
+
+// Quill 编辑器配置
+const editorOptions = {
+	modules: {
+		toolbar: [
+			['bold', 'italic', 'underline', 'strike'],
+			['blockquote', 'code-block'],
+			[{ 'header': 1 }, { 'header': 2 }],
+			[{ 'list': 'ordered' }, { 'list': 'bullet' }],
+			[{ 'script': 'sub' }, { 'script': 'super' }],
+			[{ 'indent': '-1' }, { 'indent': '+1' }],
+			[{ 'direction': 'rtl' }],
+			[{ 'size': ['small', false, 'large', 'huge'] }],
+			[{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+			[{ 'color': [] }, { 'background': [] }],
+			[{ 'font': [] }],
+			[{ 'align': [] }],
+			['clean'],
+			['link', 'image']
+		]
+	},
+	placeholder: '撰写邮件...',
+}
+
+// 获取邮件联系人
+const GetEmailContract = async () => {
+	try {
+		const response = await request({
+			url: 'Email/GetEmailContact/GetEmailContact',
+			method: 'GET'
+		})
+		recipientTreeData.value = response.data || []
+	} catch (error) {
+		console.error('获取联系人失败:', error)
+	}
+}
+
+// 邮箱验证函数
+const validateEmail = (email: string) => {
+	const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+	return emailRegex.test(email)
+}
+
+// 辅助函数：将邮箱字符串转换为数组
+const parseEmailList = (emailStr) => {
+	if (!emailStr) return []
+	if (Array.isArray(emailStr)) return emailStr
+	return emailStr.split(/[,;]/)
+		.map(email => email.trim())
+		.filter(email => email && validateEmail(email))
+}
+
+// 辅助函数：过滤掉重复的邮箱地址
+const uniqueEmails = (emails) => {
+	return Array.from(new Set(emails))
+}
+
+// 处理抄送列表
+const handleCcList = (ccList) => {
+	const currentUserEmail = ConfigEmailForm.email
+	return uniqueEmails(parseEmailList(ccList))
+		.filter(email => email !== currentUserEmail)
+}
+
+// 切换全屏状态
+const toggleFullScreen = () => {
+	isFullscreen.value = !isFullscreen.value
+}
+
+// 写邮件处理函数
+const handleWriteEmail = async () => {
+	dialogTitle.value = '新邮件'
+	emailType.value = 'new'
+	resetEmailForm()
+	await GetEmailContract()
+	showEmailDialog.value = true
+}
+
+// 处理回复邮件
+const handleReply = async (replyAll = false) => {
+	emailForm.originalMessageId = SelectEmailID.value
+	emailType.value = replyAll ? 'replyAll' : 'reply'
+	dialogTitle.value = replyAll ? '回复全部' : '回复'
+	await GetEmailContract()
+
+	emailForm.ToEmail = [currentEmail.value.from]
+
+	if (replyAll && currentEmail.value.cc) {
+		const ccList = handleCcList(currentEmail.value.cc)
+		if (ccList.length > 0) {
+			showCc.value = true
+			emailForm.cc = ccList
+		}
+	} else {
+		showCc.value = false
+		emailForm.cc = []
+	}
+
+	emailForm.subject = `回复: ${currentEmail.value.subject}`
+	emailForm.content = `
+        <br><br>
+        <p>------------------ 原始邮件 ------------------</p>
+        <p>发件人: ${currentEmail.value.from}</p>
+        <p>发送时间: ${currentEmail.value.date}</p>
+        <p>主题: ${currentEmail.value.subject}</p>
+        <p>收件人: ${currentEmail.value.to}</p>
+        ${currentEmail.value.cc ? `<p>抄送: ${currentEmail.value.cc}</p>` : ''}
+        ${currentEmail.value.content}
+    `
+	showEmailDialog.value = true
+}
+
+// 转发邮件处理
+const handleForward = async () => {
+	emailType.value = 'forward'
+	dialogTitle.value = '转发'
+	await GetEmailContract()
+
+	emailForm.ToEmail = []
+	emailForm.cc = []
+	emailForm.subject = `转发: ${currentEmail.value.subject}`
+	emailForm.content = `
+        <br><br>
+        <p>------------------ 转发邮件 ------------------</p>
+        <p>发件人: ${currentEmail.value.from}</p>
+        <p>发送时间: ${currentEmail.value.date}</p>
+        <p>主题: ${currentEmail.value.subject}</p>
+        <p>收件人: ${currentEmail.value.to}</p>
+        ${currentEmail.value.content}
+    `
+
+	// 处理附件
+	if (currentEmail.value.attachments?.length) {
+		fileList.value = []
+		for (const attachment of currentEmail.value.attachments) {
+			try {
+				const response = await request({
+					url: 'Email/DownloadAttachment/DownloadAttachment',
+					method: 'GET',
+					params: { id: attachment.id },
+					responseType: 'blob'
+				})
+
+				const base64Content = await blobToBase64(response.data)
+				fileList.value.push({
+					name: attachment.name,
+					size: attachment.size,
+					uid: Date.now() + Math.random().toString(36).substr(2, 9),
+					raw: new File([response.data], attachment.name),
+					base64Content: base64Content
+				})
+			} catch (error) {
+				console.error('获取附件失败:', error)
+				ElMessage.warning(`附件 "${attachment.name}" 获取失败`)
+			}
+		}
+	}
+
+	showEmailDialog.value = true
+}
+
+// blob 转 base64 的辅助函数
+const blobToBase64 = (blob) => {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader()
+		reader.onload = () => {
+			const base64String = reader.result.toString().split(',')[1]
+			resolve(base64String)
+		}
+		reader.onerror = reject
+		reader.readAsDataURL(blob)
+	})
+}
+
+// 编辑草稿
 const editDraft = async () => {
 	try {
 		dialogTitle.value = '编辑草稿'
-
-		// 设置表单数据，包括草稿ID
-		emailForm.draftId = currentEmail.value.id  // 保存草稿ID
+		emailForm.draftId = currentEmail.value.id
 		emailForm.ToEmail = currentEmail.value.to ? parseEmailList(currentEmail.value.to) : []
 		emailForm.cc = currentEmail.value.cc ? parseEmailList(currentEmail.value.cc) : []
 		emailForm.subject = currentEmail.value.subject || ''
 		emailForm.content = currentEmail.value.content || ''
 
-		// 处理附件
 		if (currentEmail.value.attachments?.length) {
 			fileList.value = currentEmail.value.attachments.map(attachment => ({
 				name: attachment.name,
@@ -929,38 +3282,99 @@ const editDraft = async () => {
 	}
 }
 
-// 控制 dialog 显示
-const showEmailDialog = ref(false)
+// 文件相关处理
+const handleFileChange = (file) => {
+	const isLt10M = file.size / 1024 / 1024 < 10
+	if (!isLt10M) {
+		ElMessage.error('文件大小不能超过 10MB!')
+		return false
+	}
+	return true
+}
 
-// 邮件表单数据
-const emailForm = reactive({
-	draftId: null,
-	ToEmail: [],
-	cc: [],
-	bcc: [],
-	subject: '',
-	content: '',
-	emailTags: [],
-	originalMessageId: null
-})
+const handleFileRemove = (file) => {
+	const index = fileList.value.findIndex(item => item.uid === file.uid)
+	if (index !== -1) {
+		fileList.value.splice(index, 1)
+	}
+}
 
-// 添加暂存相关的状态
-const isSavingDraft = ref(false)
+const triggerFileInput = () => {
+	fileInput.value.click()
+}
 
-// 暂存草稿方法
+const handleFileInputChange = (event) => {
+	const files = Array.from(event.target.files)
+	files.forEach(file => {
+		if (handleFileChange(file)) {
+			fileList.value.push({
+				name: (file as File).name,
+				size: (file as File).size,
+				raw: file,
+				uid: Date.now() + Math.random().toString(36).substr(2, 9)
+			})
+		}
+	})
+	event.target.value = ''
+}
+
+// 文件转Base64函数
+const convertFileToBase64 = (file) => {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader()
+		reader.readAsDataURL(file)
+		reader.onload = () => {
+			const base64String = reader.result.toString().split(',')[1]
+			resolve(base64String)
+		}
+		reader.onerror = reject
+	})
+}
+
+// 重置表单
+const resetEmailForm = () => {
+	Object.assign(emailForm, {
+		draftId: null,
+		ToEmail: [],
+		cc: [],
+		bcc: [],
+		subject: '',
+		content: '',
+		emailTags: [],
+		originalMessageId: null
+	})
+	fileList.value = []
+	showCc.value = false
+	if (quillEditor.value) {
+		quillEditor.value.setContents([])
+	}
+	isFullscreen.value = false
+}
+
+// 丢弃邮件
+const discardEmail = () => {
+	resetEmailForm()
+	showEmailDialog.value = false
+}
+
+// 关闭对话框处理
+const handleDialogClose = () => {
+	resetEmailForm()
+}
+
+// 暂存草稿
 const saveDraft = async () => {
-	// 基本验证
 	if (!emailForm.ToEmail?.length && !emailForm.subject && !emailForm.content) {
 		ElMessage.warning('邮件内容为空，无需保存')
 		return
 	}
+
 	try {
 		isSavingDraft.value = true
-		// 处理附件
+
 		let attachments = []
 		if (fileList.value && fileList.value.length > 0) {
 			attachments = await Promise.all(fileList.value.map(async (file) => {
-				// 如果文件已经上传过并有 fileUrl，直接使用
 				if (file.fileUrl) {
 					return {
 						FileName: file.name,
@@ -969,7 +3383,6 @@ const saveDraft = async () => {
 					}
 				}
 
-				// 如果是新文件，需要先转换为 Base64
 				if (file.raw) {
 					const base64Content = await convertFileToBase64(file.raw)
 					return {
@@ -980,14 +3393,13 @@ const saveDraft = async () => {
 					}
 				}
 
-				// 如果既没有 fileUrl 也不是新文件，返回基本信息
 				return {
 					FileName: file.name,
 					FileSize: file.size
 				}
 			}))
 		}
-		// 构建要发送的数据
+
 		const draftData = {
 			DraftId: emailForm.draftId,
 			ToEmail: emailForm.ToEmail,
@@ -997,6 +3409,7 @@ const saveDraft = async () => {
 			EmailContent: emailForm.content,
 			Attachments: attachments
 		}
+
 		const response = await request({
 			url: 'Email/SaveDraftEmail/SaveDraftEmail',
 			method: 'POST',
@@ -1005,9 +3418,8 @@ const saveDraft = async () => {
 
 		if (response.code === 200) {
 			ElMessage.success('草稿保存成功')
-			// 可选：刷新草稿箱
-			if (activeMenu.value === '3') { // 假设 3 是草稿箱的 menu id
-				await getInboxEmail(currentPage.value, pageSize.value, activeMenu.value)
+			if (activeMenu.value === '3') {
+				await refreshCurrentView()
 			}
 		} else {
 			ElMessage.error(response.msg || '保存草稿失败')
@@ -1020,78 +3432,192 @@ const saveDraft = async () => {
 	}
 }
 
-// 添加自动保存功能（可选）
-let autoSaveTimer = null
-const AUTO_SAVE_INTERVAL = 900000 // 900秒
-
-const startAutoSave = () => {
-	stopAutoSave() // 先清除之前的定时器
-	autoSaveTimer = setInterval(async () => {
-		if (emailForm.ToEmail?.length || emailForm.subject || emailForm.content) {
-			ElMessage.info('自动保存中...')
-			await saveDraft()
-		}
-	}, AUTO_SAVE_INTERVAL)
-}
-
-const stopAutoSave = () => {
-	if (autoSaveTimer) {
-		clearInterval(autoSaveTimer)
-		autoSaveTimer = null
-	}
-}
-
-// 在对话框打开时启动自动保存，关闭时停止
-watch(showEmailDialog, (newVal) => {
-	if (newVal) {
-		startAutoSave()
-	} else {
-		stopAutoSave()
-	}
-})
-
-// 在组件卸载时清理定时器
-onUnmounted(() => {
-	stopAutoSave();
-})
-
-// 在组件挂载时获取联系人数据
-onMounted(async () => {
+// 发送邮件
+const sendEmail = async () => {
 	try {
-		await fetchEmailList(currentPage.value, pageSize.value)
-		await GetEmailContract() // 获取联系人数据
+		if (emailForm.draftId) {
+			await sendFromDraft()
+		} else {
+			await sendNewEmail()
+		}
 	} catch (error) {
-		console.error('初始化数据失败:', error)
+		console.error('发送邮件失败:', error)
+		ElMessage.error('发送失败，请重试')
 	}
-})
-
-const originalEmailData = ref([]) // 用于存储原始邮件列表
-
-// 本地搜索处理函数
-const handleLocalSearch = () => {
-	if (!input1.value) {
-		EmailTableData.value = [...originalEmailData.value]
-		return
-	}
-
-	const searchTerm = input1.value.toLowerCase()
-	EmailTableData.value = originalEmailData.value.filter(email => {
-		return (
-			email.subject?.toLowerCase().includes(searchTerm) ||
-			email.name?.toLowerCase().includes(searchTerm) ||
-			email.fromEmailAddress?.toLowerCase().includes(searchTerm) ||
-			email.toEmail?.toLowerCase().includes(searchTerm)
-		)
-	})
 }
 
-// 清除搜索
-const clearLocalSearch = () => {
-	EmailTableData.value = [...originalEmailData.value]
+// 发送新邮件
+const sendNewEmail = async () => {
+	try {
+		if (!emailForm.ToEmail.length) {
+			ElMessage.warning('请填写收件人')
+			return
+		}
+		if (!emailForm.subject) {
+			ElMessage.warning('请填写主题')
+			return
+		}
+		if (!emailForm.emailTags) {
+			ElMessage.warning('请选择标签')
+			return
+		}
+
+		const allEmails = [
+			...emailForm.ToEmail,
+			...(emailForm.cc || []),
+			...(emailForm.bcc || [])
+		]
+
+		const invalidEmails = allEmails.filter(email => !validateEmail(email))
+		if (invalidEmails.length > 0) {
+			ElMessage.error(`以下邮箱格式不正确：${invalidEmails.join(', ')}`)
+			return
+		}
+
+		await appendSignatureIfEnabled()
+
+		const attachments = await Promise.all(
+			fileList.value.map(async file => {
+				if (file.raw) {
+					const base64Content = await convertFileToBase64(file.raw)
+					return {
+						FileName: file.name,
+						FileContent: base64Content,
+						FileSize: file.size,
+						ContentType: file.raw.type
+					}
+				}
+				return null
+			})
+		).then(results => results.filter(Boolean))
+
+		const emailData = {
+			ToEmail: emailForm.ToEmail,
+			CcEmail: emailForm.cc || [],
+			BccEmail: emailForm.bcc || [],
+			Subject: emailForm.subject,
+			EmailContent: emailForm.content,
+			Attachments: attachments,
+			EmailTags: emailForm.emailTags,
+			EmailTagNames: EmailTagcheckboxoptions.value.find(option => option.value === emailForm.emailTags)?.label,
+			originalMessageId: Number(emailForm.originalMessageId)
+		}
+
+		const loading = ElLoading.service({
+			lock: true,
+			text: '正在发送邮件，请稍候...',
+			background: 'rgba(0, 0, 0, 0.7)'
+		})
+
+		try {
+			const response = await request({
+				url: 'Email/SendEmail/send',
+				method: 'POST',
+				data: emailData
+			})
+
+			if (response.code === 200) {
+				ElMessage.success('邮件发送成功')
+				showEmailDialog.value = false
+				resetEmailForm()
+				if (activeMenu.value === '2') {
+					await refreshCurrentView()
+				}
+			} else {
+				ElMessage.error(response.msg || '发送失败')
+			}
+		} finally {
+			loading.close()
+		}
+	} catch (error) {
+		console.error('发送邮件失败:', error)
+		ElMessage.error('发送失败，请重试')
+	}
 }
 
+// 发送草稿邮件
+const sendFromDraft = async () => {
+	try {
+		if (!emailForm.ToEmail.length) {
+			ElMessage.warning('请填写收件人')
+			return
+		}
+		if (!emailForm.subject) {
+			ElMessage.warning('请填写主题')
+			return
+		}
 
-// 签名相关的响应式变量
+		await appendSignatureIfEnabled()
+
+		const attachments = await Promise.all(fileList.value.map(async file => {
+			if (file.id && file.fileUrl) {
+				return {
+					Id: file.id,
+					FileName: file.name,
+					FileSize: file.size,
+					FileUrl: file.fileUrl,
+					AttachmentId: file.id
+				}
+			}
+
+			if (file.raw) {
+				const base64Content = await convertFileToBase64(file.raw)
+				return {
+					FileName: file.name,
+					FileSize: file.size,
+					FileContent: base64Content,
+					ContentType: file.raw.type
+				}
+			}
+
+			return null
+		})).then(results => results.filter(Boolean))
+
+		const draftData = {
+			DraftId: emailForm.draftId,
+			ToEmail: emailForm.ToEmail,
+			CcEmail: emailForm.cc || [],
+			BccEmail: emailForm.bcc || [],
+			Subject: emailForm.subject,
+			EmailContent: emailForm.content,
+			Attachments: attachments,
+			EmailTags: emailForm.emailTags,
+			EmailTagNames: EmailTagcheckboxoptions.value.find(option => option.value === emailForm.emailTags)?.label
+		}
+
+		const loading = ElLoading.service({
+			lock: true,
+			text: '正在发送草稿邮件，请稍候...',
+			background: 'rgba(0, 0, 0, 0.7)'
+		})
+
+		try {
+			const response = await request({
+				url: 'Email/SendFromDraft/SendFromDraft',
+				method: 'POST',
+				data: draftData
+			})
+
+			if (response.code === 200) {
+				ElMessage.success('草稿邮件发送成功')
+				showEmailDetail.value = false
+				resetEmailForm()
+				await refreshCurrentView()
+			} else {
+				ElMessage.error(response.msg || '发送失败')
+			}
+		} finally {
+			loading.close()
+		}
+	} catch (error) {
+		console.error('发送草稿失败:', error)
+		ElMessage.error('发送草稿失败，请重试')
+	}
+}
+// #endregion
+
+// #region 签名管理
+const signatureDialog = ref(false)
 const currentSignature = ref({
 	id: 0,
 	name: '默认签名',
@@ -1099,9 +3625,19 @@ const currentSignature = ref({
 	enabled: false
 })
 
-// 打开签名设置对话框时获取签名
+const signatureToolbar = [
+	['bold', 'italic', 'underline', 'strike'],
+	[{ 'font': [] }],
+	[{ 'size': ['small', false, 'large', 'huge'] }],
+	[{ 'color': [] }, { 'background': [] }],
+	[{ 'align': [] }],
+	['link'],
+	['clean']
+]
+
+// 打开签名设置对话框
 const openSignatureDialog = async () => {
-	await getUserSignature();
+	await getUserSignature()
 	signatureDialog.value = true
 }
 
@@ -1113,9 +3649,9 @@ const getUserSignature = async () => {
 			method: 'GET'
 		})
 		if (response.data.length > 0) {
-			currentSignature.value.id = response.data[0].id;
-			currentSignature.value.content = response.data[0].signature_content;
-			currentSignature.value.enabled = response.data[0].isEnable == 1 ? true : false;
+			currentSignature.value.id = response.data[0].id
+			currentSignature.value.content = response.data[0].signature_content
+			currentSignature.value.enabled = response.data[0].isEnable == 1 ? true : false
 		}
 	} catch (error) {
 		console.error('获取签名失败:', error)
@@ -1148,1755 +3684,31 @@ const saveSignatureSettings = async () => {
 	}
 }
 
-// 签名编辑器工具栏配置
-const signatureToolbar = [
-	['bold', 'italic', 'underline', 'strike'],
-	[{ 'font': [] }],
-	[{ 'size': ['small', false, 'large', 'huge'] }],
-	[{ 'color': [] }, { 'background': [] }],
-	[{ 'align': [] }],
-	['link'],
-	['clean']
-]
-
-const signatureDialog = ref(false);
-const signatures = ref([]);
-const defaultNewSignature = ref('none');
-const defaultReplySignature = ref('none');
-const insertBeforeQuoted = ref(false);
-
-const createSignature = () => {
-
-}
-
-const editSignature = (signature) => {
-
-}
-
-// 菜单切换
-const MenuClick = async (menuIndex) => {
-	if (await CheckShowEmailDetail() == false) {
-		return;
-	}
-	showEmailDetail.value = false
-	EmailTagIndex.value = 0
-	folderName.value = null
-	activeMenu.value = menuIndex
-	currentPage.value = 1
-
-	// 清除搜索状态
-	isSearchMode.value = false
-	lastSearchParams.value = null
-
-	// 获取邮件列表
-	getInboxEmail(currentPage.value, pageSize.value, menuIndex)
-}
-
-// 添加以下方法到 setup 中
-const getRowTags = (tagsString) => {
-	if (!tagsString) return [];
-	return tagsString.split(',').filter(tag => tag && !isNaN(tag)).map(Number);
-}
-
-// 添加这些方法到 setup 中
-const getTagName = (tagId) => {
-	const tag = EmailTagcheckboxoptions.value.find(t => t.value === tagId)
-	return tag ? tag.label : ''
-}
-
-// 可以根据标签ID返回不同的类型，实现标签的多彩效果
-// const getTagType = (tagId) => {
-// 	//EditEmailTags();
-// 	const types = ['', 'success', 'warning', 'info', 'danger']
-// 	return types[tagId % types.length]
-// }
-
-// 标签过滤列表
-const filterByTag = async (tagId) => {
-	if (await CheckShowEmailDetail() == false) {
-		return;
-	}
-	try {
-		showEmailDetail.value = false
-		// 设置当前选中的标签ID
-		EmailTagIndex.value = tagId.toString();
-		activeMenu.value = `tag-${tagId}`;
-		// 重置页码
-		currentPage.value = 1;
-		// 获取带有该标签的邮件列表
-		await getInboxEmail(currentPage.value, pageSize.value, 1);
-
-	} catch (error) {
-		console.error('按标签过滤邮件失败:', error);
-		ElMessage.error('获取标签邮件失败');
-	}
-}
-
-const isLoadingTags = ref(false)
-
-// 在复选框变化时调用
-const handleTagChange = async (value) => {
-	if (isLoadingTags.value) return;
-
-	// 获取最后一个改变的标签ID
-	const lastChangedTagId = value[value.length - 1];
-	// 判断是选中还是取消选中
-	const isChecked = EmailTagcheckboxGroup.value.includes(lastChangedTagId);
-
-	if (!isChecked) {
-		// 取消选中，直接调用EditEmailTags
-		EditEmailTags();
-	} else {
-		// 选中标签，调用SelectEmailTags
-		SelectEmailTags();
-	}
-}
-
-// 确认选择
-const handleConfirmSelection = async () => {
-	// 验证必填项
-	if (!BusinessOpportunityForm.value.opportunityId) {
-		ElMessage.warning('请选择商机编号');
-		return;
-	}
-
-	if (BusinessOpportunityForm.value.type === 'quotation' && !BusinessOpportunityForm.value.quotationId) {
-		ElMessage.warning('请选择报价单号');
-		return;
-	}
-
-	if (BusinessOpportunityForm.value.type === 'contract' && !BusinessOpportunityForm.value.contractId) {
-		ElMessage.warning('请选择合同编号');
-		return;
-	}
-
-	try {
-		// 根据不同类型更新销售阶段
-		let salesStage = '';
-		let docuementID = 0;
-		if (BusinessOpportunityForm.value.type === 'quotation') {
-			salesStage = BusinessOpportunityForm.value.tagNames.includes('初次报价') ? '初次报价' : '再次报价';
-			docuementID = BusinessOpportunityForm.value.quotationId;
-		} else if (BusinessOpportunityForm.value.type === 'contract') {
-			salesStage = '合同确定';
-			docuementID = BusinessOpportunityForm.value.contractId;
-		} else if (BusinessOpportunityForm.value.type === 'communication') {
-			salesStage = '沟通需求';
-			docuementID = 0;
-		}
-		// 更新商机销售阶段
-		const response = await request({
-			url: '/BusinessOpportunity/UpdateBusinessOpportunitySalesStage/UpdateSalesStage',
-			method: 'GET',
-			params: {
-				BusinessOpportunityID: BusinessOpportunityForm.value.opportunityId,
-				SalesStage: salesStage,
-				DocuementID: docuementID
-			}
-		});
-
-		if (response.code === 200) {
-			// 更新标签和关联信息
-			await EditEmailTags();
-			BusinessOpportunitySelectionDialog.value = false;
-			ElMessage.success('设置成功');
-		} else {
-			ElMessage.error(response.msg || '更新销售阶段失败');
-		}
-	} catch (error) {
-		console.error('设置失败:', error);
-		ElMessage.error('设置失败');
-	}
-}
-
-const SelectEmailTags = () => {
-	EmailModel.EmailTags = EmailTagcheckboxGroup.value.toString();
-	EmailModel.EmailTagNames = EmailTagcheckboxGroup.value.map(tagId => getTagName(tagId)).join(',');
-	// 根据标签名称判断需要打开的对话框类型
-	if (EmailModel.EmailTagNames.includes('初次报价')) {
-		openBusinessOpportunitySelectionDialog('quotation', ['初次报价']);
-		return;
-	}
-	if (EmailModel.EmailTagNames.includes('再次报价')) {
-		openBusinessOpportunitySelectionDialog('quotation', ['再次报价']);
-		return;
-	}
-	if (EmailModel.EmailTagNames.includes('合同确定')) {
-		openBusinessOpportunitySelectionDialog('contract', ['合同确定']);
-		return;
-	}
-	if (EmailModel.EmailTagNames.includes('沟通需求')) {
-		openBusinessOpportunitySelectionDialog('communication', ['沟通需求']);
-		return;
-	}
-	// 如果不是特殊标签，直接更新
-	EditEmailTags();
-}
-
-const EditEmailTags = () => {
-	EmailModel.EmailTags = EmailTagcheckboxGroup.value.toString();
-	EmailModel.EmailTagNames = EmailTagcheckboxGroup.value.map(tagId => getTagName(tagId)).join(',');
-	EmailModel.businessopportunityid = BusinessOpportunityForm.value.opportunityId;
-	request({
-		url: 'Email/EditEmailTags/EditEmailTags',
-		method: 'POST',
-		data: EmailModel
-	}).then(response => {
-		if (response != null) {
-			ElMessage({
-				message: response.msg,
-				type: 'success'
-			})
-		} else {
-			console.error('更新邮件标签失败');
-		}
-	}).catch(error => {
-		console.error('更新邮件标签失败！😔错误内容：', error);
-	})
-}
-const EmailTagcheckboxGroup = ref([]);
-const EmailTagcheckboxoptions = ref([]);
-const UserEmailTagList = ref([]);
-const GetUserEmailTagList = () => {
-	return request({
-		url: 'Email/GetUserEmailTagList/GetUserEmailTag',
-		method: 'GET'
-	}).then(response => {
-		if (response != null) {
-			if (EmailModel.EmailTags != null && EmailModel.EmailTags != '') {
-				var EmailTagArray = EmailModel.EmailTags.split(',');
-				response.data.forEach(item => {
-					EmailTagcheckboxoptions.value.push({ label: item.emailTagName, value: item.id });
-					if (EmailTagArray.length > 0) {
-						EmailTagArray.forEach(element => {
-							if (element == item.id) {
-								EmailTagcheckboxGroup.value.push(item.id);
-							}
-						});
-					}
-				});
-			} else {
-				response.data.forEach(item => {
-					EmailTagcheckboxoptions.value.push({ label: item.emailTagName, value: item.id });
-				});
-			}
-
-			UserEmailTagList.value = response.data;
-			return response.data.result;
-		} else {
-			return null;
-		}
-	}).catch(error => {
-		console.error(error);
-		return null;
-	});
-}
-GetUserEmailTagList();
-
-const initEmailTag = async () => {
-	// 清空当前标签数据
-	EmailTagcheckboxGroup.value = [];
-	UserEmailTagList.value = [];
-	newEmailTagName.value = '';
-
-	// 重新获取标签列表
-	const response = await request({
-		url: 'Email/GetUserEmailTagList/GetUserEmailTag',
-		method: 'GET'
-	});
-
-	if (response?.data) {
-		// 更新标签选项
-		EmailTagcheckboxoptions.value = response.data.map(item => ({
-			label: item.emailTagName,
-			value: item.id
-		}));
-		UserEmailTagList.value = response.data;
-	}
-}
-const newEmailTagName = ref('');
-const addNewEmailTag = async (type) => {
-	var nameStr = '';
-	if (type == 1) {
-		nameStr = newFolderName.value;
-		// 关闭新建文件夹对话框
-		showNewFolderDialog.value = false;
-	}
-	else {
-		nameStr = newEmailTagName.value;
-	}
-	if (nameStr == '') {
-		ElMessage({
-			message: '标签名称不能为空！😒',
-			type: 'warning'
-		})
-		return;
-	} try {
-		const response = await request({
-			url: 'Email/AddUserEmailTag/AddUserEmailTag',
-			method: 'POST',
-			data: {
-				EmailTagName: nameStr,
-				Type: 0
-			}
-		});
-		if (response.code == 200) {
-			ElMessage({
-				message: response.msg,
-				type: 'success'
-			});
-			// 重新初始化标签列表
-			await initEmailTag();
-			// 清空输入框
-			if (type === 1) {
-				newFolderName.value = '';
-			} else {
-				newEmailTagName.value = '';
-			}
-		} else {
-			ElMessage.error('添加新标签失败');
-		}
-	} catch (error) {
-		ElMessage.error('添加失败，请重试');
-	}
-}
-
-// 删除标签的方法
-const deleteEmailTag = async (tagId) => {
-	try {
-		await ElMessageBox.confirm('确定要删除此标签吗？', '提示', {
-			confirmButtonText: '确定',
-			cancelButtonText: '取消',
-			type: 'warning'
-		});
-
-		const response = await request({
-			url: 'Email/DelUserEmailTag/DelUserEmailTag',
-			method: 'Delete',
-			data: { id: tagId }
-		});
-		if (response.code == 200) {
-			ElMessage.success(response.msg);
-			initEmailTag();
-		}
-	} catch (error) {
-		if (error !== 'cancel') {
-			console.error('删除标签失败:', error);
-			ElMessage.error('删除标签失败');
-		}
-	}
-}
-
-
-// 自定义文件夹列表
-const customFolders = ref([])
-
-// 新建文件夹对话框控制
-const showNewFolderDialog = ref(false)
-const newFolderName = ref('')
-
-
-// 处理移动邮件命令
-const handleMoveEmail = async (command) => {
-	try {
-		// 保存当前的菜单状态
-		const currentMenuState = activeMenu.value;
-		// 移动邮件
-		await MoveEmail(command);
-
-		// 返回列表，但不要让backToList改变菜单状态
-		showEmailDetail.value = false;
-
-		// 刷新当前列表数据
-		await getInboxEmail(currentPage.value, pageSize.value, currentMenuState);
-
-	} catch (error) {
-		console.error('移动邮件失败:', error)
-		ElMessage.error('移动邮件失败')
-	}
-}
-
-//移动邮件
-const MoveEmail = (emailType) => {
-	EmailModel.emailType = emailType;
-	request({
-		url: 'Email/MoveEmail/MoveEmail',
-		method: 'POST',
-		data: EmailModel
-	}).then(response => {
-		if (response != null) {
-			ElMessage({
-				message: response.msg,
-				type: 'success'
-			})
-			//getInboxEmail(currentPage.value, pageSize.value, emailType);
-		} else {
-			console.error('移动邮件失败');
-		}
-	}).catch(error => {
-		console.error('移动邮件失败！😔错误内容：', error);
-	})
-}
-
-const folderName = ref(null);
-// 过滤分类邮件
-const filterByFolder = async (folderId) => {
-	if (await CheckShowEmailDetail() == false) {
-		return;
-	}
-	try {
-		showEmailDetail.value = false
-		// 设置当前选中的邮件分类ID
-		activeMenu.value = `folder-${folderId}`;
-		// 重置页码
-		currentPage.value = 1;
-		folderName.value = folderId;
-		// 获取该文件夹的邮件
-		await getInboxEmail(currentPage.value, pageSize.value, 1);
-
-	} catch (error) {
-		console.error('过滤分类邮件失败:', error);
-		ElMessage.error('获取分类邮件失败');
-	}
-}
-
-// 获取自定义文件夹列表
-const fetchCustomFolders = async () => {
-	try {
-		const response = await request({
-			url: 'Email/GetMailClassificationList/MailClassification',
-			method: 'GET'
-		})
-		if (response.data) {
-			if (response.data.length > 0) {
-				customFolders.value = response.data;
-				var index = 0;
-				customFolders.value.forEach(item => {
-					index++;
-					item.id = item.fromEmail;
-					item.fromEmail = GetFromEmailName(item.fromEmail);
-				});
-			}
-		}
-	} catch (error) {
-		console.error('获取文件夹列表失败:', error)
-	}
-}
-
-// 在组件挂载时获取文件夹列表
-onMounted(async () => {
-	await fetchCustomFolders()
-})
-
-const EmailModel = reactive({
-	"id": '',
-	"userID": '',
-	"emailID": '',
-	"emailType": 0,
-	"fromEmail": '',
-	"fromEmailAddress": '',
-	"toEmail": '',
-	"toEmailAddress": '',
-	"emailsubject": '',
-	"emailContent": '',
-	"emaildate": '',
-	"isRead": 0,
-	"EmailTags": '',
-	"EmailTagNames": '',
-	"businessopportunityid": 0
-});
-
-const activeMenu = ref('1');
-
-const GetFromEmailName = (fromEmail) => {
-	if (!fromEmail) return '未知';
-
-	// 匹配双引号中的内容
-	const nameMatch = fromEmail.match(/"([^"]+)"/);
-	if (nameMatch && nameMatch[1]) {
-		return nameMatch[1];
-	}
-
-	// 如果没有引号（纯邮箱地址），则返回@前的部分
-	const emailOnlyMatch = fromEmail.match(/^([^@]+)@/);
-	if (emailOnlyMatch && emailOnlyMatch[1]) {
-		return emailOnlyMatch[1];
-	}
-
-	// 如果都没匹配到，返回原始值
-	return fromEmail;
-}
-
-// 添加 HTML 净化函数
-const sanitizeHtml = (html) => {
-	if (!html) return ''
-	return DOMPurify.sanitize(html, {
-		ALLOWED_TAGS: [
-			'a', 'b', 'br', 'div', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-			'i', 'img', 'li', 'ol', 'p', 'span', 'strong', 'table', 'tbody',
-			'td', 'th', 'thead', 'tr', 'ul', 'blockquote'
-		],
-		ALLOWED_ATTR: [
-			'href', 'src', 'alt', 'title', 'style', 'target', 'class'
-		]
-	})
-}
-
-// 添加邮件内容样式控制
-const emailContentStyle = computed(() => ({
-	fontSize: '14px',
-	lineHeight: '1.6',
-	color: '#333',
-	fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-}))
-
-const EmailTableData = ref([]);
-const IsEditUserEmailConfig = ref(false);
-const selectedIndex = ref(null);
-const inboxEmailTable = ref([]);
-const EmailInboxArray = ref([]);
-const EmailTagIndex = ref(0);
-const ConfigEmaildialog = ref(false);
-const ConfigEmailForm = reactive({
-	id: 0,
-	userID: 0,
-	email: '',
-	password: '',
-	smtpPort: 0,
-	imapPort: 0,
-	emailSendServer: '',
-	emailReceiveServer: ''
-})
-
-// 初始化邮箱配置
-const initEmailConfig = async () => {
-	const response = await checkUserEmailConfig();
-	if (response && response.data) {
-		ConfigEmailForm.id = response.data.id;
-		ConfigEmailForm.userID = response.data.userID;
-		ConfigEmailForm.email = response.data.userEmail;
-		ConfigEmailForm.password = response.data.userEmailAuth;
-		ConfigEmailForm.emailSendServer = response.data.userEmailSendServer;
-		ConfigEmailForm.smtpPort = response.data.userEmailSendPort;
-		ConfigEmailForm.emailReceiveServer = response.data.userEmailReceiveServer;
-		ConfigEmailForm.imapPort = response.data.userEmailReceivePort;
-	}
-}
-initEmailConfig();
-
-const openUserEmailConfigDialog = async () => {
-	try {
-		// 显示加载指示器
-		const loading = ElLoading.service({
-			lock: true,
-			text: '正在获取邮箱配置...',
-			background: 'rgba(0, 0, 0, 0.7)',
-		})
-
-		// 强制重新获取最新配置
-		const response = await request({
-			url: 'Email/GetEmailConfigByUser/GetEmailConfigByUser',
-			method: 'GET',
-			params: { timestamp: new Date().getTime() } // 添加时间戳避免缓存
-		})
-
-		loading.close()
-
-		if (response && response.data) {
-			// 更新所有字段，确保完整加载
-			ConfigEmailForm.id = response.data.id || 0
-			ConfigEmailForm.userID = response.data.userID || 0
-			ConfigEmailForm.email = response.data.userEmail || ''
-			ConfigEmailForm.password = response.data.userEmailAuth || ''
-			ConfigEmailForm.emailSendServer = response.data.userEmailSendServer || ''
-			ConfigEmailForm.smtpPort = response.data.userEmailSendPort || 0
-			ConfigEmailForm.emailReceiveServer = response.data.userEmailReceiveServer || ''
-			ConfigEmailForm.imapPort = response.data.userEmailReceivePort || 0
-			IsEditUserEmailConfig.value = true
-			ConfigEmaildialog.value = true
-		} else {
-			IsEditUserEmailConfig.value = false
-			ConfigEmaildialog.value = true
-			ElMessage.warning('未能获取邮箱配置数据')
-		}
-	} catch (error) {
-		console.error('获取邮箱配置失败:', error)
-		ElMessage.error('获取邮箱配置失败')
-		ConfigEmaildialog.value = true
-	}
-}
-
-
-function checkUserEmailConfig() {
-	return request({
-		url: 'Email/GetEmailConfigByUser/GetEmailConfigByUser',
-		method: 'GET'
-	}).then(response => {
-		if (response != null) {
-			return response;
-		} else {
-			return null;
-		}
-	}).catch(error => {
-		console.error(error);
-		return null;
-	});
-}
-
-function ConfigUserEmail() {
-	const loading = ElLoading.service({
-		lock: true,
-		text: '正在配置邮箱并获取邮件，请稍等.....',
-		background: 'rgba(0, 0, 0, 0.7)',
-	})
-	try {
-		var requestData = {
-			id: ConfigEmailForm.id,
-			UserID: ConfigEmailForm.userID,
-			UserEmail: ConfigEmailForm.email,
-			UserEmailSendServer: ConfigEmailForm.emailSendServer,
-			UserEmailReceiveServer: ConfigEmailForm.emailReceiveServer,
-			UserEmailAuth: ConfigEmailForm.password,
-			UserEmailSendPort: ConfigEmailForm.smtpPort,
-			UserEmailReceivePort: ConfigEmailForm.imapPort
-		}
-		if (IsEditUserEmailConfig.value == false) {
-			request({
-				url: 'Email/AddUserEmailConfig/AddUserEmailConfig',
-				method: 'POST',
-				data: requestData
-			}).then(response => {
-				if (response != null) {
-					ConfigEmaildialog.value = false;
-					ElMessage({
-						message: response.msg,
-						type: 'success'
-					})
-					getInboxEmail(currentPage.value, pageSize.value, 1);
-					initEmailTag();
-					fetchCustomFolders();
-				} else {
-					console.error('No data in response');
-				}
-			}).catch(error => {
-				console.error('邮箱配置失败:', error);
-			}).finally(() => {
-				// 在请求完成之后，无论成功或失败，关闭加载动画
-				loading.close();
-			});
-		} else {
-			request({
-				url: 'Email/EditUserEmailConfig/EditUserEmailConfig',
-				method: 'POST',
-				data: requestData
-			}).then(response => {
-				if (response != null) {
-					ConfigEmaildialog.value = false;
-					ElMessage({
-						message: response.msg,
-						type: 'success'
-					})
-					getInboxEmail(currentPage.value, pageSize.value, 1);
-					initEmailTag();
-					fetchCustomFolders();
-				} else {
-					console.error('No data in response');
-				}
-			}).catch(error => {
-				console.error('邮箱配置失败:', error);
-			}).finally(() => {
-				// 在请求完成之后，无论成功或失败，关闭加载动画
-				loading.close();
-			});
-		}
-	} catch (error) {
-		loading.close();
-		console.error('邮箱配置失败:', error);
-	}
-}
-
-function UnbindUserEmail() {
-	// 弹出确认对话框，提示用户确认解绑操作
-	ElMessageBox.confirm('确定要解绑当前邮箱吗？解绑后将无法收发邮件。', '提示', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'warning'
-	}).then(async () => {
-		try {
-			// 显示加载动画
-			const loading = ElLoading.service({
-				lock: true,
-				text: '正在解绑邮箱，请稍等...',
-				background: 'rgba(0, 0, 0, 0.7)',
-			})
-
-			var requestData = {
-				id: ConfigEmailForm.id,
-				UserEmail: ConfigEmailForm.email,
-				UserEmailSendServer: ConfigEmailForm.emailSendServer,
-				UserEmailReceiveServer: ConfigEmailForm.emailReceiveServer,
-				UserEmailAuth: ConfigEmailForm.password,
-				UserEmailSendPort: ConfigEmailForm.smtpPort,
-				UserEmailReceivePort: ConfigEmailForm.imapPort,
-				UserID: 0
-			}
-
-			// 调用解绑邮箱API
-			const response = await request({
-				url: 'Email/UnbindEmail/UnbindEmail',
-				method: 'POST',
-				data: requestData
-			})
-
-			loading.close()
-
-			if (response.code === 200) {
-				// 解绑成功，显示成功消息
-				ElMessage.success(response.msg || '解绑邮箱成功')
-
-				// 清空所有邮件相关数据
-				EmailTableData.value = []
-				originalEmailData.value = []
-				totalItems.value = 0
-
-				// 清空标签相关数据
-				UserEmailTagList.value = []
-				EmailTagcheckboxoptions.value = []
-				EmailTagcheckboxGroup.value = []
-
-				// 清空文件夹数据
-				customFolders.value = []
-
-				// 重置表单数据
-				ConfigEmailForm.id = 0
-				ConfigEmailForm.userID = 0
-				ConfigEmailForm.email = ''
-				ConfigEmailForm.password = ''
-				ConfigEmailForm.emailSendServer = ''
-				ConfigEmailForm.emailReceiveServer = ''
-				ConfigEmailForm.smtpPort = 0
-				ConfigEmailForm.imapPort = 0
-
-				// 重置当前邮件详情
-				showEmailDetail.value = false
-				currentEmail.value = {
-					id: '',
-					subject: '',
-					from: '',
-					to: '',
-					cc: '',
-					date: '',
-					content: '',
-					attachments: []
-				}
-
-				// 关闭配置对话框
-				ConfigEmaildialog.value = false
-
-				// 重置邮箱配置状态
-				IsEditUserEmailConfig.value = false
-
-				// 关闭当前邮箱页面并返回首页
-				closePage().then(() => {
-					console.log('关闭邮箱页面')
-				})
-			} else {
-				// 解绑失败，显示错误消息
-				ElMessage.error(response.msg || '解绑邮箱失败')
-			}
-		} catch (error) {
-			// 捕获并处理异常
-			console.error('解绑邮箱失败:', error)
-			ElMessage.error('解绑邮箱失败，请重试')
-		}
-	}).catch(() => {
-		// 用户取消操作，不做任何处理
-	})
-}
-
-const VerifyUserEmailConfigurationExists = () => {
-	return request({
-		url: 'Email/VerifyUserEmailConfigurationExists/VerifyUserEmailConfigurationExists',
-		method: 'GET'
-	}).then(response => {
-		if (response.data == 0) {
-			ElMessage({
-				message: '您还没有配置邮箱，请先进行邮箱配置！',
-				type: 'warning'
-			})
-			ConfigEmaildialog.value = true;
-
-		} else {
-			ConfigEmaildialog.value = false;
-			getInboxEmail(currentPage.value, pageSize.value, 1);
-			initEmailTag();
-			fetchCustomFolders();
-		}
-	}).catch(error => {
-		console.error(error);
-		return null;
-	});
-}
-VerifyUserEmailConfigurationExists();
-
-const handleEmailInput = () => {
-	const email = ConfigEmailForm.email;
-	const atIndex = email.indexOf('@');
-	if (atIndex !== -1) {
-		const domain = email.substring(atIndex + 1);
-		ConfigEmailForm.password = '';
-		ConfigEmailForm.emailSendServer = 'smtp.' + domain;
-		ConfigEmailForm.emailReceiveServer = 'imap.' + domain;
-		ConfigEmailForm.smtpPort = 465;
-		ConfigEmailForm.imapPort = 993;
-	}
-};
-const router = useRouter();
-const handleConfigEmailDialogClose = () => {
-	if (ConfigEmailForm.email == '' || ConfigEmailForm.password == '' || ConfigEmailForm.emailSendServer == '' || ConfigEmailForm.emailReceiveServer == '' || ConfigEmailForm.smtpPort == 0 || ConfigEmailForm.imapPort == 0) {
-		closePage().then(() => {
-			console.log('关闭邮箱标签页');
-		});
-	};
-}
-function getInboxEmail(start, end, emailType) {
-	activeMenu.value = emailType;
-	EmailTableData.value = [];
-	return new Promise((resolve, reject) => {
-		request({
-			url: 'Email/GetEmailInboxList/GetInbox',
-			method: 'GET',
-			params: {
-				PageNum: start,
-				PageSize: end,
-				EmailType: emailType,
-				EmailTagIndex: EmailTagIndex.value,
-				floderName: folderName.value
-			}
-		}).then(response => {
-			if (response.data.result.length > 0) {
-				// 清空数组
-				EmailTableData.value = []
-				const processedEmails = response.data.result.map(item => ({
-					id: item.id,
-					subject: item.emailsubject,
-					date: item.emaildate,
-					name: GetFromEmailName(item.fromEmail),
-					tags: item.emailtags,
-					content: item.emailContent,
-					emailTags: item.emailTags,
-					toEmail: item.toEmail,
-					ccEmail: item.ccEmail,
-					fromEmailAddress: item.fromEmailAddress,
-					EmailID: item.emailID,
-					hasAttachments: item.isAttachments === 1,
-					isRead: item.isRead
-				}))
-
-				EmailTableData.value = processedEmails
-				originalEmailData.value = [...processedEmails] // 保存原始数据
-				totalItems.value = response.data.totalNum
-				selectedIndex.value = ref(null)
-			} else {
-				if (response.data.totalNum > 0 && start > 1) {
-					getInboxEmail(start - 1, end, 1);
-				}
-				EmailInboxArray.value = null;
-			}
-		}).catch(error => {
-			console.error(error);
-			reject(error);  // Reject the promise if an error occurs
-		});
-	});
-}
-
-
-// 控制高级搜索对话框的显示
-const showAdvancedSearch = ref(false)
-
-// 高级搜索表单数据
-const searchForm = reactive({
-	sender: '',
-	receiver: '',
-	subject: '',
-	includeWords: '',
-	excludeWords: '',
-	dateRange: '1', // 默认1天
-	customDateRange: [],
-	searchScope: '0', // 默认搜索所有邮件
-	hasAttachment: false
-})
-
-// 添加重置搜索表单的方法
-const resetSearchForm = () => {
-	// 重置搜索表单数据
-	searchForm.sender = ''
-	searchForm.receiver = ''
-	searchForm.subject = ''
-	searchForm.includeWords = ''
-	searchForm.excludeWords = ''
-	searchForm.dateRange = '1'
-	searchForm.customDateRange = []
-	searchForm.searchScope = '0'
-	searchForm.hasAttachment = false
-
-	// 清除搜索状态
-	isSearchMode.value = false
-	lastSearchParams.value = null
-
-	// 重置页码和每页显示数量
-	currentPage.value = 1
-	pageSize.value = 20  // 或者你设定的默认值
-	// 重新获取普通邮件列表
-	getInboxEmail(currentPage.value, pageSize.value, activeMenu.value)
-}
-
-// 添加一个变量来跟踪是否处于搜索结果状态
-const isSearchMode = ref(false)
-const lastSearchParams = ref(null)
-
-// 处理高级搜索
-const handleAdvancedSearch = async () => {
-	try {
-		// 构建搜索参数
-		const searchParams = {
-			sender: searchForm.sender,
-			receiver: searchForm.receiver,
-			subject: searchForm.subject,
-			includeWords: searchForm.includeWords,
-			excludeWords: searchForm.excludeWords,
-			hasAttachment: searchForm.hasAttachment ? 1 : 0,
-			searchScope: searchForm.searchScope,
-			startDate: null,
-			endDate: null
-		}
-
-		// 处理日期范围...
-		if (searchForm.dateRange === 'custom' && searchForm.customDateRange?.length === 2) {
-			searchParams.startDate = searchForm.customDateRange[0]
-			searchParams.endDate = searchForm.customDateRange[1]
-		} else if (searchForm.dateRange !== 'custom' && searchForm.dateRange) {
-			const days = parseInt(searchForm.dateRange)
-			searchParams.endDate = new Date()
-			searchParams.startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
-		}
-
-		// 保存搜索参数
-		lastSearchParams.value = searchParams
-		isSearchMode.value = true
-
-		// 执行搜索...
-		const response = await request({
-			url: 'Email/SearchEmailInboxList/SearchEmailList',
-			method: 'GET',
-			params: searchParams
-		})
-
-		if (response.data) {
-			// 更新邮件列表...
-			EmailTableData.value = response.data.result.map(item => ({
-				id: item.id,
-				subject: item.emailsubject,
-				date: item.emaildate,
-				name: GetFromEmailName(item.fromEmail),
-				tags: item.emailtags,
-				content: item.emailContent,
-				emailTags: item.emailTags,
-				toEmail: item.toEmail,
-				fromEmailAddress: item.fromEmailAddress,
-				EmailID: item.emailID,
-				hasAttachments: item.isAttachments === 1,
-				isRead: item.isRead
-			}))
-			totalItems.value = response.data.totalNum
-			currentPage.value = 1
-			showAdvancedSearch.value = false
-			ElMessage.success('搜索完成')
-		} else {
-			ElMessage.warning('未找到匹配的邮件')
-		}
-	} catch (error) {
-		console.error('搜索失败:', error)
-		ElMessage.error('搜索失败，请重试')
-	}
-}
-
-const markAsRead = async (row) => {
-	if (!row.id) {
-		ElMessage.warning('无法获取邮件ID')
-		return
-	}
-	try {
-		if (row.isRead == 1) {
-			const response = await request({
-				url: 'Email/EditEmailIsRead/EditEmailIsRead',
-				method: 'POST',
-				data: {
-					id: row.id,
-					isRead: 0
-				}
-			})
-			if (response.code === 200) {
-				row.isRead = 0;
-			} else {
-				ElMessage.error(response.msg || '标记已读失败')
-			}
-		}
-	} catch (error) {
-		console.error('标记邮件为已读失败:', error)
-		ElMessage.error('操作失败，请重试')
-	}
-}
-
-// 标记邮件为未读
-const markAsUnread = async (emailId) => {
-	if (!emailId) {
-		ElMessage.warning('无法获取邮件ID')
-		return
-	}
-	try {
-		const response = await request({
-			url: 'Email/EditEmailIsRead/EditEmailIsRead',
-			method: 'POST',
-			data: {
-				id: emailId,
-				isRead: 1
-			}
-		})
-
-		if (response.code === 200) {
-			ElMessage.success(response.msg)
-			// 刷新邮件列表
-			await getInboxEmail(currentPage.value, pageSize.value, activeMenu.value)
-		} else {
-			ElMessage.error(response.msg || '标记未读失败')
-		}
-	} catch (error) {
-		console.error('标记邮件为未读失败:', error)
-		ElMessage.error('操作失败，请重试')
-	}
-}
-
-// 分页相关的响应式变量
-const currentPage = ref(1)
-const pageSize = ref(20)
-const totalItems = ref(0)
-
-
-// 处理页码改变
-const handleCurrentChange = async (newPage) => {
-	try {
-		if (isSearchMode.value && lastSearchParams.value) {
-			// 在搜索模式下，使用上次的搜索参数，但更新页码
-			const searchParams = {
-				...lastSearchParams.value,
-				PageNum: newPage,
-				PageSize: pageSize.value
-			}
-
-			const response = await request({
-				url: 'Email/SearchEmailInboxList/SearchEmailList',
-				method: 'GET',
-				params: searchParams
-			})
-
-			if (response.data) {
-				EmailTableData.value = response.data.result.map(item => ({
-					id: item.id,
-					subject: item.emailsubject,
-					date: item.emaildate,
-					name: GetFromEmailName(item.fromEmail),
-					tags: item.emailtags,
-					content: item.emailContent,
-					emailTags: item.emailTags,
-					toEmail: item.toEmail,
-					fromEmailAddress: item.fromEmailAddress,
-					EmailID: item.emailID,
-					hasAttachments: item.isAttachments === 1,
-					isRead: item.isRead
-				}))
-				totalItems.value = response.data.totalNum
-				currentPage.value = newPage
-			}
-		} else {
-			// 非搜索模式下的普通分页
-			await fetchEmailList(newPage, pageSize.value)
-		}
-	} catch (error) {
-		console.error('获取邮件列表失败:', error)
-		ElMessage.error('获取邮件列表失败')
-	}
-}
-
-// 处理每页显示数量改变
-const handleSizeChange = async (newSize) => {
-	try {
-		pageSize.value = newSize
-		if (isSearchMode.value && lastSearchParams.value) {
-			// 在搜索模式下，使用上次的搜索参数，但更新页码和每页数量
-			const searchParams = {
-				...lastSearchParams.value,
-				PageNum: 1, // 切换每页显示数量时重置为第一页
-				PageSize: newSize
-			}
-
-			const response = await request({
-				url: 'Email/SearchEmailInboxList/SearchEmailList',
-				method: 'GET',
-				params: searchParams
-			})
-
-			if (response.data) {
-				EmailTableData.value = response.data.result.map(item => ({
-					id: item.id,
-					subject: item.emailsubject,
-					date: item.emaildate,
-					name: GetFromEmailName(item.fromEmail),
-					tags: item.emailtags,
-					content: item.emailContent,
-					emailTags: item.emailTags,
-					toEmail: item.toEmail,
-					fromEmailAddress: item.fromEmailAddress,
-					EmailID: item.emailID,
-					hasAttachments: item.isAttachments === 1,
-					isRead: item.isRead
-				}))
-				totalItems.value = response.data.totalNum
-				currentPage.value = 1
-			}
-		} else {
-			// 非搜索模式下的普通分页
-			currentPage.value = 1
-			await fetchEmailList(1, newSize)
-		}
-	} catch (error) {
-		console.error('获取邮件列表失败:', error)
-		ElMessage.error('获取邮件列表失败')
-	}
-}
-
-// 获取邮件列表数据
-const fetchEmailList = async (page, size) => {
-	getInboxEmail(page, size, activeMenu.value);
-}
-
-// 在组件挂载时获取第一页数据
-onMounted(async () => {
-	try {
-		await fetchEmailList(currentPage.value, pageSize.value)
-	} catch (error) {
-		console.error('初始化邮件列表失败:', error)
-	}
-})
-
-
-
-// 标签相关的响应式变量
-const selectedTags = ref([])
-
-// 监听标签选择变化
-watch(selectedTags, async (newTags) => {
-	try {
-		await updateEmailTags(currentEmail.value.id, newTags)
-		ElMessage.success('标签更新成功')
-		// 更新当前邮件的标签
-		currentEmail.value.tags = newTags
-	} catch (error) {
-		console.error('更新标签失败:', error)
-		ElMessage.error('标签更新失败')
-	}
-})
-
-// 更新邮件标签的方法
-const updateEmailTags = async (emailId, tagIds) => {
-	// TODO: 实现调用后端 API 更新邮件标签
-	return new Promise((resolve) => {
-		setTimeout(resolve, 500) // 模拟 API 调用
-	})
-}
-
-// 添加新的响应式变量
-const dialogTitle = ref('新邮件')
-const emailType = ref('new') // new, reply, replyAll, forward
-
-// 辅助函数：将邮箱字符串转换为数组
-const parseEmailList = (emailStr) => {
-	if (!emailStr) return []
-	if (Array.isArray(emailStr)) return emailStr
-	return emailStr.split(/[,;]/)
-		.map(email => email.trim())
-		.filter(email => email && validateEmail(email))
-}
-
-// 辅助函数：过滤掉重复的邮箱地址
-const uniqueEmails = (emails) => {
-	return [...new Set(emails)]
-}
-
-// 修改后的处理抄送的逻辑
-const handleCcList = (ccList) => {
-	const currentUserEmail = ConfigEmailForm.email
-	return uniqueEmails(parseEmailList(ccList))
-		.filter(email => email !== currentUserEmail)
-}
-// 处理回复邮件
-const handleReply = async (replyAll = false) => {
-	emailForm.originalMessageId = SelectEmailID;
-	emailType.value = replyAll ? 'replyAll' : 'reply'
-	dialogTitle.value = replyAll ? '回复全部' : '回复'
-	await GetEmailContract() // 获取联系人数据
-	// 设置收件人 - 只设置原始发件人
-	emailForm.ToEmail = [currentEmail.value.from]
-	// 处理抄送
-	if (replyAll && currentEmail.value.cc) {
-		const ccList = handleCcList(currentEmail.value.cc)
-		if (ccList.length > 0) {
-			showCc.value = true // 自动显示抄送字段
-			emailForm.cc = ccList
-		}
-	} else {
-		showCc.value = false
-		emailForm.cc = []
-	}
-	// 设置主题
-	emailForm.subject = `回复: ${currentEmail.value.subject}`
-	// 设置内容
-	emailForm.content = `
-        <br><br>
-        <p>------------------ 原始邮件 ------------------</p>
-        <p>发件人: ${currentEmail.value.from}</p>
-        <p>发送时间: ${currentEmail.value.date}</p>
-        <p>主题: ${currentEmail.value.subject}</p>
-        <p>收件人: ${currentEmail.value.to}</p>
-        ${currentEmail.value.cc ? `<p>抄送: ${currentEmail.value.cc}</p>` : ''}
-        ${currentEmail.value.content}
-    `
-	showEmailDialog.value = true
-}
-
-// 修改转发邮件的处理函数
-const handleForward = async () => {
-	emailType.value = 'forward'
-	dialogTitle.value = '转发'
-	await GetEmailContract() // 获取联系人数据
-	// 清空收件人和抄送
-	emailForm.ToEmail = []
-	emailForm.cc = []
-
-	// 设置主题
-	emailForm.subject = `转发: ${currentEmail.value.subject}`
-
-	// 设置内容
-	emailForm.content = `
-        <br><br>
-        <p>------------------ 转发邮件 ------------------</p>
-        <p>发件人: ${currentEmail.value.from}</p>
-        <p>发送时间: ${currentEmail.value.date}</p>
-        <p>主题: ${currentEmail.value.subject}</p>
-        <p>收件人: ${currentEmail.value.to}</p>
-        ${currentEmail.value.content}
-    `
-
-	// 如果有附件，复制原邮件的附件
-	if (currentEmail.value.attachments?.length) {
-		// 清空当前附件列表
-		fileList.value = []
-
-		// 获取原邮件的附件
-		for (const attachment of currentEmail.value.attachments) {
-			try {
-				// 获取附件内容
-				const response = await request({
-					url: 'Email/DownloadAttachment/DownloadAttachment',
-					method: 'GET',
-					params: { id: attachment.id },
-					responseType: 'blob'
-				})
-
-				// 转换为 Base64
-				const base64Content = await blobToBase64(response.data)
-
-				// 添加到文件列表
-				fileList.value.push({
-					name: attachment.name,
-					size: attachment.size,
-					uid: Date.now() + Math.random().toString(36).substr(2, 9),
-					raw: new File([response.data], attachment.name),
-					// 保存 base64 内容以便发送
-					base64Content: base64Content
-				})
-			} catch (error) {
-				console.error('获取附件失败:', error)
-				ElMessage.warning(`附件 "${attachment.name}" 获取失败`)
-			}
-		}
-	}
-
-	showEmailDialog.value = true
-}
-
-// 添加 blob 转 base64 的辅助函数
-const blobToBase64 = (blob) => {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader()
-		reader.onload = () => {
-			const base64String = reader.result.toString().split(',')[1]
-			resolve(base64String)
-		}
-		reader.onerror = reject
-		reader.readAsDataURL(blob)
-	})
-}
-
-// 控制详情页显示
-const showEmailDetail = ref(false)
-
-// 当前查看的邮件数据
-const currentEmail = ref({
-	id: '',
-	subject: '',
-	from: '',
-	to: '',
-	cc: '',
-	date: '',
-	content: '',
-	attachments: []
-})
-
-
-
-const downloadAttachment = (id, fileName, fileUrl) => {
-	//方法 1: 如果文件URL可以直接访问
-	if (fileUrl) {
-		const link = document.createElement('a')
-		link.href = fileUrl
-		link.download = fileName
-		document.body.appendChild(link)
-		link.click()
-		document.body.removeChild(link)
-	} else {
-		// 方法 2: 如果需要通过API下载
-		request({
-			url: `Email/DownloadAttachment/DownloadAttachment`,
-			method: 'GET',
-			params: { id: id },
-			responseType: 'blob'  // 重要：设置响应类型为blob
-		}).then(response => {
-			const blob = new Blob([response.data])
-			const link = document.createElement('a')
-			link.href = URL.createObjectURL(blob)
-			link.download = fileName
-			document.body.appendChild(link)
-			link.click()
-			document.body.removeChild(link)
-			URL.revokeObjectURL(link.href)
-		}).catch(error => {
-			console.error('下载失败:', error)
-			ElMessage.error('下载失败，请重试')
-		})
-	}
-}
-
-// 获取邮件附件
-const GetEmailAttachment = async (emailId) => {
-	const response = await request({
-		url: 'Email/GetEmailAttachments/GetEmailAttachments',
-		method: 'GET',
-		params: {
-			emailId: emailId
-		}
-	});
-	console.log(response.data);
-	return response.data;
-}
-const SelectEmailID = ref('');
-// 处理行点击，显示邮件详情
-const handleRowClick = async (row) => {
-	SelectEmailID.value = row.id;
-	// 保存当前状态
-	const attachmentsList = await GetEmailAttachment(row.EmailID);
-	currentEmail.value = {
-		id: row.id,
-		subject: row.subject,
-		from: row.fromEmailAddress,
-		to: row.toEmail,
-		cc: row.ccEmail || null, // 如果有抄送则显示，没有则为null
-		date: row.date,
-		content: row.content,
-		attachments: attachmentsList.map(attachment => ({
-			id: attachment.id,
-			name: attachment.attachmentsName,
-			fileUrl: attachment.attachmentsDownLoadUrl
-		}))
-	};
-
-	EmailModel.id = row.id;
-	EmailModel.emailsubject = row.subject;
-	EmailModel.fromEmail = row.fromEmailAddress;
-	isLoadingTags.value = true;
-	markAsRead(row); // 标记为已读
-
-	try {
-		// 清空当前选中的标签
-		EmailTagcheckboxGroup.value = [];
-		EmailTagcheckboxoptions.value = []; // 清空标签选项
-
-		// 重新获取标签列表
-		const response = await request({
-			url: 'Email/GetUserEmailTagList/GetUserEmailTag',
-			method: 'GET'
-		});
-
-		if (response?.data) {
-			// 更新标签选项
-			EmailTagcheckboxoptions.value = response.data.map(item => ({
-				label: item.emailTagName,
-				value: item.id
-			}));
-
-			// 如果当前邮件有标签，设置选中状态
-			if (row.emailTags) {
-				const tagArray = row.emailTags.split(',');
-				tagArray.forEach(tagId => {
-					if (tagId && !isNaN(tagId)) {
-						EmailTagcheckboxGroup.value.push(Number(tagId));
-					}
-				});
-			}
-		}
-	} catch (error) {
-		console.error('获取标签列表失败:', error);
-		ElMessage.error('获取标签列表失败');
-	} finally {
-		isLoadingTags.value = false;
-		showEmailDetail.value = true;
-	}
-}
-
-// 返回列表
-const backToList = async (updateMenu = true) => {
-	if (await CheckShowEmailDetail() == false) {
-		return;
-	}
-	showEmailDetail.value = false
-	if (isSearchMode.value && lastSearchParams.value) {
-		// 如果是搜索模式，使用保存的搜索参数和当前页码
-		const searchParams = {
-			...lastSearchParams.value,
-			PageNum: currentPage.value,  // 使用当前页码
-			PageSize: pageSize.value
-		}
-
-		const response = await request({
-			url: 'Email/SearchEmailInboxList/SearchEmailList',
-			method: 'GET',
-			params: searchParams
-		})
-
-		if (response.data) {
-			EmailTableData.value = response.data.result.map(item => ({
-				id: item.id,
-				subject: item.emailsubject,
-				date: item.emaildate,
-				name: GetFromEmailName(item.fromEmail),
-				tags: item.emailtags,
-				content: item.emailContent,
-				emailTags: item.emailTags,
-				toEmail: item.toEmail,
-				fromEmailAddress: item.fromEmailAddress,
-				EmailID: item.emailID,
-				hasAttachments: item.isAttachments === 1,
-				isRead: item.isRead
-			}))
-			totalItems.value = response.data.totalNum
-		}
-	} else if (updateMenu) {
-		// 普通模式，使用当前页码获取邮件列表
-		await getInboxEmail(currentPage.value, pageSize.value, activeMenu.value)
-	}
-}
-
-const GetEmailContract = async () => {
-	return request({
-		url: 'Email/GetEmailContact/GetEmailContact',
-		method: 'GET'
-	}).then(response => {
-		recipientTreeData.value = response.data;
-	}).catch(error => {
-		console.error(error);
-	});
-}
-
-// 收件人树形数据
-const recipientTreeData = ref([])
-
-// 邮箱验证函数
-const validateEmail = (email: string) => {
-	const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-	return emailRegex.test(email)
-}
-
-// 过滤收件人的方法
-const filterRecipients = (query: string) => {
-	if (query) {
-		// 这里可以实现搜索逻辑
-		// 如果需要，可以调用后端 API 进行搜索
-	}
-}
-
-// 文件列表
-const fileList = ref([])
-// 文件输入引用
-const fileInput = ref(null)
-
-// 格式化文件大小
-const formatFileSize = (bytes) => {
-	if (bytes === 0) return '0 B'
-	const k = 1024
-	const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-	const i = Math.floor(Math.log(bytes) / Math.log(k))
-	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-
-// 控制全屏状态
-const isFullscreen = ref(false)
-
-// 切换全屏状态
-const toggleFullScreen = () => {
-	isFullscreen.value = !isFullscreen.value
-}
-
-// Quill 编辑器配置
-const editorOptions = {
-	modules: {
-		toolbar: [
-			['bold', 'italic', 'underline', 'strike'],
-			['blockquote', 'code-block'],
-			[{ 'header': 1 }, { 'header': 2 }],
-			[{ 'list': 'ordered' }, { 'list': 'bullet' }],
-			[{ 'script': 'sub' }, { 'script': 'super' }],
-			[{ 'indent': '-1' }, { 'indent': '+1' }],
-			[{ 'direction': 'rtl' }],
-			[{ 'size': ['small', false, 'large', 'huge'] }],
-			[{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-			[{ 'color': [] }, { 'background': [] }],
-			[{ 'font': [] }],
-			[{ 'align': [] }],
-			['clean'],
-			['link', 'image']
-		]
-	},
-	placeholder: '撰写邮件...',
-}
-
-// 发送新邮件
-const sendNewEmail = async () => {
-	try {
-		// 基本验证
-		if (!emailForm.ToEmail.length) {
-			ElMessage.warning('请填写收件人')
-			return
-		}
-		if (!emailForm.subject) {
-			ElMessage.warning('请填写主题')
-			return
-		}
-		if (!emailForm.emailTags) {
-			ElMessage.warning('请选择标签')
-			return
-		}
-		// 验证所有邮箱格式
-		const allEmails = [
-			...emailForm.ToEmail,
-			...(emailForm.cc || []),
-			...(emailForm.bcc || [])
-		]
-
-		const invalidEmails = allEmails.filter(email => !validateEmail(email))
-		if (invalidEmails.length > 0) {
-			ElMessage.error(`以下邮箱格式不正确：${invalidEmails.join(', ')}`)
-			return
-		}
-		// 检查并添加签名
-		await appendSignatureIfEnabled()
-		// 处理新附件
-		const attachments = await Promise.all(
-			fileList.value.map(async file => {
-				if (file.raw) {
-					const base64Content = await convertFileToBase64(file.raw)
-					return {
-						FileName: file.name,
-						FileContent: base64Content,
-						FileSize: file.size,
-						ContentType: file.raw.type
-					}
-				}
-				return null
-			})
-		).then(results => results.filter(Boolean))
-
-		alert(emailForm.originalMessageId);
-		// 构建发送数据
-		const emailData = {
-			ToEmail: emailForm.ToEmail,
-			CcEmail: emailForm.cc || [],
-			BccEmail: emailForm.bcc || [],
-			Subject: emailForm.subject,
-			EmailContent: emailForm.content,
-			Attachments: attachments,
-			EmailTags: emailForm.emailTags,
-			EmailTagNames: EmailTagcheckboxoptions.value.find(option => option.value === emailForm.emailTags).label,
-			originalMessageId: Number(emailForm.originalMessageId)
-		}
-
-		const loading = ElLoading.service({
-			lock: true,
-			text: '正在发送邮件，请稍候...',
-			background: 'rgba(0, 0, 0, 0.7)'
-		})
-
-		try {
-			const response = await request({
-				url: 'Email/SendEmail/send',
-				method: 'POST',
-				data: emailData
-			})
-
-			if (response.code === 200) {
-				ElMessage.success('邮件发送成功')
-				showEmailDialog.value = false
-				resetEmailForm()
-				// 如果在已发送文件夹，刷新列表
-				if (activeMenu.value === '2') {
-					await getInboxEmail(currentPage.value, pageSize.value, activeMenu.value)
-				}
-			} else {
-				ElMessage.error(response.msg || '发送失败')
-			}
-		} finally {
-			loading.close()
-		}
-	} catch (error) {
-		console.error('发送邮件失败:', error)
-		ElMessage.error('发送失败，请重试')
-	}
-}
-
-// 发送草稿邮件
-const sendFromDraft = async () => {
-	var loading = null;
-	try {
-		// 基本验证
-		if (!emailForm.ToEmail.length) {
-			ElMessage.warning('请填写收件人')
-			return
-		}
-		if (!emailForm.subject) {
-			ElMessage.warning('请填写主题')
-			return
-		}
-		// 检查并添加签名
-		await appendSignatureIfEnabled()
-		// 处理附件信息 - 区分已有附件和新上传的附件
-		const attachments = await Promise.all(fileList.value.map(async file => {
-			// 如果是已有的附件（从草稿加载的）
-			if (file.id && file.fileUrl) {
-				return {
-					Id: file.id,
-					FileName: file.name,
-					FileSize: file.size,
-					FileUrl: file.fileUrl,
-					AttachmentId: file.id
-				}
-			}
-
-			// 如果是新上传的附件
-			if (file.raw) {
-				const base64Content = await convertFileToBase64(file.raw)
-				return {
-					FileName: file.name,
-					FileSize: file.size,
-					FileContent: base64Content,
-					ContentType: file.raw.type
-				}
-			}
-
-			return null
-		})).then(results => results.filter(Boolean))
-
-		// 构建草稿发送数据
-		const draftData = {
-			DraftId: emailForm.draftId,
-			ToEmail: emailForm.ToEmail,
-			CcEmail: emailForm.cc || [],
-			BccEmail: emailForm.bcc || [],
-			Subject: emailForm.subject,
-			EmailContent: emailForm.content,
-			Attachments: attachments,
-			EmailTags: emailForm.emailTags,
-			EmailTagNames: EmailTagcheckboxoptions.value.find(option => option.value === emailForm.emailTags).label
-		}
-
-		loading = ElLoading.service({
-			lock: true,
-			text: '正在发送草稿邮件，请稍候...',
-			background: 'rgba(0, 0, 0, 0.7)'
-		})
-
-		const response = await request({
-			url: 'Email/SendFromDraft/SendFromDraft',
-			method: 'POST',
-			data: draftData
-		})
-
-		if (response.code === 200) {
-			ElMessage.success('草稿邮件发送成功')
-			loading.close()
-			showEmailDetail.value = false // 触发 watch
-			resetEmailForm()
-			await getInboxEmail(currentPage.value, pageSize.value, activeMenu.value)
-		} else {
-			ElMessage.error(response.msg || '发送失败')
-		}
-
-	} catch (error) {
-		console.error('发送草稿失败:', error)
-		ElMessage.error('发送草稿失败，请重试')
-	}
-}
-
-// 修改签名添加逻辑，增加验证和位置控制
+// 添加签名
 const appendSignatureIfEnabled = async () => {
 	try {
 		await getUserSignature()
 		if (currentSignature.value.enabled && currentSignature.value.content) {
 			const signatureContent = currentSignature.value.content
 
-			// 如果是回复或转发的邮件
 			if (emailType.value === 'reply' || emailType.value === 'replyAll' || emailType.value === 'forward') {
-				// 查找原始邮件分隔线的位置
 				const separatorIndex = emailForm.content.indexOf('------------------ 原始邮件 ------------------')
 				const forwardSeparatorIndex = emailForm.content.indexOf('------------------ 转发邮件 ------------------')
 
-				// 获取实际的分隔线位置
 				const actualSeparatorIndex = Math.min(
 					separatorIndex === -1 ? Infinity : separatorIndex,
 					forwardSeparatorIndex === -1 ? Infinity : forwardSeparatorIndex
 				)
 
 				if (actualSeparatorIndex !== Infinity) {
-					// 在分隔线之前插入签名
 					const beforeSeparator = emailForm.content.substring(0, actualSeparatorIndex)
 					const afterSeparator = emailForm.content.substring(actualSeparatorIndex)
 
-					// 检查签名是否已存在
 					if (!beforeSeparator.includes(signatureContent)) {
 						emailForm.content = beforeSeparator + `<br><br>${signatureContent}` + afterSeparator
 					}
 				}
 			} else {
-				// 新邮件，直接在末尾添加签名（如果尚未添加）
 				if (!emailForm.content.includes(signatureContent)) {
 					emailForm.content += `<br><br>${signatureContent}`
 				}
@@ -2904,168 +3716,24 @@ const appendSignatureIfEnabled = async () => {
 		}
 	} catch (error) {
 		console.error('获取签名失败:', error)
-		// 如果获取签名失败，继续发送邮件但不添加签名
 	}
 }
+// #endregion
 
-// 统一的发送邮件入口
-const sendEmail = async () => {
-	try {
-		// 根据是否有草稿ID来决定使用哪个发送方法
-		if (emailForm.draftId) {
-			await sendFromDraft()
-		} else {
-			await sendNewEmail()
-		}
-	} catch (error) {
-		console.error('发送邮件失败:', error)
-		ElMessage.error('发送失败，请重试')
-	}
-}
-
-// 文件转Base64函数
-const convertFileToBase64 = (file) => {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader()
-		reader.readAsDataURL(file)
-		reader.onload = () => {
-			const base64String = reader.result.toString().split(',')[1]
-			resolve(base64String)
-		}
-		reader.onerror = reject
-	})
-}
-
-// 修改文件上传相关函数
-const handleFileChange = (file) => {
-	// 可以在这里添加文件类型和大小的验证
-	const isLt10M = file.size / 1024 / 1024 < 10
-	if (!isLt10M) {
-		ElMessage.error('文件大小不能超过 10MB!')
-		return false
-	}
-	return true
-}
-
-const handleFileRemove = (file) => {
-	const index = fileList.value.findIndex(item => item.uid === file.uid)
-	if (index !== -1) {
-		fileList.value.splice(index, 1)
-	}
-}
-
-// 修改触发文件选择的函数
-const triggerFileInput = () => {
-	fileInput.value.click()
-}
-
-const handleFileInputChange = (event) => {
-	const files = Array.from(event.target.files)
-	files.forEach(file => {
-		if (handleFileChange(file)) {
-			fileList.value.push({
-				name: file.name,
-				size: file.size,
-				raw: file,
-				uid: Date.now() + Math.random().toString(36).substr(2, 9) // 生成唯一ID
-			})
-		}
-	})
-	// 清空input，以便可以重复选择同一文件
-	event.target.value = ''
-}
-
-const showCc = ref(false)
-// 修改重置表单函数，确保清空附件
-const resetEmailForm = () => {
-	emailForm.emailTags = null;
-	emailForm.draftId = null
-	emailForm.ToEmail = []
-	emailForm.cc = []
-	emailForm.bcc = []
-	emailForm.subject = ''
-	emailForm.content = ''
-	fileList.value = []
-	showCc.value = false
-	if (quillEditor.value) {
-		quillEditor.value.setContents([])
-	}
-	isFullscreen.value = false
-}
-
-// 丢弃邮件
-const discardEmail = () => {
-	emailForm.ToEmail = []
-	emailForm.cc = []
-	emailForm.bcc = []
-	emailForm.subject = ''
-	emailForm.content = ''
-	emailForm.emailTags = null;
-	showEmailDetail.value = false // 触发 watch
-}
-
-const quillEditor = ref(null) // 添加编辑器引用
-
-// 在关闭对话框时也调用重置函数
-const handleDialogClose = () => {
-	resetEmailForm()
-}
-
-GetEmailContract();
-//写邮件的处理函数
-const handleWriteEmail = async () => {
-	dialogTitle.value = '新邮件'
-	emailType.value = 'new'
-	resetEmailForm()
-	await GetEmailContract() // 获取联系人数据
-	showEmailDialog.value = true
-}
-
-const input1 = ref('')
-
-// 选中的行数据
-const selectedRows = ref([])
-// 当前高亮的行
-const currentRow = ref(null)
-
-// 选择变化处理
-const handleSelectionChange = (selection) => {
-	selectedRows.value = selection
-}
-
-// 设置行的 class
-const tableRowClassName = ({ row }) => {
-	const classes = []
-
-	// 添加未读样式
-	if (row.isRead === 1) {
-		classes.push('unread-row')
-	}
-
-	// 保留原有的高亮逻辑
-	if (currentRow.value === row) {
-		classes.push('highlight-row')
-	}
-	// 选中行样式
-	if (selectedRows.value.some(selected => selected.id === row.id)) {
-		classes.push('selected-row')
-	}
-
-	return classes.join(' ')
-}
-
-// 设置提醒
-const reminderDialogVisible = ref(false);
+// #region 提醒功能
+const reminderDialogVisible = ref(false)
 const reminderForm = ref({
 	title: '',
 	content: '',
 	reminderTime: null
 })
+
 const openReminderDialog = (email) => {
-	reminderForm.value.title = '邮件提醒';
-	reminderForm.value.content = email.from + '发来的邮件';
-	reminderDialogVisible.value = true;
+	reminderForm.value.title = '邮件提醒'
+	reminderForm.value.content = email.from + '发来的邮件'
+	reminderDialogVisible.value = true
 }
+
 const setReminder = async () => {
 	try {
 		if (!reminderForm.value.content || !reminderForm.value.reminderTime) {
@@ -3077,17 +3745,16 @@ const setReminder = async () => {
 			url: 'TaskReminder/AddTaskReminder/Add',
 			method: 'GET',
 			params: {
-				userId: '', // 这个参数服务端会自动获取，可以传空
+				userId: '',
 				title: reminderForm.value.title,
 				content: reminderForm.value.content,
 				reminderTime: reminderForm.value.reminderTime
 			}
 		})
+
 		if (res.code === 200) {
 			ElMessage.success('提醒设置成功')
 			reminderDialogVisible.value = false
-			// 重置表单
-
 		} else {
 			ElMessage.error(res.msg || '设置失败')
 		}
@@ -3096,83 +3763,640 @@ const setReminder = async () => {
 		ElMessage.error('设置提醒失败：' + (error.message || '未知错误'))
 	}
 }
+// #endregion
 
-// 添加控制 popover 显示的变量
+// #region 其他状态和变量
 const tagPopoverVisible = ref(false)
 const tagPopover = ref(null)
-// 检查当前详情页是否显示，如果显示，说明正在浏览邮件，需要判断当前被浏览的邮件有没有标签
-// 如果被浏览的邮件有标签，则允许关闭详情页，否则不允许关闭详情页
-// 检查邮件方法
-const CheckShowEmailDetail = async () => {
-	return new Promise(async (resolve) => {
-		// 如果详情页没有显示，直接返回true
-		if (!showEmailDetail.value) {
-			resolve(true)
-			return
+
+// 自动保存相关
+let autoSaveTimer = null
+const AUTO_SAVE_INTERVAL = 900000 // 900秒
+
+const startAutoSave = () => {
+	stopAutoSave()
+	autoSaveTimer = setInterval(async () => {
+		if (emailForm.ToEmail?.length || emailForm.subject || emailForm.content) {
+			ElMessage.info('自动保存中...')
+			await saveDraft()
+		}
+	}, AUTO_SAVE_INTERVAL)
+}
+
+const stopAutoSave = () => {
+	if (autoSaveTimer) {
+		clearInterval(autoSaveTimer)
+		autoSaveTimer = null
+	}
+}
+
+// 监听对话框状态
+watch(showEmailDialog, (newVal) => {
+	if (newVal) {
+		startAutoSave()
+	} else {
+		stopAutoSave()
+	}
+})
+
+// 监听文件夹对话框状态
+watch(showAddFolderDialog, (val) => {
+	if (val) fetchCascaderOptions()
+})
+// #endregion
+
+// #region 生命周期和初始化
+onMounted(async () => {
+	try {
+		// 初始化邮箱配置
+		await initEmailConfig()
+
+		// 验证邮箱配置并获取数据
+		await VerifyUserEmailConfigurationExists()
+
+		// 获取联系人数据
+		await GetEmailContract()
+
+		// 获取标签列表
+		await GetUserEmailTagList()
+	} catch (error) {
+		console.error('初始化失败:', error)
+	}
+})
+
+onUnmounted(() => {
+	stopAutoSave()
+})
+// #endregion
+
+// #region 批量移动至文件夹功能
+// 新增状态变量
+const showBatchMoveToFolderDialog = ref(false)
+const isBatchMovingToFolder = ref(false)
+const selectedFolderData = ref(null)
+const selectedFolderName = ref('')
+const flattenedFolderOptions = ref([])
+
+// 文件夹树的属性配置
+const folderTreeProps = {
+	children: 'children',
+	label: 'label',
+	value: 'value'
+}
+
+// 显示移动对话框时构建文件夹树
+const showBatchMoveDialog = async () => {
+	if (selectedRows.value.length === 0) {
+		ElMessage.warning('请先选择要移动的邮件')
+		return
+	}
+
+	try {
+		// 确保有最新的文件夹数据
+		await fetchCustomFolders()
+
+		// 构建完整的文件夹选择树
+		buildCompletefolderTreeOptions()
+
+		// 重置选择状态
+		selectedFolderData.value = null
+		selectedFolderName.value = ''
+
+		// 显示对话框
+		showBatchMoveToFolderDialog.value = true
+
+	} catch (error) {
+		console.error('加载文件夹数据失败:', error)
+		ElMessage.error('加载文件夹数据失败，请重试')
+	}
+}
+
+// 优化构建文件夹树选项的方法
+const buildFolderTreeOptions = () => {
+	console.log('构建文件夹树选项，原始数据:', emailFolders.value)
+
+	// 系统默认文件夹
+	const systemFolders = [
+		{
+			value: 'inbox-1',
+			label: '收件箱',
+			type: 1,
+			dataId: 1,
+			isSystem: true,
+			children: []
+		},
+		{
+			value: 'sent-2',
+			label: '已发送',
+			type: 2,
+			dataId: 2,
+			isSystem: true,
+			children: []
+		},
+		{
+			value: 'draft-3',
+			label: '草稿箱',
+			type: 3,
+			dataId: 3,
+			isSystem: true,
+			children: []
+		},
+		{
+			value: 'trash-4',
+			label: '垃圾箱',
+			type: 4,
+			dataId: 4,
+			isSystem: true,
+			children: []
+		},
+		{
+			value: 'archive-6',
+			label: '归档邮件',
+			type: 6,
+			dataId: 6,
+			isSystem: true,
+			children: []
+		}
+	]
+
+	// 递归转换自定义文件夹数据
+	const convertFolderData = (folders, parentPath = '') => {
+		if (!folders || !Array.isArray(folders)) {
+			return []
 		}
 
-		// 如果正在查看邮件详情
-		if (currentEmail.value) {
-			try {
-				// 调用检查标签接口
-				const res = await request({
-					url: 'Email/CheckEmailTagsByEmailID/CheckEmailTags',
-					method: 'GET',
-					params: {
-						id: currentEmail.value.id
-					}
-				})
+		return folders.map(folder => {
+			const folderValue = `folder-${folder.dataId || folder.id}`
+			const folderPath = parentPath ? `${parentPath}/${folder.label}` : folder.label
 
-				if (res.code === 200 && !res.data) {
-					// 如果没有标签，显示提示框
-					ElMessageBox.confirm(
-						'当前邮件未添加标签，添加标签后才能关闭。是否现在添加标签？',
-						'提示',
-						{
-							confirmButtonText: '去添加标签',
-							type: 'warning',
-							showCancelButton: false,
-							closeOnClickModal: false,
-							closeOnPressEscape: false,
-							showClose: false
-						}
-					)
-						.then(() => {
-							tagPopoverVisible.value = true
-							resolve(false)
-						})
-						.catch(() => {
-							resolve(false)
-						})
-					return
-				}
-				resolve(true)
-			} catch (error) {
-				console.error('检查邮件标签失败:', error)
-				resolve(true) // 出错时允许关闭
+			const converted = {
+				value: folderValue,
+				label: folder.label || folder.name || '未命名文件夹',
+				type: folder.type,
+				dataId: folder.dataId || folder.id,
+				isSystem: folder.isSystem || false,
+				children: []
 			}
-			return
+
+			// 递归处理子文件夹
+			if (folder.children && folder.children.length > 0) {
+				converted.children = convertFolderData(folder.children, folderPath)
+			}
+
+			return converted
+		})
+	}
+
+	// 转换自定义文件夹
+	const customFolders = convertFolderData(emailFolders.value)
+
+	// 组合所有文件夹选项
+	flattenedFolderOptions.value = [
+		{
+			value: 'system',
+			label: '系统文件夹',
+			isSystem: true,
+			children: systemFolders
+		},
+		{
+			value: 'custom',
+			label: '自定义文件夹',
+			isSystem: false,
+			children: customFolders
 		}
-		// 如果没有当前邮件数据，允许关闭
-		resolve(true)
+	]
+
+	console.log('构建完成的文件夹树:', flattenedFolderOptions.value)
+}
+
+// 修改 handleFolderSelect 方法，增加调试信息和验证：
+const handleFolderSelect = (data, node) => {
+	console.log('=== 文件夹选择调试信息 ===')
+	console.log('选择的节点数据:', data)
+	console.log('节点标签:', node.label)
+
+	// 详细分析文件夹类型
+	let analysisResult = {
+		isSystemFolder: false,
+		isHierarchyFolder: false,
+		actualType: null,
+		conflictRisk: false
+	}
+
+	if (data.isSystem && [1, 2, 3, 4, 6].includes(data.type)) {
+		analysisResult.isSystemFolder = true
+		analysisResult.actualType = 'system'
+	} else {
+		analysisResult.isHierarchyFolder = true
+		analysisResult.actualType = 'hierarchy'
+
+		// 检查是否存在ID冲突风险
+		if ([1, 2, 3, 4, 6].includes(data.dataId)) {
+			analysisResult.conflictRisk = true
+			console.warn('⚠️ 检测到潜在的ID冲突风险:', {
+				dataId: data.dataId,
+				type: data.type,
+				label: data.label
+			})
+		}
+	}
+
+	console.log('文件夹类型分析:', analysisResult)
+	console.log('节点详细信息:', {
+		value: data.value,
+		label: data.label,
+		type: data.type,           // 原始层级类型
+		dataId: data.dataId,       // 具体ID（可能冲突）
+		isSystem: data.isSystem,
+		folderCategory: data.folderCategory, // 新增字段
+		determinedFolderType: determineFolderLevelType(data)  // 计算后的类型
+	})
+
+	// 不允许选择分组节点
+	if (['system-folders', 'hierarchy-folders'].includes(data.value)) {
+		ElMessage.warning('请选择具体的文件夹')
+		return
+	}
+
+	// 显示详细的选择信息
+	const folderType = getFolderTypeName(data)
+	const message = `已选择${folderType}: ${data.label} (ID: ${data.dataId}, 计算类型: ${determineFolderLevelType(data)})`
+	console.log(message)
+	ElMessage.info(message)
+
+	selectedFolderData.value = data
+	selectedFolderName.value = node.label
+
+	// 生成测试请求来验证参数
+	const testRequest = buildBatchMoveRequest(data, ['test-email-id'])
+	console.log('测试请求参数:', testRequest)
+	console.log('=== 调试信息结束 ===')
+}
+
+// 确保文件夹数据结构包含足够的信息
+const convertEmailFoldersToHierarchy = (folders) => {
+	if (!folders || !Array.isArray(folders)) {
+		return []
+	}
+
+	return folders.map(folder => {
+		const converted = {
+			value: `folder-${folder.dataId || folder.id}`,
+			label: folder.label || folder.name,
+			type: folder.type,                    // 原始层级类型（1=大洲,2=国家等）
+			dataId: folder.dataId || folder.id,   // 具体的ID（可能与系统文件夹ID重复）
+			isSystem: false,                      // 明确标记为非系统文件夹
+			folderCategory: 'hierarchy',          // 新增：文件夹类别
+			children: folder.children ? convertEmailFoldersToHierarchy(folder.children) : []
+		}
+
+		console.log('转换文件夹数据:', {
+			原始: {
+				label: folder.label,
+				type: folder.type,
+				dataId: folder.dataId,
+				isSystem: folder.isSystem
+			},
+			转换后: {
+				label: converted.label,
+				type: converted.type,
+				dataId: converted.dataId,
+				isSystem: converted.isSystem,
+				folderCategory: converted.folderCategory,
+				determinedType: determineFolderLevelType(converted)
+			}
+		})
+
+		return converted
 	})
 }
 
-// 定义标签类型映射
-const tagTypeMap = {
-	'询盘': 'info',        // 蓝色
-	'初次报价': 'success', // 绿色
-	'沟通需求': 'warning', // 橙色
-	'再次报价': 'danger',  // 红色
-	'合同确定': 'primary',        // 主色调
-	'开发信': ''    // 主色调	
+// 同时，需要修改 buildSystemFolders 方法，确保 folderCategory 字段正确：
+const buildSystemFolders = () => {
+	return [
+		{
+			value: 'inbox-1',
+			label: '收件箱',
+			type: 1,
+			dataId: 1,
+			isSystem: true,
+			folderCategory: 'system'
+		},
+		{
+			value: 'sent-2',
+			label: '已发送',
+			type: 2,
+			dataId: 2,
+			isSystem: true,
+			folderCategory: 'system'
+		},
+		{
+			value: 'draft-3',
+			label: '草稿箱',
+			type: 3,
+			dataId: 3,
+			isSystem: true,
+			folderCategory: 'system'
+		},
+		{
+			value: 'trash-4',
+			label: '垃圾箱',
+			type: 4,
+			dataId: 4,
+			isSystem: true,
+			folderCategory: 'system'
+		},
+		{
+			value: 'archive-6',
+			label: '归档邮件',
+			type: 6,
+			dataId: 6,
+			isSystem: true,
+			folderCategory: 'system'
+		}
+	]
 }
-// 获取标签类型的方法
-const getTagType = (tagName) => {
-	return tagTypeMap[tagName] || '' // 默认返回空字符串（灰色）
+
+// 执行批量移动 - 使用正确的BatchMoveToFolder接口
+const handleBatchMoveToFolder = async () => {
+	if (!selectedFolderData.value) {
+		ElMessage.warning('请选择目标位置')
+		return
+	}
+
+	if (selectedRows.value.length === 0) {
+		ElMessage.warning('没有选中的邮件')
+		return
+	}
+
+	try {
+		await ElMessageBox.confirm(
+			`确定要将选中的 ${selectedRows.value.length} 封邮件移动到 "${selectedFolderName.value}" 吗？`,
+			'确认移动',
+			{
+				confirmButtonText: '确定移动',
+				cancelButtonText: '取消',
+				type: 'warning'
+			}
+		)
+
+		isBatchMovingToFolder.value = true
+		const emailIds = selectedRows.value.map(row => row.id.toString())
+
+		// 构建移动请求参数
+		const moveRequest = buildBatchMoveRequest(selectedFolderData.value, emailIds)
+
+		console.log('批量移动请求参数:', moveRequest)
+
+		const response = await request({
+			url: 'Email/BatchMoveEmailToFolder/BatchMoveToFolder',
+			method: 'POST',
+			data: moveRequest
+		})
+
+		if (response.code === 200) {
+			ElMessage.success(response.msg || `成功移动 ${selectedRows.value.length} 封邮件`)
+			showBatchMoveToFolderDialog.value = false
+			clearSelection()
+			await refreshCurrentView()
+		} else {
+			ElMessage.error(response.msg || '移动邮件失败')
+		}
+
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('批量移动邮件失败:', error)
+			ElMessage.error('移动邮件失败，请重试')
+		}
+	} finally {
+		isBatchMovingToFolder.value = false
+	}
+}
+
+// 重新设计的批量移动请求参数构建
+const buildBatchMoveRequest = (folderData, emailIds) => {
+	const request = {
+		emailIds: emailIds
+	}
+
+	console.log('构建请求参数，文件夹数据:', folderData)
+
+	// 明确区分不同类型的文件夹
+	if (folderData.isSystem && [1, 2, 3, 4, 6].includes(folderData.type)) {
+		// 系统文件夹（收件箱、发件箱、草稿箱、垃圾箱、归档箱）
+		request.targetType = 'system'
+		request.targetFolderId = folderData.dataId || folderData.id
+		request.folderType = folderData.type  // 系统文件夹类型：1,2,3,4,6
+
+		// 为系统文件夹添加 folderContext
+		request.folderContext = {
+			originalType: folderData.type,      // 原始类型
+			isHierarchy: false,                 // 明确标记为非层级文件夹
+			levelName: getSystemFolderLevelName(folderData.type),  // 系统文件夹级别名称
+			isSystem: true                      // 明确标记为系统文件夹
+		}
+
+		console.log('系统文件夹请求:', request)
+	} else {
+		// 层级文件夹或自定义文件夹
+		request.targetType = 'folder'
+		request.targetFolderId = folderData.dataId || folderData.id  // 具体的ID
+
+		// 关键修改：使用明确的层级类型区分
+		request.folderType = determineFolderLevelType(folderData)
+
+		// 添加额外的上下文信息来帮助后端识别
+		request.folderContext = {
+			originalType: folderData.type,      // 原始类型
+			isHierarchy: !folderData.isSystem,  // 是否为层级文件夹
+			levelName: getFolderLevelName(folderData.type),  // 层级名称
+			isSystem: false                     // 明确标记为非系统文件夹
+		}
+
+		console.log('层级/自定义文件夹请求:', {
+			targetType: request.targetType,
+			targetFolderId: request.targetFolderId,
+			folderType: request.folderType,
+			folderContext: request.folderContext,
+			folderData: folderData
+		})
+	}
+
+	return request
+}
+
+// 新增：获取系统文件夹级别名称的方法
+const getSystemFolderLevelName = (type) => {
+	const systemLevelNames = {
+		1: 'inbox',      // 收件箱
+		2: 'sent',       // 发件箱
+		3: 'draft',      // 草稿箱
+		4: 'trash',      // 垃圾箱
+		6: 'archive'     // 归档箱
+	}
+	return systemLevelNames[type] || 'unknown'
+}
+
+// 确定文件夹层级类型（使用不同的数值范围避免冲突）
+const determineFolderLevelType = (folderData) => {
+	if (folderData.isSystem) {
+		// 系统文件夹：1-10范围
+		return folderData.type
+	} else {
+		// 层级文件夹：使用100+的范围避免与系统文件夹冲突
+		switch (folderData.type) {
+			case 1: return 101  // 大洲层级
+			case 2: return 102  // 国家层级  
+			case 3: return 103  // 客户层级
+			case 4: return 104  // 联系人层级
+			case 5: return 105  // 自定义文件夹
+			default: return 199 // 未知层级
+		}
+	}
+}
+// 修改现有的 getFolderLevelName 方法，确保层级文件夹的名称正确
+const getFolderLevelName = (type) => {
+	const levelNames = {
+		1: 'continent',    // 大洲
+		2: 'country',      // 国家
+		3: 'customer',     // 客户
+		4: 'contact',      // 联系人
+		5: 'custom'        // 自定义
+	}
+	return levelNames[type] || 'unknown'
 }
 
 
+
+// 监听文件夹数据变化，自动更新文件夹选项
+watch(emailFolders, () => {
+	if (showBatchMoveToFolderDialog.value) {
+		buildFolderTreeOptions()
+	}
+}, { deep: true })
+
+// 获取系统目标层级
+const getSystemTargetLevel = (systemType) => {
+	const mapping = {
+		1: 10, // 收件箱
+		2: 11, // 发件箱  
+		3: 12, // 草稿箱
+		4: 13, // 垃圾箱
+		6: 14  // 归档箱
+	}
+	return mapping[systemType] || 10
+}
+
+// 修改 buildCompletefolderTreeOptions 方法，确保系统文件夹正确标记：
+const buildCompletefolderTreeOptions = () => {
+	console.log('构建完整文件夹树')
+
+	// 1. 系统文件夹（明确标记）
+	const systemFolders = buildSystemFolders()
+
+	// 2. 层级文件夹（明确标记为非系统）
+	const hierarchyFolders = convertEmailFoldersToHierarchy(emailFolders.value)
+
+	// 3. 组合所有选项
+	flattenedFolderOptions.value = [
+		{
+			value: 'system-folders',
+			label: '系统文件夹',
+			isSystem: true,
+			folderCategory: 'system-group', // 新增：分组标识
+			children: systemFolders
+		},
+		{
+			value: 'hierarchy-folders',
+			label: '分类文件夹',
+			isSystem: false,
+			folderCategory: 'hierarchy-group', // 新增：分组标识
+			children: hierarchyFolders
+		}
+	]
+
+	console.log('完整文件夹树构建完成:', flattenedFolderOptions.value)
+
+	// 检查潜在冲突
+	const systemIds = systemFolders.map(f => f.dataId)
+	const hierarchyIds = hierarchyFolders.map(f => f.dataId)
+	const conflicts = systemIds.filter(id => hierarchyIds.includes(id))
+
+	if (conflicts.length > 0) {
+		console.warn('⚠️ 检测到ID冲突:', conflicts)
+		console.log('系统文件夹IDs:', systemIds)
+		console.log('层级文件夹IDs:', hierarchyIds)
+	}
+}
+
+
+// 获取文件夹类型名称
+const getFolderTypeName = (folderData) => {
+	if (folderData.isSystem && [1, 2, 3, 4, 6].includes(folderData.type)) {
+		const systemNames = {
+			1: '系统收件箱',
+			2: '系统发件箱',
+			3: '系统草稿箱',
+			4: '系统垃圾箱',
+			6: '系统归档箱'
+		}
+		return systemNames[folderData.type] || '系统文件夹'
+	}
+
+	const hierarchyNames = {
+		1: '大洲层级',
+		2: '国家层级',
+		3: '客户层级',
+		4: '联系人层级',
+		5: '自定义文件夹'
+	}
+	return hierarchyNames[folderData.type] || '未知类型'
+}
+// #endregion
+
+// 1. 添加当前文件夹状态的响应式变量
+const currentFolderState = ref({
+	type: null,        // 'system' | 'folder' | 'tag' | 'search'
+	id: null,          // 文件夹/标签ID
+	name: null,        // 文件夹/标签名称
+	folderData: null,  // 完整的文件夹数据对象
+	params: null       // 额外参数
+})
+
+// 2. 统一的状态设置方法
+const setCurrentFolderState = (type, id, name = null, folderData = null, params = null) => {
+	console.log('🎯 设置当前文件夹状态:', { type, id, name, folderData, params })
+
+	currentFolderState.value = {
+		type,
+		id,
+		name,
+		folderData,
+		params
+	}
+
+	// 同时更新原有的状态变量以保持兼容性
+	if (type === 'folder') {
+		activeMenu.value = `folder-${id}`
+		folderName.value = id.toString()
+		EmailTagIndex.value = 0
+	} else if (type === 'tag') {
+		activeMenu.value = `tag-${id}`
+		EmailTagIndex.value = id.toString()
+		folderName.value = null
+	} else if (type === 'system') {
+		activeMenu.value = id.toString()
+		folderName.value = null
+		EmailTagIndex.value = 0
+	}
+}
+
+// 监听文件夹数据变化
+watch(emailFolders, () => {
+	if (showBatchMoveToFolderDialog.value) {
+		buildCompletefolderTreeOptions()
+	}
+}, { deep: true })
 </script>
 
 <style lang="scss" scoped>
@@ -3224,7 +4448,7 @@ const getTagType = (tagName) => {
 }
 
 .cc-checkbox {
-	margin-left: 70px; // 与其他表单项对齐
+	margin-left: 70px;
 	color: #606266;
 }
 
@@ -3325,7 +4549,7 @@ const getTagType = (tagName) => {
 	.label {
 		color: #999;
 		margin-right: 8px;
-		min-width: 60px; // 确保标签对齐
+		min-width: 60px;
 		display: inline-block;
 	}
 
@@ -3371,7 +4595,7 @@ const getTagType = (tagName) => {
 
 	// 选中行样式
 	.selected-row {
-		background-color: #ecf5ff !important; // 使用 !important 确保样式优先级
+		background-color: #ecf5ff !important;
 
 		td {
 			background-color: #ecf5ff !important;
@@ -3388,17 +4612,6 @@ const getTagType = (tagName) => {
 		color: #606266;
 		background-color: #ffffff;
 	}
-
-	// // 调整复选框列的样式
-	// .el-table-column--selection .cell {
-	// 	padding-top: -10px; // 根据实际需要调整padding值
-	// 	vertical-align: middle;
-	// }
-
-	// // 确保所有单元格垂直居中
-	// .el-table__cell {
-	// 	vertical-align: middle;
-	// }
 }
 
 // 签名设置起
@@ -3473,7 +4686,6 @@ const getTagType = (tagName) => {
 
 // 签名设置止
 
-
 .email-tags-container {
 	display: flex;
 	flex-wrap: wrap;
@@ -3502,19 +4714,12 @@ const getTagType = (tagName) => {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 5px;
-		/* 使用 gap 属性设置统一的间距 */
 		margin-top: 8px;
-		/* 与标题保持一定距离 */
 
 		.custom-tag {
 			font-size: 14px;
-			/* 增加字体大小 */
 			padding: 12px 24px;
-			/* 增加内边距使标签更大 */
 			margin: 10px;
-			/* 清除默认边距，使用 gap 控制间距 */
-
-			/* 可选：让标签更突出 */
 			font-weight: 500;
 			border-radius: 4px;
 		}
@@ -3561,7 +4766,6 @@ const getTagType = (tagName) => {
 .el-menu-item .el-icon {
 	margin-right: 8px;
 	color: #909399;
-	/* 设置图标颜色 */
 }
 
 /* 当菜单项被选中时的图标样式 */
@@ -3576,7 +4780,6 @@ const getTagType = (tagName) => {
 
 :deep(.el-scrollbar) {
 	height: calc(100vh - 60px);
-	/* 减去头部高度 */
 }
 
 :deep(.el-menu) {
@@ -3724,7 +4927,6 @@ const getTagType = (tagName) => {
 
 .search-container {
 	position: relative;
-	/* 确保有相对定位 */
 	width: 70%;
 }
 
@@ -4024,7 +5226,6 @@ const getTagType = (tagName) => {
 	margin-right: 16px;
 }
 
-
 .dialog-header {
 	display: flex;
 	justify-content: space-between;
@@ -4073,7 +5274,6 @@ const getTagType = (tagName) => {
 /* 表单项的间距调整 */
 .email-form-item {
 	margin-bottom: 8px;
-	/* 减小表单项之间的间距 */
 }
 
 .email-form {
@@ -4151,29 +5351,16 @@ const getTagType = (tagName) => {
 
 .search-container {
 	margin-left: 10px;
-	/* 可以根据需要调整左边距 */
 }
 
 .layout-container-demo .el-header {
 	position: relative;
-	/* background-color: var(--el-col</script>*/
-}
-
-.layout-container-demo .el-header {
-	position: relative;
-	/* background-color: var(--el-col</script>*/
-}
-
-.layout-container-demo .el-header {
-	position: relative;
-	/* background-color: var(--el-color-primary-light-7); */
 	background: none;
 	color: var(--el-text-color-primary);
 }
 
 .layout-container-demo .el-aside {
 	color: var(--el-text-color-primary);
-	/* background: var(--el-color-primary-light-8); */
 	background: none;
 }
 
@@ -4192,5 +5379,288 @@ const getTagType = (tagName) => {
 	justify-content: center;
 	height: 100%;
 	right: 20px;
+}
+
+.email-folder-tree {
+	margin-top: 10px;
+	padding: 0 10px;
+}
+
+.custom-tree-node {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	font-size: 14px;
+	padding-right: 8px;
+}
+
+.custom-tree-node .el-icon {
+	margin-right: 8px;
+	font-size: 16px;
+	color: #909399;
+}
+
+.folder-actions {
+	margin-left: auto;
+	display: none;
+}
+
+.custom-tree-node:hover .folder-actions {
+	display: flex;
+	align-items: center;
+}
+
+.menu-section-title {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0 20px;
+	margin: 10px 0;
+	color: #909399;
+	font-size: 14px;
+}
+
+.add-button {
+	padding: 2px;
+}
+
+.add-button .el-icon {
+	font-size: 14px;
+}
+
+/* 批量操作样式 */
+.batch-actions {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 16px;
+	background-color: #f5f7fa;
+	border: 1px solid #e4e7ed;
+	border-radius: 4px;
+	margin-bottom: 16px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.batch-info {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: #606266;
+	font-size: 14px;
+}
+
+.batch-info .el-icon {
+	color: #409eff;
+}
+
+.batch-buttons {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+}
+
+.batch-buttons .el-button-group {
+	margin-right: 8px;
+}
+
+.batch-buttons .el-button {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+/* 批量处理时的禁用状态 */
+.batch-actions.is-batch-processing {
+	opacity: 0.6;
+	pointer-events: none;
+}
+
+/* 表格选择列的样式调整 */
+:deep(.el-table .el-table-column--selection .cell) {
+	padding: 0;
+	text-align: center;
+}
+
+:deep(.el-table .el-checkbox) {
+	margin: 0;
+}
+
+/* 确保复选框在行点击时不会触发选择 */
+:deep(.el-table .el-table-column--selection .cell) {
+	pointer-events: auto;
+}
+
+:deep(.el-table .el-table-column--selection .cell .el-checkbox) {
+	pointer-events: auto;
+}
+
+/* 移动至文件夹对话框样式 */
+.move-to-folder-dialog {
+	padding: 10px 0;
+}
+
+.selected-emails-info {
+	margin-bottom: 20px;
+}
+
+.folder-tree-node {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	padding: 4px 0;
+}
+
+.folder-tree-node .el-icon {
+	color: #909399;
+	font-size: 16px;
+}
+
+/* 文件夹树样式 */
+:deep(.el-tree) {
+	.el-tree-node__content {
+		height: 40px;
+
+		&:hover {
+			background-color: #f5f7fa;
+		}
+	}
+
+	.el-tree-node.is-current>.el-tree-node__content {
+		background-color: #ecf5ff;
+		color: #409eff;
+
+		.el-icon {
+			color: #409eff;
+		}
+	}
+
+	.el-tree-node__expand-icon {
+		color: #c0c4cc;
+
+		&.is-leaf {
+			color: transparent;
+			cursor: default;
+		}
+	}
+}
+
+/* 批量操作按钮组样式调整 */
+.batch-buttons .el-button-group {
+	.el-button {
+		&:nth-child(1) {
+			/* 归档按钮 */
+			border-top-right-radius: 0;
+			border-bottom-right-radius: 0;
+		}
+
+		&:nth-child(2) {
+			/* 移动至按钮 */
+			border-radius: 0;
+			border-left: none;
+			border-right: none;
+		}
+
+		&:nth-child(3) {
+			/* 删除按钮 */
+			border-top-left-radius: 0;
+			border-bottom-left-radius: 0;
+		}
+	}
+}
+
+/* 移动至按钮特殊样式 */
+.el-button--warning {
+	&:hover {
+		background-color: #ebb563;
+		border-color: #ebb563;
+	}
+
+	&:active {
+		background-color: #cf9236;
+		border-color: #cf9236;
+	}
+}
+
+/* 对话框内容区域样式 */
+.move-to-folder-dialog {
+	.el-form-item__label {
+		font-weight: 500;
+		color: #606266;
+	}
+
+	.el-input__wrapper {
+		background-color: #f5f7fa;
+
+		&.is-focus {
+			background-color: #fff;
+		}
+	}
+}
+
+/* 文件夹选择树容器样式 */
+.folder-tree-container {
+	border: 1px solid #dcdfe6;
+	border-radius: 4px;
+	padding: 10px;
+	max-height: 300px;
+	overflow-y: auto;
+	background-color: #fafafa;
+
+	&:hover {
+		border-color: #c0c4cc;
+	}
+}
+
+/* 系统文件夹和自定义文件夹分组样式 */
+:deep(.el-tree-node) {
+
+	&[data-value="system"],
+	&[data-value="custom"] {
+		.el-tree-node__content {
+			font-weight: 600;
+			color: #303133;
+			background-color: #f0f2f5;
+
+			&:hover {
+				background-color: #e6e8eb;
+			}
+		}
+	}
+}
+
+/* 提示信息样式 */
+.selected-emails-info {
+	.el-alert {
+		.el-alert__content {
+			font-size: 14px;
+		}
+
+		strong {
+			color: #409eff;
+			font-weight: 600;
+		}
+	}
+}
+
+/* 对话框底部按钮样式 */
+.move-to-folder-dialog .dialog-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	padding-top: 20px;
+	border-top: 1px solid #ebeef5;
+	margin-top: 20px;
+}
+
+/* 禁用状态的按钮样式 */
+.el-button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* 加载状态样式 */
+.batch-actions.is-moving {
+	opacity: 0.8;
+	pointer-events: none;
 }
 </style>

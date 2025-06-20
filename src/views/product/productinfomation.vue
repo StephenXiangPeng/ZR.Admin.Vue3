@@ -71,7 +71,7 @@
 					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;产品列表</span>
 					<el-divider></el-divider>
 					<el-button type="primary" @click="openAddProductDialog()"
-						v-if="userId.toString() === '1'">添加产品</el-button>
+						v-if="userId.toString() === '1' || userDepartment === 210">添加产品</el-button>
 					<el-table :data="ProductInfoTableData" row-key="id"
 						:tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
 						<el-table-column prop="productCode" label="产品编号" width="200" sortable>
@@ -396,7 +396,8 @@
 				<span style="font-size: 20px; font-weight: bold;">子产品</span>
 				<el-divider></el-divider>
 				<el-button type="primary" @click="AddSubProduct()"
-					v-if="showAddSubProductButton && userId.toString() === '1'" :disabled="isDisabled">添加子产品</el-button>
+					v-if="showAddSubProductButton && (userId.toString() === '1' || userDepartment === 210)"
+					:disabled="isDisabled">添加子产品</el-button>
 				<el-table :data="SubProductTableData" style="width: 100%; height: 550px;">
 					<el-table-column prop="mainProductCode" label="主产品编号" width="150" align="center" v-if="false">
 						<template #default="scope">
@@ -428,7 +429,7 @@
 								<template #trigger>
 									<el-button type="primary" icon="Plus" size="default"
 										:disabled="isDisabled || (scope.row.productFiles && scope.row.productFiles.length >= 3)"
-										v-if="SelectFileView && userId.toString() === '1'">
+										v-if="SelectFileView && (userId.toString() === '1' || userDepartment === 210)">
 										选择附件
 									</el-button>
 								</template>
@@ -448,7 +449,7 @@
 								:on-remove="(file) => handleImageRemove(file, scope.$index)" :limit="3" accept="image/*"
 								multiple list-type="text" :file-list="scope.row.subproductImages || []">
 								<el-button
-									v-if="!isViewMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3) && userId.toString() === '1'"
+									v-if="!isViewMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3) && (userId.toString() === '1' || userDepartment === 210)"
 									type="primary" icon="Plus" size="default">
 									选择图片
 								</el-button>
@@ -768,23 +769,28 @@
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="warning" v-if="showSaveBtn && userId.toString() === '1'"
+					<el-button type="warning"
+						v-if="showSaveBtn && (userId.toString() === '1' || userDepartment === 210)"
 						@click="SaveProductinfomation(ProductformRef, true)">
 						保存草稿
 					</el-button>
-					<el-button type="success" v-if="showSaveBtn && userId.toString() === '1'"
+					<el-button type="success"
+						v-if="showSaveBtn && (userId.toString() === '1' || userDepartment === 210)"
 						@click="SaveProductinfomation(ProductformRef)">
 						提交
 					</el-button>
-					<el-button type="primary" v-if="showEditBtn && userId.toString() === '1'"
+					<el-button type="primary"
+						v-if="showEditBtn && (userId.toString() === '1' || userDepartment === 210)"
 						@click="EditProductinfomation()">
 						编辑
 					</el-button>
-					<el-button type="warning" v-if="showEditSaveBtn && userId.toString() === '1'"
+					<el-button type="warning"
+						v-if="showEditSaveBtn && (userId.toString() === '1' || userDepartment === 210)"
 						@click="EditSaveDraft()">
 						保存草稿
 					</el-button>
-					<el-button type="success" v-if="showEditSaveBtn && userId.toString() === '1'"
+					<el-button type="success"
+						v-if="showEditSaveBtn && (userId.toString() === '1' || userDepartment === 210)"
 						@click="EditSaveProductinfomation()">
 						提交
 					</el-button>
@@ -803,9 +809,44 @@ import { useDict } from '@/utils/dict'
 import request from '@/utils/request'
 import { FormInstance, FormRules, UploadProps, UploadUserFile, UploadRawFile, UploadFile, UploadFiles } from 'element-plus'
 import { ElNotification } from 'element-plus'
+import { use } from 'echarts'
+import { useRouter } from 'vue-router'
 //初始运行钩子
-
-
+const router = useRouter()
+onMounted(async () => {
+	console.log('产品信息页面挂载，检查路由参数')
+	await dictsLoaded;
+	autoAddProduct()
+})
+const CProductsId = ref(0);
+const autoAddProduct = async () => {
+	const from = router.currentRoute.value.query.from
+	CProductsId.value = Number(router.currentRoute.value.query.contractProductsId)
+	if (from == 'purchase') {
+		const response = await request({
+			url: 'Contracts/GetContactProductsByContactProductsID/GetContactProducts',
+			method: 'get',
+			params: {
+				ContactProductsID: CProductsId.value
+			}
+		})
+		if (response.data.length > 0) {
+			Productform.chineseProductName = response.data[0].chineseName;
+			Productform.chineseSpecification = response.data[0].chineseSpec;
+			Productform.customsCode = response.data[0].customerCode;
+			Productform.englishProductName = response.data[0].englishName;
+			Productform.unit = state.optionss.hr_calculate_unit.find((dict) => dict.dictValue === response.data[0].unit.toString())?.dictValue;
+			Productform.PackingMethod = state.optionss.hr_packing.find((dict) => dict.dictValue === response.data[0].packaging.toString())?.dictValue;
+			Productform.outerboxlength = response.data[0].outerBoxLength;
+			Productform.outerboxwidth = response.data[0].outerBoxWidth;
+			Productform.outerboxheight = response.data[0].outerBoxHeight;
+			Productform.outerboxnetweight = response.data[0].outerBoxNetWeight;
+			Productform.outerboxgrossweight = response.data[0].outerBoxGrossWeight;
+			Productform.outerboxvolume = response.data[0].outerBoxVolume;
+			AddProductDialog.value = true;
+		}
+	}
+}
 
 // 获取第一张图片URL
 const getFirstImageUrl = (imagePathString) => {
@@ -822,6 +863,8 @@ const getImageUrlList = (imagePathString) => {
 
 //获取当前登录用户信息
 const userId = useUserStore().userId;
+//获取当前用户部门
+const userDepartment = useUserStore().userInfo.deptId;
 //#region 子产品附件
 const SelectFileView = ref(true);
 const handleSubProductFileChange = (file, fileList, index) => {
@@ -1301,12 +1344,17 @@ const state = reactive({
 const { optionss } = toRefs(state)
 var dictParams = [{ dictType: 'hr_packing' }, { dictType: 'hr_calculate_unit' },
 { dictType: 'hr_inspectionmark' }, { dictType: 'sql_supplier_info' }, { dictType: 'sql_all_user' }]
-proxy.getDicts(dictParams).then((response) => {
-	response.data.forEach((element) => {
-		state.optionss[element.dictType] = element.list
+
+// 封装Promise，等字典加载完再resolve
+const dictsLoaded = new Promise((resolve) => {
+	proxy.getDicts(dictParams).then((response) => {
+		response.data.forEach((element) => {
+			state.optionss[element.dictType] = element.list
+		});
+		GetProductInfoList(currentPage.value, pageSize.value);
+		resolve();
 	});
-	GetProductInfoList(currentPage.value, pageSize.value);
-})
+});
 
 const handleCategoryChange = (value) => {
 	// 如果是数组，取最后一个值（通常是叶子节点）
@@ -1777,6 +1825,7 @@ const saveProductInfo = async (isDraftMode: boolean) => {
 			CustomerGoodsNumber: Productform.customerGoodsNumber == null || Productform.customerGoodsNumber == undefined ? '无' : Productform.customerGoodsNumber,
 			developers: Productform.developmentPersonnel,
 			IsDraft: isDraftMode ? 1 : 0, // 设置草稿状态
+			ContactProductsID: CProductsId.value
 		};
 		// 上传主产品图片
 		let mainProductImageUrls = [];
