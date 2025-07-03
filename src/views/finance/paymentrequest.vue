@@ -679,7 +679,8 @@ const state = reactive({
 		sql_sale_contracts: [],
 		sql_payment_requests: [],
 		hr_payment_contract_type: [],
-		sql_shippingdeliveries: []
+		sql_shippingdeliveries: [],
+		hr_business_expenses: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -687,7 +688,7 @@ var dictParams = [{ dictType: 'hr_ourcompany' }, { dictType: 'hr_export_currency
 { dictType: 'hr_payment_category' }, { dictType: 'hr_factory_payment' }, { dictType: 'hr_domestic_charges' }, { dictType: 'hr_foreign_charges' },
 { dictType: 'hr_daily_expenses' }, { dictType: 'sql_supplier_info' }, { dictType: 'hr_currency_code' }, { dictType: 'sql_all_user' }, { dictType: 'sql_hr_sale' },
 { dictType: 'sql_hr_purchase' }, { dictType: 'sql_hr_finance' }, { dictType: 'sql_hr_dept' }, { dictType: 'hr_associated_modules' }, { dictType: 'sql_purchase_contract' },
-{ dictType: 'sql_sale_contracts' }, { dictType: 'sql_payment_requests' }, { dictType: 'hr_payment_contract_type' }, { dictType: 'sql_shippingdeliveries' }]
+{ dictType: 'sql_sale_contracts' }, { dictType: 'sql_payment_requests' }, { dictType: 'hr_payment_contract_type' }, { dictType: 'sql_shippingdeliveries' }, { dictType: 'hr_business_expenses' }]
 
 async function fetchDataAndExecute() {
 	try {
@@ -718,6 +719,9 @@ const paymentCategoryChange = () => {
 			break;
 		case '4':
 			PaymentTypeOptions.value = state.optionss.hr_daily_expenses
+			break;
+		case '5':
+			PaymentTypeOptions.value = state.optionss.hr_business_expenses
 			break;
 	}
 }

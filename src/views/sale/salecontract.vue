@@ -2859,7 +2859,7 @@ const checkContractsDetails = async (row) => {
 					}
 					productData.value.push({
 						Id: element.id,
-						ProductID: element.productID,
+						productID: element.productID,
 						ContractId: element.contractId,
 						productNum: element.productCode,
 						CustomerCode: element.customerNum,
