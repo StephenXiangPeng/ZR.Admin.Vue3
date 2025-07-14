@@ -1785,6 +1785,9 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined, isDraftMo
 // 提取公共的保存产品信息逻辑
 const saveProductInfo = async (isDraftMode: boolean) => {
 	try {
+		if (CProductsId.value == null || CProductsId.value == undefined || isNaN(CProductsId.value)) {
+			CProductsId.value = 0;
+		}
 		const productInfoRequest = {
 			ProductCategoriesID: SelectNodeId.value,
 			ProductCode: Productform.productCode,
@@ -1911,6 +1914,7 @@ const saveProductInfo = async (isDraftMode: boolean) => {
 					}));
 				}
 				return {
+
 					mainProductCode: productInfoRequest.ProductCode,
 					subProductCode: productInfoRequest.ProductCode + '-' + subProduct.subProductCode,
 					subProductImages: subProductImageUrls.join(','),

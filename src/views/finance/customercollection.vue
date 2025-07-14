@@ -121,13 +121,51 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
+					<el-col :span="8">
+						<el-form-item label="客户">
+							<el-select v-model="addcustomercollectionform.Customer" filterable clearable
+								placeholder="请选择客户" style="width: 300px">
+								<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="款项类别">
+							<el-select v-model="addcustomercollectionform.FundsClassification" filterable clearable
+								placeholder="请选择款项类别" style="width: 300px">
+								<el-option v-for="dict in optionss.hr_funds_classification" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<el-row>
+					<el-col :span="8">
+						<el-form-item label="关联模块">
+							<el-select v-model="addcustomercollectionform.AssociatedModules" filterable clearable
+								placeholder="请选择关联模块" style="width: 300px">
+								<el-option v-for="dict in optionss.hr_collection_associated_modules"
+									:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="关联单号">
+							<el-select v-model="addcustomercollectionform.AssociatedModulesDocumentID" filterable
+								clearable placeholder="请选择关联单号" style="width: 300px"
+								:disabled="isAssociatedDocumentDisabled">
+								<el-option v-for="dict in associatedDocumentOptions" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
 				</el-row>
 				<el-row>
 					<el-col :span="16">
 						<el-form-item label="收款单据">
 							<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList"
-								limit="3" :disabled="fileList.length >= 3" @change="handleChange" :action="UploadUrl"
-								:data="formData">
+								limit="3" :disabled="fileList.length >= 3" @change="handleChange" :action="UploadUrl">
 								<el-icon>
 									<Plus />
 								</el-icon>
@@ -174,9 +212,10 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, computed, watch } from 'vue'
 import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from 'element-plus'
 import request from '@/utils/request';
+import { getDicts } from '@/api/system/dict/data';
 import { get } from 'sortablejs';
 
 // 添加格式化日期函数
@@ -287,15 +326,30 @@ const state = reactive({
 		hr_ourcompany: [],
 		hr_export_currency: [],
 		hr_bank: [],
-		sql_customercollections_no: []
+		sql_customercollections_no: [],
+		sql_hr_customer: [],
+		hr_funds_classification: [],
+		hr_collection_associated_modules: [],
+		sql_sale_contracts: [],
+		sql_shippingdeliveries: []
 	}
 })
 const { optionss } = toRefs(state)
-var dictParams = [{ dictType: 'hr_ourcompany' }, { dictType: 'hr_export_currency' }, { dictType: 'hr_bank' }, { dictType: 'sql_customercollections_no' }]
+var dictParams = [
+	{ dictType: 'hr_ourcompany' },
+	{ dictType: 'hr_export_currency' },
+	{ dictType: 'hr_bank' },
+	{ dictType: 'sql_customercollections_no' },
+	{ dictType: 'sql_hr_customer' },
+	{ dictType: 'hr_funds_classification' },
+	{ dictType: 'hr_collection_associated_modules' },
+	{ dictType: 'sql_sale_contracts' },
+	{ dictType: 'sql_shippingdeliveries' }
+]
 
 async function fetchDataAndExecute() {
 	try {
-		const response = await proxy.getDicts(dictParams);
+		const response = await getDicts(dictParams);
 		response.data.forEach((element) => {
 			state.optionss[element.dictType] = element.list;
 		});
@@ -308,6 +362,40 @@ async function fetchDataAndExecute() {
 	}
 }
 fetchDataAndExecute();
+
+// 计算属性：根据关联模块动态获取关联单号选项
+const associatedDocumentOptions = computed(() => {
+	const selectedModule = addcustomercollectionform.value.AssociatedModules;
+	// 如果关联模块为空或未选择，返回空数组
+	if (!selectedModule || selectedModule === '') {
+		return [];
+	}
+	// 根据关联模块的值返回对应的数据源
+	if (selectedModule === '1') {
+		return optionss.value.sql_sale_contracts || [];
+	} else if (selectedModule === '2') {
+		return optionss.value.sql_shippingdeliveries || [];
+	}
+	return [];
+});
+
+// 计算属性：控制关联单号下拉框是否禁用
+const isAssociatedDocumentDisabled = computed(() => {
+	return !addcustomercollectionform.value.AssociatedModules ||
+		addcustomercollectionform.value.AssociatedModules === '';
+});
+
+// 监听关联模块变化，清空关联单号选择
+watch(() => addcustomercollectionform.value.AssociatedModules, (newValue, oldValue) => {
+	// 当关联模块发生变化时，清空关联单号
+	if (newValue !== oldValue) {
+		addcustomercollectionform.value.AssociatedModulesDocumentID = '';
+	}
+	// 特别处理当关联模块被清空的情况
+	if (!newValue || newValue === '') {
+		addcustomercollectionform.value.AssociatedModulesDocumentID = '';
+	}
+});
 
 const filelistUrlStr = ref('')
 const UploadUrl = 'Common/UploadFile'	// 上传图片地址
@@ -500,6 +588,10 @@ const clearAll = () => {
 	addcustomercollectionform.value.amount = ''
 	addcustomercollectionform.value.bank = ''
 	addcustomercollectionform.value.attachment = ''
+	addcustomercollectionform.value.Customer = ''
+	addcustomercollectionform.value.FundsClassification = ''
+	addcustomercollectionform.value.AssociatedModules = ''
+	addcustomercollectionform.value.AssociatedModulesDocumentID = ''
 	fileList.value = []
 	filelistUrlStr.value = ''
 	isEdit.value = false
@@ -581,6 +673,12 @@ const CheckCustomerCollectionDetails = (row) => {
 	addcustomercollectionform.value.amount = row.amount;
 	addcustomercollectionform.value.bank = state.optionss.hr_bank.find((dict) => dict.dictLabel === row.bank)?.dictValue || '';
 
+	// 关联模块相关字段赋值
+	addcustomercollectionform.value.Customer = row.customer || '';
+	addcustomercollectionform.value.FundsClassification = row.fundsClassification || '';
+	addcustomercollectionform.value.AssociatedModules = row.associatedModules || '';
+	addcustomercollectionform.value.AssociatedModulesDocumentID = row.associatedModulesDocumentID || '';
+
 	// 清空现有图片列表
 	fileList.value = [];
 	filelistUrlStr.value = '';
@@ -631,7 +729,11 @@ const addcustomercollectionform = ref({
 	exchangeRate: '',
 	amount: '',
 	bank: '',
-	attachment: ''
+	attachment: '',
+	Customer: '',
+	FundsClassification: '',
+	AssociatedModules: '',
+	AssociatedModulesDocumentID: ''
 })
 
 const SubmitCustomerCollection = async () => {
