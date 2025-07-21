@@ -15,7 +15,7 @@
 					:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-select v-model="SearchBank" filterable placeholder="选择收汇银行" style="width: 15%">
-				<el-option v-for="dict in optionss.hr_bank" :key="dict.dictCode" :label="dict.dictLabel"
+				<el-option v-for="dict in searchBankOptions" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<el-date-picker v-model="SearchReceiptDateStart" type="date" placeholder="请选择收汇日期起" size="Default"
@@ -46,13 +46,24 @@
 			<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
 			<el-table-column prop="foreignCurrency" label="外销币种" width="150"></el-table-column>
 			<el-table-column prop="exchangeRate" label="汇率" width="150"></el-table-column>
-			<el-table-column prop="amount" label="金额" width="150"></el-table-column>
+			<el-table-column prop="amount" label="金额" width="150">
+				<template #default="scope">
+					<span>{{ formatTableAmount(scope.row.amount, scope.row.foreignCurrency) }}</span>
+				</template>
+			</el-table-column>
 			<el-table-column prop="bank" label="收汇银行" width="150"></el-table-column>
+			<el-table-column prop="isCollected" label="是否领取" width="120">
+				<template #default="scope">
+					<el-tag v-if="scope.row.isCollected" type="success" size="small">已领取</el-tag>
+					<el-tag v-else type="warning" size="small">待领取</el-tag>
+				</template>
+			</el-table-column>
 			<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
 				<template v-slot:default="scope">
 					<el-button link type="primary" size="small"
 						@click=CheckCustomerCollectionDetails(scope.row)>查看详情</el-button>
-					<el-button link type="danger" size="small" @click="handleDelete(scope.row)">
+					<el-button v-if="!scope.row.isCollected" link type="danger" size="small"
+						@click="handleDelete(scope.row)">
 						删除
 					</el-button>
 				</template>
@@ -60,8 +71,8 @@
 		</el-table>
 		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
 			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<el-dialog v-model="addcustomercollectiondialog" title="新增收款单据" :close-on-click-modal=false style="width: 70%;"
-			@close="Closeaddcustomercollectiondialog()">
+		<el-dialog v-model="addcustomercollectiondialog" :title="isReadOnly ? '查看收款单据' : (isEdit ? '编辑收款单据' : '新增收款单据')"
+			:close-on-click-modal=false style="width: 70%;" @close="Closeaddcustomercollectiondialog()">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="addcustomercollectionform" label-width="120px">
@@ -75,13 +86,13 @@
 					<el-col :span="8">
 						<el-form-item label="收汇日期">
 							<el-date-picker v-model="addcustomercollectionform.receiptDate" type="date"
-								placeholder="请选择收汇日期" style="width: 300px"></el-date-picker>
+								placeholder="请选择收汇日期" style="width: 300px" :disabled="isReadOnly"></el-date-picker>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="我方公司">
 							<el-select v-model="addcustomercollectionform.ourCompany" placeholder="请选择我方公司"
-								style="width: 300px">
+								style="width: 300px" @change="handleOurCompanyChange" :disabled="isReadOnly">
 								<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -92,7 +103,7 @@
 					<el-col :span="8">
 						<el-form-item label="外销币种">
 							<el-select v-model="addcustomercollectionform.foreignCurrency" placeholder="请选择外销币种"
-								style="width: 300px">
+								style="width: 300px" @change="handleForeignCurrencyChange" :disabled="isReadOnly">
 								<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -101,63 +112,62 @@
 					<el-col :span="8">
 						<el-form-item label="汇率">
 							<el-input v-model="addcustomercollectionform.exchangeRate" placeholder="请输入汇率"
-								style="width: 300px"></el-input>
+								style="width: 300px" @input="handleExchangeRateInput" @blur="handleExchangeRateBlur"
+								@change="calculateSettlementAmount" :disabled="isReadOnly"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="金额">
-							<el-input v-model="addcustomercollectionform.amount" placeholder="请输入金额"
-								style="width: 300px"></el-input>
+						<el-form-item :label="`收汇金额`">
+							<el-input v-if="!isReadOnly" v-model="addcustomercollectionform.amount" placeholder="请输入金额"
+								style="width: 300px" @input="handleAmountInput" @focus="handleAmountFocus"
+								@blur="handleAmountBlur" @change="calculateSettlementAmount"></el-input>
+							<el-input v-else :value="formattedAmount" placeholder="请输入金额" style="width: 300px"
+								disabled></el-input>
 						</el-form-item>
 					</el-col>
 				</el-row>
 				<el-row>
 					<el-col :span="8">
-						<el-form-item label="收汇银行">
-							<el-select v-model="addcustomercollectionform.bank" placeholder="请选择收汇银行"
-								style="width: 300px">
-								<el-option v-for="dict in optionss.hr_bank" :key="dict.dictCode" :label="dict.dictLabel"
-									:value="dict.dictValue"></el-option>
-							</el-select>
+						<el-form-item :label="`结汇金额`">
+							<el-input :value="formattedSettlementAmount" placeholder="自动计算" style="width: 300px"
+								disabled></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
+						<el-form-item label="收汇银行">
+							<el-select v-model="addcustomercollectionform.bank" placeholder="请选择收汇银行"
+								style="width: 300px" @focus="handleBankSelectFocus"
+								:disabled="isReadOnly || !addcustomercollectionform.ourCompany">
+								<el-option v-for="dict in receivingBankOptions" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8" v-if="isCollectedRecord">
 						<el-form-item label="客户">
-							<el-select v-model="addcustomercollectionform.Customer" filterable clearable
-								placeholder="请选择客户" style="width: 300px">
+							<el-select v-model="addcustomercollectionform.customerID" style="width: 300px"
+								:disabled="isReadOnly || !addcustomercollectionform.ourCompany">
 								<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
-						<el-form-item label="款项类别">
-							<el-select v-model="addcustomercollectionform.FundsClassification" filterable clearable
-								placeholder="请选择款项类别" style="width: 300px">
-								<el-option v-for="dict in optionss.hr_funds_classification" :key="dict.dictCode"
+					<el-col :span="8" v-if="isCollectedRecord">
+						<el-form-item label="领取人">
+							<el-select v-model="addcustomercollectionform.receivingUser" style="width: 300px"
+								:disabled="isReadOnly || !addcustomercollectionform.ourCompany">
+								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="8">
-						<el-form-item label="关联模块">
-							<el-select v-model="addcustomercollectionform.AssociatedModules" filterable clearable
-								placeholder="请选择关联模块" style="width: 300px">
-								<el-option v-for="dict in optionss.hr_collection_associated_modules"
-									:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="关联单号">
-							<el-select v-model="addcustomercollectionform.AssociatedModulesDocumentID" filterable
-								clearable placeholder="请选择关联单号" style="width: 300px"
-								:disabled="isAssociatedDocumentDisabled">
-								<el-option v-for="dict in associatedDocumentOptions" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
+					<el-col :span="16" v-if="isRemarkRequired">
+						<el-form-item label="备注" :required="isRemarkRequired">
+							<el-input v-model="addcustomercollectionform.remark" placeholder="请输入备注" type="textarea"
+								:rows="5" style="width: 900px" :maxlength="500" show-word-limit
+								:disabled="isReadOnly"></el-input>
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -165,7 +175,8 @@
 					<el-col :span="16">
 						<el-form-item label="收款单据">
 							<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList"
-								limit="3" :disabled="fileList.length >= 3" @change="handleChange" :action="UploadUrl">
+								limit="3" :disabled="isReadOnly || fileList.length >= 3" @change="handleChange"
+								:action="UploadUrl">
 								<el-icon>
 									<Plus />
 								</el-icon>
@@ -177,7 +188,7 @@
 												@click="handlePictureCardPreview(file)">
 												<el-icon><zoom-in /></el-icon>
 											</span>
-											<span v-if="!disabled" class="el-upload-list__item-delete"
+											<span v-if="!disabled && !isReadOnly" class="el-upload-list__item-delete"
 												@click="handleRemove(file)">
 												<el-icon>
 													<Delete />
@@ -193,6 +204,77 @@
 							</el-dialog>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row v-if="showReceivingPaymentsDetails">
+					<span style="font-size: 20px; font-weight: bold;">收款明细</span>
+					<el-divider></el-divider>
+					<el-table :data="ReceivingPaymentsDetailsTbaleData" style="width: 100%">
+						<el-table-column prop="fundsClassification" label="款项类别">
+							<template #default="{ row }">
+								<span>{{ getFundsClassificationLabel(row.fundsClassification) }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="associatedModulesDocument" label="关联单号">
+							<template #default="{ row }">
+								<span>{{ getAssociatedDocumentLabel(row.associatedModulesDocument) }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="applicationAmount" label="金额">
+							<template #default="{ row }">
+								<span>{{ formatAmountWithCurrency(row.applicationAmount,
+									addcustomercollectionform.foreignCurrency) }}</span>
+							</template>
+						</el-table-column>
+					</el-table>
+					<!-- 合计行 -->
+					<div v-if="ReceivingPaymentsDetailsTbaleData.length > 0"
+						style="margin-top: 10px; text-align: right; padding: 10px; background-color: #f5f7fa; border-radius: 4px;">
+						<div style="display: flex; justify-content: space-between; align-items: center;">
+							<div>
+								<span style="font-weight: bold; font-size: 14px;">合计金额：</span>
+								<span :style="{
+									fontWeight: 'bold',
+									fontSize: '16px',
+									color: isAmountExceeded ? '#f56c6c' : isAmountEqual ? '#67c23a' : '#409eff'
+								}">
+									{{ formatAmountWithCurrency(totalAmount, addcustomercollectionform.foreignCurrency)
+									}}
+								</span>
+								<div v-if="isAmountExceeded" style="margin-top: 5px;">
+									<el-tag type="danger" size="small">
+										<el-icon>
+											<Warning />
+										</el-icon>
+										收款明细总金额已超过收汇金额
+									</el-tag>
+								</div>
+								<div v-else-if="!isAmountEqual && totalAmount > 0" style="margin-top: 5px;">
+									<el-tag type="warning" size="small">
+										<el-icon>
+											<Warning />
+										</el-icon>
+										收款明细总金额必须等于收汇金额
+									</el-tag>
+								</div>
+								<div v-else-if="isAmountEqual" style="margin-top: 5px;">
+									<el-tag type="success" size="small">
+										<el-icon>
+											<CircleCheck />
+										</el-icon>
+										金额匹配
+									</el-tag>
+								</div>
+							</div>
+							<div style="text-align: right;">
+								<div style="font-size: 12px; color: #909399;">收汇金额：</div>
+								<div style="font-size: 14px; color: #606266;">
+									{{ formatAmountWithCurrency(addcustomercollectionform.amount,
+										addcustomercollectionform.foreignCurrency)
+									}}
+								</div>
+							</div>
+						</div>
+					</div>
 				</el-row>
 			</el-form>
 			<template #footer>
@@ -212,7 +294,7 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { createApp, getCurrentInstance, reactive, toRefs, ref, computed, watch } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, computed, watch, nextTick } from 'vue'
 import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 import { getDicts } from '@/api/system/dict/data';
@@ -226,6 +308,224 @@ const formatDate = (dateString) => {
 	const month = String(date.getMonth() + 1).padStart(2, '0');
 	const day = String(date.getDate()).padStart(2, '0');
 	return `${year}-${month}-${day}`;
+};
+
+// 处理汇率输入格式化（保留3位小数）
+const handleExchangeRateInput = (value) => {
+	if (!value) return;
+
+	// 移除非数字和小数点
+	let cleanValue = value.replace(/[^\d.]/g, '');
+
+	// 确保只有一个小数点
+	const parts = cleanValue.split('.');
+	if (parts.length > 2) {
+		cleanValue = parts[0] + '.' + parts.slice(1).join('');
+	}
+
+	// 限制小数点后最多3位
+	if (parts.length === 2 && parts[1].length > 3) {
+		cleanValue = parts[0] + '.' + parts[1].substring(0, 3);
+	}
+
+	// 更新表单值
+	addcustomercollectionform.value.exchangeRate = cleanValue;
+};
+
+// 处理汇率失焦格式化（补0到3位小数）
+const handleExchangeRateBlur = (event) => {
+	const value = event.target.value;
+	if (!value) return;
+
+	// 如果包含小数点，处理小数部分
+	const parts = value.split('.');
+	if (parts.length === 2) {
+		const integerPart = parts[0];
+		const decimalPart = parts[1];
+
+		// 补0到3位小数
+		const paddedDecimal = decimalPart.padEnd(3, '0');
+
+		// 更新表单值
+		addcustomercollectionform.value.exchangeRate = integerPart + '.' + paddedDecimal;
+	} else if (parts.length === 1) {
+		// 如果只有整数部分，添加.000
+		const integerPart = parts[0];
+		addcustomercollectionform.value.exchangeRate = integerPart + '.000';
+	}
+};
+
+// 处理收汇金额输入格式化（保留2位小数）
+const handleAmountInput = (value) => {
+	if (!value) return;
+
+	// 移除非数字和小数点
+	let cleanValue = value.replace(/[^\d.]/g, '');
+
+	// 确保只有一个小数点
+	const parts = cleanValue.split('.');
+	if (parts.length > 2) {
+		cleanValue = parts[0] + '.' + parts.slice(1).join('');
+	}
+
+	// 限制小数点后最多2位
+	if (parts.length === 2 && parts[1].length > 2) {
+		cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
+	}
+
+	// 更新表单值
+	addcustomercollectionform.value.amount = cleanValue;
+};
+
+// 处理收汇金额获得焦点（清除货币符号，只显示数字）
+const handleAmountFocus = (event) => {
+	const value = event.target.value;
+	if (!value) return;
+
+	// 移除货币符号和空格，只保留数字和小数点
+	const cleanValue = value.replace(/[^\d.]/g, '');
+	event.target.value = cleanValue;
+};
+
+// 处理收汇金额失焦格式化（补0到2位小数）
+const handleAmountBlur = (event) => {
+	const value = event.target.value;
+	if (!value) return;
+
+	// 移除货币符号和空格，获取纯数字
+	let cleanValue = value.replace(/[^\d.]/g, '');
+
+	// 如果包含小数点，处理小数部分
+	const parts = cleanValue.split('.');
+	if (parts.length === 2) {
+		const integerPart = parts[0];
+		const decimalPart = parts[1];
+
+		// 补0到2位小数
+		const paddedDecimal = decimalPart.padEnd(2, '0');
+
+		// 更新表单值
+		addcustomercollectionform.value.amount = integerPart + '.' + paddedDecimal;
+	} else if (parts.length === 1) {
+		// 如果只有整数部分，添加.00
+		const integerPart = parts[0];
+		addcustomercollectionform.value.amount = integerPart + '.00';
+	}
+
+	// 重新计算结汇金额
+	calculateSettlementAmount();
+
+	// 在失去焦点时显示货币符号
+	const currencySymbol = getCurrencySymbol(addcustomercollectionform.value.foreignCurrency);
+	const formattedValue = currencySymbol + ' ' + addcustomercollectionform.value.amount;
+	// 使用 nextTick 确保 DOM 更新后再设置显示值
+	nextTick(() => {
+		event.target.value = formattedValue;
+	});
+};
+
+// 处理结汇金额输入格式化（保留2位小数）
+const handleSettlementAmountInput = (value) => {
+	if (!value) return;
+
+	// 移除非数字和小数点
+	let cleanValue = value.replace(/[^\d.]/g, '');
+
+	// 确保只有一个小数点
+	const parts = cleanValue.split('.');
+	if (parts.length > 2) {
+		cleanValue = parts[0] + '.' + parts.slice(1).join('');
+	}
+
+	// 限制小数点后最多2位
+	if (parts.length === 2 && parts[1].length > 2) {
+		cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
+	}
+
+	// 更新表单值
+	addcustomercollectionform.value.ExchangeSettlementAmount = cleanValue;
+};
+
+// 计算结汇金额（汇率 × 收汇金额）
+const calculateSettlementAmount = () => {
+	const exchangeRate = parseFloat(addcustomercollectionform.value.exchangeRate) || 0;
+	const amount = parseFloat(addcustomercollectionform.value.amount) || 0;
+
+	const settlementAmount = exchangeRate * amount;
+
+	// 格式化为2位小数
+	addcustomercollectionform.value.ExchangeSettlementAmount = settlementAmount.toFixed(2);
+};
+
+// 获取货币符号
+const getCurrencySymbol = (currencyValue) => {
+	if (!currencyValue) return '';
+	if (currencyValue === '1') return 'USD';
+	if (currencyValue === '2') return 'EUR';
+	if (currencyValue === '3') return 'CNY';
+	return '';
+};
+
+// 格式化金额显示（添加货币符号）
+const formatAmountDisplay = (amount, currencyValue) => {
+	if (!amount) return '';
+	const symbol = getCurrencySymbol(currencyValue);
+	return symbol ? `${symbol} ${amount}` : amount;
+};
+
+// 格式化表格中的金额显示
+const formatTableAmount = (amount, currencyLabel) => {
+	if (!amount) return '';
+	// 确保金额格式化为2位小数
+	const formattedAmount = parseFloat(amount).toFixed(2);
+	// 根据货币标签获取货币符号
+	let symbol = '';
+	if (currencyLabel === '美元') symbol = 'USD';
+	else if (currencyLabel === '欧元') symbol = 'EUR';
+	else if (currencyLabel === '人民币') symbol = 'CNY';
+
+	return symbol ? `${symbol} ${formattedAmount}` : formattedAmount;
+};
+
+
+
+// 计算属性：格式化结汇金额显示
+const formattedSettlementAmount = computed(() => {
+	const settlementAmount = addcustomercollectionform.value.ExchangeSettlementAmount;
+	if (!settlementAmount) return '';
+	// 确保结汇金额格式化为2位小数
+	const formattedSettlementAmount = parseFloat(settlementAmount).toFixed(2);
+	return formatAmountDisplay(formattedSettlementAmount, '3'); // 结汇金额始终使用CNY
+});
+
+// 计算属性：格式化收汇金额显示
+const formattedAmount = computed(() => {
+	const amount = addcustomercollectionform.value.amount;
+	if (!amount) return '';
+	// 确保金额格式化为2位小数
+	const formattedAmount = parseFloat(amount).toFixed(2);
+	return formatAmountDisplay(formattedAmount, addcustomercollectionform.value.foreignCurrency);
+});
+
+// 计算属性：收汇金额显示值（只读时显示格式化，编辑时显示原始值）
+const displayAmount = computed(() => {
+	if (isReadOnly.value) {
+		return formattedAmount.value;
+	}
+	return addcustomercollectionform.value.amount;
+});
+
+// 处理外销币种变化事件
+const handleForeignCurrencyChange = (value) => {
+	// 如果选择的是人民币（字典值为3），自动设置汇率为1.000
+	if (value === '3') {
+		addcustomercollectionform.value.exchangeRate = '1.000';
+	} else {
+		addcustomercollectionform.value.exchangeRate = '';
+	}
+
+	// 重新计算结汇金额
+	calculateSettlementAmount();
 };
 
 // 添加删除方法
@@ -283,6 +583,7 @@ const openAddCustomerCollection = () => {
 	if (EditID.value == 0) {
 		isSaveBtnShow.value = true;
 		isSubmitBtnShow.value = true;
+		isReadOnly.value = false; // 新增时设置为可编辑
 	}
 	addcustomercollectiondialog.value = true;
 	addcustomercollectionform.value.receiptDate = new Date().toLocaleDateString();
@@ -314,6 +615,7 @@ interface CustomUploadFile extends UploadUserFile {
 // Then update the fileList ref type
 const fileList = ref<CustomUploadFile[]>([]);
 const isEdit = ref(false);
+const isReadOnly = ref(false); // 控制表单是否只读
 const isSaveBtnShow = ref(true);
 const isEditSaveBtnShow = ref(false);
 const isSubmitBtnShow = ref(false);
@@ -331,7 +633,10 @@ const state = reactive({
 		hr_funds_classification: [],
 		hr_collection_associated_modules: [],
 		sql_sale_contracts: [],
-		sql_shippingdeliveries: []
+		sql_shippingdeliveries: [],
+		hr_receiving_bank: [],
+		hr_rf_receiving_bank: [],
+		sql_all_user: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -344,7 +649,10 @@ var dictParams = [
 	{ dictType: 'hr_funds_classification' },
 	{ dictType: 'hr_collection_associated_modules' },
 	{ dictType: 'sql_sale_contracts' },
-	{ dictType: 'sql_shippingdeliveries' }
+	{ dictType: 'sql_shippingdeliveries' },
+	{ dictType: 'hr_receiving_bank' },
+	{ dictType: 'hr_rf_receiving_bank' },
+	{ dictType: 'sql_all_user' }
 ]
 
 async function fetchDataAndExecute() {
@@ -395,6 +703,112 @@ watch(() => addcustomercollectionform.value.AssociatedModules, (newValue, oldVal
 	if (!newValue || newValue === '') {
 		addcustomercollectionform.value.AssociatedModulesDocumentID = '';
 	}
+});
+
+// 计算属性：根据我方公司动态获取收汇银行选项
+const receivingBankOptions = computed(() => {
+	const selectedCompany = addcustomercollectionform.value.ourCompany;
+	// 如果我方公司为空或未选择，返回空数组
+	if (!selectedCompany || selectedCompany === '') {
+		return [];
+	}
+	// 根据我方公司的值返回对应的收汇银行数据源
+	if (selectedCompany === '1') {
+		// 荣发塑料，使用 hr_rf_receiving_bank
+		return optionss.value.hr_rf_receiving_bank || [];
+	} else if (selectedCompany === '2') {
+		// 惠荣进出口，使用 hr_receiving_bank
+		return optionss.value.hr_receiving_bank || [];
+	}
+	return [];
+});
+
+// 监听我方公司变化，清空收汇银行选择
+watch(() => addcustomercollectionform.value.ourCompany, (newValue, oldValue) => {
+	console.log('我方公司变化监听器触发:', { newValue, oldValue });
+
+	// 当我方公司发生变化时，清空收汇银行和备注
+	if (newValue !== oldValue) {
+		// 使用 nextTick 确保在 DOM 更新后执行清空操作
+		nextTick(() => {
+			addcustomercollectionform.value.bank = '';
+			addcustomercollectionform.value.remark = '';
+			addcustomercollectionform.value.ExchangeSettlementAmount = '';
+			console.log('我方公司已更改，已清空收汇银行、备注和结汇金额');
+		});
+	}
+
+	// 特别处理当我方公司被清空的情况
+	if (!newValue || newValue === '') {
+		nextTick(() => {
+			addcustomercollectionform.value.bank = '';
+			addcustomercollectionform.value.remark = '';
+			addcustomercollectionform.value.ExchangeSettlementAmount = '';
+			console.log('我方公司已清空，已清空收汇银行、备注和结汇金额');
+		});
+	}
+}, { immediate: true, deep: true });
+
+// 监听收汇银行变化，当从"其他"改为其他选项时清空备注
+watch(() => addcustomercollectionform.value.bank, (newValue, oldValue) => {
+	// 如果之前选择的是"其他"（值为'5'），现在改为其他选项，则清空备注
+	if (oldValue === '5' && newValue !== '5') {
+		addcustomercollectionform.value.remark = '';
+		console.log('收汇银行已从"其他"改为其他选项，已清空备注');
+	}
+});
+
+// 去除货币符号的辅助函数
+const removeCurrencySymbol = (value) => {
+	if (!value) return '';
+	// 移除货币符号（USD、EUR、CNY）和空格，只保留数字和小数点
+	return value.replace(/[^\d.]/g, '');
+};
+
+// 处理我方公司变化事件
+const handleOurCompanyChange = (value) => {
+	console.log('我方公司变化事件触发:', value);
+	// 直接清空收汇银行、备注和结汇金额
+	addcustomercollectionform.value.bank = '';
+	addcustomercollectionform.value.remark = '';
+	addcustomercollectionform.value.ExchangeSettlementAmount = '';
+	console.log('已清空收汇银行、备注和结汇金额');
+};
+
+// 处理收汇银行下拉框聚焦事件
+const handleBankSelectFocus = () => {
+	// 检查是否已选择我方公司
+	if (!addcustomercollectionform.value.ourCompany || addcustomercollectionform.value.ourCompany === '') {
+		ElMessage({
+			type: 'warning',
+			message: '请先选择我方公司'
+		});
+	}
+};
+
+// 计算属性：搜索条件中的收汇银行选项（包含所有可能的收汇银行）
+const searchBankOptions = computed(() => {
+	const allBanks = [];
+
+	// 添加荣发塑料的收汇银行
+	if (optionss.value.hr_rf_receiving_bank) {
+		allBanks.push(...optionss.value.hr_rf_receiving_bank);
+	}
+
+	// 添加惠荣进出口的收汇银行
+	if (optionss.value.hr_receiving_bank) {
+		allBanks.push(...optionss.value.hr_receiving_bank);
+	}
+
+	return allBanks;
+});
+
+// 计算属性：判断是否显示备注输入框（当收汇银行选择"其他"时显示）
+const isRemarkRequired = computed(() => {
+	const selectedBank = addcustomercollectionform.value.bank;
+	// 检查收汇银行是否选择的是"其他"
+	// 这里假设"其他"的字典值为"999"或其他特定值，您需要根据实际情况调整
+	return selectedBank === '5';
 });
 
 const filelistUrlStr = ref('')
@@ -508,12 +922,22 @@ const customerCollectionsRequest = reactive({
 	ReceiptImageUrl: "",
 	Remark: "",
 	IsDelete: 0,
-	isDraft: 1
+	isDraft: 1,
+	ExchangeSettlementAmount: 0
 })
 
 //保存收款单据
 const SaveCustomerCollection = async () => {
 	try {
+		// 验证备注字段（当收汇银行选择"其他"时必填）
+		if (isRemarkRequired.value && !addcustomercollectionform.value.remark.trim()) {
+			ElMessage({
+				type: 'error',
+				message: '当收汇银行选择"其他"时，备注字段为必填项'
+			});
+			return;
+		}
+
 		const result = await ElMessageBox.confirm('确定保存该收款单据吗？', '提示', {
 			confirmButtonText: '确定',
 			cancelButtonText: '取消',
@@ -525,8 +949,14 @@ const SaveCustomerCollection = async () => {
 		customerCollectionsRequest.OurCompany = addcustomercollectionform.value.ourCompany;
 		customerCollectionsRequest.ForeignCurrency = addcustomercollectionform.value.foreignCurrency;
 		customerCollectionsRequest.ExchangeRate = Number(addcustomercollectionform.value.exchangeRate);
-		customerCollectionsRequest.Amount = Number(addcustomercollectionform.value.amount);
+		// 去除收汇金额的货币符号后转换为数字
+		const cleanAmount = removeCurrencySymbol(addcustomercollectionform.value.amount);
+		customerCollectionsRequest.Amount = Number(cleanAmount);
 		customerCollectionsRequest.Bank = addcustomercollectionform.value.bank;
+		customerCollectionsRequest.Remark = addcustomercollectionform.value.remark;
+		// 去除结汇金额的货币符号后转换为数字
+		const cleanSettlementAmount = removeCurrencySymbol(addcustomercollectionform.value.ExchangeSettlementAmount);
+		customerCollectionsRequest.ExchangeSettlementAmount = Number(cleanSettlementAmount);
 		// 上传图片
 		let receiptImageUrls = [];
 		if (Array.isArray(fileList.value) && fileList.value.length > 0) {
@@ -587,6 +1017,8 @@ const clearAll = () => {
 	addcustomercollectionform.value.exchangeRate = ''
 	addcustomercollectionform.value.amount = ''
 	addcustomercollectionform.value.bank = ''
+	addcustomercollectionform.value.ExchangeSettlementAmount = ''
+	addcustomercollectionform.value.remark = ''
 	addcustomercollectionform.value.attachment = ''
 	addcustomercollectionform.value.Customer = ''
 	addcustomercollectionform.value.FundsClassification = ''
@@ -595,8 +1027,15 @@ const clearAll = () => {
 	fileList.value = []
 	filelistUrlStr.value = ''
 	isEdit.value = false
+	isReadOnly.value = false
 	EditID.value = 0
 	filelistUrlStr.value = ''
+	// 清空收款明细
+	ReceivingPaymentsDetailsTbaleData.value = []
+	totalAmount.value = 0
+	// 清空客户ID和领取人
+	addcustomercollectionform.value.customerID = ''
+	addcustomercollectionform.value.receivingUser = ''
 }
 
 //分页组件
@@ -631,9 +1070,25 @@ function GetCustomerCollectionsList(start, end) {
 				customercollectiontableData.value.forEach((item) => {
 					item.ourCompany = state.optionss.hr_ourcompany.find((dict) => dict.dictValue === item.ourCompany)?.dictLabel;
 					item.foreignCurrency = state.optionss.hr_export_currency.find((dict) => dict.dictValue === item.foreignCurrency)?.dictLabel;
-					item.bank = state.optionss.hr_bank.find((dict) => dict.dictValue === item.bank)?.dictLabel;
+
+					// 根据我方公司选择对应的收汇银行数据源
+					let bankOptions = [];
+					if (item.ourCompany === '荣发塑料') {
+						bankOptions = state.optionss.hr_rf_receiving_bank || [];
+					} else if (item.ourCompany === '惠荣进出口') {
+						bankOptions = state.optionss.hr_receiving_bank || [];
+					}
+
+					// 在对应的收汇银行数据源中查找标签
+					const bankDict = bankOptions.find((dict) => dict.dictValue === item.bank);
+					item.bank = bankDict?.dictLabel || item.bank;
+
+					// 转换客户ID为显示标签
+					item.customerID = state.optionss.sql_hr_customer.find((dict) => dict.dictValue === item.customerID)?.dictLabel || item.customerID;
+					// 计算是否领取状态：有领取人和客户则为已领取，否则为待领取
+					item.isCollected = !!(item.customerID && item.receivingUser);
 				})
-				resolve(response.data.data);
+				resolve(response.data);
 			} else {
 				if (response.data.totalNum > 0 && start > 1) {
 					GetCustomerCollectionsList(start - 1, end);
@@ -650,28 +1105,46 @@ function GetCustomerCollectionsList(start, end) {
 }
 
 const EditID = ref(0);
-const CheckCustomerCollectionDetails = (row) => {
+const CheckCustomerCollectionDetails = async (row) => {
 	EditID.value = row.id;
 	if (row.isDraft === 1) {
+		// 草稿状态：可以编辑和提交
 		isSubmitBtnShow.value = true;
 		isEdit.value = true;
 		isSaveBtnShow.value = false;
 		isEditSaveBtnShow.value = true;
+		isReadOnly.value = false;
 	} else {
+		// 已提交状态：只读模式
 		isSubmitBtnShow.value = false;
 		isEdit.value = false;
 		isSaveBtnShow.value = false;
 		isEditSaveBtnShow.value = false;
-
+		isReadOnly.value = true;
 	}
 	// 基本信息赋值
 	addcustomercollectionform.value.receiptNumber = row.receiptNumber;
 	addcustomercollectionform.value.receiptDate = row.receiptDate;
 	addcustomercollectionform.value.ourCompany = state.optionss.hr_ourcompany.find((dict) => dict.dictLabel === row.ourCompany)?.dictValue || '';
 	addcustomercollectionform.value.foreignCurrency = state.optionss.hr_export_currency.find((dict) => dict.dictLabel === row.foreignCurrency)?.dictValue || '';
-	addcustomercollectionform.value.exchangeRate = row.exchangeRate;
-	addcustomercollectionform.value.amount = row.amount;
-	addcustomercollectionform.value.bank = state.optionss.hr_bank.find((dict) => dict.dictLabel === row.bank)?.dictValue || '';
+	addcustomercollectionform.value.exchangeRate = row.exchangeRate ? parseFloat(row.exchangeRate).toFixed(3) : '';
+	// 收汇金额赋值，存储纯数字，显示时通过计算属性格式化
+	addcustomercollectionform.value.amount = row.amount ? parseFloat(row.amount).toFixed(2) : '';
+	addcustomercollectionform.value.ExchangeSettlementAmount = row.exchangeSettlementAmount ? parseFloat(row.exchangeSettlementAmount).toFixed(2) : '';
+	// 根据我方公司选择对应的收汇银行数据源，然后查找对应的值
+	let bankOptions = [];
+	if (row.ourCompany === '荣发塑料') {
+		bankOptions = state.optionss.hr_rf_receiving_bank || [];
+	} else if (row.ourCompany === '惠荣进出口') {
+		bankOptions = state.optionss.hr_receiving_bank || [];
+	}
+
+	const bankDict = bankOptions.find((dict) => dict.dictLabel === row.bank);
+	addcustomercollectionform.value.bank = bankDict?.dictValue || '';
+	addcustomercollectionform.value.customerID = state.optionss.sql_hr_customer.find((dict) => dict.dictValue === row.customerID.toString())?.dictValue || '';
+	addcustomercollectionform.value.receivingUser = state.optionss.sql_all_user.find((dict) => dict.dictValue === row.receivingUser.toString())?.dictValue || '';
+	// 备注字段赋值
+	addcustomercollectionform.value.remark = row.remark || '';
 
 	// 关联模块相关字段赋值
 	addcustomercollectionform.value.Customer = row.customer || '';
@@ -698,6 +1171,11 @@ const CheckCustomerCollectionDetails = (row) => {
 
 	// 更新已上传文件列表
 	uploadedFiles.value = [...fileList.value];
+
+	// 如果有客户ID和领取人，获取收款明细
+	if (addcustomercollectionform.value.customerID && addcustomercollectionform.value.receivingUser) {
+		await getCustomerCollectionsDetailsList(row.id);
+	}
 
 	// 打开对话框
 	addcustomercollectiondialog.value = true;
@@ -729,32 +1207,103 @@ const addcustomercollectionform = ref({
 	exchangeRate: '',
 	amount: '',
 	bank: '',
+	remark: '',
 	attachment: '',
 	Customer: '',
 	FundsClassification: '',
 	AssociatedModules: '',
-	AssociatedModulesDocumentID: ''
+	AssociatedModulesDocumentID: '',
+	ExchangeSettlementAmount: '',
+	customerID: '',
+	receivingUser: ''
 })
+
+// 保存收款单据（用于提交时的保存）
+const SaveCustomerCollectionForSubmit = async () => {
+	try {
+		// 准备基础数据
+		customerCollectionsRequest.ReceiptNumber = addcustomercollectionform.value.receiptNumber;
+		customerCollectionsRequest.ReceiptDate = addcustomercollectionform.value.receiptDate;
+		customerCollectionsRequest.OurCompany = addcustomercollectionform.value.ourCompany;
+		customerCollectionsRequest.ForeignCurrency = addcustomercollectionform.value.foreignCurrency;
+		customerCollectionsRequest.ExchangeRate = Number(addcustomercollectionform.value.exchangeRate);
+		// 去除收汇金额的货币符号后转换为数字
+		const cleanAmount = removeCurrencySymbol(addcustomercollectionform.value.amount);
+		customerCollectionsRequest.Amount = Number(cleanAmount);
+		customerCollectionsRequest.Bank = addcustomercollectionform.value.bank;
+		customerCollectionsRequest.Remark = addcustomercollectionform.value.remark;
+		// 去除结汇金额的货币符号后转换为数字
+		const cleanSettlementAmount = removeCurrencySymbol(addcustomercollectionform.value.ExchangeSettlementAmount);
+		customerCollectionsRequest.ExchangeSettlementAmount = Number(cleanSettlementAmount);
+
+		// 上传图片
+		let receiptImageUrls = [];
+		if (Array.isArray(fileList.value) && fileList.value.length > 0) {
+			receiptImageUrls = await Promise.all(fileList.value
+				.filter(file => file.isChanged)
+				.map(async (file) => {
+					const response = await uploadReceiptPhoto(file);
+					if (response.code === 200 && response.data.url) {
+						return response.data.url;
+					}
+					throw new Error('上传图片失败');
+				}));
+		}
+		// 合并现有的和新上传的图片URL
+		if (filelistUrlStr.value) {
+			const existingUrls = filelistUrlStr.value.split(',');
+			receiptImageUrls = [...existingUrls, ...receiptImageUrls];
+		}
+		customerCollectionsRequest.ReceiptImageUrl = receiptImageUrls.join(',');
+
+		// 保存数据
+		const response = await request.post(
+			!isEdit.value
+				? 'CustomerCollections/AddCustomerCollections/Add'
+				: 'CustomerCollections/EditCustomerCollections/Edit',
+			isEdit.value ? { ...customerCollectionsRequest, Id: EditID.value } : customerCollectionsRequest
+		);
+
+		if (response != null) {
+			// 返回保存的ID，不关闭对话框
+			return response.data || EditID.value;
+		}
+	} catch (error) {
+		console.error('保存收款单据出错！😔错误内容：', error);
+		throw error;
+	}
+};
 
 const SubmitCustomerCollection = async () => {
 	try {
+		// 验证备注字段（当收汇银行选择"其他"时必填）
+		if (isRemarkRequired.value && !addcustomercollectionform.value.remark.trim()) {
+			ElMessage({
+				type: 'error',
+				message: '当收汇银行选择"其他"时，备注字段为必填项'
+			});
+			return;
+		}
+
 		await ElMessageBox.confirm('确定提交该收款单据吗？', '提示', {
 			confirmButtonText: '确定',
 			cancelButtonText: '取消',
 			type: 'warning',
 		});
 
+		let currentId = EditID.value;
+
 		if (EditID.value === 0) {
-			// First save the draft
-			await SaveCustomerCollection();
+			// 新增时先保存草稿，获取ID
+			currentId = await SaveCustomerCollectionForSubmit();
 		}
 
-		// Then update the draft status
+		// 更新草稿状态为已提交
 		const response = await request({
 			url: 'CustomerCollections/UpdateCustomerCollectionsIsDraft/UpdateIsDraft',
 			method: 'get',
 			params: {
-				ID: EditID.value
+				ID: currentId
 			}
 		});
 
@@ -778,4 +1327,125 @@ const SubmitCustomerCollection = async () => {
 		}
 	}
 }
+
+const ReceivingPaymentsDetailsTbaleData = ref([]);
+// 格式化带货币符号的金额显示
+const formatAmountWithCurrency = (amount, currencyValue) => {
+	if (!amount) return '';
+	const symbol = getCurrencySymbol(currencyValue);
+	const formattedAmount = new Intl.NumberFormat('zh-CN', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2
+	}).format(amount);
+	return symbol ? `${symbol} ${formattedAmount}` : formattedAmount;
+};
+
+
+const totalAmount = ref(0);
+// 检查是否超过收汇金额
+const isAmountExceeded = computed(() => {
+	const receiptAmount = parseFloat(addcustomercollectionform.value.amount) || 0;
+	// 使用更精确的比较方式，避免浮点数精度问题
+	return Math.round(totalAmount.value * 100) / 100 > Math.round(receiptAmount * 100) / 100;
+});
+
+// 检查金额是否完全相等
+const isAmountEqual = computed(() => {
+	const receiptAmount = parseFloat(addcustomercollectionform.value.amount) || 0;
+	// 使用更精确的比较方式，避免浮点数精度问题
+	return Math.round(totalAmount.value * 100) / 100 === Math.round(receiptAmount * 100) / 100;
+});
+
+// 判断是否为新增记录
+const isNewRecord = computed(() => {
+	return EditID.value === 0;
+});
+
+// 判断当前记录是否为已领取状态
+const isCollectedRecord = computed(() => {
+	const hasCustomer = addcustomercollectionform.value.customerID && addcustomercollectionform.value.customerID !== '';
+	const hasReceiver = addcustomercollectionform.value.receivingUser && addcustomercollectionform.value.receivingUser !== '';
+	return hasCustomer && hasReceiver;
+});
+
+// 判断是否显示收款明细（有领取人和客户的情况下才显示）
+const showReceivingPaymentsDetails = computed(() => {
+	const hasCustomer = addcustomercollectionform.value.customerID && addcustomercollectionform.value.customerID !== '';
+	const hasReceiver = addcustomercollectionform.value.receivingUser && addcustomercollectionform.value.receivingUser !== '';
+	console.log('收款明细显示条件检查:', {
+		hasCustomer,
+		hasReceiver,
+		customerID: addcustomercollectionform.value.customerID,
+		receiver: addcustomercollectionform.value.receivingUser,
+	});
+	return hasCustomer && hasReceiver;
+});
+
+// 获取款项类别标签
+const getFundsClassificationLabel = (value) => {
+	if (!value) return '';
+	const dict = state.optionss.hr_funds_classification.find((dict) => dict.dictValue === value.toString());
+	return dict ? dict.dictLabel : value;
+};
+
+// 获取关联单号标签
+const getAssociatedDocumentLabel = (value) => {
+	if (!value) return '';
+	// 在所有关联文档选项中查找
+	const allOptions = [
+		...(optionss.value.sql_sale_contracts || []),
+		...(optionss.value.sql_shippingdeliveries || [])
+	];
+	const dict = allOptions.find(item => item.dictValue === value.toString());
+	return dict ? dict.dictLabel : value;
+};
+
+// 监听收款明细表格数据变化，计算总金额
+watch(ReceivingPaymentsDetailsTbaleData, (newData) => {
+	const total = newData.reduce((sum, item) => {
+		const amount = parseFloat(item.applicationAmount) || 0;
+		// 使用更精确的计算方式，避免浮点数精度问题
+		return Math.round((sum + amount) * 100) / 100;
+	}, 0);
+	totalAmount.value = total;
+}, { deep: true });
+
+// 监听客户ID和领取人变化，获取收款明细
+watch([() => addcustomercollectionform.value.customerID, () => addcustomercollectionform.value.receivingUser], async ([newCustomerID, newReceiver]) => {
+	if (newCustomerID && newCustomerID !== '' && newReceiver && newReceiver !== '' && EditID.value > 0) {
+		// 有客户ID和领取人且是编辑模式时，获取收款明细
+		await getCustomerCollectionsDetailsList(EditID.value);
+	} else {
+		// 清空收款明细
+		ReceivingPaymentsDetailsTbaleData.value = [];
+		totalAmount.value = 0;
+	}
+});
+
+// 获取收款明细列表
+const getCustomerCollectionsDetailsList = async (customerCollectionID) => {
+	try {
+		console.log('开始获取收款明细，ID:', customerCollectionID);
+		const response = await request({
+			url: 'CustomerCollections/GetCustomerCollectionsDetailsList/GetCustomerCollectionsDetailsList',
+			method: 'GET',
+			params: {
+				CustomerCollectionID: customerCollectionID
+			}
+		});
+
+		console.log('收款明细接口响应:', response);
+
+		if (response.data && response.code === 200) {
+			ReceivingPaymentsDetailsTbaleData.value = response.data || [];
+			console.log('收款明细数据已设置:', ReceivingPaymentsDetailsTbaleData.value);
+		} else {
+			ReceivingPaymentsDetailsTbaleData.value = [];
+			console.log('收款明细接口返回错误或空数据');
+		}
+	} catch (error) {
+		console.error('获取收款明细列表失败:', error);
+		ReceivingPaymentsDetailsTbaleData.value = [];
+	}
+};
 </script>

@@ -159,11 +159,15 @@
       <el-table-column prop="receiptNumber" label="收款单号" />
       <el-table-column prop="receiptDate" label="收汇日期" />
       <el-table-column prop="ourCompany" label="我方公司" />
-      <el-table-column prop="foreignCurrency" label="外销币种" />
-      <el-table-column prop="exchangeRate" label="汇率" />
-      <el-table-column prop="amount" label="金额" />
+      <el-table-column prop="foreignCurrency" label="外销币种" v-if="false" />
+      <el-table-column prop="exchangeRate" label="汇率" v-if="false" />
+      <el-table-column prop="amount" label="金额">
+        <template #default="{ row }">
+          {{ formatAmountWithCurrency(row.amount, row.foreignCurrencyValue) }}
+        </template>
+      </el-table-column>
       <el-table-column prop="bank" label="收汇银行" />
-      <el-table-column label="收款凭证" width="120">
+      <el-table-column label="收款凭证" width="120" v-if="false">
         <template #default="{ row }">
           <el-image v-if="row.receiptImageUrl" style="width: 50px; height: 50px; cursor: pointer"
             :src="row.receiptImageUrl" :preview-src-list="[row.receiptImageUrl]" preview-teleported fit="cover"
@@ -1786,38 +1790,177 @@
       </template>
     </el-dialog>
     <!-- 领取收款单对话框 -->
-    <el-dialog v-model="claimDialogVisible" title="领取收款单" width="500px" :close-on-click-modal="false">
+    <el-dialog v-model="claimDialogVisible" title="领取收款单" width="70%" :close-on-click-modal="false">
       <el-form ref="claimFormRef" :model="claimForm" :rules="claimRules" label-width="100px">
-        <el-form-item label="合同类型" prop="contractType">
-          <el-select v-model="claimForm.contractType" placeholder="请选择合同类型" style="width: 100%" filterable
-            @change="relatedmoduleshandleChange(claimForm.contractType)">
-            <el-option v-for="item in state.optionss.hr_payment_contract_type" :key="item.dictValue"
-              :label="item.dictLabel" :value="item.dictValue" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="合同号" prop="contractsID">
-          <el-select v-model="claimForm.contractsID" placeholder="请选择合同号" style="width: 100%" filterable>
-            <el-option v-for="item in AssociatedOrderNumberOptions" :key="item.dictValue" :label="item.dictLabel"
-              :value="item.dictValue" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="款项类型" prop="fundsType">
-          <el-select v-model="claimForm.fundsType" placeholder="请选择款项类型" style="width: 100%">
-            <el-option v-for="dict in state.optionss.funds_type" :key="dict.dictValue" :label="dict.dictLabel"
-              :value="dict.dictValue" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="claimForm.remark" type="textarea" :rows="3" placeholder="请输入备注信息" />
-        </el-form-item>
+        <span style="font-size: 20px; font-weight: bold;">基本信息</span>
+        <el-divider></el-divider>
+        <el-form :model="addcustomercollectionform" label-width="120px">
+          <el-row>
+            <el-col :span="8">
+              <el-form-item label="收款单号">
+                <el-input v-model="addcustomercollectionform.receiptNumber" style="width: 300px" disabled></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="收汇日期">
+                <el-date-picker v-model="addcustomercollectionform.receiptDate" type="date" disabled
+                  style="width: 300px"></el-date-picker>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="我方公司">
+                <el-select v-model="addcustomercollectionform.ourCompany" style="width: 300px" disabled>
+                  <el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode" :label="dict.dictLabel"
+                    :value="dict.dictValue"></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row>
+            <el-col :span="8">
+              <el-form-item label="外销币种">
+                <el-select v-model="addcustomercollectionform.foreignCurrency" style="width: 300px" disabled>
+                  <el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode" :label="dict.dictLabel"
+                    :value="dict.dictValue"></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="汇率">
+                <el-input :value="formatExchangeRate(addcustomercollectionform.exchangeRate)" style="width: 300px"
+                  disabled></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="收汇金额">
+                <el-input
+                  :value="formatAmountWithCurrency(addcustomercollectionform.amount, addcustomercollectionform.foreignCurrency)"
+                  style="width: 300px" disabled></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row>
+            <el-col :span="8">
+              <el-form-item label="结汇金额">
+                <el-input :value="formatAmountWithCurrency(addcustomercollectionform.ExchangeSettlementAmount, '3')"
+                  style="width: 300px" disabled></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="收汇银行">
+                <el-select v-model="addcustomercollectionform.bank" style="width: 300px" disabled>
+                  <el-option v-for="dict in receivingBankOptions" :key="dict.dictCode" :label="dict.dictLabel"
+                    :value="dict.dictValue"></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="客户">
+                <el-select v-model="addcustomercollectionform.Customer" filterable clearable placeholder="请选择客户"
+                  style="width: 300px">
+                  <el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode" :label="dict.dictLabel"
+                    :value="dict.dictValue"></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row>
+            <span style="font-size: 20px; font-weight: bold;">收款明细</span>
+            <el-divider></el-divider>
+            <el-button class="mt-4" type="primary" @click="handleAddRowReceivingPaymentsDetails"
+              :disabled="isAddButtonDisabled" :title="isAddButtonDisabled ? '收汇金额已全部分配完毕' : ''"
+              style="margin-bottom: 10px;">
+              添加收款明细
+            </el-button>
+            <el-table :data="ReceivingPaymentsDetailsTbaleData" style="width: 100%" show-summary
+              :summary-method="getSummaries">
+              <el-table-column prop="fundsClassification" label="款项类别">
+                <template #default="{ row }">
+                  <el-select v-model="row.fundsClassification" filterable clearable placeholder="请选择款项类别">
+                    <el-option v-for="dict in optionss.hr_funds_classification" :key="dict.dictCode"
+                      :label="dict.dictLabel" :value="dict.dictValue"></el-option>
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column prop="associatedModulesDocumentID" label="关联单号">
+                <template #default="{ row }">
+                  <el-select v-model="row.associatedModulesDocumentID" filterable clearable placeholder="请选择关联单号">
+                    <el-option v-for="dict in getAssociatedDocumentOptions()" :key="dict.dictValue"
+                      :label="dict.dictLabel" :value="dict.dictValue"></el-option>
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column prop="applicationamount" label="金额">
+                <template #default="{ row }">
+                  <el-input v-model="row.applicationamount" placeholder="输入金额" size="large" @input="handleAmountInput"
+                    :class="{ 'amount-exceeded': isAmountExceeded }"
+                    :title="isAmountExceeded ? '收款明细总金额已超过收汇金额' : ''"></el-input>
+                </template>
+              </el-table-column>
+              <el-table-column fixed="right" label="操作" width="100">
+                <template #default="scope">
+                  <el-button type="text" size="large" @click="handleDeleteRow(scope.$index)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <!-- 合计行 -->
+            <div v-if="ReceivingPaymentsDetailsTbaleData.length > 0"
+              style="margin-top: 10px; text-align: right; padding: 10px; background-color: #f5f7fa; border-radius: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="font-weight: bold; font-size: 14px;">合计金额：</span>
+                  <span :style="{
+                    fontWeight: 'bold',
+                    fontSize: '16px',
+                    color: isAmountExceeded ? '#f56c6c' : isAmountEqual ? '#67c23a' : '#409eff'
+                  }">
+                    {{ formatAmountWithCurrency(totalAmount, addcustomercollectionform.foreignCurrency) }}
+                  </span>
+                  <div v-if="isAmountExceeded" style="margin-top: 5px;">
+                    <el-tag type="danger" size="small">
+                      <el-icon>
+                        <Warning />
+                      </el-icon>
+                      收款明细总金额超过收汇金额
+                    </el-tag>
+                  </div>
+                  <div v-else-if="!isAmountEqual && totalAmount > 0" style="margin-top: 5px;">
+                    <el-tag type="warning" size="small">
+                      <el-icon>
+                        <Warning />
+                      </el-icon>
+                      收款明细总金额必须等于收汇金额
+                    </el-tag>
+                  </div>
+                  <div v-else-if="isAmountEqual" style="margin-top: 5px;">
+                    <el-tag type="success" size="small">
+                      <el-icon>
+                        <CircleCheck />
+                      </el-icon>
+                      金额匹配，可以提交
+                    </el-tag>
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 12px; color: #909399;">收汇金额：</div>
+                  <div style="font-size: 14px; color: #606266;">
+                    {{ formatAmountWithCurrency(addcustomercollectionform.amount,
+                      addcustomercollectionform.foreignCurrency)
+                    }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </el-row>
+        </el-form>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="claimDialogVisible = false">取 消</el-button>
-          <el-button type="primary" @click="submitClaim">确 定</el-button>
+          <el-button type="primary" @click="submitClaim" :disabled="isSubmitDisabled"
+            :title="isSubmitDisabled ? '收款明细总金额必须等于收汇金额才能确定' : ''">
+            确 定
+          </el-button>
         </span>
       </template>
     </el-dialog>
@@ -1878,8 +2021,16 @@
         <el-table-column prop="id" label="出运单id" width="100" v-if="false" />
         <el-table-column prop="contractName" label="出运单号" width="100" />
         <el-table-column prop="receivableDate" label="应收汇日" width="150" />
-        <el-table-column prop="totalAmount" label="出运单金额" width="150" />
-        <el-table-column prop="totalReceivedAmount" label="已收金额" width="100" />
+        <el-table-column prop="totalAmount" label="出运单金额" width="150">
+          <template #default="{ row }">
+            {{ formatAmountWithCurrency(row.totalAmount, '3') }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="totalReceivedAmount" label="已收金额" width="100">
+          <template #default="{ row }">
+            {{ formatAmountWithCurrency(row.totalReceivedAmount, '3') }}
+          </template>
+        </el-table-column>
         <el-table-column prop="overdueDays" label="逾期天数" width="100" />
         <el-table-column fixed="right" label="操作" style="width: 25%; ">
           <template #default="{ row }">
@@ -1999,11 +2150,235 @@ import useUserStore from '@/store/modules/user'
 import useSocketStore from '@/store/modules/socket'
 // 时间插件
 import duration from 'dayjs/plugin/duration'
-import { Picture } from '@element-plus/icons-vue'
+import { Picture, Warning, CircleCheck } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { useRouter } from 'vue-router'
 import { eventBus } from '@/utils/eventBus'
 import { useRoute } from 'vue-router'
+
+
+const totalAmount = ref(0);
+
+const handleAddRowReceivingPaymentsDetails = () => {
+  // 检查是否还有剩余金额可以分配
+  const receiptAmount = parseFloat(addcustomercollectionform.value.amount) || 0;
+  const remainingAmount = receiptAmount - totalAmount.value;
+
+  if (remainingAmount <= 0) {
+    // 静默处理，不显示提示消息
+    return;
+  }
+
+  ReceivingPaymentsDetailsTbaleData.value.push({
+    fundsClassification: '',
+    associatedModules: '',
+    associatedModulesDocumentID: '',
+    applicationamount: ''
+  });
+};
+const ReceivingPaymentsDetailsTbaleData = ref([])
+//收款单据表单
+const addcustomercollectionform = ref({
+  receiptNumber: '',
+  receiptDate: '',
+  ourCompany: '',
+  foreignCurrency: '',
+  exchangeRate: '',
+  amount: '',
+  bank: '',
+  attachment: '',
+  Customer: '',
+  FundsClassification: '',
+  AssociatedModules: '',
+  AssociatedModulesDocumentID: '',
+  ExchangeSettlementAmount: ''
+})
+
+// 计算总金额
+const calculateTotal = () => {
+  // 使用更精确的计算方法，避免浮点数精度问题
+  totalAmount.value = ReceivingPaymentsDetailsTbaleData.value.reduce((sum, row) => {
+    const amount = parseFloat(row.applicationamount) || 0;
+    // 将每个金额转换为分进行计算，避免浮点数精度问题
+    return sum + Math.round(amount * 100);
+  }, 0) / 100;
+};
+
+// 验证收款明细总金额是否完全等于收汇金额
+const validateTotalAmount = () => {
+  // 使用更精确的解析方法，避免浮点数精度问题
+  const receiptAmount = Math.round(parseFloat(addcustomercollectionform.value.amount) * 100) / 100 || 0;
+  const currentTotal = totalAmount.value;
+
+  if (currentTotal > receiptAmount) {
+    return false;
+  }
+
+  if (currentTotal !== receiptAmount) {
+    return false;
+  }
+
+  return true;
+};
+
+// 获取验证错误消息
+const getValidationMessage = () => {
+  // 使用更精确的解析方法，避免浮点数精度问题
+  const receiptAmount = Math.round(parseFloat(addcustomercollectionform.value.amount) * 100) / 100 || 0;
+  const currentTotal = totalAmount.value;
+
+  if (currentTotal > receiptAmount) {
+    return `收款明细总金额 (${formatAmountWithCurrency(currentTotal, addcustomercollectionform.value.foreignCurrency)}) 不能超过收汇金额 (${formatAmountWithCurrency(receiptAmount, addcustomercollectionform.value.foreignCurrency)})`;
+  }
+
+  if (currentTotal !== receiptAmount) {
+    return `收款明细总金额 (${formatAmountWithCurrency(currentTotal, addcustomercollectionform.value.foreignCurrency)}) 必须完全等于收汇金额 (${formatAmountWithCurrency(receiptAmount, addcustomercollectionform.value.foreignCurrency)})`;
+  }
+
+  return '';
+};
+
+// 检查是否超过收汇金额
+const isAmountExceeded = computed(() => {
+  // 使用更精确的解析方法，避免浮点数精度问题
+  const receiptAmount = Math.round(parseFloat(addcustomercollectionform.value.amount) * 100) / 100 || 0;
+  // 必须分毫不差，不允许任何误差
+  return totalAmount.value > receiptAmount;
+});
+
+// 检查金额是否完全相等
+const isAmountEqual = computed(() => {
+  // 使用更精确的解析方法，避免浮点数精度问题
+  const receiptAmount = Math.round(parseFloat(addcustomercollectionform.value.amount) * 100) / 100 || 0;
+  // 必须分毫不差，不允许任何误差
+  return totalAmount.value === receiptAmount;
+});
+
+// 检查确定按钮是否应该禁用
+const isSubmitDisabled = computed(() => {
+  return !isAmountEqual.value || isAmountExceeded.value;
+});
+
+// 检查添加按钮是否应该禁用
+const isAddButtonDisabled = computed(() => {
+  // 使用更精确的解析方法，避免浮点数精度问题
+  const receiptAmount = Math.round(parseFloat(addcustomercollectionform.value.amount) * 100) / 100 || 0;
+  const remainingAmount = receiptAmount - totalAmount.value;
+  return remainingAmount <= 0;
+});
+
+// 处理金额输入
+const handleAmountInput = () => {
+  calculateTotal();
+  // 移除实时验证提示，只在视觉上显示状态
+};
+
+// 获取货币符号
+const getCurrencySymbol = (currencyValue) => {
+  if (!currencyValue) return '';
+  if (currencyValue === '1') return 'USD';
+  if (currencyValue === '2') return 'EUR';
+  if (currencyValue === '3') return 'CNY';
+  return '';
+};
+
+// 格式化货币显示
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+};
+
+// 格式化带货币符号的金额显示
+const formatAmountWithCurrency = (amount, currencyValue) => {
+  if (!amount) return '';
+  const symbol = getCurrencySymbol(currencyValue);
+  const formattedAmount = new Intl.NumberFormat('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+  return symbol ? `${symbol} ${formattedAmount}` : formattedAmount;
+};
+
+// 格式化汇率显示（保留3位小数）
+const formatExchangeRate = (rate) => {
+  if (!rate && rate !== 0) return '';
+  return new Intl.NumberFormat('zh-CN', {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3
+  }).format(rate);
+};
+
+// 表格合计行方法
+const getSummaries = (param) => {
+  const { columns, data } = param;
+  const sums = [];
+  columns.forEach((column, index) => {
+    if (index === 0) {
+      sums[index] = '合计';
+      return;
+    }
+    if (index === 3) { // 金额列
+      const values = data.map(item => Number(item.applicationamount) || 0);
+      if (!values.every(value => isNaN(value))) {
+        const total = values.reduce((prev, curr) => {
+          const value = Number(curr);
+          if (!isNaN(value)) {
+            return prev + curr;
+          } else {
+            return prev;
+          }
+        }, 0);
+        sums[index] = formatAmountWithCurrency(total, addcustomercollectionform.value.foreignCurrency);
+      } else {
+        sums[index] = formatAmountWithCurrency(0, addcustomercollectionform.value.foreignCurrency);
+      }
+    } else {
+      sums[index] = '';
+    }
+  });
+  return sums;
+};
+
+// 删除收款明细行
+const handleDeleteRow = (index) => {
+  ReceivingPaymentsDetailsTbaleData.value.splice(index, 1);
+  calculateTotal(); // 重新计算总金额
+};
+
+const handleAssociatedModulesChange = (row) => {
+  // 当关联模块变化时，可以在这里添加其他逻辑
+  // 现在不再需要清空关联单号，因为所有数据都来自同一个接口
+};
+
+// 存储关联单号选项数据
+const associatedDocumentOptions = ref([]);
+
+// 获取关联单号选项数据
+const getAssociatedDocumentOptionsData = async () => {
+  try {
+    const response = await request({
+      url: 'Contracts/GetSalesNumberAndShippingDeliverNumberSelectList/GetSalesNumberAndShippingDeliverNumberSelectList',
+      method: 'GET'
+    });
+
+    if (response.code === 200 && response.data) {
+      associatedDocumentOptions.value = response.data;
+    } else {
+      console.error('获取关联单号选项失败:', response.msg);
+      associatedDocumentOptions.value = [];
+    }
+  } catch (error) {
+    console.error('获取关联单号选项失败:', error);
+    associatedDocumentOptions.value = [];
+  }
+};
+
+const getAssociatedDocumentOptions = (module) => {
+  // 直接返回从接口获取的数据，不再根据模块区分
+  return associatedDocumentOptions.value || [];
+};
 
 
 const AgencyProcessdialogTableActiveName = ref('first')
@@ -2356,9 +2731,64 @@ const claimRules = {
 }
 
 // 打开领取对话框
-const handleClaim = (row) => {
+const handleClaim = async (row) => {
   claimForm.id = row.id
   claimDialogVisible.value = true
+
+  try {
+    // 获取关联单号选项数据
+    await getAssociatedDocumentOptionsData();
+
+    // 调用接口获取客户收款单详情
+    const response = await request({
+      url: 'CustomerCollections/GetCustomerCollectionDetails/GetDetails',
+      method: 'GET',
+      params: {
+        id: row.id
+      }
+    })
+
+    if (response.code === 200 && response.data) {
+      const details = response.data
+
+      // 绑定数据到表单
+      addcustomercollectionform.value = {
+        receiptNumber: details.receiptNumber || '',
+        receiptDate: details.receiptDate || '',
+        ourCompany: details.ourCompany || '',
+        foreignCurrency: details.foreignCurrency || '',
+        exchangeRate: details.exchangeRate ? parseFloat(details.exchangeRate) : '',
+        amount: details.amount || '',
+        bank: details.bank || '',
+        attachment: details.attachment || '',
+        Customer: details.customer || '',
+        FundsClassification: details.fundsClassification || '',
+        AssociatedModules: details.associatedModules || '',
+        AssociatedModulesDocumentID: details.associatedModulesDocumentID || '',
+        ExchangeSettlementAmount: details.exchangeSettlementAmount || ''
+      }
+
+      // 如果有收款明细数据，也绑定到表格
+      if (details.receivingPaymentsDetails && Array.isArray(details.receivingPaymentsDetails)) {
+        ReceivingPaymentsDetailsTbaleData.value = details.receivingPaymentsDetails.map(item => ({
+          fundsClassification: item.fundsClassification || '',
+          associatedModules: item.associatedModules || '',
+          associatedModulesDocumentID: item.associatedModulesDocumentID || '',
+          applicationamount: item.applicationamount || ''
+        }))
+        // 重新计算总金额
+        calculateTotal()
+      } else {
+        ReceivingPaymentsDetailsTbaleData.value = []
+        totalAmount.value = 0
+      }
+    } else {
+      ElMessage.error('获取收款单详情失败')
+    }
+  } catch (error) {
+    console.error('获取收款单详情失败:', error)
+    ElMessage.error('获取收款单详情失败')
+  }
 }
 
 const AssociatedOrderNumberOptions = ref([])
@@ -2382,38 +2812,81 @@ const relatedmoduleshandleChange = (type) => {
 
 // 提交领取
 const submitClaim = () => {
-  claimFormRef.value?.validate(async (valid) => {
-    if (valid) {
-      try {
-        const response = await request({
-          url: 'CustomerCollections/AssigningCustomerCollections/Assigning',
-          method: 'post',
-          data: {
-            id: claimForm.id,
-            ContractsID: claimForm.contractsID,
-            FundsType: claimForm.fundsType,
-            Remark: claimForm.remark,
-            ContractType: claimForm.contractType
-          }
-        })
-
-        if (response.code === 200) {
-          ElMessage.success('领取成功')
-          claimDialogVisible.value = false
-          // 重新加载列表
-          getFinancialTasksList(
-            FinancialTasksTableCurrentPage.value,
-            FinancialTasksTablePageSize.value
-          )
-        } else {
-          ElMessage.error(response.msg || '领取失败')
-        }
-      } catch (error) {
-        console.error('领取失败:', error)
-        ElMessage.error('领取失败')
-      }
+  // 验证收款明细总金额
+  if (!validateTotalAmount()) {
+    const errorMessage = getValidationMessage();
+    if (errorMessage) {
+      ElMessage.warning(errorMessage);
     }
-  })
+    return;
+  }
+
+  // 验证客户是否已选择
+  if (!addcustomercollectionform.value.Customer) {
+    ElMessage.warning('请选择客户');
+    return;
+  }
+
+  // 验证收款明细是否为空
+  if (ReceivingPaymentsDetailsTbaleData.value.length === 0) {
+    ElMessage.warning('请至少添加一条收款明细');
+    return;
+  }
+
+  // 验证收款明细数据完整性
+  for (let i = 0; i < ReceivingPaymentsDetailsTbaleData.value.length; i++) {
+    const item = ReceivingPaymentsDetailsTbaleData.value[i];
+    if (!item.fundsClassification) {
+      ElMessage.warning(`第${i + 1}行请选择款项类别`);
+      return;
+    }
+    if (!item.associatedModulesDocumentID) {
+      ElMessage.warning(`第${i + 1}行请选择关联单号`);
+      return;
+    }
+    if (!item.applicationamount || parseFloat(item.applicationamount) <= 0) {
+      ElMessage.warning(`第${i + 1}行请输入有效金额`);
+      return;
+    }
+  }
+
+  try {
+    // 构建请求数据，匹配后端 AssigningCustomerCollectionsRequest 结构
+    const requestData = {
+      id: claimForm.id,
+      CustomerID: parseInt(addcustomercollectionform.value.Customer),
+      customerCollectionsItens: ReceivingPaymentsDetailsTbaleData.value.map(item => ({
+        CustomerCollectionsID: claimForm.id,
+        FundsClassification: parseInt(item.fundsClassification),
+        AssociatedModulesDocument: item.associatedModulesDocumentID,
+        ApplicationAmount: parseFloat(item.applicationamount)
+      }))
+    };
+
+    request({
+      url: 'CustomerCollections/AssigningCustomerCollections/Assigning',
+      method: 'post',
+      data: requestData
+    }).then((response) => {
+      if (response && response.code === 200) {
+        ElMessage.success(response.data || '客户收款单领取成功！')
+        claimDialogVisible.value = false
+        // 重新加载列表
+        getFinancialTasksList(
+          FinancialTasksTableCurrentPage.value,
+          FinancialTasksTablePageSize.value
+        )
+      } else {
+        ElMessage.error(response?.msg || '客户收款单领取失败！')
+      }
+    }).catch(error => {
+      console.error('领取失败:', error)
+      ElMessage.error('客户收款单领取失败！')
+    })
+  } catch (error) {
+    console.error('数据验证失败:', error)
+    ElMessage.error('数据验证失败')
+  }
 }
 
 // 对话框关闭时重置表单
@@ -2423,6 +2896,27 @@ const resetClaimForm = () => {
   claimForm.remark = ''
   claimForm.contractType = ''
   claimFormRef.value?.resetFields()
+
+  // 重置收款单表单数据
+  addcustomercollectionform.value = {
+    receiptNumber: '',
+    receiptDate: '',
+    ourCompany: '',
+    foreignCurrency: '',
+    exchangeRate: '',
+    amount: '',
+    bank: '',
+    attachment: '',
+    Customer: '',
+    FundsClassification: '',
+    AssociatedModules: '',
+    AssociatedModulesDocumentID: '',
+    ExchangeSettlementAmount: ''
+  }
+
+  // 清空收款明细表格数据
+  ReceivingPaymentsDetailsTbaleData.value = []
+  totalAmount.value = 0
 }
 
 // 监听对话框关闭
@@ -2455,6 +2949,7 @@ const formatDate = (dateString) => {
 
 // 获取财务任务列表
 const getFinancialTasksList = (start, end) => {
+  FinancialTasksTableData.value = [];
   request({
     url: 'CustomerCollections/GetUnassignedCustomerCollectionsList/GetList',
     method: 'GET',
@@ -2468,8 +2963,18 @@ const getFinancialTasksList = (start, end) => {
       FinancialTasksTableData.value.forEach(item => {
         item.receiptDate = formatDate(item.receiptDate);
         item.ourCompany = state.optionss.hr_ourcompany.find(dict => dict.dictValue === item.ourCompany)?.dictLabel;
+        // 保存原始货币值用于显示货币符号
+        item.foreignCurrencyValue = item.foreignCurrency;
         item.foreignCurrency = state.optionss.hr_export_currency.find(dict => dict.dictValue === item.foreignCurrency)?.dictLabel;
-        item.bank = state.optionss.hr_bank.find(dict => dict.dictValue === item.bank)?.dictLabel;
+
+        // 根据我方公司选择对应的收汇银行数据源
+        let bankOptions = [];
+        if (item.ourCompany === '荣发塑料') {
+          bankOptions = state.optionss.hr_rf_receiving_bank || [];
+        } else if (item.ourCompany === '惠荣进出口') {
+          bankOptions = state.optionss.hr_receiving_bank || [];
+        }
+        item.bank = bankOptions.find(dict => dict.dictValue === item.bank)?.dictLabel || item.bank;
       });
       // 更新分页信息
       FinancialTasksTableTotalItems.value = response.data.totalNum;
@@ -3288,16 +3793,27 @@ const openSaleContractDialog = (row) => {
             }
           }).then(GetCustomerControllerDataresponse => {
             if (GetCustomerControllerDataresponse.code === 200) {
-              CustomerReceiptsData.value = GetCustomerControllerDataresponse.data.map(item => ({
-                ReceiptNumber: item.receiptNumber,
-                ReceiptDate: item.receiptDate ? item.receiptDate.split(' ')[0] : '',
-                ReceiptAmount: item.amount,
-                ReceiptCurrency: state.optionss["hr_export_currency"].find(cc => cc.dictValue == item.foreignCurrency.toString())?.dictLabel || '',
-                ExchangeRate: item.exchangeRate,
-                ReceiptBank: state.optionss["hr_bank"].find(bank => bank.dictValue == item.bank.toString())?.dictLabel || '',
-                OurCompany: state.optionss["hr_ourcompany"].find(oc => oc.dictValue == item.ourCompany.toString())?.dictLabel || '',
-                FundsType: state.optionss["funds_type"].find(ft => ft.dictValue == item.fundsType.toString())?.dictLabel || '',
-              }))
+              CustomerReceiptsData.value = GetCustomerControllerDataresponse.data.map(item => {
+                // 根据我方公司选择对应的收汇银行数据源
+                let bankOptions = [];
+                const ourCompanyLabel = state.optionss["hr_ourcompany"].find(oc => oc.dictValue == item.ourCompany.toString())?.dictLabel || '';
+                if (ourCompanyLabel === '荣发塑料') {
+                  bankOptions = state.optionss.hr_rf_receiving_bank || [];
+                } else if (ourCompanyLabel === '惠荣进出口') {
+                  bankOptions = state.optionss.hr_receiving_bank || [];
+                }
+
+                return {
+                  ReceiptNumber: item.receiptNumber,
+                  ReceiptDate: item.receiptDate ? item.receiptDate.split(' ')[0] : '',
+                  ReceiptAmount: item.amount,
+                  ReceiptCurrency: state.optionss["hr_export_currency"].find(cc => cc.dictValue == item.foreignCurrency.toString())?.dictLabel || '',
+                  ExchangeRate: item.exchangeRate,
+                  ReceiptBank: bankOptions.find(bank => bank.dictValue == item.bank.toString())?.dictLabel || '',
+                  OurCompany: ourCompanyLabel,
+                  FundsType: state.optionss["funds_type"].find(ft => ft.dictValue == item.fundsType.toString())?.dictLabel || '',
+                }
+              })
             } else {
               ElMessage.error('获取客户收汇数据失败：无效的响应数据');
             }
@@ -3549,7 +4065,11 @@ const state = reactive({
     hr_freight_forwarding_company: [],
     sql_product: [],
     sql_settlement: [],
-    hr_payment_contract_type: []
+    hr_payment_contract_type: [],
+    hr_funds_classification: [],
+    sql_user_customers: [], // 用户特定的客户数据
+    hr_receiving_bank: [],//惠荣收汇银行
+    hr_rf_receiving_bank: [],//荣发塑料收汇银行
   }
 })
 const { optionss } = toRefs(state)
@@ -3598,7 +4118,11 @@ var dictParams = [
   { dictType: 'hr_freight_forwarding_company' },
   { dictType: 'sql_product' },
   { dictType: 'sql_settlement' },
-  { dictType: 'hr_payment_contract_type' }
+  { dictType: 'hr_payment_contract_type' },
+  { dictType: 'hr_funds_classification' },
+  { dictType: 'hr_collection_associated_modules' },
+  { dictType: 'hr_receiving_bank' },
+  { dictType: 'hr_rf_receiving_bank' }
 ]
 proxy.getDicts(dictParams).then((response) => {
   response.data.forEach((element) => {
@@ -3606,7 +4130,31 @@ proxy.getDicts(dictParams).then((response) => {
   })
   getPendingCount();
   getFinancialTasksList(1, 10);
+  getUserCustomerData();
 })
+
+// 获取用户相关的客户数据
+const getUserCustomerData = async () => {
+  try {
+    const response = await request({
+      url: 'CustomerInfoMation/GetCustomerDataByUserID/GetSelectCustomerDataByUserID',
+      method: 'get'
+    })
+
+    if (response.code === 200) {
+      state.optionss.sql_user_customers = response.data.map(item => ({
+        dictValue: item.dictValue,
+        dictLabel: item.dictLabel
+      }))
+    } else {
+      ElMessage.error(response.msg || '获取客户数据失败')
+    }
+  } catch (error) {
+    console.error('获取客户数据失败:', error)
+    ElMessage.error('获取客户数据失败')
+  }
+}
+
 
 //获取待办流程数量
 const getPendingCount = () => {
@@ -3727,6 +4275,24 @@ const userInfo = computed(() => {
 const onlineInfo = computed(() => {
   return useSocketStore().onlineInfo
 })
+
+// 计算属性：根据我方公司动态获取收汇银行选项
+const receivingBankOptions = computed(() => {
+  const selectedCompany = addcustomercollectionform.value.ourCompany;
+  // 如果我方公司为空或未选择，返回空数组
+  if (!selectedCompany || selectedCompany === '') {
+    return [];
+  }
+  // 根据我方公司的值返回对应的收汇银行数据源
+  if (selectedCompany === '1') {
+    // 荣发塑料，使用 hr_rf_receiving_bank
+    return optionss.value.hr_rf_receiving_bank || [];
+  } else if (selectedCompany === '2') {
+    // 惠荣进出口，使用 hr_receiving_bank
+    return optionss.value.hr_receiving_bank || [];
+  }
+  return [];
+});
 
 
 let lineChartData = reactive([])
@@ -4481,7 +5047,8 @@ onMounted(async () => {
       getOverduePendingTaskPlanItemList(),
       fetchTaskReminderData(),
       fetchDashboardData(),
-      getUnreadMessages()
+      getUnreadMessages(),
+      getAssociatedDocumentOptionsData() // 获取关联单号选项数据
     ])
   } catch (error) {
     console.error('数据加载失败:', error)
@@ -5157,6 +5724,17 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
     &:hover {
       background-color: #66b1ff;
     }
+  }
+}
+
+/* 金额超出时的输入框样式 */
+.amount-exceeded {
+  :deep(.el-input__wrapper) {
+    box-shadow: 0 0 0 1px #f56c6c inset !important;
+  }
+
+  :deep(.el-input__inner) {
+    color: #f56c6c;
   }
 }
 </style>
