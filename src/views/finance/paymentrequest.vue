@@ -158,17 +158,15 @@
 							<el-input v-model="addpaymentrequestform.bankName" style="width: 300px" disabled></el-input>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row :gutter="20">
-					<el-col :span="8">
-						<el-form-item label="开户银行">
-							<el-input v-model="addpaymentrequestform.bankName" style="width: 300px" disabled></el-input>
-						</el-form-item>
-					</el-col>
 					<el-col :span="8">
 						<el-form-item label="银行账号">
-							<el-input v-model="addpaymentrequestform.bankAccount" style="width: 300px"
-								disabled></el-input>
+							<el-select v-model="addpaymentrequestform.bankAccount" style="width: 300px"
+								placeholder="请选择银行账号" :disabled="IsDisabled" @change="bankAccountChange" filterable
+								clearable>
+								<el-option v-for="account in supplierBankAccounts" :key="account.id"
+									:label="`${account.bank} - ${account.bank_account_number}`"
+									:value="account.bank_account_number" />
+							</el-select>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -180,8 +178,6 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row :gutter="20">
 					<el-col :span="8">
 						<el-form-item label="币种">
 							<el-select v-model="addpaymentrequestform.currencyCode" style="width: 300px"
@@ -191,6 +187,8 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row :gutter="20">
 					<el-col :span="8">
 						<el-form-item label="申请金额">
 							<el-input v-model="addpaymentrequestform.totalAmount" style="width: 300px"
@@ -277,7 +275,7 @@
 				<el-table-column prop="applicationamount" label="申请金额" width="150">
 					<template #default="{ row }">
 						<el-input v-model="row.applicationamount" placeholder="输入申请金额" size="large" style="width: 130px"
-							:disabled="IsDisabled" @input="CalculatetotalAmount(row)"></el-input>
+							:disabled="IsDisabled" @input="CalculatetotalAmount()"></el-input>
 					</template>
 				</el-table-column>
 				<el-table-column prop="relevantdates" label="关联日期" width="150">
@@ -624,6 +622,9 @@ const addpaymentrequestform = ref({
 	handler: '',
 	remarks: ''
 })
+
+// 供应商银行账号列表
+const supplierBankAccounts = ref([])
 const CostDetailsTbaleDatahandleDelete = (index: number) => {
 	CostDetailsTbaleData.value.splice(index, 1)
 	CalculatetotalAmount() // 重新计算总金额
@@ -744,32 +745,81 @@ const relatedmoduleshandleChange = (row) => {
 			break;
 	}
 }
-const payeeCodeChange = () => {
-	return new Promise((resolve, reject) => {
-		request({
+const payeeCodeChange = async () => {
+	try {
+		// 获取供应商基本信息
+		const supplierResponse = await request({
 			url: 'Supplierinfo/GetSupplierInfoByID/GetSupplierInfo',
 			method: 'GET',
 			params: {
 				SupplierID: addpaymentrequestform.value.payeeCode
 			}
-		}).then(response => {
-			if (response.code == 200) {
-				// 供应商简称
-				addpaymentrequestform.value.payeeName = response.data.fullName;
-				addpaymentrequestform.value.bankName = response.data.bankName;
-				addpaymentrequestform.value.bankAccount = response.data.bankAccount;
-				resolve(response);  // Resolve the promise with the response data
-			} else {
-				ElMessage({
-					message: '未找到对应的厂商信息',
-					type: 'error'
-				});	// 提示错误信息
-			}
-		}).catch(error => {
-			console.error(error);
-			reject(error);  // Reject the promise if an error occurs
 		});
-	});
+
+		if (supplierResponse.data && supplierResponse.code === 200) {
+			// 设置供应商名称
+			addpaymentrequestform.value.payeeName = supplierResponse.fullName;
+
+			// 获取供应商银行账号列表
+			const bankAccountResponse = await request({
+				url: 'Supplierinfo/GetSupplierBankAccountList/GetBankAccountList',
+				method: 'GET',
+				params: {
+					supplierId: addpaymentrequestform.value.payeeCode
+				}
+			});
+
+			if (bankAccountResponse.data && bankAccountResponse.code === 200) {
+				supplierBankAccounts.value = bankAccountResponse.data || [];
+
+				// 如果有银行账号，默认选中第一个
+				if (supplierBankAccounts.value.length > 0) {
+					const firstAccount = supplierBankAccounts.value[0];
+					addpaymentrequestform.value.bankName = firstAccount.bank || '';
+					addpaymentrequestform.value.bankAccount = firstAccount.bank_account_number || '';
+				} else {
+					// 如果没有银行账号，清空相关字段
+					addpaymentrequestform.value.bankName = '';
+					addpaymentrequestform.value.bankAccount = '';
+				}
+			} else {
+				// 如果获取银行账号失败，使用供应商基本信息中的银行信息
+				addpaymentrequestform.value.bankName = supplierResponse.bankName || '';
+				addpaymentrequestform.value.bankAccount = supplierResponse.bankAccount || '';
+				supplierBankAccounts.value = [];
+			}
+		} else {
+			ElMessage({
+				message: '未找到对应的厂商信息',
+				type: 'error'
+			});
+			// 清空相关字段
+			addpaymentrequestform.value.payeeName = '';
+			addpaymentrequestform.value.bankName = '';
+			addpaymentrequestform.value.bankAccount = '';
+			supplierBankAccounts.value = [];
+		}
+	} catch (error) {
+		console.error('获取供应商信息失败:', error);
+		ElMessage({
+			message: '获取供应商信息失败',
+			type: 'error'
+		});
+		// 清空相关字段
+		addpaymentrequestform.value.payeeName = '';
+		addpaymentrequestform.value.bankName = '';
+		addpaymentrequestform.value.bankAccount = '';
+		supplierBankAccounts.value = [];
+	}
+}
+
+// 银行账号选择变化处理
+const bankAccountChange = (selectedBankAccount) => {
+	// 根据选择的银行账号找到对应的银行信息
+	const selectedAccount = supplierBankAccounts.value.find(account => account.bank_account_number === selectedBankAccount);
+	if (selectedAccount) {
+		addpaymentrequestform.value.bankName = selectedAccount.bank || '';
+	}
 }
 
 const paymentRequestRequest = reactive({
@@ -950,6 +1000,26 @@ const CheckPaymentRequest = async (row) => {
 		addpaymentrequestform.value.payeeName = response.data.paymentRequest.payeeName;
 		addpaymentrequestform.value.bankName = response.data.paymentRequest.bankName;
 		addpaymentrequestform.value.bankAccount = response.data.paymentRequest.bankAccount;
+
+		// 加载供应商银行账号列表
+		try {
+			const bankAccountResponse = await request({
+				url: 'Supplierinfo/GetSupplierBankAccountList/GetBankAccountList',
+				method: 'GET',
+				params: {
+					supplierId: response.data.paymentRequest.payeeCode
+				}
+			});
+
+			if (bankAccountResponse.data && bankAccountResponse.data.code === 200) {
+				supplierBankAccounts.value = bankAccountResponse.data.data || [];
+			} else {
+				supplierBankAccounts.value = [];
+			}
+		} catch (error) {
+			console.error('获取供应商银行账号列表失败:', error);
+			supplierBankAccounts.value = [];
+		}
 		addpaymentrequestform.value.ourCompany = response.data.paymentRequest.ourCompany.toString();
 		addpaymentrequestform.value.currencyCode = response.data.paymentRequest.currencyCode.toString();
 		addpaymentrequestform.value.totalAmount = response.data.paymentRequest.totalAmount;
@@ -1115,6 +1185,7 @@ const Closeaddpaymentrequestdialog = () => {
 	addpaymentrequestform.value.totalAmount = '';
 	addpaymentrequestform.value.unpaidAmount = '';
 	CostDetailsTbaleData.value = [];
+	supplierBankAccounts.value = [];
 	isEditSaveBtnShow.value = false;
 	isSaveBtnShow.value = true;
 	isCheckAndEdit.value = false;
@@ -1378,6 +1449,9 @@ const resetForm = () => {
 
 	// 清空费用明细表格数据
 	CostDetailsTbaleData.value = [];
+
+	// 清空供应商银行账号列表
+	supplierBankAccounts.value = [];
 };
 
 const CalculatetotalAmount = () => {

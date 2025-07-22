@@ -10,8 +10,10 @@
 					v-if="userId.toString() === '1'">删除分类</el-button>
 				<el-button size="small" plain @click="moveToTopLevel()"
 					v-if="userId.toString() === '1' && SelectNodeId.value !== 0">移至顶级</el-button>
-				<el-tree-v2 :data="ProductCategoriesTreeData" style="font-size: 15px;" :height="700"
-					@node-click="handleNodeClick" @node-contextmenu="handleRightClick" draggable :allow-drop="allowDrop"
+				<el-tree ref="treeRef" :props="{ label: 'label', children: 'children' }" node-key="id"
+					:default-expanded-keys="[0]" :expand-on-click-node="false" :data="ProductCategoriesTreeData"
+					style="font-size: 15px;" :height="700" @node-click="handleNodeClick" @node-collapse="handleCollapse"
+					@node-contextmenu="handleRightClick" draggable :allow-drop="allowDrop"
 					@node-drag-start="handleDragStart" @node-drag-enter="handleDragEnter"
 					@node-drag-leave="handleDragLeave" @node-drag-end="handleDragEnd" @node-drop="handleDrop">
 					<template #default="{ node }">
@@ -20,11 +22,9 @@
 								<Folder />
 							</el-icon>
 						</span>
-						<!-- <el-tooltip :content="node.label" placement="top" style="ellipsis"> -->
 						<span>{{ node.label }}</span>
-						<!-- </el-tooltip> -->
 					</template>
-				</el-tree-v2>
+				</el-tree>
 
 				<!-- 右键菜单 -->
 				<ul v-show="contextMenuVisible" :style="{ left: contextMenuLeft + 'px', top: contextMenuTop + 'px' }"
@@ -1510,11 +1510,10 @@ const GetAllParentProductCategoriesList = () => {
 	});
 }
 const SelectNodeId = ref(0);
+const treeRef = ref();
 const handleNodeClick = (node) => {
 	SelectNodeId.value = node.id;
 	SelectedProductCategoriesStr = '【' + node.label + '】';
-
-	// 保存当前选中的节点信息到全局变量
 	window.currentSelectedNode = {
 		id: node.id,
 		label: node.label,
@@ -1522,8 +1521,21 @@ const handleNodeClick = (node) => {
 	};
 	console.log('当前选中的节点:', window.currentSelectedNode);
 
+	if (node.id === 0) {
+		nextTick(() => {
+			treeRef.value.setExpandedKeys([0]);
+		});
+	}
 	GetProductInfoList(currentPage.value, pageSize.value);
-}
+};
+const handleCollapse = (data, node) => {
+	if (data.ID === 0) {
+		nextTick(() => {
+			treeRef.value.setExpandedKeys([0]);
+		});
+	}
+};
+
 const ResetSelectNode = () => {
 	SelectNodeId.value = 0;
 	SelectedProductCategoriesStr = '';
@@ -3243,12 +3255,17 @@ const EditSaveDraft = async () => {
 }
 
 /* 拖拽相关样式 */
-:deep(.is-dragging) {
-	opacity: 0.5;
-}
+// :deep(.is-dragging) {
+// 	opacity: 0.5;
+// }
 
-:deep(.is-drop-inner) {
-	background-color: #f0f9eb;
-	border: 1px dashed #67c23a;
+// :deep(.is-drop-inner) {
+// 	background-color: #f0f9eb;
+// 	border: 1px dashed #67c23a;
+// }
+
+:deep(.el-tree-node__content.is-drop-inner) {
+	background-color: transparent !important;
+	border: none !important;
 }
 </style>
