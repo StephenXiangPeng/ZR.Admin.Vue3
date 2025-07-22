@@ -1193,11 +1193,13 @@ const openAddProductDialog = () => {
 }
 
 const closeAddProductDialog = async () => {
-	if (userId.toString() === '1') {
+	if (userId.toString() === '1' && EditProductID.value > 0) {
 		await removeProductEditLock(EditProductID.value);
 	}
 	clearProductform();
 	SelectNodeId.value = 0;
+	// 重置编辑ID
+	EditProductID.value = 0;
 }
 
 const clearProductform = () => {

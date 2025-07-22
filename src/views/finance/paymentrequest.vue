@@ -139,18 +139,23 @@
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="收款单位编号" placeholder="请选择收款单位编号">
+						<el-form-item label="收款单位" placeholder="请选择收款单位">
 							<el-select v-model="addpaymentrequestform.payeeCode" style="width: 300px"
-								@change="payeeCodeChange()" :disabled="IsDisabled">
+								@change="payeeCodeChange()" :disabled="IsDisabled" filterable>
 								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="收款单位名称">
 							<el-input v-model="addpaymentrequestform.payeeName" style="width: 300px"
 								disabled></el-input>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="开户银行">
+							<el-input v-model="addpaymentrequestform.bankName" style="width: 300px" disabled></el-input>
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -178,7 +183,7 @@
 				</el-row>
 				<el-row :gutter="20">
 					<el-col :span="8">
-						<el-form-item label="货币代码">
+						<el-form-item label="币种">
 							<el-select v-model="addpaymentrequestform.currencyCode" style="width: 300px"
 								:disabled="IsDisabled">
 								<el-option v-for="dict in optionss.hr_currency_code" :key="dict.dictCode"
@@ -187,22 +192,14 @@
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="申请总额">
+						<el-form-item label="申请金额">
 							<el-input v-model="addpaymentrequestform.totalAmount" style="width: 300px"
 								:disabled="IsDisabled"></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="已付金额">
 							<el-input v-model="addpaymentrequestform.paidAmount" style="width: 300px"
-								:disabled="IsDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row :gutter="20">
-					<el-col :span="8">
-						<el-form-item label="未付金额">
-							<el-input v-model="addpaymentrequestform.unpaidAmount" style="width: 300px"
 								:disabled="IsDisabled"></el-input>
 						</el-form-item>
 					</el-col>
@@ -215,8 +212,16 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row :gutter="20">
+					<el-col :span="8" v-if="false">
+						<el-form-item label="未付金额">
+							<el-input v-model="addpaymentrequestform.unpaidAmount" style="width: 300px"
+								:disabled="IsDisabled"></el-input>
+						</el-form-item>
+					</el-col>
 					<el-col :span="8">
-						<el-form-item label="申请部门">
+						<el-form-item label="申请部门" v-if="false">
 							<el-select v-model="addpaymentrequestform.applicationDepartment" style="width: 300px"
 								:disabled="IsDisabled">
 								<el-option v-for="dict in optionss.sql_hr_dept" :key="dict.dictCode"
@@ -227,7 +232,7 @@
 				</el-row>
 				<el-row :gutter="20">
 					<el-col :span="8">
-						<el-form-item label="经手人">
+						<el-form-item label="经手人" v-if="false">
 							<el-select v-model="addpaymentrequestform.handler" style="width: 300px"
 								:disabled="IsDisabled">
 								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
@@ -246,84 +251,80 @@
 					</el-col>
 				</el-row>
 			</el-form>
-			<span style="font-size: 20px; font-weight: bold;">费用信息</span>
+
+
+			<span style="font-size: 20px; font-weight: bold;">付款明细</span>
 			<el-divider></el-divider>
-			<el-button class="mt-4" type="primary" @click="handleAddRowCostDetails" style="margin-bottom: 10px;"
-				:disabled="IsDisabled">添加费用明细</el-button>
-			<el-tabs v-model="activeTab" tab-position="top" style="height: 350px; " class="demo-tabs">
-				<el-tab-pane label="费用明细" name="CostDetailsTab">
-					<el-table :data="CostDetailsTbaleData" style="width: 100%" height="280">
-						<el-table-column prop="relatedmodules" label="关联模块" width="150">
-							<template #default="{ row }">
-								<el-select v-model="row.relatedmodules" placeholder="选择关联模块" size="large"
-									@change="relatedmoduleshandleChange(row)" style="width: 130px;"
-									:disabled="IsDisabled">
-									<el-option v-for="dict in optionss.hr_associated_modules" :key="dict.dictCode"
-										:label="dict.dictLabel" :value="dict.dictValue" />
-								</el-select>
-							</template>
-						</el-table-column>
-						<el-table-column prop="associatedordernumber" label="关联单号" width="150">
-							<template #default="{ row }">
-								<el-select v-model="row.associatedordernumber" placeholder="选择关联单号" size="large"
-									style="width: 130px;" :disabled="IsDisabled">
-									<el-option v-for="dict in row.AssociatedOrderNumberOptions" :key="dict.dictCode"
-										:label="dict.dictLabel" :value="dict.dictValue" />
-								</el-select>
-							</template>
-						</el-table-column>
-						<el-table-column prop="applicationamount" label="申请金额" width="150">
-							<template #default="{ row }">
-								<el-input v-model="row.applicationamount" placeholder="输入申请金额" size="large"
-									style="width: 130px" :disabled="IsDisabled"
-									@input="CalculatetotalAmount(row)"></el-input>
-							</template>
-						</el-table-column>
-						<el-table-column prop="relevantdates" label="关联日期" width="150">
-							<template #default="{ row }">
-								<el-date-picker v-model="row.relevantdates" type="date" size="large"
-									style="width: 130px" :disabled="IsDisabled"></el-date-picker>
-							</template>
-						</el-table-column>
-						<el-table-column prop="specificpaymentitems" label="具体款项" width="150">
-							<template #default="{ row }">
-								<el-select v-model="row.specificpaymentitems" placeholder="选择具体款项" size="large"
-									:disabled="IsDisabled">
-									<el-option v-for="dict in PaymentTypeOptions" :key="dict.dictCode"
-										:label="dict.dictLabel" :value="dict.dictValue" style="width: 130px;" />
-								</el-select>
-							</template>
-						</el-table-column>
-						<el-table-column prop="remark" label="备注" width="150">
-							<template #default="{ row }"> <el-input v-model="row.remark" placeholder="输入备注内容"
-									size="large" style="width: 130px" :disabled="IsDisabled"></el-input></template>
-						</el-table-column>
-						<el-table-column fixed="right" label="操作" width="100">
-							<template #default="scope">
-								<el-button type="text" size="large"
-									@click="CostDetailsTbaleDatahandleDelete(scope.$index)"
-									:disabled="IsDisabled">删除</el-button>
-							</template>
-						</el-table-column>
-					</el-table>
-				</el-tab-pane>
-				<el-tab-pane label="未支付款项详情" name="UnpaidDetailsTab">
-					<el-table :data="UnpaidDetailsTbaleData" style="width: 100%" height="280">
-						<el-table-column prop="contractofpurchaseNo" label="采购合同" width="120"></el-table-column>
-						<el-table-column prop="contractdate" label="合同日期" width="120"></el-table-column>
-						<el-table-column prop="relatedmodules" label="关联模块" width="120"></el-table-column>
-						<el-table-column prop="exportcurrency" label="外销币种" width="120"></el-table-column>
-						<el-table-column prop="exchangerate" label="汇率" width="120"></el-table-column>
-						<el-table-column prop="amountspayable" label="应支付金额" width="120"></el-table-column>
-						<el-table-column prop="depositpaid" label="已付定金" width="120"></el-table-column>
-						<el-table-column prop="paymentrequested" label="已申请付款" width="120"></el-table-column>
-						<el-table-column prop="nopaymentrequested" label="未申请付款" width="120"></el-table-column>
-						<el-table-column prop="paymentpaid" label="已付货款" width="120"></el-table-column>
-						<el-table-column prop="unpaiditems" label="未付货款" width="120"></el-table-column>
-					</el-table>
-				</el-tab-pane>
-				<el-tab-pane label="客诉索赔" name="CustomerComplaintsTab"></el-tab-pane>
-			</el-tabs>
+			<el-table :data="CostDetailsTbaleData" style="width: 100%">
+				<el-table-column prop="relatedmodules" label="关联模块" width="150">
+					<template #default="{ row }">
+						<el-select v-model="row.relatedmodules" placeholder="选择关联模块" size="large"
+							@change="relatedmoduleshandleChange(row)" style="width: 130px;" :disabled="IsDisabled">
+							<el-option v-for="dict in optionss.hr_associated_modules" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue" />
+						</el-select>
+					</template>
+				</el-table-column>
+				<el-table-column prop="associatedordernumber" label="关联单号" width="150">
+					<template #default="{ row }">
+						<el-select v-model="row.associatedordernumber" placeholder="选择关联单号" size="large"
+							style="width: 130px;" :disabled="IsDisabled">
+							<el-option v-for="dict in row.AssociatedOrderNumberOptions" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue" />
+						</el-select>
+					</template>
+				</el-table-column>
+				<el-table-column prop="applicationamount" label="申请金额" width="150">
+					<template #default="{ row }">
+						<el-input v-model="row.applicationamount" placeholder="输入申请金额" size="large" style="width: 130px"
+							:disabled="IsDisabled" @input="CalculatetotalAmount(row)"></el-input>
+					</template>
+				</el-table-column>
+				<el-table-column prop="relevantdates" label="关联日期" width="150">
+					<template #default="{ row }">
+						<el-date-picker v-model="row.relevantdates" type="date" size="large" style="width: 130px"
+							:disabled="IsDisabled"></el-date-picker>
+					</template>
+				</el-table-column>
+				<el-table-column prop="specificpaymentitems" label="具体款项" width="150">
+					<template #default="{ row }">
+						<el-select v-model="row.specificpaymentitems" placeholder="选择具体款项" size="large"
+							:disabled="IsDisabled">
+							<el-option v-for="dict in PaymentTypeOptions" :key="dict.dictCode" :label="dict.dictLabel"
+								:value="dict.dictValue" style="width: 130px;" />
+						</el-select>
+					</template>
+				</el-table-column>
+				<el-table-column prop="remark" label="备注" width="150">
+					<template #default="{ row }"> <el-input v-model="row.remark" placeholder="输入备注内容" size="large"
+							style="width: 130px" :disabled="IsDisabled"></el-input></template>
+				</el-table-column>
+				<el-table-column fixed="right" label="操作" width="100">
+					<template #default="scope">
+						<el-button type="text" size="large" @click="CostDetailsTbaleDatahandleDelete(scope.$index)"
+							:disabled="IsDisabled">删除</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+
+			<div style="margin-top: 30px;"></div>
+
+			<span style="font-size: 20px; font-weight: bold;">未支付款项详情</span>
+			<el-divider></el-divider>
+			<el-table :data="UnpaidDetailsTbaleData" style="width: 100%">
+				<el-table-column prop="contractofpurchaseNo" label="采购合同" width="120"></el-table-column>
+				<el-table-column prop="contractdate" label="合同日期" width="120"></el-table-column>
+				<el-table-column prop="relatedmodules" label="关联模块" width="120"></el-table-column>
+				<el-table-column prop="exportcurrency" label="外销币种" width="120"></el-table-column>
+				<el-table-column prop="exchangerate" label="汇率" width="120"></el-table-column>
+				<el-table-column prop="amountspayable" label="应支付金额" width="120"></el-table-column>
+				<el-table-column prop="depositpaid" label="已付定金" width="120"></el-table-column>
+				<el-table-column prop="paymentrequested" label="已申请付款" width="120"></el-table-column>
+				<el-table-column prop="nopaymentrequested" label="未申请付款" width="120"></el-table-column>
+				<el-table-column prop="paymentpaid" label="已付货款" width="120"></el-table-column>
+				<el-table-column prop="unpaiditems" label="未付货款" width="120"></el-table-column>
+			</el-table>
+
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="warning" v-show="isSaveBtnShow" @click="SavePaymentRequest()">
