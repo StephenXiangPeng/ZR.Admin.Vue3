@@ -309,7 +309,7 @@
 					<el-table-column prop="unitofmeasurement" label="计量单位" width="100">
 						<template #default="scope">
 							<el-select v-model="scope.row.unitofmeasurement" filterable placeholder="单位"
-								style="width: 100%;" :disabled="true">
+								style="width: 100%;" :disabled="scope.row.isImported">
 								<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -1530,6 +1530,19 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
 	await formEl.validate((valid, fields) => {
 		if (valid) {
+			// 过滤掉没有填写报价数量和利润率的产品
+			const validProducts = productData.value.filter(item =>
+				item.quotationnum && item.quotationnum > 0 &&
+				item.ProfitMargin !== undefined && item.ProfitMargin !== null && item.ProfitMargin >= 0
+			);
+
+			// 如果有被过滤掉的产品，更新产品列表
+			if (validProducts.length !== productData.value.length) {
+				const removedCount = productData.value.length - validProducts.length;
+				productData.value = validProducts;
+				calculateTotal(); // 重新计算总值
+				ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
+			}
 			addQuotationRequest.customerid = parseInt(quotationDialogform.customernum);
 			addQuotationRequest.quotationProductDetailsList = [];
 			addQuotationRequest.quotationNum = quotationDialogform.quotationnum;
@@ -1688,6 +1701,20 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 }
 
 const SaveDraft = async () => {
+	// 过滤掉没有填写报价数量和利润率的产品
+	const validProducts = productData.value.filter(item =>
+		item.quotationnum && item.quotationnum > 0 &&
+		item.ProfitMargin !== undefined && item.ProfitMargin !== null && item.ProfitMargin >= 0
+	);
+
+	// 如果有被过滤掉的产品，更新产品列表
+	if (validProducts.length !== productData.value.length) {
+		const removedCount = productData.value.length - validProducts.length;
+		productData.value = validProducts;
+		calculateTotal(); // 重新计算总值
+		ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
+	}
+
 	// 设置默认值
 	addQuotationRequest.customerid = parseInt(quotationDialogform.customernum) || 0;
 	addQuotationRequest.quotationProductDetailsList = [];
@@ -2035,7 +2062,8 @@ const GetQuotationDetailsList = (ID) => {
 						outerboxvolume: element.outerBoxVolume,
 						inlandfreightprice: element.inlandfreightprice,
 						IsNewProduct: element.IsNewProduct,
-						ProfitMargin: element.profitMargin
+						ProfitMargin: element.profitMargin,
+						isImported: element.IsNewProduct === 0
 					});
 			});
 		}
@@ -2059,6 +2087,19 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
 	await formEl.validate((valid, fields) => {
 		if (valid) {
+			// 过滤掉没有填写报价数量和利润率的产品
+			const validProducts = productData.value.filter(item =>
+				item.quotationnum && item.quotationnum > 0 &&
+				item.ProfitMargin !== undefined && item.ProfitMargin !== null && item.ProfitMargin >= 0
+			);
+
+			// 如果有被过滤掉的产品，更新产品列表
+			if (validProducts.length !== productData.value.length) {
+				const removedCount = productData.value.length - validProducts.length;
+				productData.value = validProducts;
+				calculateTotal(); // 重新计算总值
+				ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
+			}
 			for (let key in addQuotationRequest) {
 				addQuotationRequest[key] = null;
 			}
@@ -2420,7 +2461,7 @@ const CreateRevision = () => {
 									inlandfreightprice: element.inlandfreightprice,
 									IsNewProduct: element.IsNewProduct,
 									ProfitMargin: element.profitMargin,
-									isImported: true
+									isImported: element.IsNewProduct === 0
 								});
 							});
 							calculateTotal(); // 重新计算总值

@@ -251,51 +251,56 @@
 			</el-form>
 
 
-			<span style="font-size: 20px; font-weight: bold;">付款明细</span>
-			<el-divider></el-divider>
-			<el-table :data="CostDetailsTbaleData" style="width: 100%">
-				<el-table-column prop="relatedmodules" label="关联模块" width="150">
+			<span style="font-size: 20px; font-weight: bold;" v-show="showPaymentDetails">付款明细</span>
+			<el-divider v-show="showPaymentDetails"></el-divider>
+			<el-table :data="CostDetailsTbaleData" style="width: 100%" v-show="showPaymentDetails">
+				<el-table-column prop="shippingOrderNumber" label="出运单号" width="150">
 					<template #default="{ row }">
-						<el-select v-model="row.relatedmodules" placeholder="选择关联模块" size="large"
-							@change="relatedmoduleshandleChange(row)" style="width: 130px;" :disabled="IsDisabled">
-							<el-option v-for="dict in optionss.hr_associated_modules" :key="dict.dictCode"
-								:label="dict.dictLabel" :value="dict.dictValue" />
-						</el-select>
+						<el-input v-model="row.shippingOrderNumber" style="width: 130px"
+							:disabled="IsDisabled"></el-input>
 					</template>
 				</el-table-column>
-				<el-table-column prop="associatedordernumber" label="关联单号" width="150">
+				<el-table-column prop="purchaseContractNumber" label="采购合同号" width="150">
 					<template #default="{ row }">
-						<el-select v-model="row.associatedordernumber" placeholder="选择关联单号" size="large"
-							style="width: 130px;" :disabled="IsDisabled">
-							<el-option v-for="dict in row.AssociatedOrderNumberOptions" :key="dict.dictCode"
-								:label="dict.dictLabel" :value="dict.dictValue" />
-						</el-select>
+						<el-input v-model="row.purchaseContractNumber" style="width: 130px"
+							:disabled="IsDisabled"></el-input>
 					</template>
 				</el-table-column>
-				<el-table-column prop="applicationamount" label="申请金额" width="150">
+				<el-table-column prop="totalGoodsValue" label="采购合同金额" width="150">
 					<template #default="{ row }">
-						<el-input v-model="row.applicationamount" placeholder="输入申请金额" size="large" style="width: 130px"
-							:disabled="IsDisabled" @input="CalculatetotalAmount()"></el-input>
+						<el-input v-model="row.totalGoodsValue" style="width: 130px" :disabled="IsDisabled"></el-input>
 					</template>
 				</el-table-column>
-				<el-table-column prop="relevantdates" label="关联日期" width="150">
+				<el-table-column prop="actualShippingAmount" label="实际发货金额" width="150">
 					<template #default="{ row }">
-						<el-date-picker v-model="row.relevantdates" type="date" size="large" style="width: 130px"
-							:disabled="IsDisabled"></el-date-picker>
+						<el-input v-model="row.actualShippingAmount" style="width: 130px"
+							:disabled="IsDisabled"></el-input>
 					</template>
 				</el-table-column>
-				<el-table-column prop="specificpaymentitems" label="具体款项" width="150">
+				<el-table-column prop="deposit" label="已付定金" width="150">
 					<template #default="{ row }">
-						<el-select v-model="row.specificpaymentitems" placeholder="选择具体款项" size="large"
-							:disabled="IsDisabled">
-							<el-option v-for="dict in PaymentTypeOptions" :key="dict.dictCode" :label="dict.dictLabel"
-								:value="dict.dictValue" style="width: 130px;" />
-						</el-select>
+						<el-input v-model="row.deposit" style="width: 130px" :disabled="IsDisabled"></el-input>
+					</template>
+				</el-table-column>
+				<el-table-column prop="paidAmount" label="已付货款" width="150">
+					<template #default="{ row }">
+						<el-input v-model="row.paidAmount" style="width: 130px" :disabled="IsDisabled"></el-input>
+					</template>
+				</el-table-column>
+				<el-table-column prop="unpaidAmount" label="未付货款" width="150">
+					<template #default="{ row }">
+						<el-input v-model="row.unpaidAmount" style="width: 130px" :disabled="IsDisabled"></el-input>
+					</template>
+				</el-table-column>
+				<el-table-column prop="contractStatus" label="采购合同状态" width="150">
+					<template #default="{ row }">
+						<el-input v-model="row.contractStatus" style="width: 130px" :disabled="IsDisabled"></el-input>
 					</template>
 				</el-table-column>
 				<el-table-column prop="remark" label="备注" width="150">
-					<template #default="{ row }"> <el-input v-model="row.remark" placeholder="输入备注内容" size="large"
-							style="width: 130px" :disabled="IsDisabled"></el-input></template>
+					<template #default="{ row }">
+						<el-input v-model="row.remark" style="width: 130px" :disabled="IsDisabled"></el-input>
+					</template>
 				</el-table-column>
 				<el-table-column fixed="right" label="操作" width="100">
 					<template #default="scope">
@@ -305,24 +310,63 @@
 				</el-table-column>
 			</el-table>
 
-			<div style="margin-top: 30px;"></div>
+			<div style="margin-top: 30px;" v-show="showPaymentDetails"></div>
 
-			<span style="font-size: 20px; font-weight: bold;">未支付款项详情</span>
-			<el-divider></el-divider>
-			<el-table :data="UnpaidDetailsTbaleData" style="width: 100%">
-				<el-table-column prop="contractofpurchaseNo" label="采购合同" width="120"></el-table-column>
-				<el-table-column prop="contractdate" label="合同日期" width="120"></el-table-column>
-				<el-table-column prop="relatedmodules" label="关联模块" width="120"></el-table-column>
-				<el-table-column prop="exportcurrency" label="外销币种" width="120"></el-table-column>
-				<el-table-column prop="exchangerate" label="汇率" width="120"></el-table-column>
-				<el-table-column prop="amountspayable" label="应支付金额" width="120"></el-table-column>
-				<el-table-column prop="depositpaid" label="已付定金" width="120"></el-table-column>
-				<el-table-column prop="paymentrequested" label="已申请付款" width="120"></el-table-column>
-				<el-table-column prop="nopaymentrequested" label="未申请付款" width="120"></el-table-column>
-				<el-table-column prop="paymentpaid" label="已付货款" width="120"></el-table-column>
-				<el-table-column prop="unpaiditems" label="未付货款" width="120"></el-table-column>
+			<span style="font-size: 20px; font-weight: bold;" v-show="showPaymentDetails">未支付款项详情</span>
+			<el-divider v-show="showPaymentDetails"></el-divider>
+			<el-table :data="UnpaidDetailsTbaleData" style="width: 100%" @row-dblclick="handleUnpaidRowDoubleClick"
+				v-show="showPaymentDetails">
+				<el-table-column prop="id" label="ID" width="120" v-if="false">
+					<template #default="{ row }">
+						<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.id }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="invoiceNumber" label="出运单号" width="120">
+					<template #default="{ row }">
+						<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.invoiceNumber }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="purchaseContractNumber" label="采购合同号" width="120">
+					<template #default="{ row }">
+						<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.purchaseContractNumber }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="totalGoodsValue" label="采购合同金额" width="120">
+					<template #default="{ row }">
+						<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.totalGoodsValue }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="actualShippingAmount" label="实际发货金额" width="120">
+					<template #default="{ row }">
+						<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.actualShippingAmount }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="deposit" label="已付定金" width="120">
+					<template #default="{ row }">
+						<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.deposit }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="paidAmount" label="已付货款" width="120">
+					<template #default="{ row }">
+						<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.paidAmount }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="unpaidAmount" label="未付货款" width="120">
+					<template #default="{ row }">
+						<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.unpaidAmount }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="contractStatus" label="采购合同状态" width="120">
+					<template #default="{ row }">
+						<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.contractStatus }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="remark" label="备注" width="120">
+					<template #default="{ row }">
+						<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.remark }}</span>
+					</template>
+				</el-table-column>
 			</el-table>
-
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="warning" v-show="isSaveBtnShow" @click="SavePaymentRequest()">
@@ -597,6 +641,8 @@ const isSaveBtnShow = ref(true);
 const isEditSaveBtnShow = ref(false);
 const activeTab = ref('CostDetailsTab')//费用信息Tab
 const addpaymentrequestdialog = ref(false)//付款申请Dialog
+// 控制付款明细和未支付款项详情的显示
+const showPaymentDetails = ref(true);
 const paymentrequesttableData = ref([])//付款申请列表Table
 const CostDetailsTbaleData = ref([])//费用明细Table
 const UnpaidDetailsTbaleData = ref([])//未支付款项详情Table
@@ -625,10 +671,6 @@ const addpaymentrequestform = ref({
 
 // 供应商银行账号列表
 const supplierBankAccounts = ref([])
-const CostDetailsTbaleDatahandleDelete = (index: number) => {
-	CostDetailsTbaleData.value.splice(index, 1)
-	CalculatetotalAmount() // 重新计算总金额
-}
 const handleAddRowCostDetails = () => {
 	activeTab.value = 'CostDetailsTab'
 
@@ -640,6 +682,18 @@ const handleAddRowCostDetails = () => {
 	const todayStr = `${year}-${month}-${day}`;
 
 	CostDetailsTbaleData.value.push({
+		shippingOrderNumber: '',
+		ShippingOrderNumberOptions: [],
+		purchaseContractNumber: '',
+		PurchaseContractNumberOptions: [],
+		totalGoodsValue: '',
+		actualShippingAmount: '',
+		deposit: '',
+		paidAmount: '',
+		unpaidAmount: '',
+		contractStatus: '',
+		remark: '',
+		// 保留原有字段以兼容现有逻辑
 		productCode: '',
 		customerCode: '',
 		chineseName: '',
@@ -651,8 +705,7 @@ const handleAddRowCostDetails = () => {
 		applicationamount: '',
 		relevantdates: todayStr, // 设置关联日期默认值为当天
 		relatedmodules: '',
-		specificpaymentitems: '',
-		remark: ''
+		specificpaymentitems: ''
 	})
 }
 /*动态下拉框start*/
@@ -682,7 +735,8 @@ const state = reactive({
 		sql_payment_requests: [],
 		hr_payment_contract_type: [],
 		sql_shippingdeliveries: [],
-		hr_business_expenses: []
+		hr_business_expenses: [],
+		hr_contract_status: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -690,7 +744,7 @@ var dictParams = [{ dictType: 'hr_ourcompany' }, { dictType: 'hr_export_currency
 { dictType: 'hr_payment_category' }, { dictType: 'hr_factory_payment' }, { dictType: 'hr_domestic_charges' }, { dictType: 'hr_foreign_charges' },
 { dictType: 'hr_daily_expenses' }, { dictType: 'sql_supplier_info' }, { dictType: 'hr_currency_code' }, { dictType: 'sql_all_user' }, { dictType: 'sql_hr_sale' },
 { dictType: 'sql_hr_purchase' }, { dictType: 'sql_hr_finance' }, { dictType: 'sql_hr_dept' }, { dictType: 'hr_associated_modules' }, { dictType: 'sql_purchase_contract' },
-{ dictType: 'sql_sale_contracts' }, { dictType: 'sql_payment_requests' }, { dictType: 'hr_payment_contract_type' }, { dictType: 'sql_shippingdeliveries' }, { dictType: 'hr_business_expenses' }]
+{ dictType: 'sql_sale_contracts' }, { dictType: 'sql_payment_requests' }, { dictType: 'hr_payment_contract_type' }, { dictType: 'sql_shippingdeliveries' }, { dictType: 'hr_business_expenses' }, { dictType: 'hr_contract_status' }]
 
 async function fetchDataAndExecute() {
 	try {
@@ -712,18 +766,26 @@ const paymentCategoryChange = () => {
 	switch (addpaymentrequestform.value.paymentCategory) {
 		case '1':
 			PaymentTypeOptions.value = state.optionss.hr_factory_payment
+			showPaymentDetails.value = true; // 工厂付款显示付款明细和未支付款项详情
 			break;
 		case '2':
 			PaymentTypeOptions.value = state.optionss.hr_domestic_charges
+			showPaymentDetails.value = true; // 国内费用显示付款明细和未支付款项详情
 			break;
 		case '3':
 			PaymentTypeOptions.value = state.optionss.hr_foreign_charges
+			showPaymentDetails.value = true; // 国外费用显示付款明细和未支付款项详情
 			break;
 		case '4':
 			PaymentTypeOptions.value = state.optionss.hr_daily_expenses
+			showPaymentDetails.value = false; // 日常费用隐藏付款明细和未支付款项详情
 			break;
 		case '5':
 			PaymentTypeOptions.value = state.optionss.hr_business_expenses
+			showPaymentDetails.value = false; // 业务费用隐藏付款明细和未支付款项详情
+			break;
+		default:
+			showPaymentDetails.value = true;
 			break;
 	}
 }
@@ -788,6 +850,34 @@ const payeeCodeChange = async () => {
 				addpaymentrequestform.value.bankAccount = supplierResponse.bankAccount || '';
 				supplierBankAccounts.value = [];
 			}
+
+			// 只有在需要显示付款明细时才获取未付款详情列表
+			if (showPaymentDetails.value) {
+				try {
+					const unpaidResponse = await request({
+						url: 'PaymentRequest/GetUnpaidPaymentListBySupplierID/GetUnpaidPaymentList',
+						method: 'GET',
+						params: {
+							supplierID: addpaymentrequestform.value.payeeCode
+						}
+					});
+
+					if (unpaidResponse.data && unpaidResponse.code === 200) {
+						UnpaidDetailsTbaleData.value = unpaidResponse.data || [];
+						UnpaidDetailsTbaleData.value.forEach((element) => {
+							element.contractStatus = state.optionss.hr_contract_status.find((item) => item.dictValue == element.contractStatus)?.dictLabel || '';
+						});
+					} else {
+						UnpaidDetailsTbaleData.value = [];
+					}
+				} catch (unpaidError) {
+					console.error('获取未付款详情失败:', unpaidError);
+					UnpaidDetailsTbaleData.value = [];
+				}
+			} else {
+				// 如果不需要显示付款明细，清空未付款详情数据
+				UnpaidDetailsTbaleData.value = [];
+			}
 		} else {
 			ElMessage({
 				message: '未找到对应的厂商信息',
@@ -798,6 +888,7 @@ const payeeCodeChange = async () => {
 			addpaymentrequestform.value.bankName = '';
 			addpaymentrequestform.value.bankAccount = '';
 			supplierBankAccounts.value = [];
+			UnpaidDetailsTbaleData.value = [];
 		}
 	} catch (error) {
 		console.error('获取供应商信息失败:', error);
@@ -810,6 +901,7 @@ const payeeCodeChange = async () => {
 		addpaymentrequestform.value.bankName = '';
 		addpaymentrequestform.value.bankAccount = '';
 		supplierBankAccounts.value = [];
+		UnpaidDetailsTbaleData.value = [];
 	}
 }
 
@@ -994,6 +1086,21 @@ const CheckPaymentRequest = async (row) => {
 		addpaymentrequestform.value.applicationNumber = response.data.paymentRequest.applicationNumber;
 		addpaymentrequestform.value.applicationDate = response.data.paymentRequest.applicationDate;
 		addpaymentrequestform.value.paymentCategory = response.data.paymentRequest.paymentCategory.toString();
+		// 根据付款类别设置显示状态
+		switch (response.data.paymentRequest.paymentCategory.toString()) {
+			case '1':
+			case '2':
+			case '3':
+				showPaymentDetails.value = true; // 工厂付款、国内费用、国外费用显示付款明细
+				break;
+			case '4':
+			case '5':
+				showPaymentDetails.value = false; // 日常费用、业务费用隐藏付款明细
+				break;
+			default:
+				showPaymentDetails.value = true;
+				break;
+		}
 		paymentCategoryChange();
 		addpaymentrequestform.value.paymentName = response.data.paymentRequest.paymentName.toString();
 		addpaymentrequestform.value.payeeCode = response.data.paymentRequest.payeeCode.toString();
@@ -1020,6 +1127,31 @@ const CheckPaymentRequest = async (row) => {
 			console.error('获取供应商银行账号列表失败:', error);
 			supplierBankAccounts.value = [];
 		}
+
+		// 只有在需要显示付款明细时才获取未付款详情列表
+		if (showPaymentDetails.value) {
+			try {
+				const unpaidResponse = await request({
+					url: 'PaymentRequest/GetUnpaidPaymentList/GetUnpaidPaymentList',
+					method: 'GET',
+					params: {
+						supplierID: response.data.paymentRequest.payeeCode
+					}
+				});
+
+				if (unpaidResponse.data && unpaidResponse.data.code === 200) {
+					UnpaidDetailsTbaleData.value = unpaidResponse.data.data || [];
+				} else {
+					UnpaidDetailsTbaleData.value = [];
+				}
+			} catch (unpaidError) {
+				console.error('获取未付款详情失败:', unpaidError);
+				UnpaidDetailsTbaleData.value = [];
+			}
+		} else {
+			// 如果不需要显示付款明细，清空未付款详情数据
+			UnpaidDetailsTbaleData.value = [];
+		}
 		addpaymentrequestform.value.ourCompany = response.data.paymentRequest.ourCompany.toString();
 		addpaymentrequestform.value.currencyCode = response.data.paymentRequest.currencyCode.toString();
 		addpaymentrequestform.value.totalAmount = response.data.paymentRequest.totalAmount;
@@ -1030,6 +1162,9 @@ const CheckPaymentRequest = async (row) => {
 		addpaymentrequestform.value.financialApproval = response.data.paymentRequest.financialApproval.toString();
 		addpaymentrequestform.value.handler = response.data.paymentRequest.handler.toString();
 		addpaymentrequestform.value.remarks = response.data.remarks;
+		// 清空已选择的未付款项
+		selectedUnpaidItemIds.value.clear();
+
 		response.data.paymentRequestDetails.forEach((element) => {
 			handleAddRowCostDetails();
 		});
@@ -1042,6 +1177,17 @@ const CheckPaymentRequest = async (row) => {
 			element.relevantdates = response.data.paymentRequestDetails[index].relevantDates;
 			element.specificpaymentitems = response.data.paymentRequestDetails[index].specificPaymentItems.toString();
 			element.remark = response.data.paymentRequestDetails[index].remark;
+
+			// 如果是从未付款项添加的数据，标记为已选择
+			if (element.shippingOrderNumber && element.purchaseContractNumber) {
+				const unpaidItem = UnpaidDetailsTbaleData.value.find(item =>
+					item.invoiceNumber === element.shippingOrderNumber &&
+					item.purchaseContractNumber === element.purchaseContractNumber
+				);
+				if (unpaidItem) {
+					selectedUnpaidItemIds.value.add(unpaidItem.id);
+				}
+			}
 		});
 		getApprovalFlow(row.id).then(() => {
 			const isCurrentUserApprover = checkIfCurrentUserIsApprover();
@@ -1161,31 +1307,6 @@ const EditSavePaymentRequest = () => {
 const Closeaddpaymentrequestdialog = () => {
 	resetForm();
 	addpaymentrequestdialog.value = false;
-	isEditSaveBtnShow.value = false;
-	isSaveBtnShow.value = true;
-	isCheckAndEdit.value = false;
-	PaymentRequestID.value = 0;
-	addpaymentrequestdialog.value = false;
-	addpaymentrequestform.value.applicant = '';
-	addpaymentrequestform.value.applicationDate = '';
-	addpaymentrequestform.value.applicationDepartment = '';
-	addpaymentrequestform.value.applicationNumber = '';
-	addpaymentrequestform.value.bankAccount = '';
-	addpaymentrequestform.value.bankName = '';
-	addpaymentrequestform.value.currencyCode = '';
-	addpaymentrequestform.value.financialApproval = '';
-	addpaymentrequestform.value.handler = '';
-	addpaymentrequestform.value.ourCompany = '';
-	addpaymentrequestform.value.paidAmount = '';
-	addpaymentrequestform.value.paymentCategory = '';
-	addpaymentrequestform.value.paymentName = '';
-	addpaymentrequestform.value.payeeCode = '';
-	addpaymentrequestform.value.payeeName = '';
-	addpaymentrequestform.value.remarks = '';
-	addpaymentrequestform.value.totalAmount = '';
-	addpaymentrequestform.value.unpaidAmount = '';
-	CostDetailsTbaleData.value = [];
-	supplierBankAccounts.value = [];
 	isEditSaveBtnShow.value = false;
 	isSaveBtnShow.value = true;
 	isCheckAndEdit.value = false;
@@ -1419,6 +1540,8 @@ const resetForm = () => {
 	isSaveBtnShow.value = true;
 	isCheckAndEdit.value = false;
 	PaymentRequestID.value = 0;
+	// 重置显示状态为默认显示
+	showPaymentDetails.value = true;
 
 	if (paymentFormRef.value) {
 		paymentFormRef.value.resetFields();
@@ -1452,6 +1575,12 @@ const resetForm = () => {
 
 	// 清空供应商银行账号列表
 	supplierBankAccounts.value = [];
+
+	// 清空未付款详情数据
+	UnpaidDetailsTbaleData.value = [];
+
+	// 清空已选择的未付款项
+	selectedUnpaidItemIds.value.clear();
 };
 
 const CalculatetotalAmount = () => {
@@ -1461,8 +1590,13 @@ const CalculatetotalAmount = () => {
 	// 遍历费用明细表格中的所有行
 	CostDetailsTbaleData.value.forEach(row => {
 		// 将字符串转换为数字并累加
-		// 如果applicationamount为空或非数字，使用0
-		const amount = parseFloat(row.applicationamount) || 0;
+		// 优先使用unpaidAmount，如果没有则使用applicationamount
+		let amount = 0;
+		if (row.unpaidAmount) {
+			amount = parseFloat(row.unpaidAmount) || 0;
+		} else if (row.applicationamount) {
+			amount = parseFloat(row.applicationamount) || 0;
+		}
 		total += amount;
 	});
 
@@ -1472,6 +1606,75 @@ const CalculatetotalAmount = () => {
 	const paidAmount = parseFloat(addpaymentrequestform.value.paidAmount) || 0;
 	addpaymentrequestform.value.unpaidAmount = (total - paidAmount).toFixed(2);
 }
+
+// 存储已选择的未付款项ID
+const selectedUnpaidItemIds = ref(new Set());
+
+// 检查项目是否已被选择
+const isItemSelected = (row) => {
+	return selectedUnpaidItemIds.value.has(row.id);
+};
+
+// 处理未付款项双击事件
+const handleUnpaidRowDoubleClick = (row) => {
+	// 检查是否已被选择
+	if (isItemSelected(row)) {
+		ElMessage.warning('该项目已被添加到付款明细中，不能重复添加');
+		return;
+	}
+
+	// 获取当前日期
+	const today = new Date();
+	const year = today.getFullYear();
+	const month = String(today.getMonth() + 1).padStart(2, '0');
+	const day = String(today.getDate()).padStart(2, '0');
+	const todayStr = `${year}-${month}-${day}`;
+
+	// 添加到付款明细列表
+	const newDetail = {
+		shippingOrderNumber: row.invoiceNumber || '',
+		ShippingOrderNumberOptions: [],
+		purchaseContractNumber: row.purchaseContractNumber || '',
+		PurchaseContractNumberOptions: [],
+		totalGoodsValue: row.totalGoodsValue || '',
+		actualShippingAmount: row.actualShippingAmount || '',
+		deposit: row.deposit || '',
+		paidAmount: row.paidAmount || '',
+		unpaidAmount: row.unpaidAmount || '',
+		contractStatus: row.contractStatus || '',
+		remark: row.remark || ''
+	};
+
+	CostDetailsTbaleData.value.push(newDetail);
+
+	// 标记为已选择
+	selectedUnpaidItemIds.value.add(row.id);
+
+	// 重新计算总金额
+	CalculatetotalAmount();
+
+	ElMessage.success('已添加到付款明细');
+};
+
+// 从付款明细中移除项目时，同时从已选择列表中移除
+const CostDetailsTbaleDatahandleDelete = (index: number) => {
+	const deletedItem = CostDetailsTbaleData.value[index];
+
+	// 如果删除的项目来自未付款项，从已选择列表中移除
+	if (deletedItem.shippingOrderNumber && deletedItem.purchaseContractNumber) {
+		// 查找对应的未付款项并移除标记
+		const unpaidItem = UnpaidDetailsTbaleData.value.find(item =>
+			item.invoiceNumber === deletedItem.shippingOrderNumber &&
+			item.purchaseContractNumber === deletedItem.purchaseContractNumber
+		);
+		if (unpaidItem) {
+			selectedUnpaidItemIds.value.delete(unpaidItem.id);
+		}
+	}
+
+	CostDetailsTbaleData.value.splice(index, 1);
+	CalculatetotalAmount(); // 重新计算总金额
+};
 
 const DeleteCustomerProfile = (row) => {
 	ElMessageBox.confirm('确定要删除该付款申请单吗？', '提示', {
@@ -1498,3 +1701,11 @@ const DeleteCustomerProfile = (row) => {
 	});
 };
 </script>
+
+<style scoped>
+.selected-item {
+	color: #f56c6c !important;
+	font-weight: bold;
+	text-decoration: line-through;
+}
+</style>
