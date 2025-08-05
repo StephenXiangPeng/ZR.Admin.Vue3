@@ -760,11 +760,11 @@
 			<div class="reminder-dialog">
 				<el-form :model="BusinessOpportunityForm" label-width="100px">
 					<!-- 商机选择（所有情况都显示） -->
-					<el-form-item label="商机编号">
+					<el-form-item label="商机名称">
 						<el-select v-model="BusinessOpportunityForm.opportunityId" clearable filterable
-							placeholder="请选择商机编号" @change="handleOpportunityChange">
-							<el-option v-for="item in BusinessOpportunityList" :key="item.id"
-								:label="item.opportunityNumber" :value="item.id">
+							placeholder="请选择商机名称" @change="handleOpportunityChange">
+							<el-option v-for="item in BusinessOpportunityList" :key="item.id" :label="item.businessName"
+								:value="item.id">
 							</el-option>
 						</el-select>
 					</el-form-item>
@@ -794,6 +794,23 @@
 				<span class="dialog-footer">
 					<el-button @click="BusinessOpportunitySelectionDialog = false">取消</el-button>
 					<el-button type="primary" @click="handleConfirmSelection">确定</el-button>
+				</span>
+			</template>
+		</el-dialog>
+		<!-- 询盘商机名称输入对话框 -->
+		<el-dialog v-model="inquiryOpportunityDialog" title="创建商机" width="30%">
+			<div class="inquiry-opportunity-dialog">
+				<el-form :model="inquiryOpportunityForm" label-width="100px">
+					<el-form-item label="商机名称" required>
+						<el-input v-model="inquiryOpportunityForm.opportunityName" placeholder="请输入商机名称" maxlength="100"
+							show-word-limit />
+					</el-form-item>
+				</el-form>
+			</div>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button @click="inquiryOpportunityDialog = false">取消</el-button>
+					<el-button type="primary" @click="handleInquiryOpportunityConfirm">确定</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -907,6 +924,18 @@ const BusinessOpportunityForm = ref({
 	tagNames: []
 })
 
+// 询盘商机名称输入对话框相关
+const inquiryOpportunityDialog = ref(false)
+const inquiryOpportunityForm = ref({
+	opportunityName: ''
+})
+
+// 打开询盘商机名称输入对话框
+const openInquiryOpportunityDialog = () => {
+	inquiryOpportunityForm.value.opportunityName = ''
+	inquiryOpportunityDialog.value = true
+}
+
 // 打开商机选择对话框
 const openBusinessOpportunitySelectionDialog = async (type, tagNames) => {
 	BusinessOpportunityForm.value = {
@@ -1017,6 +1046,25 @@ const handleConfirmSelection = async () => {
 	} catch (error) {
 		console.error('设置失败:', error)
 		ElMessage.error('设置失败')
+	}
+}
+
+// 处理询盘商机名称确认
+const handleInquiryOpportunityConfirm = async () => {
+	if (!inquiryOpportunityForm.value.opportunityName.trim()) {
+		ElMessage.warning('请输入商机名称')
+		return
+	}
+	try {
+		// 更新邮件标签
+		await EditEmailTags()
+		// 成功后立即更新本地标签数据
+		await updateLocalEmailTags(EmailModel.id, EmailTagcheckboxGroup.value)
+		inquiryOpportunityDialog.value = false
+
+	} catch (error) {
+		console.error('创建商机失败:', error)
+		ElMessage.error('创建商机失败')
 	}
 }
 // #endregion
@@ -1356,7 +1404,8 @@ const EmailModel = reactive({
 	"isRead": 0,
 	"EmailTags": '',
 	"EmailTagNames": '',
-	"businessopportunityid": 0
+	"businessopportunityid": 0,
+	"businessopportunityname": ''
 })
 
 // 统一的数据刷新方法
@@ -1850,6 +1899,10 @@ const SelectEmailTags = () => {
 	EmailModel.EmailTagNames = EmailTagcheckboxGroup.value.map(tagId => getTagName(tagId)).join(',')
 
 	// 根据标签名称判断需要打开的对话框类型
+	if (EmailModel.EmailTagNames.includes('询盘')) {
+		openInquiryOpportunityDialog()
+		return
+	}
 	if (EmailModel.EmailTagNames.includes('初次报价')) {
 		openBusinessOpportunitySelectionDialog('quotation', ['初次报价'])
 		return
@@ -1875,6 +1928,7 @@ const EditEmailTags = async () => {
 	EmailModel.EmailTags = EmailTagcheckboxGroup.value.toString()
 	EmailModel.EmailTagNames = EmailTagcheckboxGroup.value.map(tagId => getTagName(tagId)).join(',')
 	EmailModel.businessopportunityid = BusinessOpportunityForm.value.opportunityId
+	EmailModel.businessopportunityname = inquiryOpportunityForm.value.opportunityName
 
 	try {
 		const response = await request({

@@ -60,12 +60,10 @@
 					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
 					<el-divider></el-divider>
 					<div style="width: 100%; margin-top: 30px;">
-						<el-input v-model="Search_ProductCode" clearable style="width: 20%" size="large"
-							placeholder="输入产品编号" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-						<el-input v-model="Search_ProductName" clearable style="width: 20%" size="large"
-							placeholder="输入产品名称" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-						<el-button type="primary" @click="Search_ProductInfo()" plain>查询</el-button>
-						<el-button @click="Search_Reset()">重置</el-button>
+						<el-input v-model="Search_Keyword" clearable style="width: 60%" size="large"
+							placeholder="输入产品编号或产品名称关键词进行搜索" @keyup.enter="Search_ProductInfo" @clear="Search_Reset" />
+						<el-button type="primary" @click="Search_ProductInfo()" plain
+							style="margin-left: 10px;">查询</el-button>
 					</div>
 					<div style="margin-top: 30px;"></div>
 					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;产品列表</span>
@@ -73,8 +71,9 @@
 					<el-button type="primary" @click="openAddProductDialog()"
 						v-if="userId.toString() === '1' || userDepartment === 210">添加产品</el-button>
 					<el-table :data="ProductInfoTableData" row-key="id"
-						:tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
-						<el-table-column prop="productCode" label="产品编号" width="200" sortable>
+						:tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
+						@sort-change="handleSortChange">
+						<el-table-column prop="productCode" label="产品编号" width="200" sortable="custom">
 							<template #default="scope">
 								<span>{{ scope.row.productCode }}</span>
 								<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
@@ -2019,25 +2018,53 @@ const totalItems = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(10);
 
+// 排序参数
+const sortParams = ref({
+	sort: undefined,
+	sortType: undefined
+});
+
+// 排序处理函数
+const handleSortChange = (column) => {
+	if (column.prop && column.order) {
+		sortParams.value.sort = column.prop;
+		sortParams.value.sortType = column.order;
+	} else {
+		sortParams.value.sort = undefined;
+		sortParams.value.sortType = undefined;
+	}
+	// 重新获取数据
+	GetProductInfoList(currentPage.value, pageSize.value);
+};
+
 //产品信息表格
 const ProductInfoTableData = ref([])
 const handlePageChange = async (newPage) => {
 	currentPage.value = newPage;
 	await GetProductInfoList(newPage, pageSize.value);
-
 };
 const Search_ProductCode = ref('');	// 查询产品编号
 const Search_StartTransactionDate = ref('');	// 查询最近成交日期
 const Search_EndTransactionDate = ref('');	// 查询最近成交日期
 const Search_ProductName = ref('');	// 查询产品名称
+const Search_Keyword = ref('');	// 统一搜索关键词
+
 const Search_ProductInfo = () => {
+	// 将搜索关键词同时设置到产品编号和产品名称字段
+	Search_ProductCode.value = Search_Keyword.value;
+	Search_ProductName.value = Search_Keyword.value;
 	GetProductInfoList(currentPage.value, pageSize.value);
 }
+
 const Search_Reset = () => {
+	Search_Keyword.value = '';
 	Search_ProductCode.value = '';
 	Search_StartTransactionDate.value = '';
 	Search_EndTransactionDate.value = '';
 	Search_ProductName.value = '';
+	// 重置排序参数
+	sortParams.value.sort = undefined;
+	sortParams.value.sortType = undefined;
 	GetProductInfoList(currentPage.value, pageSize.value);
 }
 
@@ -2087,11 +2114,14 @@ function GetProductInfoList(start, end) {
 			params: {
 				PageNum: start,
 				PageSize: end,
-				ProductCode: Search_ProductCode.value,
+				ProductCode: Search_Keyword.value,
 				startDate: Search_StartTransactionDate.value,
 				endDate: Search_EndTransactionDate.value,
 				ProductCategoriesID: SelectNodeId.value,
-				ProductName: Search_ProductName.value
+				ProductName: Search_ProductName.value,
+				// 添加排序参数
+				sort: sortParams.value.sort,
+				sortType: sortParams.value.sortType
 			}
 		}).then(response => {
 			if (response.data.data.length > 0) {

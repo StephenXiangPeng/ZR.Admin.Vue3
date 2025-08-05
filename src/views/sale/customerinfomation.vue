@@ -588,10 +588,25 @@
 						style="width: 100%;" />
 				</el-form-item>
 				<el-form-item label="日志标签" prop="ContactLogTag">
-					<el-select v-model="contactLogForm.ContactLogTag" filterable placeholder="选择日志标签"
-						style="width: 100%;">
+					<el-select v-model="contactLogForm.ContactLogTag" filterable clearable placeholder="选择日志标签"
+						style="width: 100%;" @change="handleContactLogTagChange">
 						<el-option v-for="item in ContactLogTagData" :key="item.id" :label="item.emailTagName"
 							:value="item.id" />
+					</el-select>
+				</el-form-item>
+				<!-- 商机名称字段 - 根据日志标签显示 -->
+				<el-form-item v-if="showBusinessOpportunityField" label="商机名称"
+					:required="contactLogForm.ContactLogTag && ContactLogTagData.find(tag => tag.id === contactLogForm.ContactLogTag)?.emailTagName === '询盘'"
+					prop="businessOpportunityName">
+					<!-- 询盘时显示文本框 -->
+					<el-input
+						v-if="contactLogForm.ContactLogTag && ContactLogTagData.find(tag => tag.id === contactLogForm.ContactLogTag)?.emailTagName === '询盘'"
+						v-model="contactLogForm.businessOpportunityName" placeholder="请输入商机名称" style="width: 100%;" />
+					<!-- 其他情况显示下拉框 -->
+					<el-select v-else v-model="contactLogForm.businessOpportunityName" filterable placeholder="请选择商机名称"
+						style="width: 100%;">
+						<el-option v-for="item in businessOpportunityOptions" :key="item.dictValue"
+							:label="item.dictLabel" :value="item.dictValue" />
 					</el-select>
 				</el-form-item>
 				<el-form-item label="联系人" prop="contactPerson">
@@ -607,17 +622,20 @@
 							:label="item.dictLabel" :value="item.dictValue" />
 					</el-select>
 				</el-form-item>
+
+
+
 				<el-form-item label="关联单据">
-					<el-radio-group v-model="contactLogForm.relatedDocumentType" @change="RelatedDocumentsChange">
+					<el-radio-group v-model="contactLogForm.relatedDocumentType" @change="RelatedDocumentsChange"
+						:disabled="isRelatedDocumentLocked">
 						<el-radio :value="1">销售合同</el-radio>
 						<el-radio :value="2">出运合同</el-radio>
+						<el-radio :value="3">报价单</el-radio>
 					</el-radio-group>
 					<el-select v-model="contactLogForm.relatedDocumentID" filterable
-						:placeholder="contactLogForm.relatedDocumentType === 1 ? '请选择销售合同' : '请选择出运合同'"
-						style="width: 100%;">
-						<el-option
-							v-for="item in contactLogForm.relatedDocumentType === 1 ? state.optionss.customer_contract_data : state.optionss.sql_shippingdeliveries"
-							:key="item.dictValue" :label="item.dictLabel" :value="item.dictValue" />
+						:placeholder="getRelatedDocumentPlaceholder()" style="width: 100%;">
+						<el-option v-for="item in getRelatedDocumentOptions()" :key="item.dictValue"
+							:label="item.dictLabel" :value="item.dictValue" />
 					</el-select>
 				</el-form-item>
 				<el-form-item label="联系内容" prop="contactContent">
@@ -710,7 +728,7 @@
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance, reactive, toRefs, ref, onMounted, nextTick } from 'vue'
+import { getCurrentInstance, reactive, toRefs, ref, onMounted, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, UploadUserFile, ElMessage, UploadFile, FormInstance, FormRules } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -747,7 +765,7 @@ interface CustomUploadFile extends UploadFile {
 
 const activeTab = ref('ContactInfoTable');
 const isEditCustomerInfo = ref(false);
-const proxy = getCurrentInstance().proxy
+const proxy = getCurrentInstance().proxy as any
 const state = reactive({
 	optionss: {
 		// 显示状态选项列表(动态字典将会从后台获取数据)
@@ -813,7 +831,7 @@ const getUserCustomerData = async () => {
 				dictLabel: item.dictLabel
 			}))
 		} else {
-			ElMessage.error(response.msg || '获取客户数据失败')
+			ElMessage.error((response as any).msg || '获取客户数据失败')
 		}
 	} catch (error) {
 		ElMessage.error('获取客户数据失败')
@@ -835,7 +853,7 @@ const GetVisibleContractSelectList = async (customerId = 0) => {
 		if (response.code === 200) {
 			state.optionss.customer_contract_data = response.data
 		} else {
-			ElMessage.error(response.msg || '获取销售合同数据失败')
+			ElMessage.error((response as any).msg || '获取销售合同数据失败')
 		}
 	} catch (error) {
 		console.error('获取销售合同数据失败:', error)
@@ -1579,10 +1597,10 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 						addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
 						addCustomerInfo.customerInfo = CustomerProfileform;
 						//保存导入客户资料
-						request.post('CustomerInfoMation/AddCustomerInfo/Add', addCustomerInfo).then(response => {
+						request.post('CustomerInfoMation/AddCustomerInfo/Add', addCustomerInfo).then((response: any) => {
 							if (response != null) {
 								ElMessage({
-									message: response.msg,
+									message: (response as any).msg,
 									type: 'success'
 								})
 								//清空上传图片
@@ -1649,10 +1667,10 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 								addCustomerInfo.customerInfo.collectionPeriod = collectionPeriodValue;
 								addCustomerInfo.customerInfo.IsDraft = 0;
 
-								request.post('CustomerInfoMation/EditCustomerInfo/Edit', addCustomerInfo).then(response => {
+								request.post('CustomerInfoMation/EditCustomerInfo/Edit', addCustomerInfo).then((response: any) => {
 									if (response != null) {
 										ElMessage({
-											message: response.msg,
+											message: (response as any).msg,
 											type: 'success'
 										})
 										//清空上传图片
@@ -1715,10 +1733,10 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 						addCustomerInfo.customerInfo.collectionPeriod = collectionPeriodValue;
 						addCustomerInfo.customerInfo.IsDraft = 0;
 
-						request.post('CustomerInfoMation/EditCustomerInfo/Edit', addCustomerInfo).then(response => {
+						request.post('CustomerInfoMation/EditCustomerInfo/Edit', addCustomerInfo).then((response: any) => {
 							if (response != null) {
 								ElMessage({
-									message: response.msg,
+									message: (response as any).msg,
 									type: 'success'
 								})
 								//关闭编辑状态
@@ -2084,7 +2102,7 @@ const loadQuotationHistory = async (customerId: number, pageNum: number = 1, pag
 			// 转换数据
 			QuotationRecordData.value = response.data.result;
 		} else {
-			ElMessage.error(response.msg || '获取报价历史失败');
+			ElMessage.error((response as any).msg || '获取报价历史失败');
 		}
 	} catch (error) {
 		console.error('获取报价历史失败:', error);
@@ -2115,7 +2133,7 @@ const loadContractHistory = async (customerId: number, pageNum: number = 1, page
 			// 转换数据
 			SalesContractRecordData.value = response.data.result || response.data;
 		} else {
-			ElMessage.error(response.msg || '获取销售历史失败');
+			ElMessage.error((response as any).msg || '获取销售历史失败');
 		}
 	} catch (error) {
 		console.error('获取销售历史失败:', error);
@@ -2180,7 +2198,7 @@ const loadCustomerSendSampleHistory = async (customerId, pageNum: number = 1, pa
 				id: item.id
 			}));
 		} else {
-			ElMessage.error(response.msg || '获取收寄样历史失败');
+			ElMessage.error((response as any).msg || '获取收寄样历史失败');
 		}
 	} catch (error) {
 		console.error('获取收寄样历史失败:', error);
@@ -2207,6 +2225,7 @@ interface ContactLogForm {
 	imageURLs: string
 	relatedDocumentType: number
 	relatedDocumentID: number
+	businessOpportunityName: string
 }
 
 const contactLogForm = reactive<ContactLogForm>({
@@ -2219,8 +2238,47 @@ const contactLogForm = reactive<ContactLogForm>({
 	attachmentURLs: '',
 	imageURLs: '',
 	relatedDocumentType: 1,
-	relatedDocumentID: null
+	relatedDocumentID: null,
+	businessOpportunityName: ''
 })
+
+// 判断关联单据是否被锁定
+const isRelatedDocumentLocked = computed(() => {
+	if (!contactLogForm.ContactLogTag) return false
+	const selectedTag = ContactLogTagData.value.find(tag => tag.id === contactLogForm.ContactLogTag)
+	if (!selectedTag) return false
+
+	const tagName = selectedTag.emailTagName
+	return tagName === '初次报价' || tagName === '再次报价' || tagName === '合同确定'
+})
+
+// 获取关联单据占位符
+const getRelatedDocumentPlaceholder = () => {
+	switch (contactLogForm.relatedDocumentType) {
+		case 1:
+			return '请选择销售合同'
+		case 2:
+			return '请选择出运合同'
+		case 3:
+			return '请选择报价单'
+		default:
+			return '请选择关联单据'
+	}
+}
+
+// 获取关联单据选项
+const getRelatedDocumentOptions = () => {
+	switch (contactLogForm.relatedDocumentType) {
+		case 1:
+			return state.optionss.customer_contract_data || []
+		case 2:
+			return state.optionss.sql_shippingdeliveries || []
+		case 3:
+			return quotationNumberOptions.value || []
+		default:
+			return []
+	}
+}
 
 const RelatedDocumentsChange = (value) => {
 	// 清空当前选择的值
@@ -2228,9 +2286,12 @@ const RelatedDocumentsChange = (value) => {
 	if (value === 1) {
 		// 切换到销售合同选项
 		state.optionss.sql_sale_contracts = state.optionss.sql_sale_contracts || [];
-	} else {
+	} else if (value === 2) {
 		// 切换到出运合同选项
 		state.optionss.sql_shippingdeliveries = state.optionss.sql_shippingdeliveries || [];
+	} else if (value === 3) {
+		// 切换到报价单选项
+		loadQuotationNumberOptions();
 	}
 }
 
@@ -2239,7 +2300,24 @@ const contactLogRules = reactive<FormRules>({
 	ContactLogTag: [{ required: true, message: '请选择日志标签', trigger: 'change' }],
 	contactPerson: [{ required: true, message: '请选择联系人', trigger: 'change' }],
 	ourStaff: [{ required: true, message: '请选择我方人员', trigger: 'change' }],
-	contactContent: [{ required: true, message: '请输入联系内容', trigger: 'blur' }]
+	contactContent: [{ required: true, message: '请输入联系内容', trigger: 'blur' }],
+	businessOpportunityName: [{
+		required: false,
+		validator: (rule, value, callback) => {
+			// 检查是否为询盘标签
+			const isInquiryTag = contactLogForm.ContactLogTag &&
+				ContactLogTagData.value.find(tag => tag.id === contactLogForm.ContactLogTag)?.emailTagName === '询盘'
+
+			if (showBusinessOpportunityField.value && isInquiryTag && !value) {
+				callback(new Error('日志标签为询盘时，必须填写商机名称'))
+			} else {
+				callback()
+			}
+		},
+		trigger: 'blur'
+	}],
+
+
 })
 
 // 打开添加联系日志对话框
@@ -2252,9 +2330,16 @@ const AddContactLog = async () => {
 	contactLogForm.remark = ''
 	contactLogForm.attachmentURLs = ''
 	contactLogForm.imageURLs = ''
+	contactLogForm.ContactLogTag = ''
+	contactLogForm.businessOpportunityName = ''
+	contactLogForm.relatedDocumentType = 1 // 默认选择销售合同
+	contactLogForm.relatedDocumentID = null
 	contactLogAttachments.value = []
 	contactLogImages.value = []
 	previewImageUrl.value = ''
+
+	// 重置字段显示状态
+	showBusinessOpportunityField.value = false
 
 	// 显示对话框
 	contactLogDialogVisible.value = true
@@ -2340,7 +2425,9 @@ const submitContactLog = async (formEl: FormInstance | undefined) => {
 					ImageURLs: imageUrlStr,
 					Remark: contactLogForm.remark,
 					relatedDocumentType: contactLogForm.relatedDocumentType,
-					relatedDocumentID: contactLogForm.relatedDocumentID
+					relatedDocumentID: contactLogForm.relatedDocumentID,
+					businessOpportunityName: contactLogForm.businessOpportunityName,
+					businessOpportunityID: contactLogForm.businessOpportunityName
 				}
 
 				// 发送请求保存联系日志
@@ -2366,7 +2453,7 @@ const submitContactLog = async (formEl: FormInstance | undefined) => {
 						.join(',')
 					loadCustomerContactLogs(selectCustomerID.value, emailAddresses)
 				} else {
-					ElMessage.error(response.msg || '添加联系日志失败')
+					ElMessage.error((response as any).msg || '添加联系日志失败')
 				}
 			} catch (error) {
 				console.error('添加联系日志失败:', error)
@@ -2727,20 +2814,120 @@ const SaveCustomerProfile = async (formEl: FormInstance | undefined) => {
 
 const ContactLogTagData = ref([]);
 
+// 控制字段显示的变量
+const showBusinessOpportunityField = ref(false)
+const quotationNumberOptions = ref([])
+const businessOpportunityOptions = ref([])
+
 const loadContactLogTagData = async () => {
 	try {
 		const response = await request({
 			url: 'Email/GetUserEmailTagList/GetUserEmailTag',
 			method: 'get'
-		})
+		}) as ApiResponse<any>
 		if (response && response.code === 200) {
 			ContactLogTagData.value = response.data;
 			console.log(ContactLogTagData.value)
 		} else {
-			ElMessage.error(response.msg || '获取联系日志失败')
+			ElMessage.error((response as any).msg || '获取联系日志失败')
 		}
 	} catch (error) {
 		console.error('获取联系日志失败:', error)
+	}
+}
+
+// 加载商机名称选项
+const loadBusinessOpportunityOptions = async () => {
+	try {
+		const response = await request({
+			url: 'BusinessOpportunity/GetBusinessOpportunityListByUser/GetBusinessOpportunityList',
+			method: 'get'
+		}) as ApiResponse<any>
+		if (response && response.code === 200) {
+			businessOpportunityOptions.value = response.data.map(item => ({
+				dictValue: item.id,
+				dictLabel: item.businessName
+			}))
+		} else {
+			ElMessage.error((response as any).msg || '获取商机列表失败')
+		}
+	} catch (error) {
+		console.error('获取商机列表失败:', error)
+		ElMessage.error('获取商机列表失败')
+	}
+}
+
+// 处理日志标签变化的方法
+const handleContactLogTagChange = (tagId) => {
+	// 重置所有字段显示状态
+	showBusinessOpportunityField.value = false
+
+	// 清空相关字段值
+	contactLogForm.businessOpportunityName = ''
+
+	// 如果表单引用存在，清除验证状态
+	if (contactLogFormRef.value) {
+		contactLogFormRef.value.clearValidate('businessOpportunityName')
+	}
+
+	// 根据选中的标签ID获取标签名称
+	const selectedTag = ContactLogTagData.value.find(tag => tag.id === tagId)
+	if (!selectedTag) return
+
+	const tagName = selectedTag.emailTagName
+
+	// 根据标签名称显示相应字段
+	switch (tagName) {
+		case '询盘':
+			showBusinessOpportunityField.value = true
+			// 询盘时商机名称是文本框
+			break
+		case '初次报价':
+		case '再次报价':
+			showBusinessOpportunityField.value = true
+			// 加载商机名称选项（下拉框）
+			loadBusinessOpportunityOptions()
+			// 加载报价单号选项
+			loadQuotationNumberOptions()
+			// 关联单据锁定报价单
+			contactLogForm.relatedDocumentType = 3 // 假设3代表报价单
+			break
+		case '沟通需求':
+			showBusinessOpportunityField.value = true
+			// 加载商机名称选项（下拉框）
+			loadBusinessOpportunityOptions()
+			break
+		case '合同确定':
+			showBusinessOpportunityField.value = true
+			// 加载商机名称选项（下拉框）
+			loadBusinessOpportunityOptions()
+			// 关联单据锁定销售合同
+			contactLogForm.relatedDocumentType = 1 // 1代表销售合同
+			break
+	}
+}
+
+// 加载报价单号选项
+const loadQuotationNumberOptions = async () => {
+	try {
+		const response = await request({
+			url: 'Quotation/GetQuotaionListByUserAndCustomerID/GetQuotaionList',
+			method: 'get',
+			params: {
+				customerId: selectCustomerID.value
+			}
+		}) as ApiResponse<any>
+		if (response && response.code === 200) {
+			quotationNumberOptions.value = response.data.map(item => ({
+				dictValue: item.id,
+				dictLabel: item.quotationNum
+			}))
+		} else {
+			ElMessage.error((response as any).msg || '获取报价单号列表失败')
+		}
+	} catch (error) {
+		console.error('获取报价单号列表失败:', error)
+		ElMessage.error('获取报价单号列表失败')
 	}
 }
 
@@ -2825,7 +3012,7 @@ const DeleteCustomerProfile = (row) => {
 			data: {
 				CustomerID: row.id
 			}
-		}).then(response => {
+		}).then((response: any) => {
 			if (response.code === 200) {
 				ElMessage({
 					message: '删除成功',

@@ -84,46 +84,44 @@
 							<table class="simple-detail-table">
 								<tbody>
 									<tr>
-										<th>询价单号</th>
-										<td>{{ currentDetail.inquiryNumber || '无' }}</td>
+										<!-- <th>询价单号</th>
+										<td>{{ currentDetail.inquiryNumber || '无' }}</td> -->
 										<th>产品名称</th>
 										<td>{{ currentDetail.productName || '无' }}</td>
 										<th>销售员</th>
 										<td>{{ currentDetail.salePerson || '无' }}</td>
+										<th>状态</th>
+										<td>{{ currentDetail.status === 0 ? '待报价' : '已报价' }}</td>
 									</tr>
-									<tr>
+									<!-- <tr>
 										<th>采购员</th>
 										<td>{{ currentDetail.buyer || '无' }}</td>
 										<th>创建人</th>
 										<td>{{ currentDetail.create_by || '无' }}</td>
 										<th>日期</th>
 										<td>{{ currentDetail.date || '无' }}</td>
-									</tr>
+									</tr> -->
 									<tr>
-										<th>状态</th>
-										<td>{{ currentDetail.status === 0 ? '待报价' : '已报价' }}</td>
 										<th>编号</th>
 										<td>{{ currentDetail.productnumber || '无' }}</td>
 										<th>规格</th>
 										<td>{{ currentDetail.productspecifications || '无' }}</td>
-									</tr>
-									<tr>
 										<th>主要材料</th>
 										<td>{{ currentDetail.mainmaterials || '无' }}</td>
+									</tr>
+									<!-- <tr>
 										<th>产品长度(CM)</th>
 										<td>{{ currentDetail.productlength ?? '无' }}</td>
 										<th>产品宽度(CM)</th>
 										<td>{{ currentDetail.productwidth ?? '无' }}</td>
-									</tr>
+									</tr> -->
 									<tr>
-										<th>产品高度(CM)</th>
-										<td>{{ currentDetail.productheight ?? '无' }}</td>
+										<!-- <th>产品高度(CM)</th>
+										<td>{{ currentDetail.productheight ?? '无' }}</td> -->
 										<th>产品克重</th>
 										<td>{{ currentDetail.productweight ?? '无' }}</td>
 										<th>小包装方式</th>
 										<td>{{ currentDetail.smallpackagingmethod || '无' }}</td>
-									</tr>
-									<tr>
 										<th>MOQ</th>
 										<td>
 											<template v-if="detailEditMode">
@@ -134,6 +132,8 @@
 											</template>
 											<template v-else>{{ currentDetail.moq ?? '无' }}</template>
 										</td>
+									</tr>
+									<tr>
 										<th>报价数量</th>
 										<td>
 											<template v-if="detailEditMode">
@@ -154,8 +154,6 @@
 											</template>
 											<template v-else>{{ currentDetail.price ?? '无' }}</template>
 										</td>
-									</tr>
-									<tr>
 										<th>议价量</th>
 										<td>
 											<template v-if="detailEditMode">
@@ -164,6 +162,8 @@
 											</template>
 											<template v-else>{{ currentDetail.negotiateprice ?? '无' }}</template>
 										</td>
+									</tr>
+									<tr>
 										<th>定制</th>
 										<td>
 											<template v-if="detailEditMode">
@@ -180,13 +180,11 @@
 											</template>
 											<template v-else>{{ currentDetail.taxincluded ?? '无' }}</template>
 										</td>
-									</tr>
-									<tr>
 										<th>价格条款</th>
 										<td>
 											<template v-if="detailEditMode">
 												<el-select v-model="currentDetail.priceterms" filterable
-													style="width:90px;">
+													style="width:180px;">
 													<el-option v-for="opt in optionss.hr_purchase_pricing_term"
 														:key="opt.dictValue" :label="opt.dictLabel"
 														:value="opt.dictValue" />
@@ -195,8 +193,10 @@
 											<template v-else>{{ getPriceTermsLabel(currentDetail.priceterms) || '无'
 											}}</template>
 										</td>
+									</tr>
+									<tr>
 										<th>供应商</th>
-										<td colspan="2">
+										<td colspan="1">
 											<template v-if="detailEditMode">
 												<el-form-item prop="SupplierID">
 													<el-select v-model="currentDetail.SupplierID" filterable
@@ -209,28 +209,28 @@
 											<template v-else>{{ getSupplierLabel(currentDetail.SupplierID) || '无'
 											}}</template>
 										</td>
-									</tr>
-									<tr>
 										<th>中包装</th>
 										<td>{{ currentDetail.mediumpackaging ?? '无' }}</td>
 										<th>外箱</th>
 										<td>{{ currentDetail.outerbox ?? '无' }}</td>
-										<th>中包/外箱</th>
-										<td>{{ currentDetail.middlebagorouterbox ?? '无' }}</td>
 									</tr>
 									<tr>
+										<th>中包/外箱</th>
+										<td>{{ currentDetail.middlebagorouterbox ?? '无' }}</td>
 										<th>外箱长度(CM)</th>
 										<td>{{ currentDetail.outerboxlength ?? '无' }}</td>
 										<th>外箱宽度(CM)</th>
 										<td>{{ currentDetail.outerboxwidth ?? '无' }}</td>
-										<th>外箱高度(CM)</th>
-										<td>{{ currentDetail.outerboxheight ?? '无' }}</td>
 									</tr>
 									<tr>
+										<th>外箱高度(CM)</th>
+										<td>{{ currentDetail.outerboxheight ?? '无' }}</td>
 										<th>外箱体积(m³)</th>
 										<td>{{ currentDetail.outerboxvolume ?? '无' }}</td>
 										<th>外箱毛重(KGS)</th>
 										<td>{{ currentDetail.outerboxgrossweight ?? '无' }}</td>
+									</tr>
+									<tr>
 										<th>是否新产品</th>
 										<td>{{ currentDetail.IsNewProduct === 1 ? '是' : '否' }}</td>
 									</tr>
@@ -1212,7 +1212,9 @@ const rowClassName = ({ row }) => {
 }
 
 .simple-detail-table-wrapper {
-	padding: 0 8px 8px 8px;
+	padding: 0;
+	width: 100%;
+	overflow-x: auto;
 }
 
 .simple-detail-table {
@@ -1220,6 +1222,7 @@ const rowClassName = ({ row }) => {
 	border-collapse: separate;
 	border-spacing: 0;
 	background: #fff;
+	table-layout: fixed;
 }
 
 .simple-detail-table th {
@@ -1228,21 +1231,97 @@ const rowClassName = ({ row }) => {
 	color: #444;
 	font-size: 14px;
 	text-align: left;
-	padding: 8px 10px 8px 12px;
+	padding: 12px 10px;
 	border-bottom: 1px solid #f0f0f0;
-	min-width: 90px;
+	width: 16.66%;
+	height: 48px;
+	vertical-align: middle;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .simple-detail-table td {
 	background: #fff;
 	color: #333;
 	font-size: 14px;
-	padding: 8px 10px;
+	padding: 12px 10px;
 	border-bottom: 1px solid #f0f0f0;
+	width: 16.66%;
+	height: 48px;
+	vertical-align: middle;
+	word-wrap: break-word;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.simple-detail-table tr {
+	height: 48px;
 }
 
 .simple-detail-table tr:last-child th,
 .simple-detail-table tr:last-child td {
 	border-bottom: none;
+}
+
+/* 特殊列宽度调整 */
+.simple-detail-table th:nth-child(1),
+.simple-detail-table td:nth-child(1) {
+	width: 12%;
+}
+
+.simple-detail-table th:nth-child(2),
+.simple-detail-table td:nth-child(2) {
+	width: 20%;
+}
+
+.simple-detail-table th:nth-child(3),
+.simple-detail-table td:nth-child(3) {
+	width: 12%;
+}
+
+.simple-detail-table th:nth-child(4),
+.simple-detail-table td:nth-child(4) {
+	width: 20%;
+}
+
+.simple-detail-table th:nth-child(5),
+.simple-detail-table td:nth-child(5) {
+	width: 12%;
+}
+
+.simple-detail-table th:nth-child(6),
+.simple-detail-table td:nth-child(6) {
+	width: 24%;
+}
+
+/* 表格内表单元素样式优化 */
+.simple-detail-table .el-form-item {
+	margin-bottom: 0;
+}
+
+.simple-detail-table .el-input,
+.simple-detail-table .el-select {
+	width: 100%;
+}
+
+.simple-detail-table .el-input__wrapper {
+	height: 32px;
+	line-height: 32px;
+}
+
+.simple-detail-table .el-select .el-input__wrapper {
+	height: 32px;
+}
+
+.simple-detail-table .el-textarea__inner {
+	min-height: 32px;
+	resize: none;
+}
+
+/* 图片容器样式 */
+.simple-detail-table .el-image {
+	display: inline-block;
+	vertical-align: middle;
 }
 </style>

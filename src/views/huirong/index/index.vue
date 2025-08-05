@@ -237,7 +237,7 @@
                 <span class="truncate-text">{{ truncateText(item.businessName, 8) }}</span>
               </el-tooltip>
             </div>
-            <div class="text item">客户邮箱：
+            <div class="text item">{{ item.customerLabel || '客户邮箱' }}：
               <el-tooltip :content="item.customer" placement="top" :disabled="item.customer.length <= 16">
                 <span class="truncate-text">{{ truncateText(item.customer, 16) }}</span>
               </el-tooltip>
@@ -2586,6 +2586,19 @@ const fetchDashboardData = async () => {
       // 用stageOrder补全所有阶段
       const stages = stageOrder.map(stageName => {
         const existingStage = response.data.find(s => s.salesStage === stageName)
+        if (existingStage) {
+          // 处理每个商机的businessSource字段
+          existingStage.details = existingStage.details.map(item => {
+            let customerLabel = '客户邮箱'
+            if (item.businessSource === '联系日志') {
+              customerLabel = '客户名称'
+            }
+            return {
+              ...item,
+              customerLabel: customerLabel
+            }
+          })
+        }
         return existingStage || {
           salesStage: stageName,
           count: 0,
@@ -2623,7 +2636,8 @@ const fetchDashboardData = async () => {
           customer: quote.contactPersonEmail || quote.customerName || '无客户信息',
           amount: quote.totalValueOfGoods * quote.exchangeRate || 0,
           create_time: quote.createTime || new Date().toISOString(),
-          sourceType: 'api'
+          sourceType: 'api',
+          customerLabel: '客户邮箱'
         }))
         console.log('处理后的初次报价数据:', initialQuoteDetails)
 
@@ -2647,7 +2661,8 @@ const fetchDashboardData = async () => {
           customer: quote.contactPersonEmail || quote.customerName || '无客户信息',
           amount: quote.totalValueOfGoods * quote.exchangeRate || 0,
           create_time: quote.createTime || new Date().toISOString(),
-          sourceType: 'api'
+          sourceType: 'api',
+          customerLabel: '客户邮箱'
         }))
         console.log('处理后的最终报价数据:', finalQuoteDetails)
 
@@ -2675,7 +2690,8 @@ const fetchDashboardData = async () => {
           customer: quote.contactEmail || '无客户邮箱',
           amount: (quote.amountTotal || 0) * (quote.exchangeRate || 1),
           create_time: quote.createTime || new Date().toISOString(),
-          sourceType: 'api'
+          sourceType: 'api',
+          customerLabel: '客户邮箱'
         }))
         businessStages.value[contractConfirmedIndex].details = [
           ...businessStages.value[contractConfirmedIndex].details,
