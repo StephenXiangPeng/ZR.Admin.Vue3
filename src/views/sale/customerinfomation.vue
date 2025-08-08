@@ -2427,7 +2427,14 @@ const submitContactLog = async (formEl: FormInstance | undefined) => {
 					relatedDocumentType: contactLogForm.relatedDocumentType,
 					relatedDocumentID: contactLogForm.relatedDocumentID,
 					businessOpportunityName: contactLogForm.businessOpportunityName,
-					businessOpportunityID: contactLogForm.businessOpportunityName
+					businessOpportunityID: (() => {
+						// 如果日志标签是询盘，businessOpportunityID设置为0
+						const selectedTag = ContactLogTagData.value.find(tag => tag.id === contactLogForm.ContactLogTag)
+						if (selectedTag && selectedTag.emailTagName === '询盘') {
+							return 0
+						}
+						return contactLogForm.businessOpportunityName
+					})()
 				}
 
 				// 发送请求保存联系日志

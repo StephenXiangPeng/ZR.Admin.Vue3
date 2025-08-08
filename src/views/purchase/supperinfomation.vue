@@ -507,7 +507,7 @@ const loadProductInquiryHistory = async (productIds: number[]) => {
 const loadSupplierProductList = async (supplierId: number) => {
 	try {
 		const response = await getSupplierProductList(supplierId);
-		if (response.code === 200) {
+		if (response && response.code === 200) {
 			// 清空产品ID数组
 			currentSupplierProductIds.value = [];
 			// 处理产品列表数据
@@ -574,7 +574,7 @@ const handleDeleteBankAccountRow = (index) => {
 				method: 'POST',
 				data: row
 			}).then(response => {
-				if (response.code === 200) {
+				if (response && response.code === 200) {
 					ElMessage.success(response.msg);
 					supperinfoBankAccountInfoTableData.value.splice(index, 1);
 				} else {
@@ -610,7 +610,7 @@ const saveBankAccountInfo = () => {
 
 	Promise.all(promises)
 		.then(responses => {
-			const hasError = responses.some(response => response.code !== 200);
+			const hasError = responses.some(response => response && response.code !== 200);
 			if (!hasError) {
 				ElMessage.success('信息保存成功！');
 				loadBankAccountList(); // 重新加载列表
@@ -636,7 +636,7 @@ const loadBankAccountList = () => {
 				supplierId: SelctedSupplierId.value
 			}
 		}).then(response => {
-			if (response.code === 200) {
+			if (response && response.code === 200) {
 				supperinfoBankAccountInfoTableData.value = response.data;
 			} else {
 				ElMessage.error('获取银行账号列表失败！');
@@ -680,7 +680,7 @@ const GetNextSupplierID = () => {
 		method: 'GET'
 	}).then(response => {
 		if (response != null) {
-			Addsupperinfoform.supplierId = response;
+			Addsupperinfoform.supplierId = response.data || response;
 		} else {
 			console.error('获取下一个供应商编号出错');
 		}
@@ -787,6 +787,7 @@ var dictParams = [{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' }
 { dictType: 'hr_customer_level' }, { dictType: 'hr_signing_place' }, { dictType: 'hr_quotation_basis' }, { dictType: 'hr_outerbox_unit' },
 { dictType: 'hr_supplier_level' }, { dictType: 'hr_business_scope' }, { dictType: 'hr_china_provinces' }, { dictType: 'hr_china_city' },
 { dictType: 'hr_recipient_type_examples' }, { dictType: 'hr_express_delivery_company' }, { dictType: 'hr_express_payment_method' }, { dictType: 'sys_user_sex' }]
+// 获取字典数据
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -875,7 +876,7 @@ const SaveSupperinfo = () => {
 					loadBankAccountList();// 加载银行账号列表
 					isEditable.value = true;
 					ElMessage({
-						message: response.msg,
+						message: response.msg || '保存成功',
 						type: 'success'
 					})
 					GetSupplierInfoList(SupplierInfoTableDatacurrentPage.value, SupplierInfoTableDatapageSize.value);
@@ -987,6 +988,11 @@ const Searchproductselect = ref('')
 const SearchinquiryDate = ref('')
 const SearchquotationDate = ref('')
 
+// 添加缺失的变量定义
+const supplierselectoptions = ref([])
+const productselectoptions = ref([])
+const formData = ref({})
+
 // 供应商信息表
 const SupplierInfoTableData = ref([]);
 //分页组件
@@ -1011,7 +1017,17 @@ function GetSupplierInfoList(start, end) {
 			}
 		}).then(response => {
 			if (response.data.result.length > 0) {
-				SupplierInfoTableData.value = response.data.result;
+				// 转换所在省份为label
+				const processedData = response.data.result.map(item => {
+					const provinceOption = state.optionss.hr_china_provinces.find(
+						option => option.dictValue === item.province?.toString()
+					);
+					return {
+						...item,
+						province: provinceOption?.dictLabel || item.province
+					};
+				});
+				SupplierInfoTableData.value = processedData;
 				resolve(response.data.data);
 			} else {
 				if (response.data.totalNum > 0 && start > 1) {
@@ -1075,7 +1091,7 @@ const checkSupplierDetails = async (row) => {
 					name: name,
 					url: url,
 					isChanged: false
-				});
+				} as any);
 			}
 		});
 	}
@@ -1169,7 +1185,7 @@ const EditSaveSupperinfo = () => {
 			element.Remark = element.remarks || '无';
 		});
 		// 上传供应商图片
-		const uploadPromises = fileList.value.filter(file => file.isChanged).map(file => {
+		const uploadPromises = fileList.value.filter(file => (file as any).isChanged).map(file => {
 			const formData = new FormData();
 			formData.append('FileName', file.name);
 			formData.append('FileDir', 'Supplier/SupplierPhoto');
@@ -1280,7 +1296,7 @@ const loadSupplierSendSampleHistory = async (supplierId) => {
 			params: { SupplierID: supplierId }
 		});
 
-		if (response.code === 200) {
+		if (response && response.code === 200) {
 			// 转换数据
 			supperinfoSendSampleData.value = response.data.map((item: SampleHistoryItem) => ({
 				type: item.type === 1 ? '寄样' : '收样',
@@ -1300,7 +1316,7 @@ const loadSupplierSendSampleHistory = async (supplierId) => {
 				remark: item.remark || ''
 			}));
 		} else {
-			ElMessage.error(response.msg || '获取收寄样历史失败');
+			ElMessage.error(response?.msg || '获取收寄样历史失败');
 		}
 	} catch (error) {
 		console.error('获取收寄样历史失败:', error);
@@ -1373,7 +1389,7 @@ const SubmitSupperinfo = () => {
 					GetSupplierInfoList(SupplierInfoTableDatacurrentPage.value, SupplierInfoTableDatapageSize.value);
 					AddSupperDialog.value = false;
 				} else {
-					ElMessage.error(response.msg || '供应商信息提交失败');
+					ElMessage.error(response?.msg || '供应商信息提交失败');
 				}
 			}).catch(error => {
 				console.error('提交供应商信息出错！😔错误内容：', error);
@@ -1399,7 +1415,7 @@ const DeleteSupplier = (row) => {
 			data: { SupplierID: row.id }
 		}).then(response => {
 			const res = response;
-			if (res.code == 200) {
+			if (res && res.code == 200) {
 				ElMessage({
 					message: '删除成功',
 					type: 'success'
