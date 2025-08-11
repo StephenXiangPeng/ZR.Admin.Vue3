@@ -92,7 +92,7 @@
 				<el-button class="mt-4" type="primary" style="margin-bottom: 10px;" @click="OpenSearchProcutDialog"
 					:disabled="isEditable">导入产品</el-button>
 				<el-button class="mt-4" type="primary" @click="onAddInquiryProductItem" style="margin-bottom: 10px;"
-					:disabled="isEditable">空白新增</el-button>
+					:disabled="isEditable">添加新产品</el-button>
 				<el-table :data="inquryProductTableData" height="450" stripe>
 					<el-table-column prop="productId" label="产品ID" width="150" align="center" v-if="false">
 						<template #default="{ row }">

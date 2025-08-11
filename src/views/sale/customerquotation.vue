@@ -586,7 +586,7 @@
 				</span>
 			</template>
 		</el-dialog>
-		<el-dialog v-model="SearchProcutDialog" title="选择产品" :close-on-click-modal=false :width="'50%'"
+		<el-dialog v-model="SearchProcutDialog" title="选择产品" :close-on-click-modal=false :width="'65%'"
 			@close="handleCloseSearchProcutDialog">
 			<el-input v-model="searchProductNameText" placeholder="请输入产品关键字进行搜索" style="margin-bottom: 10px;"
 				@input="searchProductNameTextChange" />
@@ -599,6 +599,7 @@
 				<el-table-column prop="chineseSpecification" label="中文规格" width="150" />
 				<el-table-column prop="englishSpecification" label="英文规格" width="180" />
 				<el-table-column prop="unitOfMeasurement" label="计量单位" width="120" />
+				<el-table-column prop="unitPrice" label="最新采购单价" width="120" />
 			</el-table>
 			<el-pagination @current-change="SearchProducthandlePageChange" :current-page="SearchProductCurrentPage"
 				:page-size="SearchProductpageSize" :total="SearchProducttotalItems" background
@@ -1157,7 +1158,7 @@ const handleRowDblClick = (row) => {
 			exporttotalprice: 0,
 			unitofmeasurement: state.optionss['hr_calculate_unit'].filter(hr_calculate_unit => hr_calculate_unit.dictLabel == row.unitOfMeasurement).map(item => item.dictValue).values().next().value,
 			purchaseinquiry: 0,
-			purchaseunitprice: 0,
+			purchaseunitprice: row.unitPrice,
 			purchasecurrency: state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictLabel == '人民币').map(item => item.dictValue).values().next().value,
 			onepacking: 0,
 			invoice: '',

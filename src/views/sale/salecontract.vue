@@ -972,7 +972,7 @@
 				</span>
 			</template>
 		</el-dialog>
-		<el-dialog v-model="SearchProcutDialog" title="选择产品" :close-on-click-modal=false :width="'60%'"
+		<el-dialog v-model="SearchProcutDialog" title="选择产品" :close-on-click-modal=false :width="'65%'"
 			@close="handleCloseSearchProcutDialog">
 			<el-input v-model="searchProductNameText" clearable placeholder="请输入产品关键字进行搜索" style="margin-bottom: 10px;"
 				@input="searchProductNameTextChange" />
@@ -993,6 +993,7 @@
 									scope.row.unitOfMeasurement)?.dictLabel || '-'}}
 							</template>
 						</el-table-column>
+						<el-table-column prop="unitPrice" label="最新采购单价" width="120" />
 					</el-table>
 					<el-pagination @current-change="SearchProducthandlePageChange"
 						:current-page="SearchProductCurrentPage" :page-size="SearchProductpageSize"
@@ -1338,7 +1339,7 @@ const handleRowDblClick = (row) => {
 			unitofmeasurement: unitMeasurement?.dictValue,
 			unitOfMeasurementLabel: unitMeasurement?.dictLabel || '-',
 			purchaseinquiry: 0,
-			purchaseunitprice: 0,
+			purchaseunitprice: row.unitPrice,
 			onepacking: 0,
 			isInvoicingc: invoiceOption?.dictValue || '',
 			packaging: '',

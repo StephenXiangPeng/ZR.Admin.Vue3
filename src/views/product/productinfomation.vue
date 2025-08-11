@@ -717,20 +717,30 @@
 				<el-tabs v-model="activeTab" class="demo-tabs">
 					<el-tab-pane label="工厂报价" name="FactoryQuotationTab">
 						<el-table :data="FactoryQuotationTableData" style="width: 100%">
-							<el-table-column prop="" label="报价日期" width="150"></el-table-column>
-							<el-table-column prop="" label="供应商编号" width="150" v-if="false"></el-table-column>
-							<el-table-column prop="" label="供应商简称" width="150"></el-table-column>
-							<el-table-column prop="" label="产品图片" width="150"></el-table-column>
-							<el-table-column prop="" label="名称型号及规格" width="150"></el-table-column>
-							<el-table-column prop="" label="包装方式" width="150"></el-table-column>
-							<el-table-column prop="" label="起订量" width="150"></el-table-column>
-							<el-table-column prop="" label="折扣价起订量" width="150"></el-table-column>
-							<el-table-column prop="" label="定制起订量" width="150"></el-table-column>
-							<el-table-column prop="" label="价格条款" width="150"></el-table-column>
-							<el-table-column prop="" label="报价目的地" width="150"></el-table-column>
-							<el-table-column prop="" label="单价" width="150"></el-table-column>
-							<el-table-column prop="" label="计量单位" width="150"></el-table-column>
-							<el-table-column prop="" label="含税+/-" width="150"></el-table-column>
+							<el-table-column prop="update_time" label="报价日期" width="150">
+								<template #default="scope">
+									{{ formatDate(scope.row.update_time) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="supplierID" label="供应商编号" width="150" v-if="false"></el-table-column>
+							<el-table-column prop="supplierName" label="供应商简称" width="150"></el-table-column>
+							<el-table-column prop="productImage" label="产品图片" width="150">
+								<template #default="scope">
+									<el-image v-if="scope.row.productImage" :src="scope.row.productImage"
+										style="width: 50px; height: 50px; object-fit: cover;" fit="cover">
+									</el-image>
+								</template>
+							</el-table-column>
+							<el-table-column prop="productName" label="名称型号及规格" width="150"></el-table-column>
+							<el-table-column prop="smallPackagingMethod" label="包装方式" width="150"></el-table-column>
+							<el-table-column prop="minimumOrderQuantity" label="起订量" width="150"></el-table-column>
+							<el-table-column prop="discountOrderQuantity" label="折扣价起订量" width="150"></el-table-column>
+							<el-table-column prop="customOrderQuantity" label="定制起订量" width="150"></el-table-column>
+							<el-table-column prop="priceTerms" label="价格条款" width="150"></el-table-column>
+							<el-table-column prop="destination" label="报价目的地" width="150"></el-table-column>
+							<el-table-column prop="price" label="单价" width="150"></el-table-column>
+							<el-table-column prop="unitOfMeasurement" label="计量单位" width="150"></el-table-column>
+							<el-table-column prop="taxIncluded" label="含税+/-" width="150"></el-table-column>
 						</el-table>
 					</el-tab-pane>
 					<el-tab-pane label="销售历史" name="SaleHistoryTab">
@@ -806,6 +816,7 @@ import { Plus, Delete, Edit, Folder, ArrowLeft, ArrowRight, TopRight } from '@el
 import useUserStore from '@/store/modules/user'
 import { useDict } from '@/utils/dict'
 import request from '@/utils/request'
+import { getInquiryProductHistoryList } from '@/api/product/inquiry'
 import { FormInstance, FormRules, UploadProps, UploadUserFile, UploadRawFile, UploadFile, UploadFiles } from 'element-plus'
 import { ElNotification } from 'element-plus'
 import { use } from 'echarts'
@@ -1199,6 +1210,10 @@ const closeAddProductDialog = async () => {
 	SelectNodeId.value = 0;
 	// 重置编辑ID
 	EditProductID.value = 0;
+	// 清空工厂报价表格数据
+	FactoryQuotationTableData.value = [];
+	// 清空产品ID数组
+	productIdsArray.value = [];
 }
 
 const clearProductform = () => {
@@ -1236,6 +1251,7 @@ const clearProductform = () => {
 	fileList.value = []
 	uploadedFiles.value = []
 	SubProductTableData.value = []
+	FactoryQuotationTableData.value = []
 	isDisabled.value = false;
 	showEditSaveBtn.value = false;
 	showEditBtn.value = false;
@@ -2225,12 +2241,17 @@ const removeProductEditLock = async (productId) => {
 
 const isViewMode = ref(false);
 const showAddSubProductButton = ref(true);
+const productIdsArray = ref([]); // 存储产品ID的数组
 
 //查看详情
 const OpenProductInfoDetailDialog = async (row) => {
 	// 确定是否为子产品，并获取正确的产品ID
 	const isSubProduct = row.isSubProduct;
 	const productId = isSubProduct ? row.mainProductId : row.id;
+
+	// 初始化产品ID数组
+	productIdsArray.value = [];
+
 	// 先检查编辑锁
 	const lockStatus = await getProductEditLock(productId);
 	if (lockStatus.data.isEditLock == true) {
@@ -2263,6 +2284,13 @@ const OpenProductInfoDetailDialog = async (row) => {
 					// 可以在这里添加代码，滚动到或高亮显示当前子产品
 					// 例如：currentSubProductIndex.value = currentSubIndex;
 				}
+
+				// 收集产品ID：主产品ID + 所有子产品ID
+				productIdsArray.value.push(productId); // 添加主产品ID
+				const subProducts = mainProduct.children || mainProduct.subProductItems || [];
+				subProducts.forEach(subProduct => {
+					productIdsArray.value.push(subProduct.id);
+				});
 			} else {
 				ElMessage.error(response.msg || '获取产品详情失败');
 				return;
@@ -2275,12 +2303,47 @@ const OpenProductInfoDetailDialog = async (row) => {
 		// 直接使用当前行数据填充表单
 		fillProductForm(row);
 		processSubProducts(row);
+
+		// 收集产品ID：主产品ID + 所有子产品ID
+		productIdsArray.value.push(productId); // 添加主产品ID
+		const subProducts = row.children || row.subProductItems || [];
+		subProducts.forEach(subProduct => {
+			productIdsArray.value.push(subProduct.id);
+		});
 	}
 
 	// 设置编辑ID和显示对话框
 	EditProductID.value = productId;
 	AddProductDialog.value = true;
 	runOnPageLoad();
+
+	// 获取询价记录并绑定到工厂报价表格
+	await loadInquiryProductHistory();
+}
+
+// 加载询价产品历史记录
+const loadInquiryProductHistory = async () => {
+	try {
+		// 检查是否有产品ID
+		if (!productIdsArray.value || productIdsArray.value.length === 0) {
+			FactoryQuotationTableData.value = [];
+			return;
+		}
+
+		const response = await getInquiryProductHistoryList(productIdsArray.value);
+
+		if (response.code === 200) {
+			// 将询价记录数据绑定到工厂报价表格
+			FactoryQuotationTableData.value = response.data || [];
+		} else {
+			ElMessage.error(response.msg || '获取询价记录失败');
+			FactoryQuotationTableData.value = [];
+		}
+	} catch (error) {
+		console.error('获取询价记录失败:', error);
+		ElMessage.error('获取询价记录失败');
+		FactoryQuotationTableData.value = [];
+	}
 }
 
 // 辅助函数：填充产品表单
