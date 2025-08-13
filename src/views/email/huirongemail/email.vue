@@ -921,6 +921,13 @@ function extractBodyHtml(rawHtml: string) {
 	})
 }
 
+// 简单转义（用于头信息里）
+function esc(s?: string) {
+	return (s ?? '').replace(/[&<>"']/g, m =>
+		({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]!)
+	)
+}
+
 function buildQuotedBlock(mail: {
 	from: string; to: string; cc?: string; date: string; subject: string; content: string
 }) {
@@ -3368,78 +3375,83 @@ const handleReply = async (replyAll = false) => {
 
 // 转发邮件处理
 const handleForward = async () => {
-	emailType.value = 'forward'
-	dialogTitle.value = '转发'
-	await GetEmailContract()
+	try {
+		emailType.value = 'forward'
+		dialogTitle.value = '转发'
+		await GetEmailContract()
 
-	emailForm.ToEmail = []
-	emailForm.cc = []
-	emailForm.subject = `转发: ${currentEmail.value.subject}`
+		// 基本表单
+		emailForm.draftId = null
+		emailForm.ToEmail = []
+		emailForm.cc = []
+		emailForm.bcc = []
+		emailForm.subject = `转发: ${currentEmail.value.subject || ''}`
 
-	// 处理原始邮件内容，确保HTML内容能够正确显示
-	//const originalContent = processOriginalEmailContent(currentEmail.value.content)
-	const originalContent = extractBodyHtml(currentEmail.value.content)
-	// 创建格式化的转发邮件内容
-	const formattedForwardContent = `
-		<div style="border-left: 3px solid #007bff; padding-left: 15px; margin: 20px 0; color: #666; background-color: #f0f8ff; padding: 15px; border-radius: 4px;">
-			<div style="font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 1px solid #007bff; padding-bottom: 10px;">
-				------------------ 转发邮件 ------------------
-			</div>
-			<div style="margin-bottom: 8px;">
-				<strong>发件人:</strong> ${currentEmail.value.from}
-			</div>
-			<div style="margin-bottom: 8px;">
-				<strong>发送时间:</strong> ${currentEmail.value.date}
-			</div>
-			<div style="margin-bottom: 8px;">
-				<strong>主题:</strong> ${currentEmail.value.subject}
-			</div>
-			<div style="margin-bottom: 8px;">
-				<strong>收件人:</strong> ${currentEmail.value.to}
-			</div>
-			<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #007bff;">
-				${originalContent}
-			</div>
-		</div>
-	`
+		// 取原文正文（去掉整页<html>等 + 消毒）
+		const raw = currentEmail.value.content || ''
+		const safeBody = extractBodyHtml(stripQuotedBlock(raw))
 
-	// 显示对话框
-	showEmailDialog.value = true
+		// 组装“转发邮件”块（你原来的样式保留）
+		const forwardedBlock = `
+      <div style="border-left: 3px solid #007bff; padding-left: 15px; margin: 20px 0; color: #666; background-color: #f0f8ff; padding: 15px; border-radius: 4px;">
+        <div style="font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 1px solid #007bff; padding-bottom: 10px;">
+          ------------------ 转发邮件 ------------------
+        </div>
+        <div style="margin-bottom: 8px;"><strong>发件人:</strong> ${currentEmail.value.from || ''}</div>
+        <div style="margin-bottom: 8px;"><strong>发送时间:</strong> ${currentEmail.value.date || ''}</div>
+        <div style="margin-bottom: 8px;"><strong>主题:</strong> ${currentEmail.value.subject || ''}</div>
+        <div style="margin-bottom: 8px;"><strong>收件人:</strong> ${currentEmail.value.to || ''}</div>
+        ${currentEmail.value.cc ? `<div style="margin-bottom: 8px;"><strong>抄送:</strong> ${currentEmail.value.cc}</div>` : ''}
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #007bff;">
+          ${safeBody}
+        </div>
+      </div>
+    `
 
-	// 延迟设置内容，确保编辑器完全初始化
-	setTimeout(() => {
-		emailForm.content = `<br><br>${formattedForwardContent}`
-		console.log('设置转发邮件内容:', emailForm.content)
-	}, 100)
+		// 打开弹窗并把内容塞进 Quill（关键：用 convert → setContents）
+		showEmailDialog.value = true
+		await nextTick()
 
-	// 处理附件
-	if (currentEmail.value.attachments?.length) {
+		const quill = quillEditor.value?.getQuill?.() || quillEditor.value?.quill
+		if (quill) {
+			const html = `<p><br></p>${forwardedBlock}`   // 顶部空一行，便于先写内容
+			const delta = quill.clipboard.convert(html)   // HTML → Delta
+			quill.setContents(delta, 'silent')
+			quill.setSelection(0)                         // 光标放顶部
+			// 同步回 v-model（contentType="delta"）
+			emailForm.delta = quill.getContents()
+			emailForm.content = quill.root.innerHTML
+		}
+
+		// 处理附件
 		fileList.value = []
-		for (const attachment of currentEmail.value.attachments) {
-			try {
-				const response = await request({
-					url: 'Email/DownloadAttachment/DownloadAttachment',
-					method: 'GET',
-					params: { id: attachment.id },
-					responseType: 'blob'
-				})
-
-				const base64Content = await blobToBase64(response.data)
-				fileList.value.push({
-					name: attachment.name,
-					size: attachment.size,
-					uid: Date.now() + Math.random().toString(36).substr(2, 9),
-					raw: new File([response.data], attachment.name),
-					base64Content: base64Content
-				})
-			} catch (error) {
-				console.error('获取附件失败:', error)
-				ElMessage.warning(`附件 "${attachment.name}" 获取失败`)
+		if (currentEmail.value.attachments?.length) {
+			for (const attachment of currentEmail.value.attachments) {
+				try {
+					const response = await request({
+						url: 'Email/DownloadAttachment/DownloadAttachment',
+						method: 'GET',
+						params: { id: attachment.id },
+						responseType: 'blob'
+					})
+					const base64Content = await blobToBase64(response.data)
+					fileList.value.push({
+						name: attachment.name,
+						size: attachment.size,
+						uid: Date.now() + Math.random().toString(36).substr(2, 9),
+						raw: new File([response.data], attachment.name),
+						base64Content
+					})
+				} catch (err) {
+					console.error('获取附件失败:', err)
+					ElMessage.warning(`附件 "${attachment.name}" 获取失败`)
+				}
 			}
 		}
+	} catch (e) {
+		console.error('转发失败:', e)
+		ElMessage.error('打开转发窗口失败，请重试')
 	}
-
-	showEmailDialog.value = true
 }
 
 // blob 转 base64 的辅助函数
@@ -3480,22 +3492,24 @@ const editDraft = async () => {
 		await GetEmailContract()
 		showEmailDetail.value = false
 		showEmailDialog.value = true
-
-
 		await nextTick()
 
-		// 把“存起来的 HTML”写进编辑器（编辑器是 contentType="delta"）
+		// ★ 从草稿 EmailContent 拆分
+		const combined = currentEmail.value.content || ''
+		const { replyHtml, quotedHtml: quotedFromDraft } = splitCombinedContent(combined)
+
+		// 只读区：原文块
+		quotedHtml.value = quotedFromDraft || ''   // 没有的话可保持空
+		showQuoted.value = false                   // 默认折叠（按你习惯）
+
+		// 编辑器：只放“回复部分”
 		const quill = quillEditor.value?.getQuill?.() || quillEditor.value?.quill
 		if (quill) {
-			const html = currentEmail.value.content || ''   // 你后端返回的草稿 HTML
-			const delta = quill.clipboard.convert(html)     // HTML -> Delta
-			quill.setContents(delta, 'silent')              // 放进编辑器
-			quill.setSelection(quill.getLength(), 0)        // 光标放到末尾或 0 放开头
-
-			// 同步回 v-model（以便暂存/发送时拿到最新 delta）
+			const delta = quill.clipboard.convert(replyHtml || '')
+			quill.setContents(delta, 'silent')
+			quill.setSelection(quill.getLength(), 0)
 			emailForm.delta = quill.getContents()
-			// 如果你还在别处用到 content，就顺手同步一下
-			emailForm.content = quill.root.innerHTML
+			emailForm.content = quill.root.innerHTML // 如果你别处还用到
 		}
 	} catch (error) {
 		console.error('编辑草稿失败:', error)
@@ -3553,23 +3567,24 @@ const convertFileToBase64 = (file) => {
 }
 
 // 重置表单
-const resetEmailForm = () => {
-	Object.assign(emailForm, {
-		draftId: null,
-		ToEmail: [],
-		cc: [],
-		bcc: [],
-		subject: '',
-		content: '',
-		emailTags: [],
-		originalMessageId: null
-	})
+function resetEmailForm() {
+	emailForm.draftId = null
+	emailForm.ToEmail = []
+	emailForm.cc = []
+	emailForm.bcc = []
+	emailForm.subject = ''
+	emailForm.content = ''           // 如果还在用
+	emailForm.delta = new Delta()    // 你当前用的 delta
+
 	fileList.value = []
-	showCc.value = false
-	if (quillEditor.value) {
-		quillEditor.value.setContents([])
-	}
-	isFullscreen.value = false
+
+	// 关键：清原文块 & 恢复默认展开状态
+	quotedHtml.value = ''            // 原文只读块内容清空
+	showQuoted.value = false         // 默认折叠（或 true，看你偏好）
+
+	// 可选：清空编辑器
+	const quill = quillEditor.value?.getQuill?.() || quillEditor.value?.quill
+	if (quill) quill.setContents([], 'silent')
 }
 
 // 丢弃邮件
@@ -3581,6 +3596,36 @@ const discardEmail = () => {
 // 关闭对话框处理
 const handleDialogClose = () => {
 	resetEmailForm()
+}
+
+// ====== 统一标记（尽量独特，避免误伤）======
+const QUOTED_START = '<!--EMAIL-QUOTED:START-->'
+const QUOTED_END = '<!--EMAIL-QUOTED:END-->'
+
+// 去掉已有的原文块（防止重复嵌套）
+function stripQuotedBlock(html: string) {
+	return (html || '').replace(
+		/<!--EMAIL-QUOTED:START-->[\s\S]*?<!--EMAIL-QUOTED:END-->/i,
+		''
+	).trim()
+}
+
+// 合并：回复 + 原文块（存库/发信时用）
+function combineReplyAndQuoted(replyHtml: string, quotedHtml: string) {
+	const cleanReply = stripQuotedBlock(replyHtml)
+	if (quotedHtml && quotedHtml.trim()) {
+		return `${cleanReply}\n${QUOTED_START}\n${quotedHtml}\n${QUOTED_END}`
+	}
+	return cleanReply
+}
+
+// 拆分：从存库的 EmailContent 拆出 回复部分 / 原文块（编辑草稿时用）
+function splitCombinedContent(combinedHtml: string) {
+	const re = /<!--EMAIL-QUOTED:START-->[\s\S]*?<!--EMAIL-QUOTED:END-->/i
+	const m = (combinedHtml || '').match(/<!--EMAIL-QUOTED:START-->([\s\S]*?)<!--EMAIL-QUOTED:END-->/i)
+	const quoted = m ? m[1].trim() : ''
+	const reply = (combinedHtml || '').replace(re, '').trim()
+	return { replyHtml: reply, quotedHtml: quoted }
 }
 
 // 暂存草稿
@@ -3621,13 +3666,20 @@ const saveDraft = async () => {
 			}))
 		}
 		const quill = quillEditor.value?.getQuill?.() || quillEditor.value?.quill
+
+		const replyHtml = quill ? quill.root.innerHTML : (emailForm.content || '')
+
+		// ★ 关键：把回复区 + 原文块 合并成一个 HTML
+		const combinedHtml = combineReplyAndQuoted(replyHtml, quotedHtml.value || '')
+
 		const draftData = {
 			DraftId: emailForm.draftId,
 			ToEmail: emailForm.ToEmail,
 			CcEmail: emailForm.cc,
 			BccEmail: emailForm.bcc,
 			Subject: emailForm.subject,
-			EmailContent: quill.root.innerHTML,
+			EmailContent: combinedHtml,
+			QuotedHtml: quotedHtml.value,
 			Attachments: attachments
 		}
 
