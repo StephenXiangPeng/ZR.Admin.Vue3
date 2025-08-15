@@ -127,7 +127,7 @@
 				<el-form-item label="客户简称" prop="customername" data-field="customername">
 					<el-select v-model="quotationDialogform.customername" filterable placeholder="选择客户名称"
 						:disabled="isDisabled" style="width: 250px;" @change="handleCustomerSelection">
-						<el-option v-for="dict in optionss.sql_hr_customer_abbreviation" :key="dict.dictCode"
+						<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
 							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 					</el-select>
 				</el-form-item>
@@ -1022,7 +1022,8 @@ const state = reactive({
 		sql_product_name: [],
 		sql_hr_customer_abbreviation: [],
 		hr_packing: [],
-		hr_outerbox_unit: []
+		hr_outerbox_unit: [],
+		sql_user_customers: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -1045,6 +1046,28 @@ proxy.getDicts(dictParams).then((response) => {
 	});
 	GetQuotationList(currentPage.value, pageSize.value);
 })
+// 获取用户相关的客户数据
+const getUserCustomerData = async () => {
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetCustomerDataByUserID/GetSelectCustomerDataByUserID',
+			method: 'get'
+		})
+
+		if (response.code === 200) {
+			state.optionss.sql_user_customers = response.data.map(item => ({
+				dictValue: item.dictValue,
+				dictLabel: item.dictLabel
+			}))
+		} else {
+			ElMessage.error(response.msg || '获取客户数据失败')
+		}
+	} catch (error) {
+		console.error('获取客户数据失败:', error)
+		ElMessage.error('获取客户数据失败')
+	}
+}
+getUserCustomerData();
 /*动态下拉框end*/
 //联系人
 const contactpersonSelectOptions = ref([]);
@@ -1571,7 +1594,7 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 			addQuotationRequest.shippingRate = quotationDialogform.shippingrate;
 			addQuotationRequest.unitFreight = quotationDialogform.unitfreight;
 			addQuotationRequest.commissionRate = quotationDialogform.commissionrate;
-			addQuotationRequest.seller = quotationDialogform.seller;
+			addQuotationRequest.seller = quotationDialogform.seller || useUserStore().userId || 0;
 			addQuotationRequest.remark = quotationDialogform.Remark ?? '';
 			addQuotationRequest.totalValueOfGoods = quotationDialogform.TotalValueOfGoods;
 			addQuotationRequest.totalQuantity = quotationDialogform.TotalQuantity;
@@ -1744,7 +1767,7 @@ const SaveDraft = async () => {
 	addQuotationRequest.shippingRate = quotationDialogform.shippingrate || 1;
 	addQuotationRequest.unitFreight = quotationDialogform.unitfreight || 0;
 	addQuotationRequest.commissionRate = quotationDialogform.commissionrate || 0;
-	addQuotationRequest.seller = quotationDialogform.seller || 0;
+	addQuotationRequest.seller = quotationDialogform.seller || useUserStore().userId || 0;
 	addQuotationRequest.remark = quotationDialogform.Remark || '';
 	addQuotationRequest.totalValueOfGoods = quotationDialogform.TotalValueOfGoods || 0;
 	addQuotationRequest.totalQuantity = quotationDialogform.TotalQuantity || 0;
@@ -2132,7 +2155,7 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 			addQuotationRequest.shippingRate = quotationDialogform.shippingrate;
 			addQuotationRequest.unitFreight = quotationDialogform.unitfreight;
 			addQuotationRequest.commissionRate = quotationDialogform.commissionrate;
-			addQuotationRequest.seller = quotationDialogform.seller;
+			addQuotationRequest.seller = quotationDialogform.seller || useUserStore().userId || 0;
 			addQuotationRequest.remark = quotationDialogform.Remark ?? '';
 			addQuotationRequest.totalValueOfGoods = quotationDialogform.TotalValueOfGoods;
 			addQuotationRequest.totalQuantity = quotationDialogform.TotalQuantity;

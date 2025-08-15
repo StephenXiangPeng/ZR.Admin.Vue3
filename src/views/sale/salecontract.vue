@@ -183,12 +183,22 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="客户简称" prop="customerAbbreviation">
 							<el-select v-model="Newcontractform.customerAbbreviation" filterable placeholder="请选择客户简称"
 								:disabled="isDisabled" style="width: 300px;" @change="handleCustomerSelection"
 								id="customerAbbreviation">
 								<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="报价单号" prop="quotationNumber">
+							<el-select filterable v-model="Newcontractform.quotationNumber" placeholder="请选择报价单号"
+								:disabled="isDisabled" style="width: 300px" id="quotationNumber"
+								@change="GetQutaionProductListByID(Newcontractform.quotationNumber)">
+								<el-option v-for="dict in quotationNumberOptions" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
@@ -1224,6 +1234,7 @@ const formatExchangeRate = () => {
 	if (Newcontractform.exchangeRate) {
 		Newcontractform.exchangeRate = Number(Number(Newcontractform.exchangeRate).toFixed(4));
 	}
+	calculateTotal();
 }
 
 var userId = useUserStore().userId;
@@ -1530,6 +1541,8 @@ const calculateTotal = () => {
 
 const deleteRow = (index: number) => {
 	productData.value.splice(index, 1)
+	// 删除产品后重新计算总计
+	calculateTotal()
 }
 
 const isImportProduct = ref(false);
@@ -1630,6 +1643,7 @@ interface Newcontractform {
 	receivedDeposit: number,//已收定金
 	depositDate: string,//定金日期
 	Depositratio: number,//定金比例
+	quotationNumber: number,//报价单号
 	/*合同主体信息End*/
 	/*列表字段Start*/
 	stockProgress: string,//备货进度
@@ -2053,6 +2067,7 @@ const handleCustomerSelection = (value) => {
 	}).catch(error => {
 		console.log(error)
 	});
+	loadQuotationNumberOptions(value);
 }
 
 // 加载历史成交产品记录
@@ -2217,6 +2232,7 @@ const addContractsRequest = reactive({
 	ProfitAmount: null,
 	portMiscellaneousFees: null,
 	isDraft: 0,
+	RelatedQuotation: 0,
 	// 合同产品项数组
 	contractProductItems: [] as Array<{
 		Id: number,
@@ -2419,6 +2435,7 @@ const SaveContract = async (formEl: FormInstance | undefined) => {
 			addContractsRequest.CanPartial = Number(Newcontractform.canPartial) === 1 ? 1 : 0;
 			addContractsRequest.CanTransit = Number(Newcontractform.canTransit) === 1 ? 1 : 0;
 			addContractsRequest.isDraft = 0;
+			addContractsRequest.RelatedQuotation = Newcontractform.quotationNumber;
 
 			// 映射产品信息
 			addContractsRequest.contractProductItems = productData.value.map(item => ({
@@ -2597,6 +2614,10 @@ const clearAll = () => {
 	Newcontractform.Totalgrossprofit = null;
 	productData.value = [];
 	CustomerRelaterExoensesTableData.value = [];
+	Newcontractform.quotationNumber = null;
+	quotationNumberOptions.value = [];
+	// 清空数据后重新计算总计
+	calculateTotal();
 }
 
 //获取销售合同编号
@@ -2693,6 +2714,8 @@ const checkContractsDetails = async (row) => {
 	}
 	productData.value = [];
 	CustomerRelaterExoensesTableData.value = [];
+	// 清空数据后重新计算总计
+	calculateTotal();
 	/*表单赋值*/
 	SelctedContractId.value = row.id;
 	Newcontractform.contractNumber = row.contractNumber;
@@ -3044,7 +3067,9 @@ const EditContractsRequest = reactive({
 	IsDelete: null,
 	portMiscellaneousFees: null,
 	contractProductItems: [],
-	contractExpensesItems: []
+	contractExpensesItems: [],
+	isDraft: 0,
+	RelatedQuotation: 0
 });
 const EditContractSave = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
@@ -3139,6 +3164,7 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 		EditContractsRequest.CanPartial = Number(Newcontractform.canPartial) === 1 ? 1 : 0;
 		EditContractsRequest.CanTransit = Number(Newcontractform.canTransit) === 1 ? 1 : 0;
 		EditContractsRequest.isDraft = 0;
+		EditContractsRequest.RelatedQuotation = Newcontractform.quotationNumber;
 
 		// 映射产品信息
 		EditContractsRequest.contractProductItems = productData.value.map(item => ({
@@ -3654,7 +3680,7 @@ const SaveContractDraft = async (formEl: FormInstance | undefined) => {
 		addContractsRequest.CanPartial = Number(Newcontractform.canPartial) === 1 ? 1 : 0;
 		addContractsRequest.CanTransit = Number(Newcontractform.canTransit) === 1 ? 1 : 0;
 		addContractsRequest.isDraft = 1;
-
+		addContractsRequest.RelatedQuotation = Newcontractform.quotationNumber;
 		// 映射产品信息
 		addContractsRequest.contractProductItems = productData.value.map(item => ({
 			Id: 0,
@@ -3954,6 +3980,111 @@ const DeleteContract = (row) => {
 		ElMessage.info('已取消删除');
 	});
 };
+
+var quotationNumberOptions = ref([]);
+// 加载报价单号选项
+const loadQuotationNumberOptions = async (customerId) => {
+	try {
+		const response = await request({
+			url: 'Quotation/GetQuotaionListSelect/GetListSelect',
+			method: 'get',
+			params: {
+				customerId: customerId
+			}
+		})
+		if (response && response.code === 200) {
+			quotationNumberOptions.value = response.data.map(item => ({
+				dictValue: item.id,
+				dictLabel: item.quotationNum
+			}))
+		} else {
+			ElMessage.error((response as any).msg || '获取报价单号列表失败')
+		}
+	} catch (error) {
+		console.error('获取报价单号列表失败:', error)
+		ElMessage.error('获取报价单号列表失败')
+	}
+}
+
+const GetQutaionProductListByID = (quotationId) => {
+	request({
+		url: 'Quotation/GetQutaionProductListByID/GetQutaionProductList',
+		method: 'get',
+		params: {
+			ID: quotationId
+		}
+	}).then(response => {
+		console.log(response)
+		// 处理获取到的报价单产品列表
+		if (response && response.data && response.data.length > 0) {
+			// 清空当前产品列表
+			productData.value = [];
+
+			// 遍历报价单产品列表，添加到产品资料列表中
+			response.data.forEach(item => {
+				// 获取计量单位的dictValue作为编号，dictLabel作为显示值
+				const unitMeasurement = state.optionss.hr_calculate_unit.find(x => x.dictValue == item.unitOfMeasurement?.toString());
+				// 根据价格条款设置invoice值
+				const invoiceValue = Newcontractform.priceTerms == 7 ? "1" : "0";
+				const invoiceOption = state.optionss.hr_yes_no.find(x => x.dictValue === invoiceValue);
+
+				// 添加到产品列表
+				productData.value.push({
+					productID: item.id,
+					productNum: item.productNum,
+					customerNum: item.customerNum,
+					cproductname: item.cProductName,
+					cspecification: item.cSpecification,
+					contractQuantity: item.quotationNum || 0,
+					exportunitprice: item.exportUnitPrice || 0,
+					exporttotalprice: item.exportTotalPrice || 0,
+					unitofmeasurement: unitMeasurement?.dictValue,
+					unitOfMeasurementLabel: unitMeasurement?.dictLabel || '-',
+					purchasecurrency: item.purchaseCurrency,
+					purchaseunitprice: item.purchaseUnitPrice || 0,
+					inlandfreightprice: item.inlandfreightprice || 0,
+					AdditionalPackagingCosts: item.additionalPackagingCosts || 0,
+					isInvoicingc: invoiceOption?.dictValue || '',
+					packaging: item.packaging || '',
+					specialrequirements: item.specialRequirements || '',
+					rebaterate: item.rebateRate || 0,
+					innerBoxLoading: item.innerBoxLoading || 0,
+					outerboxloading: item.outerBoxLoading || 0,
+					outerboxunit: item.outerBoxUnit || '',
+					outerboxlength: item.outerBoxLength || 0,
+					outerboxwidth: item.outerBoxWidth || 0,
+					outerboxheight: item.outerBoxHeight || 0,
+					outerboxnetweight: item.outerBoxNetWeight || 0,
+					outerboxgrossweight: item.outerBoxGrossWeight || 0,
+					outerboxvolume: item.outerBoxVolume || 0,
+					NumberOfBoxes: item.numberOfBoxes || 0,
+					OtherFees: item.otherFees || 0,
+					singleProductGrossProfit: item.singleProductGrossProfit || 0,
+					singleProductGrossProfitTotal: item.singleProductGrossProfitTotal || 0,
+					grossProfitRate: item.grossProfitRate || 0,
+					totalNetWeight: item.totalNetWeight || 0,
+					totalGrossWeight: item.totalGrossWeight || 0,
+					totalVolume: item.totalVolume || 0,
+					SinglesalesrevenueA: item.singlesalesrevenue || 0,
+					Singleproductvolume: item.singleproductvolume || 0,
+					Portchargesforindividualproducts: item.portchargesforindividualproducts || 0,
+					Oceanfreightforasingleproduct: item.oceanfreightforasingleproduct || 0,
+					Inlandfreightforasingleproduct: item.inlandfreightforasingleproduct || 0,
+					isImported: true,
+					isPriceChanged: item.isNewProduct || 0
+				});
+			});
+			// 重新计算总计
+			calculateTotal();
+			ElMessage.success(`成功导入 ${response.data.length} 个产品`);
+		} else {
+			ElMessage.warning('该报价单没有产品数据');
+		}
+	}).catch(error => {
+		console.error('获取报价单产品列表失败:', error)
+		ElMessage.error('获取报价单产品列表失败')
+	})
+}
 </script>
 <style scoped>
 /* 基础红色文本 */
