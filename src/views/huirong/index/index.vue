@@ -230,30 +230,46 @@
                 </span>
               </div>
             </template>
-            <div class="text item">
-              <span v-if="item.sourceType === 'api'">客户名称：</span>
-              <span v-else>商机名称：</span>
-              <el-tooltip :content="item.businessName" placement="top" :disabled="item.businessName.length <= 8">
-                <span class="truncate-text">{{ truncateText(item.businessName, 8) }}</span>
-              </el-tooltip>
+            <!-- 报价单号显示特殊格式 -->
+            <div v-if="item.sourceType === 'api' && (stage.salesStage === '初次报价' || stage.salesStage === '再次报价')">
+              <div class="text item">创建时间：{{ formatDateTime(item.create_time) }}</div>
+              <div class="text item">客户简称：
+                <el-tooltip :content="item.businessName" placement="top" :disabled="item.businessName.length <= 8">
+                  <span class="truncate-text">{{ truncateText(item.businessName, 8) }}</span>
+                </el-tooltip>
+              </div>
+              <div class="text item">项目简介：
+                <el-tooltip :content="item.projectDescription" placement="top"
+                  :disabled="item.projectDescription.length <= 16">
+                  <span class="truncate-text">{{ truncateText(item.projectDescription, 16) }}</span>
+                </el-tooltip>
+              </div>
+              <div class="text item">金额：{{ formatAmountWithCurrency(item.amount, item.currency) }}</div>
             </div>
-            <div class="text item">{{ item.customerLabel || '客户邮箱' }}：
-              <el-tooltip :content="item.customer" placement="top" :disabled="item.customer.length <= 16">
-                <span class="truncate-text">{{ truncateText(item.customer, 16) }}</span>
-              </el-tooltip>
-            </div>
-            <div class="text item">创建时间：{{ formatDateTime(item.create_time) }}</div>
-            <!-- 根据销售阶段显示不同信息 -->
-            <div class="text item" v-if="shouldShowAmount(stage.salesStage)">
-              <span v-if="item.sourceType === 'api' && (stage.salesStage === '初次报价' || stage.salesStage === '再次报价')">
-                报价金额：{{ formatAmount(item.amount) }}
-              </span>
-              <span v-else-if="item.sourceType === 'api' && stage.salesStage === '合同确定'">
-                合同金额：{{ formatAmount(item.amount) }}
-              </span>
-              <span v-else>
-                预估金额：{{ formatAmount(item.amount) }}
-              </span>
+            <!-- 其他商机显示原有格式 -->
+            <div v-else>
+              <div class="text item">
+                <span v-if="item.sourceType === 'api'">客户名称：</span>
+                <span v-else>商机名称：</span>
+                <el-tooltip :content="item.businessName" placement="top" :disabled="item.businessName.length <= 8">
+                  <span class="truncate-text">{{ truncateText(item.businessName, 8) }}</span>
+                </el-tooltip>
+              </div>
+              <div class="text item">{{ item.customerLabel || '客户邮箱' }}：
+                <el-tooltip :content="item.customer" placement="top" :disabled="item.customer.length <= 16">
+                  <span class="truncate-text">{{ truncateText(item.customer, 16) }}</span>
+                </el-tooltip>
+              </div>
+              <div class="text item">创建时间：{{ formatDateTime(item.create_time) }}</div>
+              <!-- 根据销售阶段显示不同信息 -->
+              <div class="text item" v-if="shouldShowAmount(stage.salesStage)">
+                <span v-if="item.sourceType === 'api' && stage.salesStage === '合同确定'">
+                  合同金额：{{ formatAmount(item.amount) }}
+                </span>
+                <span v-else>
+                  预估金额：{{ formatAmount(item.amount) }}
+                </span>
+              </div>
             </div>
             <div class="text item" v-if="stage.salesStage === '沟通需求' && item.emailcreatetime">
               最后沟通：{{ formatDateTime(item.emailcreatetime) }}
@@ -2632,12 +2648,14 @@ const fetchDashboardData = async () => {
         const initialQuoteDetails = initialQuotes.map(quote => ({
           id: quote.id,
           opportunityNumber: quote.quotationNum || '无编号',
-          businessName: quote.customerName || '无客户名称',
+          businessName: quote.customerAbbreviation || quote.customerName || '无客户简称',
           customer: quote.contactPersonEmail || quote.customerName || '无客户信息',
           amount: quote.totalValueOfGoods * quote.exchangeRate || 0,
+          currency: quote.currency || '3', // 默认CNY
+          projectDescription: quote.projectDescription || '无项目简介',
           create_time: quote.createTime || new Date().toISOString(),
           sourceType: 'api',
-          customerLabel: '客户邮箱'
+          customerLabel: '客户简称'
         }))
         console.log('处理后的初次报价数据:', initialQuoteDetails)
 
@@ -2657,12 +2675,14 @@ const fetchDashboardData = async () => {
         const finalQuoteDetails = finalQuotes.map(quote => ({
           id: quote.id,
           opportunityNumber: quote.quotationNum || '无编号',
-          businessName: quote.customerName || '无客户名称',
+          businessName: quote.customerAbbreviation || quote.customerName || '无客户简称',
           customer: quote.contactPersonEmail || quote.customerName || '无客户信息',
           amount: quote.totalValueOfGoods * quote.exchangeRate || 0,
+          currency: quote.currency || '3', // 默认CNY
+          projectDescription: quote.projectDescription || '无项目简介',
           create_time: quote.createTime || new Date().toISOString(),
           sourceType: 'api',
-          customerLabel: '客户邮箱'
+          customerLabel: '客户简称'
         }))
         console.log('处理后的最终报价数据:', finalQuoteDetails)
 
@@ -2686,9 +2706,11 @@ const fetchDashboardData = async () => {
         const contractConfirmedDetails = contractConfirmedQuotes.map(quote => ({
           id: quote.id,
           opportunityNumber: quote.contractNumber || '无编号',
-          businessName: quote.customerAbbreviation || quote.customerName || '无客户名称',
+          businessName: quote.customerAbbreviation || quote.customerName || '无客户简称',
           customer: quote.contactEmail || '无客户邮箱',
           amount: (quote.amountTotal || 0) * (quote.exchangeRate || 1),
+          currency: quote.currency || '3', // 默认CNY
+          projectDescription: quote.projectDescription || '无项目简介',
           create_time: quote.createTime || new Date().toISOString(),
           sourceType: 'api',
           customerLabel: '客户邮箱'

@@ -365,13 +365,13 @@
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="已收定金" v-show=DepositShow prop="receivedDeposit">
 							<el-input v-model="Newcontractform.receivedDeposit" style="width: 300px"
 								:disabled="isDisabled"></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="定金日期" v-show=DepositShow prop="depositDate">
 							<el-date-picker v-model="Newcontractform.depositDate" type="date" placeholder="请选择定金日期"
 								:disabled="isDisabled" style="width: 300px"
@@ -1738,7 +1738,7 @@ const Newcontractform = reactive<Newcontractform>({
 	transportation: null,
 	salesperson: null,
 	hasDeposit: false,
-	receivedDeposit: null,
+	receivedDeposit: 0,
 	depositDate: '',
 	Depositratio: null,
 	stockProgress: '',
@@ -1811,12 +1811,12 @@ const rules = reactive<FormRules<Newcontractform>>({
 const DepositShow = ref(false);
 const hasDeposithandleCheckboxChange = (val) => {
 	if (val == true) {
-		Newcontractform.receivedDeposit = null;
+		Newcontractform.receivedDeposit = 0;
 		Newcontractform.depositDate = null;
 		Newcontractform.Depositratio = null;
 		// 如果勾选了"有定金"，则添加验证规则
-		rules.receivedDeposit = [{ required: true, message: '请输入已收定金', trigger: 'change,blur' }];
-		rules.depositDate = [{ required: true, message: '请选择定金日期', trigger: 'change,blur' }];
+		// rules.receivedDeposit = [{ required: true, message: '请输入已收定金', trigger: 'change,blur' }];
+		// rules.depositDate = [{ required: true, message: '请选择定金日期', trigger: 'change,blur' }];
 		rules.Depositratio = [{ required: true, message: '请输入定金比例', trigger: 'change,blur' }];
 	} else if (val == false) {
 		Newcontractform.receivedDeposit = null;
@@ -2848,6 +2848,9 @@ const checkContractsDetails = async (row) => {
 	Newcontractform.TotalOtherFees = row.totalOtherFees;
 	Newcontractform.ProfitAmount = row.profitAmount;
 	Newcontractform.Totalprofitmargin = row.totalprofitmargin;
+	/*报价单号*/
+	loadQuotationNumberOptions(row.customerId);
+	Newcontractform.quotationNumber = row.relatedQuotation;
 
 	/*合同产品信息与相关费用*/
 	return new Promise((resolve, reject) => {
@@ -3993,7 +3996,23 @@ const loadQuotationNumberOptions = async (customerId) => {
 			}
 		})
 		if (response && response.code === 200) {
-			quotationNumberOptions.value = response.data.map(item => ({
+			// 根据当前场景过滤报价单选项
+			let filteredData = response.data;
+
+			// 如果是新增销售合同（SelctedContractId.value === 0），则过滤掉 RelatedSalesContract != 0 的选项
+			if (SelctedContractId.value === 0) {
+				filteredData = response.data.filter(item => !item.relatedSalesContract || item.relatedSalesContract === 0);
+			} else {
+				// 如果是编辑状态（SelctedContractId.value !== 0）
+				// 包括当前已选择的报价单和 RelatedSalesContract == 0 的选项
+				filteredData = response.data.filter(item =>
+					!item.relatedSalesContract ||
+					item.relatedSalesContract === 0 ||
+					item.id === Newcontractform.quotationNumber
+				);
+			}
+
+			quotationNumberOptions.value = filteredData.map(item => ({
 				dictValue: item.id,
 				dictLabel: item.quotationNum
 			}))

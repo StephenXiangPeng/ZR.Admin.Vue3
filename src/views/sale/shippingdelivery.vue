@@ -753,96 +753,13 @@ const customerNumberChange = () => {
 	}).catch(error => {
 		console.log(error)
 	});
-	// //根据客户ID获取所有销售合同
-	// request({
-	// 	url: 'Contracts/GetCustomerContractByCustomerID/GetAllCotracts',
-	// 	method: 'GET',
-	// 	params: {
-	// 		CustomerID: AddShippingDeliveryform.value.customerNumber
-	// 	}
-	// }).then(response => {
-	// 	shippingDeliveryContrctProductTableData.value = [];
-	// 	response.data.forEach((element) => {
-	// 		var ShippingQuantity = 0;
-	// 		request({
-	// 			url: 'ShippingDeliveries/GetShippingQuantityByContractIDAndProductID/GetShippingQuantity',
-	// 			method: 'GET',
-	// 			params: {
-	// 				ContractID: element.contractId,
-	// 				ProductID: element.id
-	// 			}
-	// 		}).then(ShippingQuantityResponse => {
-	// 			ShippingQuantity = ShippingQuantityResponse.data;
-	// 			shippingDeliveryContrctProductTableData.value.push({
-	// 				contractProductID: element.id,
-	// 				contractId: element.contractId,
-	// 				contractNumber: element.contractNumber,
-	// 				productCode: element.productCode,
-	// 				chineseName: element.chineseName,
-	// 				contractQuantity: element.contractQuantity,
-	// 				RemainingQuantityToBeShipped: element.contractQuantity - ShippingQuantity,
-	// 				shipmentQuantity: element.contractQuantity - ShippingQuantity,
-	// 				unit: element.unit,
-	// 				exportUnitPrice: element.exportUnitPrice,
-	// 				exportTotalPrice: element.exportTotalPrice,
-	// 				specialRequirements: element.specialRequirements,
-	// 				outerBoxQuantity: element.outerBoxQuantity,
-	// 				boxCount: element.boxCount,
-	// 				outerBoxUnit: element.outerboxunit,
-	// 				outerBoxLength: element.outerBoxLength,
-	// 				outerBoxWidth: element.outerBoxWidth,
-	// 				outerBoxHeight: element.outerBoxHeight,
-	// 				outerBoxVolume: element.outerBoxVolume,
-	// 				totalVolume: element.totalVolume,
-	// 				outerBoxNetWeight: element.outerBoxNetWeight,
-	// 				outerBoxGrossWeight: element.outerBoxGrossWeight,
-	// 				totalNetWeight: element.totalNetWeight,
-	// 				totalGrossWeight: element.totalGrossWeight,
-	// 				singlesalesrevenue: element.singlesalesrevenue
-	// 			});
-	// 		});
-	// 	}).catch(error => {
-	// 		console.log(error)
-	// 	})
-	// 	shippingDeliveryContrctProductTableData.value.forEach((element) => {
-	// 		element.unit = state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无';
-	// 		element.outerBoxUnit = state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerBoxUnit.toString())?.dictLabel || '无';
-	// 	});
-	// }).catch(error => {
-	// 	console.log(error)
-	// });
-	// //根据客户ID获取所有采购合同
-	// request({
-	// 	url: 'PurchaseContracts/GetCustomerPurchasesByCustomerID/GetAllPurchasess',
-	// 	method: 'GET',
-	// 	params: {
-	// 		CustomerID: AddShippingDeliveryform.value.customerNumber
-	// 	}
-	// }).then(response => {
-	// 	shippingDeliveryPurchaseDetailsTableData.value = [];
-	// 	response.data.forEach((element) => {
-	// 		shippingDeliveryPurchaseDetailsTableData.value.push({
-	// 			purchaseContractID: element.purchaseContractID,
-	// 			purchaseContractProductID: element.purchaseContractProductID,
-	// 			purchaseContractNumber: element.purchaseContractNumber,
-	// 			shipmentQuantity: element.contractQuantity,
-	// 			vendorAbbreviation: state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictLabel || '无',
-	// 			productNumber: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
-	// 			chineseName: element.chineseName,
-	// 			purchaseCurrency: state.optionss.hr_export_currency.find(item => item.dictValue === element.purchaseCurrency.toString())?.dictLabel || '无',
-	// 			purchaseUnitPrice: element.purchasePrice,
-	// 			purchaseTotalPrice: element.purchaseTotalPrice,
-	// 			measurementUnit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
-	// 			invoice: element.invoice,
-	// 			totalVolume: element.TotalVolume,
-	// 			totalGrossWeight: element.TotalGrossWeight,
-	// 			contractQuantity: element.contractQuantity
-	// 		});
-	// 	});
 
-	// }).catch(error => {
-	// 	console.log(error)
-	// });
+	// 清空相关数据，因为客户改变时需要重新选择参考合同
+	shippingDeliveryContrctProductTableData.value = [];
+	shippingDeliveryPurchaseDetailsTableData.value = [];
+	AddShippingDeliveryform.value.referenceContractNumber = '';
+	AddShippingDeliveryform.value.salesContractNumber = '';
+	AddShippingDeliveryform.value.customerContractNumber = '';
 }
 
 //参考合同号改变
@@ -853,109 +770,122 @@ const referenceContractNumberChange = () => {
 		shippingDeliveryPurchaseDetailsTableData.value = [];
 		return;
 	}
-	//根据参考合同号获取销售合同信息
-	request({
-		url: 'Contracts/GetContractDetailsById/GetContractDetails',
-		method: 'GET',
-		params: {
-			contractId: SaleContractID
-		}
-	}).then(response => {
-		if (response.data != null) {
-			AddShippingDeliveryform.value.customerNumber = state.optionss.customer_data.find(item => item.dictValue === response.data.contract.customerId.toString())?.dictValue || '';
-			customerNumberChange();//改变客户编号
-			AddShippingDeliveryform.value.salesContractNumber = response.data.contract.contractNumber;
-			AddShippingDeliveryform.value.customerContractNumber = response.data.contract.customerContract;
-			AddShippingDeliveryform.value.ourCompany = response.data.contract.ourCompany.toString();
-			AddShippingDeliveryform.value.exportCurrency = response.data.contract.foreignCurrency.toString();
-			AddShippingDeliveryform.value.exchangeRate = response.data.contract.exchangeRate;
-			AddShippingDeliveryform.value.priceTerms = response.data.contract.priceTerms.toString();
-			AddShippingDeliveryform.value.departurePort = response.data.contract.shippingPort.toString();
-			AddShippingDeliveryform.value.destinationPort = response.data.contract.destinationPort.toString();
-			AddShippingDeliveryform.value.tradeCountry = response.data.contract.tradeCountry.toString();
-			AddShippingDeliveryform.value.settlementMethod = response.data.contract.settlementMethod.toString();
-			AddShippingDeliveryform.value.transportationMethod = response.data.contract.transportation.toString();
-			shippingDeliveryContrctProductTableData.value = [];
-			response.data.contractProducts.forEach((element) => {
-				var ShippingQuantity = 0;
-				request({
-					url: 'ShippingDeliveries/GetShippingQuantityByContractIDAndProductID/GetShippingQuantity',
-					method: 'GET',
-					params: {
-						ContractID: element.contractId,
-						ProductID: element.id
-					}
-				}).then(ShippingQuantityResponse => {
-					ShippingQuantity = ShippingQuantityResponse.data;
-					shippingDeliveryContrctProductTableData.value.push({
-						contractId: element.contractId,
-						contractProductId: element.id,
-						contractNumber: response.data.contract.contractNumber,
-						productCode: element.productCode,
-						chineseName: element.chineseName,
-						contractQuantity: element.contractQuantity,
-						RemainingQuantityToBeShipped: element.contractQuantity - ShippingQuantity,
-						shipmentQuantity: element.contractQuantity - ShippingQuantity,
-						unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
-						exportUnitPrice: element.exportUnitPrice,
-						exportTotalPrice: element.exportTotalPrice,
-						specialRequirements: element.specialRequirements,
-						outerBoxQuantity: element.outerBoxQuantity,
-						boxCount: element.boxCount,
-						outerBoxUnit: state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerboxunit.toString())?.dictLabel || '无',
-						outerBoxLength: element.outerBoxLength,
-						outerBoxWidth: element.outerBoxWidth,
-						outerBoxHeight: element.outerBoxHeight,
-						outerBoxVolume: element.outerBoxVolume,
-						totalVolume: element.totalVolume,
-						outerBoxNetWeight: element.outerBoxNetWeight,
-						outerBoxGrossWeight: element.outerBoxGrossWeight,
-						totalNetWeight: element.totalNetWeight,
-						totalGrossWeight: element.totalGrossWeight,
-						singlesalesrevenue: element.singlesalesrevenue
-					});
-				});
-			}).catch(error => {
-				console.log(error)
-			})
 
-		}
-	}).catch(error => {
-		console.error(error);
-	});
-	//根据参考合同号获取采购合同信息
+	// 先获取采购合同信息，检查是否有采购合同数据
 	request({
 		url: 'PurchaseContracts/GetCustomerPurchasesByContractID/GetAllPurchasess',
 		method: 'GET',
 		params: {
 			ContractID: SaleContractID
 		}
-	}).then(response => {
-		if (response.data != null && response.data.length > 0) {
+	}).then(purchaseResponse => {
+		// 检查是否有采购合同数据
+		if (!purchaseResponse.data || purchaseResponse.data.length === 0) {
+			ElMessage.error('该销售合同没有关联的采购合同，无法创建出运单！');
+			// 清空参考合同选择
+			AddShippingDeliveryform.value.referenceContractNumber = '';
+			// 清空相关数据
+			shippingDeliveryContrctProductTableData.value = [];
 			shippingDeliveryPurchaseDetailsTableData.value = [];
-			response.data.forEach((element) => {
-				shippingDeliveryPurchaseDetailsTableData.value.push({
-					purchaseContractID: element.purchaseContractID,
-					purchaseContractProductID: element.purchaseContractProductID,
-					purchaseContractNumber: element.purchaseContractNumber,
-					purchaseShippingNumber: element.purchaseContractNumber,
-					shipmentQuantity: element.contractQuantity,
-					vendorAbbreviation: state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictLabel || '无',
-					productNumber: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
-					chineseName: element.chineseName,
-					purchaseCurrency: state.optionss.hr_export_currency.find(item => item.dictValue === element.purchaseCurrency.toString())?.dictLabel || '无',
-					purchaseUnitPrice: element.purchasePrice,
-					purchaseTotalPrice: element.purchaseTotalPrice,
-					measurementUnit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
-					invoice: element.invoice,
-					totalVolume: element.TotalVolume,
-					totalGrossWeight: element.TotalGrossWeight,
-					contractQuantity: element.contractQuantity
-				});
-			});
+			return;
 		}
+
+		// 有采购合同数据，继续获取销售合同信息
+		request({
+			url: 'Contracts/GetContractDetailsById/GetContractDetails',
+			method: 'GET',
+			params: {
+				contractId: SaleContractID
+			}
+		}).then(response => {
+			if (response.data != null) {
+				AddShippingDeliveryform.value.customerNumber = state.optionss.customer_data.find(item => item.dictValue === response.data.contract.customerId.toString())?.dictValue || '';
+				customerNumberChange();//改变客户编号
+				AddShippingDeliveryform.value.salesContractNumber = response.data.contract.contractNumber;
+				AddShippingDeliveryform.value.customerContractNumber = response.data.contract.customerContract;
+				AddShippingDeliveryform.value.ourCompany = response.data.contract.ourCompany.toString();
+				AddShippingDeliveryform.value.exportCurrency = response.data.contract.foreignCurrency.toString();
+				AddShippingDeliveryform.value.exchangeRate = response.data.contract.exchangeRate;
+				AddShippingDeliveryform.value.priceTerms = response.data.contract.priceTerms.toString();
+				AddShippingDeliveryform.value.departurePort = response.data.contract.shippingPort.toString();
+				AddShippingDeliveryform.value.destinationPort = response.data.contract.destinationPort.toString();
+				AddShippingDeliveryform.value.tradeCountry = response.data.contract.tradeCountry.toString();
+				AddShippingDeliveryform.value.settlementMethod = response.data.contract.settlementMethod.toString();
+				AddShippingDeliveryform.value.transportationMethod = response.data.contract.transportation.toString();
+				shippingDeliveryContrctProductTableData.value = [];
+				response.data.contractProducts.forEach((element) => {
+					var ShippingQuantity = 0;
+					request({
+						url: 'ShippingDeliveries/GetShippingQuantityByContractIDAndProductID/GetShippingQuantity',
+						method: 'GET',
+						params: {
+							ContractID: element.contractId,
+							ProductID: element.id
+						}
+					}).then(ShippingQuantityResponse => {
+						ShippingQuantity = ShippingQuantityResponse.data;
+						shippingDeliveryContrctProductTableData.value.push({
+							contractId: element.contractId,
+							contractProductId: element.id,
+							contractNumber: response.data.contract.contractNumber,
+							productCode: element.productCode,
+							chineseName: element.chineseName,
+							contractQuantity: element.contractQuantity,
+							RemainingQuantityToBeShipped: element.contractQuantity - ShippingQuantity,
+							shipmentQuantity: element.contractQuantity - ShippingQuantity,
+							unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
+							exportUnitPrice: element.exportUnitPrice,
+							exportTotalPrice: element.exportTotalPrice,
+							specialRequirements: element.specialRequirements,
+							outerBoxQuantity: element.outerBoxQuantity,
+							boxCount: element.boxCount,
+							outerBoxUnit: state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerboxunit.toString())?.dictLabel || '无',
+							outerBoxLength: element.outerBoxLength,
+							outerBoxWidth: element.outerBoxWidth,
+							outerBoxHeight: element.outerBoxHeight,
+							outerBoxVolume: element.outerBoxVolume,
+							totalVolume: element.totalVolume,
+							outerBoxNetWeight: element.outerBoxNetWeight,
+							outerBoxGrossWeight: element.outerBoxGrossWeight,
+							totalNetWeight: element.totalNetWeight,
+							totalGrossWeight: element.totalGrossWeight,
+							singlesalesrevenue: element.singlesalesrevenue
+						});
+					});
+				}).catch(error => {
+					console.log(error)
+				})
+
+			}
+		}).catch(error => {
+			console.error(error);
+		});
+
+		// 填充采购合同数据
+		shippingDeliveryPurchaseDetailsTableData.value = [];
+		purchaseResponse.data.forEach((element) => {
+			shippingDeliveryPurchaseDetailsTableData.value.push({
+				purchaseContractID: element.purchaseContractID,
+				purchaseContractProductID: element.purchaseContractProductID,
+				purchaseContractNumber: element.purchaseContractNumber,
+				purchaseShippingNumber: element.purchaseContractNumber,
+				shipmentQuantity: element.contractQuantity,
+				vendorAbbreviation: state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictLabel || '无',
+				productNumber: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
+				chineseName: element.chineseName,
+				purchaseCurrency: state.optionss.hr_export_currency.find(item => item.dictValue === element.purchaseCurrency.toString())?.dictLabel || '无',
+				purchaseUnitPrice: element.purchasePrice,
+				purchaseTotalPrice: element.purchaseTotalPrice,
+				measurementUnit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
+				invoice: element.invoice,
+				totalVolume: element.TotalVolume,
+				totalGrossWeight: element.TotalGrossWeight,
+				contractQuantity: element.contractQuantity
+			});
+		});
 	}).catch(error => {
-		console.error(error);
+		console.error('获取采购合同信息失败:', error);
+		ElMessage.error('获取采购合同信息失败，请稍后重试');
 	});
 }
 
@@ -1200,6 +1130,12 @@ const validateForm = () => {
 	// 验证是否有产品明细
 	if (!shippingDeliveryContrctProductTableData.value.length) {
 		ElMessage.warning('请添加产品明细');
+		return false;
+	}
+
+	// 验证是否有采购合同数据
+	if (!shippingDeliveryPurchaseDetailsTableData.value.length) {
+		ElMessage.warning('没有关联的采购合同数据，无法创建出运单');
 		return false;
 	}
 
