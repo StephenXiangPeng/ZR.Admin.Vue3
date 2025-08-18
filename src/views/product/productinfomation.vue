@@ -80,10 +80,10 @@
 									size="small">草稿</el-tag>
 							</template>
 						</el-table-column>
-						<el-table-column prop="chineseProductName" label="中文品名" width="200"></el-table-column>
-						<el-table-column prop="chineseSpecification" label="中文规格" width="200"></el-table-column>
+						<el-table-column prop="chineseProductName" label="中文品名" width="150"></el-table-column>
 						<el-table-column prop="englishProductName" label="英文品名" width="200"></el-table-column>
-						<el-table-column prop="unitOfMeasurement" label="计量单位" width="200"></el-table-column>
+						<el-table-column prop="chineseSpecification" label="中文规格" width="200"></el-table-column>
+						<el-table-column prop="unitOfMeasurement" label="计量单位" width="100"></el-table-column>
 						<el-table-column label="产品图片" width="200">
 							<template #default="scope">
 								<el-image v-if="scope.row.productPhotoPath"
