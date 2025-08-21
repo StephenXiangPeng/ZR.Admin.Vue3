@@ -53,7 +53,7 @@
 			<el-table-column prop="realQuotationDate" label="实际报价日期" :width="180" :formatter="formatDate" />
 			<el-table-column prop="quotationStatus" label="报价状态" :width="150" v-if="false" />
 			<el-table-column prop="validityPeriod" label="有效期限" :width="150" />
-			<el-table-column prop="customerNum" label="客户编号" :width="150" />
+			<el-table-column prop="customerNum" label="客户编号" :width="150" v-if="false" />
 			<el-table-column prop="customerName" label="客户简称" :width="150" />
 			<el-table-column prop="totalValueOfGoods" label="货值合计" :width="150" />
 			<el-table-column prop="totalQuantity" label="数量合计" :width="150" v-if="false" />

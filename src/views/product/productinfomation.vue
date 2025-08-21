@@ -70,45 +70,48 @@
 					<el-divider></el-divider>
 					<el-button type="primary" @click="openAddProductDialog()"
 						v-if="userId.toString() === '1' || userDepartment === 210">添加产品</el-button>
-					<el-table :data="ProductInfoTableData" row-key="id"
-						:tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
-						@sort-change="handleSortChange">
-						<el-table-column prop="productCode" label="产品编号" width="200" sortable="custom">
-							<template #default="scope">
-								<span>{{ scope.row.productCode }}</span>
-								<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
-									size="small">草稿</el-tag>
-							</template>
-						</el-table-column>
-						<el-table-column prop="chineseProductName" label="中文品名" width="150"></el-table-column>
-						<el-table-column prop="englishProductName" label="英文品名" width="200"></el-table-column>
-						<el-table-column prop="chineseSpecification" label="中文规格" width="200"></el-table-column>
-						<el-table-column prop="unitOfMeasurement" label="计量单位" width="100"></el-table-column>
-						<el-table-column label="产品图片" width="200">
-							<template #default="scope">
-								<el-image v-if="scope.row.productPhotoPath"
-									:src="getFirstImageUrl(scope.row.productPhotoPath)"
-									style="width: 50px; height: 50px; object-fit: cover;"
-									:preview-src-list="getImageUrlList(scope.row.productPhotoPath)" :initial-index="0"
-									fit="cover" :preview-teleported="true">
-								</el-image>
-							</template>
-						</el-table-column>
-						<el-table-column label="最近成交" width="200">
-							<template #default="scope">
-								{{ formatDate(scope.row.recentTransactionDate) }}
-							</template>
-						</el-table-column>
-						<el-table-column fixed="right" label="操作" width="200">
-							<template #default="scope">
-								<el-button link type="primary" size="small" v-if="!scope.row.isSubProduct"
-									@click="OpenProductInfoDetailDialog(scope.row)">查看详情</el-button>
-								<el-button link type="danger" size="small"
-									v-if="isDelteBtnShow && userId.toString() === '1' && !scope.row.isSubProduct"
-									@click="DeleteProduct(scope.row)">删除产品</el-button>
-							</template>
-						</el-table-column>
-					</el-table>
+					<div class="table-wrapper">
+						<el-table :data="ProductInfoTableData" row-key="id"
+							:tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
+							@sort-change="handleSortChange"
+							style="width: 100%; overflow-x: scroll; overflow-y: hidden;">
+							<el-table-column prop="productCode" label="产品编号" width="200" sortable="custom">
+								<template #default="scope">
+									<span>{{ scope.row.productCode }}</span>
+									<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+										size="small">草稿</el-tag>
+								</template>
+							</el-table-column>
+							<el-table-column prop="chineseProductName" label="中文品名" width="150"></el-table-column>
+							<el-table-column prop="englishProductName" label="英文品名" width="200"></el-table-column>
+							<el-table-column prop="chineseSpecification" label="中文规格" width="200"></el-table-column>
+							<el-table-column prop="unitOfMeasurement" label="计量单位" width="100"></el-table-column>
+							<el-table-column label="产品图片" width="200">
+								<template #default="scope">
+									<el-image v-if="scope.row.productPhotoPath"
+										:src="getFirstImageUrl(scope.row.productPhotoPath)"
+										style="width: 50px; height: 50px; object-fit: cover;"
+										:preview-src-list="getImageUrlList(scope.row.productPhotoPath)"
+										:initial-index="0" fit="cover" :preview-teleported="true">
+									</el-image>
+								</template>
+							</el-table-column>
+							<el-table-column label="最近成交" width="200">
+								<template #default="scope">
+									{{ formatDate(scope.row.recentTransactionDate) }}
+								</template>
+							</el-table-column>
+							<el-table-column fixed="right" label="操作" width="200">
+								<template #default="scope">
+									<el-button link type="primary" size="small" v-if="!scope.row.isSubProduct"
+										@click="OpenProductInfoDetailDialog(scope.row)">查看详情</el-button>
+									<el-button link type="danger" size="small"
+										v-if="isDelteBtnShow && userId.toString() === '1' && !scope.row.isSubProduct"
+										@click="DeleteProduct(scope.row)">删除产品</el-button>
+								</template>
+							</el-table-column>
+						</el-table>
+					</div>
 					<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
 						:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
 				</el-main>

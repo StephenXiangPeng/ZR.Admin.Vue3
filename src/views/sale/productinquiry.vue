@@ -24,7 +24,7 @@
 			</el-row>
 		</div>
 		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;客户询价表</span>
+			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;询价表</span>
 			<el-divider></el-divider>
 			<el-table :data="InquityTableData" style="width: 100%" stripe :size="small">
 				<el-table-column prop="inquiry_number" label="询价单号">
@@ -93,7 +93,7 @@
 					:disabled="isEditable">导入产品</el-button>
 				<el-button class="mt-4" type="primary" @click="onAddInquiryProductItem" style="margin-bottom: 10px;"
 					:disabled="isEditable">添加新产品</el-button>
-				<el-table :data="inquryProductTableData" height="450" stripe>
+				<el-table :data="inquryProductTableData" stripe>
 					<el-table-column prop="productId" label="产品ID" width="150" align="center" v-if="false">
 						<template #default="{ row }">
 							<el-input v-model="row.productId" :disabled="isEditable" />
@@ -106,7 +106,12 @@
 							</el-tag>
 						</template>
 					</el-table-column>
-					<el-table-column prop="date" label="日期" width="150" align="center" />
+					<el-table-column prop="date" label="日期" width="150" align="center">
+						<template #default="{ row }">
+							<el-input v-if="!isEditable" v-model="row.date" />
+							<span v-else>{{ row.date }}</span>
+						</template>
+					</el-table-column>
 					<el-table-column prop="productimage" label="询价产品图片" width="150" align="center">
 						<template #default="scope">
 							<!-- 如果没有图片且可编辑，显示上传按钮 -->
@@ -139,128 +144,166 @@
 					</el-table-column>
 					<el-table-column prop="productnumber" label="编号" width="150" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.productnumber" :disabled="isEditable || row.status == 1" />
+							<el-input v-if="!isEditable" v-model="row.productnumber" />
+							<span v-else>{{ row.productnumber }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="productspecifications" label="规格" width="150" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.productspecifications" :disabled="isEditable || row.status == 1" />
+							<el-input v-if="!isEditable" v-model="row.productspecifications" />
+							<span v-else>{{ row.productspecifications }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="mainmaterials" label="主要材料" width="150" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.mainmaterials" :disabled="isEditable || row.status == 1" />
+							<el-input v-if="!isEditable" v-model="row.mainmaterials" />
+							<span v-else>{{ row.mainmaterials }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="smallpackagingmethod" label="小包装方式" width="150" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.smallpackagingmethod" :disabled="isEditable || row.status == 1" />
+							<el-input v-if="!isEditable" v-model="row.smallpackagingmethod" />
+							<span v-else>{{ row.smallpackagingmethod }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column prop="supplierID" label="供应商" width="150" align="center">
+						<template #default="{ row }">
+							<el-input v-if="!isEditable" v-model="row.supplierID" disabled />
+							<span v-else-if="row.status === 1" class="highlight-field">{{
+								getSupplierLabel(row.supplierID) }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column prop="quoteNotes" label="备注" width="150" align="center">
+						<template #default="{ row }">
+							<el-input v-if="!isEditable" v-model="row.quoteNotes" disabled />
+							<span v-else-if="row.status === 1" class="highlight-field">{{ row.quoteNotes }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="variousminimumorderquantities" label="各种起订量" width="120" align="center">
 						<el-table-column prop="moq" label="MOQ" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.moq" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.moq" disabled />
+								<span v-else-if="row.status === 1" class="highlight-field">{{ row.moq }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="negotiateprice" label="议价" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.negotiateprice" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.negotiateprice" disabled />
+								<span v-else-if="row.status === 1" class="highlight-field">{{ row.negotiateprice
+								}}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="custommade" label="定制" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.custommade" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.custommade" disabled />
+								<span v-else-if="row.status === 1" class="highlight-field">{{ row.custommade }}</span>
 							</template>
 						</el-table-column>
 					</el-table-column>
 					<el-table-column prop="priceterms" label="价格条款" width="170" align="center">
 						<template #default="{ row }">
-							<el-select v-model="row.priceterms" filterable placeholder="选择价格条款"
-								:disabled="isEditable || row.status == 1">
+							<el-select v-if="!isEditable" v-model="row.priceterms" filterable placeholder="选择价格条款"
+								disabled>
 								<el-option v-for="dict in optionss.
 									hr_purchase_pricing_term" :key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
+							<span v-else-if="row.status === 1" class="highlight-field">{{
+								getPriceTermsLabel(row.priceterms) }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="taxincluded" label="含税+/-(%)" width="120" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.taxincluded" :disabled="isEditable || row.status == 1" />
+							<el-input v-if="!isEditable" v-model="row.taxincluded" disabled />
+							<span v-else-if="row.status === 1" class="highlight-field">{{ row.taxincluded }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="QuoteQuantity" label="报价数量" width="120" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.QuoteQuantity" :disabled="isEditable || row.status == 1" />
+							<el-input v-if="!isEditable" v-model="row.QuoteQuantity" disabled />
+							<span v-else-if="row.status === 1" class="highlight-field">{{ row.QuoteQuantity }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="price" label="价格" width="120" align="center">
 						<template #default="{ row }">
-							<el-input v-model="row.price" :disabled="isEditable || row.status == 1" />
+							<el-input v-if="!isEditable" v-model="row.price" disabled />
+							<span v-else-if="row.status === 1" class="highlight-field">{{ row.price }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="singleproductsalessize" label="单个产品销售尺寸(CM)" width="120" align="center">
 						<el-table-column prop="productlength" label="长" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.productlength" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.productlength" />
+								<span v-else>{{ row.productlength }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="productwidth" label="宽" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.productwidth" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.productwidth" />
+								<span v-else>{{ row.productwidth }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="productheight" label="高" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.productheight" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.productheight" />
+								<span v-else>{{ row.productheight }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="productweight" label="克重" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.productweight" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.productweight" />
+								<span v-else>{{ row.productweight }}</span>
 							</template>
 						</el-table-column>
 					</el-table-column>
 					<el-table-column prop="boxing" label="装箱" width="120" align="center">
 						<el-table-column prop="mediumpackaging" label="中包装" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.mediumpackaging" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.mediumpackaging" />
+								<span v-else>{{ row.mediumpackaging }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerbox" label="外箱" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerbox" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.outerbox" />
+								<span v-else>{{ row.outerbox }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="middlebagorouterbox" label="中包/外箱" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.middlebagorouterbox" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.middlebagorouterbox" />
+								<span v-else>{{ row.middlebagorouterbox }}</span>
 							</template>
 						</el-table-column>
 					</el-table-column>
 					<el-table-column prop="outerboxdata" label="外箱数据(CM)" width="120" align="center">
 						<el-table-column prop="outerboxlength" label="长" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerboxlength" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.outerboxlength" />
+								<span v-else>{{ row.outerboxlength }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxwidth" label="宽" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerboxwidth" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.outerboxwidth" />
+								<span v-else>{{ row.outerboxwidth }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxheight" label="高" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerboxheight" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.outerboxheight" />
+								<span v-else>{{ row.outerboxheight }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxvolume" label="体积m³" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerboxvolume" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.outerboxvolume" />
+								<span v-else>{{ row.outerboxvolume }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxgrossweight" label="毛重KGS" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-model="row.outerboxgrossweight" :disabled="isEditable || row.status == 1" />
+								<el-input v-if="!isEditable" v-model="row.outerboxgrossweight" />
+								<span v-else>{{ row.outerboxgrossweight }}</span>
 							</template>
 						</el-table-column>
 					</el-table-column>
@@ -466,6 +509,8 @@ const handleRowDblClick = (row) => {
 			productspecifications: row.chineseSpecification,
 			mainmaterials: '',
 			smallpackagingmethod: '',
+			supplierID: '',
+			quoteNotes: '',
 			moq: 0,
 			negotiateprice: 0,
 			custommade: 0,
@@ -554,6 +599,8 @@ const onAddInquiryProductItem = () => {
 		productspecifications: '',
 		mainmaterials: '',
 		smallpackagingmethod: '',
+		supplierID: '',
+		quoteNotes: '',
 		moq: 0,
 		negotiateprice: 0,
 		custommade: 0,
@@ -604,6 +651,21 @@ const handleImageDelete = (index) => {
 };
 
 const isEditable = ref(true);
+
+// 获取供应商标签
+const getSupplierLabel = (supplierID) => {
+	if (!supplierID) return '';
+	const supplier = state.optionss.sql_supplier_info?.find(item => Number(item.dictValue) === Number(supplierID));
+	return supplier ? supplier.dictLabel : supplierID;
+};
+
+// 获取价格条款标签
+const getPriceTermsLabel = (priceTerms) => {
+	if (!priceTerms) return '';
+	const priceTerm = state.optionss.hr_purchase_pricing_term?.find(item => Number(item.dictValue) === Number(priceTerms));
+	return priceTerm ? priceTerm.dictLabel : priceTerms;
+};
+
 /*创建询价单Dialog中的Button*/
 const isEditBtnVisible = ref(false);
 const isEditSaveBtnVisible = ref(false);
@@ -638,7 +700,8 @@ const state = reactive({
 		hr_calculate_unit: [],
 		sql_product: [],
 		hr_packing: [],
-		hr_purchase_pricing_term: []
+		hr_purchase_pricing_term: [],
+		sql_supplier_info: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -646,7 +709,7 @@ var dictParams = [{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' }
 { dictType: 'hr_settlement_way' }, { dictType: 'hr_pricing_term' }, { dictType: 'hr_nation' }, { dictType: 'sql_hr_sale' }, { dictType: 'hr_transport_port' },
 { dictType: 'hr_transportation_method' }, { dictType: 'sys_yes_no' }, { dictType: 'hr_calculate_unit' }, { dictType: 'hr_contract_status' },
 { dictType: 'hr_customer_level' }, { dictType: 'hr_signing_place' }, { dictType: 'hr_quotation_basis' }, { dictType: 'hr_outerbox_unit' }, { dictType: 'sql_product' },
-{ dictType: 'hr_packing' }, { dictType: 'hr_purchase_pricing_term' }]
+{ dictType: 'hr_packing' }, { dictType: 'hr_purchase_pricing_term' }, { dictType: 'sql_supplier_info' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -946,10 +1009,12 @@ const ChcekDetails = (row) => {
 					productspecifications: item.productSpecifications,
 					mainmaterials: item.mainMaterials,
 					smallpackagingmethod: item.smallPackagingMethod,
+					supplierID: item.supplierID,
+					quoteNotes: item.quoteNotes,
 					moq: item.moq,
 					negotiateprice: item.negotiateprice,
 					custommade: item.customMade,
-					priceterms: item.priceTerms == 0 ? 0 : state.optionss.hr_purchase_pricing_term.find(option => option.dictValue === item.priceTerms.toString())?.dictValue,
+					priceterms: item.priceTerms,
 					taxincluded: item.taxIncluded,
 					price: item.price,
 					QuoteQuantity: item.quoteQuantity,
@@ -1391,10 +1456,12 @@ const loadProductList = async (inquiryId) => {
 					productspecifications: item.productSpecifications,
 					mainmaterials: item.mainMaterials,
 					smallpackagingmethod: item.smallPackagingMethod,
+					supplierID: item.supplierID,
+					quoteNotes: item.quoteNotes,
 					moq: item.moq,
 					negotiateprice: item.negotiateprice,
 					custommade: item.customMade,
-					priceterms: item.priceTerms == 0 ? 0 : state.optionss.hr_purchase_pricing_term.find(option => option.dictValue === item.priceTerms.toString())?.dictValue,
+					priceterms: item.priceTerms,
 					taxincluded: item.taxIncluded,
 					price: item.price,
 					QuoteQuantity: item.quoteQuantity,
@@ -1590,3 +1657,14 @@ const SubmitInquiry = async () => {
 	}
 }
 </script>
+
+<style scoped>
+.highlight-field {
+	color: #409eff;
+	font-weight: bold;
+	background-color: #f0f9ff;
+	padding: 2px 6px;
+	border-radius: 4px;
+	border: 1px solid #b3d8ff;
+}
+</style>
