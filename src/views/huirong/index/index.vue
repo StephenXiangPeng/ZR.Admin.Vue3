@@ -6075,6 +6075,7 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
+  height: 100%;
 }
 
 /* 日历卡片样式 */
@@ -6082,7 +6083,7 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 400px;
+  min-height: 430px;
   margin-bottom: 0;
 }
 
@@ -6295,7 +6296,6 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 740px;
   margin-bottom: 0;
 }
 
@@ -6305,6 +6305,8 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
   flex-direction: column;
   overflow: hidden;
   margin-bottom: 0;
+  height: calc(100% - 70px);
+  /* 减去头部和金额区域的高度 */
 }
 
 .opportunities-list {
@@ -6320,6 +6322,8 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
   height: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .opportunity-column {
@@ -6329,6 +6333,7 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
   border-radius: 6px;
   overflow: hidden;
   height: 100%;
+  max-height: 100%;
   border: 1px solid #e4e7ed;
   gap: 4px;
 }
@@ -6372,6 +6377,8 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  max-height: calc(100% - 8px);
+  /* 减去padding */
 }
 
 .opportunity-item {
@@ -6455,6 +6462,12 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
 
 .opportunities-list::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* 确保滚动条在内容溢出时显示 */
+.opportunities-list {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* 响应式设计 */
