@@ -872,6 +872,7 @@
 <script lang="ts" setup>
 import { ref, watch, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
+import { useRoute } from 'vue-router'
 import {
 	Menu as IconMenu, Message, Setting, EditPen, Delete, Position, Search, FullScreen, Rank, Close,
 	ArrowDown, ArrowLeft, Right, Bell, ChatRound, Share, DocumentAdd, InfoFilled, User, SwitchButton,
@@ -946,6 +947,10 @@ function buildQuotedBlock(mail: {
 }
 // 路由实例
 const router = useRouter()
+const route = useRoute()
+
+// 防止重复执行自动打开邮件的标志
+const isAutoOpeningEmail = ref(false)
 
 // #region 系统标签定义
 const systemTags = [
@@ -1018,9 +1023,9 @@ const openBusinessOpportunitySelectionDialog = async (type, tagNames) => {
 			url: '/BusinessOpportunity/GetBusinessOpportunityListByUser/GetBusinessOpportunityList',
 			method: 'GET'
 		})
-		if (listResponse.code === 200 && listResponse.data?.length > 0) {
-			await handleOpportunityChange(listResponse.data[0].id)
-			BusinessOpportunityList.value = listResponse.data
+		if (listResponse?.data?.code === 200 && listResponse.data?.data?.length > 0) {
+			await handleOpportunityChange(listResponse.data.data[0].id)
+			BusinessOpportunityList.value = listResponse.data.data
 			BusinessOpportunitySelectionDialog.value = true
 		} else {
 			ElMessage.warning('未找到相关商机')
@@ -1040,8 +1045,8 @@ const handleOpportunityChange = async (opportunityId) => {
 				url: '/Quotation/GetQuotaionListByUser/GetQuotaionList',
 				method: 'GET'
 			})
-			if (response.code === 200) {
-				quotationList.value = response.data
+			if (response?.data?.code === 200) {
+				quotationList.value = response.data.data
 			}
 		} else if (BusinessOpportunityForm.value.type === 'contract') {
 			const response = await request({
@@ -1386,7 +1391,8 @@ const resetAllData = () => {
 		cc: '',
 		date: '',
 		content: '',
-		attachments: []
+		attachments: [],
+		tags: []
 	}
 	ConfigEmaildialog.value = false
 	IsEditUserEmailConfig.value = false
@@ -1490,7 +1496,7 @@ const refreshCurrentView = async () => {
 		} else if (activeMenu.value.startsWith('tag-')) {
 			// 标签模式
 			const tagId = activeMenu.value.replace('tag-', '')
-			EmailTagIndex.value = tagId
+			EmailTagIndex.value = Number(tagId)
 			await getInboxEmail(currentPage.value, pageSize.value, 1)
 		} else if (activeMenu.value.startsWith('folder-')) {
 			// 文件夹模式
@@ -2609,7 +2615,8 @@ const handleRowClick = async (row, column, event) => {
 				id: attachment.id,
 				name: attachment.attachmentsName,
 				fileUrl: attachment.attachmentsDownLoadUrl
-			}))
+			})),
+			tags: []
 		}
 
 		EmailModel.id = row.id
@@ -3391,7 +3398,7 @@ const handleForward = async () => {
 		const raw = currentEmail.value.content || ''
 		const safeBody = extractBodyHtml(stripQuotedBlock(raw))
 
-		// 组装“转发邮件”块（你原来的样式保留）
+		// 组装"转发邮件"块（你原来的样式保留）
 		const forwardedBlock = `
       <div style="border-left: 3px solid #007bff; padding-left: 15px; margin: 20px 0; color: #666; background-color: #f0f8ff; padding: 15px; border-radius: 4px;">
         <div style="font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 1px solid #007bff; padding-bottom: 10px;">
@@ -3502,7 +3509,7 @@ const editDraft = async () => {
 		quotedHtml.value = quotedFromDraft || ''   // 没有的话可保持空
 		showQuoted.value = false                   // 默认折叠（按你习惯）
 
-		// 编辑器：只放“回复部分”
+		// 编辑器：只放"回复部分"
 		const quill = quillEditor.value?.getQuill?.() || quillEditor.value?.quill
 		if (quill) {
 			const delta = quill.clipboard.convert(replyHtml || '')
@@ -4099,14 +4106,207 @@ onMounted(async () => {
 
 		// 获取标签列表
 		await GetUserEmailTagList()
+
+		// 检查路由参数，如果有id参数则自动打开邮件详情
+		await nextTick()
+		console.log('路由对象:', route)
+		console.log('路由查询参数:', route?.query)
+
+		if (route && route.query && route.query.id) {
+			const emailId = route.query.id
+			console.log('检测到路由参数，自动打开邮件详情，ID:', emailId)
+			await autoOpenEmailDetail(emailId)
+		} else {
+			console.log('未检测到路由参数或参数为空')
+		}
 	} catch (error) {
 		console.error('初始化失败:', error)
 	}
 })
 
+// 自动打开邮件详情的函数
+const autoOpenEmailDetail = async (emailId) => {
+	// 防止重复执行
+	if (isAutoOpeningEmail.value) {
+		console.log('正在执行自动打开邮件，跳过重复请求')
+		return
+	}
+
+	isAutoOpeningEmail.value = true
+
+	try {
+		console.log('开始自动打开邮件详情，ID:', emailId)
+
+		// 显示搜索状态提示
+		const loading = ElLoading.service({
+			lock: true,
+			text: `正在搜索邮件 (ID: ${emailId})...`,
+			background: 'rgba(0, 0, 0, 0.7)'
+		})
+
+		// 首先尝试通过API直接获取邮件详情
+		try {
+			const response = await request({
+				url: 'Email/GetEmailById/GetEmailById',
+				method: 'GET',
+				params: { id: emailId }
+			})
+
+			if (response.code === 200 && response.data) {
+				const emailData = response.data
+				console.log('通过API获取到邮件数据:', emailData)
+				console.log('发件人信息:', {
+					fromEmail: emailData.fromEmail,
+					fromEmailAddress: emailData.fromEmailAddress
+				})
+				console.log('收件人信息:', {
+					toEmail: emailData.toEmail,
+					toEmailAddress: emailData.toEmailAddress
+				})
+
+				// 关闭加载提示
+				loading.close()
+
+				// 构造邮件对象
+				const targetEmail = {
+					id: emailData.id,
+					subject: emailData.emailsubject,
+					from: emailData.fromEmail, // 发件人完整信息（包含姓名）
+					to: emailData.toEmail, // 收件人完整信息（包含姓名）
+					cc: emailData.ccEmail || null,
+					date: emailData.emaildate,
+					content: emailData.emailContent,
+					emailTags: emailData.emailTags,
+					EmailID: emailData.emailID,
+					hasAttachments: emailData.isAttachments === 1,
+					isRead: emailData.isRead,
+					fromEmailAddress: emailData.fromEmailAddress, // 发件人邮箱地址
+					toEmailAddress: emailData.toEmailAddress, // 收件人邮箱地址
+					// 添加其他可能需要的字段
+					fromEmail: emailData.fromEmail,
+					toEmail: emailData.toEmail,
+					ccEmail: emailData.ccEmail
+				}
+
+				console.log('构造的邮件对象:', targetEmail)
+				console.log('邮件对象中的发件人:', targetEmail.from)
+				console.log('邮件对象中的收件人:', targetEmail.to)
+
+				// 根据邮件类型设置正确的文件夹状态
+				const emailType = emailData.emailType || '1'
+				const menuNames = {
+					'1': '收件箱',
+					'2': '已发邮件',
+					'3': '草稿箱',
+					'4': '垃圾箱',
+					'6': '归档邮件'
+				}
+
+				setCurrentFolderState('system', emailType, menuNames[emailType])
+
+				// 模拟点击行来打开邮件详情
+				await handleRowClick(targetEmail, {}, {})
+				ElMessage.success('邮件详情已打开')
+				return
+			} else {
+				console.log('API返回数据格式不正确:', response)
+				ElMessage.warning('邮件数据格式异常，尝试其他方式获取')
+			}
+		} catch (apiError) {
+			console.log('API获取邮件失败，尝试在现有列表中搜索:', apiError)
+			ElMessage.warning('API获取失败，尝试在现有列表中搜索')
+		}
+
+		// 如果API获取失败，尝试在现有邮件列表中搜索
+		let targetEmail = null
+		let foundInType = null
+		let foundInFolder = null
+
+		// 在现有邮件列表中搜索
+		if (EmailTableData.value?.length > 0) {
+			const foundEmail = EmailTableData.value.find(item =>
+				item.id.toString() === emailId.toString()
+			)
+
+			if (foundEmail) {
+				targetEmail = foundEmail
+				console.log('在现有列表中找到目标邮件:', targetEmail)
+			} else {
+				console.log('在现有列表中未找到邮件，ID:', emailId)
+			}
+		} else {
+			console.log('当前邮件列表为空，无法搜索')
+		}
+
+		// 关闭加载提示
+		loading.close()
+
+		// 如果找到了邮件，打开详情
+		if (targetEmail) {
+			console.log('找到目标邮件，自动打开详情:', targetEmail)
+
+			if (foundInFolder) {
+				// 在自定义文件夹中找到的邮件
+				setCurrentFolderState('folder', foundInFolder.dataId, foundInFolder.label, foundInFolder, { type: foundInFolder.type })
+			} else {
+				// 在系统文件夹中找到的邮件
+				const menuNames = {
+					'1': '收件箱',
+					'2': '已发邮件',
+					'3': '草稿箱',
+					'4': '垃圾箱',
+					'6': '归档邮件'
+				}
+				setCurrentFolderState('system', foundInType || '1', menuNames[foundInType || '1'])
+			}
+
+			// 模拟点击行来打开邮件详情
+			await handleRowClick(targetEmail, {}, {})
+			ElMessage.success(`邮件详情已打开 (ID: ${emailId})`)
+		} else {
+			console.warn('在所有邮件文件夹中未找到对应的邮件，ID:', emailId)
+			ElMessage.warning(`未找到邮件 (ID: ${emailId})，可能已被删除或移动，已返回收件箱`)
+
+			// 返回收件箱
+			await MenuClick(1)
+		}
+	} catch (error) {
+		console.error('自动打开邮件详情失败:', error)
+		ElMessage.error('自动打开邮件详情失败')
+	} finally {
+		// 重置标志
+		isAutoOpeningEmail.value = false
+	}
+}
+
 onUnmounted(() => {
 	stopAutoSave()
 })
+
+// 监听路由变化，处理URL参数
+watch(() => route.query, (newQuery) => {
+	console.log('路由查询参数变化:', newQuery)
+	if (newQuery && newQuery.id) {
+		console.log('检测到路由参数变化，自动打开邮件详情，ID:', newQuery.id)
+		// 延迟执行，确保路由和组件完全加载
+		setTimeout(() => {
+			autoOpenEmailDetail(newQuery.id)
+		}, 500)
+	}
+}, { immediate: true })
+
+// 监听路由路径变化，处理URL参数
+watch(() => route.path, (newPath) => {
+	console.log('路由路径变化:', newPath)
+	if (newPath === '/email' && route.query && route.query.id) {
+		console.log('检测到邮件页面路由，自动打开邮件详情，ID:', route.query.id)
+		// 延迟执行，确保路由和组件完全加载
+		setTimeout(() => {
+			autoOpenEmailDetail(route.query.id)
+		}, 500)
+	}
+}, { immediate: true })
+
 // #endregion
 
 // #region 批量移动至文件夹功能
@@ -4455,7 +4655,7 @@ const handleBatchMoveToFolder = async () => {
 
 // 重新设计的批量移动请求参数构建
 const buildBatchMoveRequest = (folderData, emailIds) => {
-	const request = {
+	const request: any = {
 		emailIds: emailIds
 	}
 

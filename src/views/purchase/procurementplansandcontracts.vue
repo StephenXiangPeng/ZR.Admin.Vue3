@@ -284,7 +284,12 @@
 						<el-table-column prop="invoice" label="是否开票" width="150"></el-table-column>
 						<el-table-column prop="innerBoxQuantity" label="内盒装量" width="150"></el-table-column>
 						<el-table-column prop="outerBoxQuantity" label="外箱装量" width="150"></el-table-column>
-						<el-table-column prop="remark" label="备注" width="150"></el-table-column>
+						<el-table-column prop="remark" label="备注" width="200">
+							<template #default="scope">
+								<el-input v-model="scope.row.remark" placeholder="请输入备注" :disabled="isFormDisabled"
+									style="width: 140px"></el-input>
+							</template>
+						</el-table-column>
 					</el-table>
 				</el-tab-pane>
 				<el-tab-pane label="厂家相关费用" name="relatedcosts">
@@ -626,7 +631,8 @@ const GeneratePurchaseContract = (row) => {
 				Addcontractofpurchaseform.value.customerid = response.data.contract.customerId;
 				Addcontractofpurchaseform.value.customerAbbreviation = response.data.contract.customerAbbreviation;
 				Addcontractofpurchaseform.value.deliveryDate = response.data.contract.deliveryDate;
-				Addcontractofpurchaseform.value.purchaseCurrency = response.data.contract.foreignCurrency.toString();
+				// 设置采购币种默认为人民币
+				Addcontractofpurchaseform.value.purchaseCurrency = "3";
 				Addcontractofpurchaseform.value.deposit = "0";
 				Addcontractofpurchaseform.value.salesperson = response.data.contract.salesperson.toString();
 				Addcontractofpurchaseform.value.priceTerms = response.data.contract.priceTerms.toString();
@@ -644,7 +650,8 @@ const GeneratePurchaseContract = (row) => {
 						contractQuantity: product.contractQuantity,
 						purchaseUnitPrice: product.purchaseUnitPrice,
 						purchaseTotalPrice: product.purchaseTotalPrice,
-						deliveryDate: product.deliveryDate,
+						// 如果产品没有交货日期，则使用基本信息中的交货日期
+						deliveryDate: product.deliveryDate || response.data.contract.deliveryDate,
 						productionLeadTime: product.productionLeadTime,
 						packaging: state.optionss.hr_packing.find(item => item.dictValue === product.packaging.toString())?.dictLabel || '无',
 						specialRequirements: product.specialRequirements,
@@ -655,6 +662,8 @@ const GeneratePurchaseContract = (row) => {
 					}));
 					// 先加载供应商数据
 					await loadSupplierData(productinfotableData.value);
+					// 设置默认交货日期
+					setDefaultDeliveryDateForProducts(Addcontractofpurchaseform.value.deliveryDate);
 				}
 
 				// 绑定合计信息
@@ -689,12 +698,25 @@ const GeneratePurchaseContract = (row) => {
 	});
 }
 
+// 设置产品表格中所有产品的默认交货日期
+const setDefaultDeliveryDateForProducts = (defaultDeliveryDate) => {
+	if (productinfotableData.value && productinfotableData.value.length > 0) {
+		productinfotableData.value.forEach(product => {
+			if (!product.deliveryDate) {
+				product.deliveryDate = defaultDeliveryDate;
+			}
+		});
+	}
+}
+
 const OpenAddcontractofpurchasedialog = async () => {
 	isGeneratedFromRequirement.value = false; // 重置标志
 	clearAll();
 	await GetNewPurchaseContractNumber();
 	Addcontractofpurchaseform.value.purchaser = userId.toString();
 	Addcontractofpurchaseform.value.contractStatus = '1';
+	// 设置采购币种默认为人民币
+	Addcontractofpurchaseform.value.purchaseCurrency = "3";
 	Addcontractofpurchasedialog.value = true;
 	isSaveBtnShow.value = true;
 	showApproveRejectBtn.value = false;
@@ -702,6 +724,8 @@ const OpenAddcontractofpurchasedialog = async () => {
 	// 新增：如果有产品数据，加载供应商数据
 	if (productinfotableData.value.length > 0) {
 		await loadSupplierData(productinfotableData.value);
+		// 设置默认交货日期
+		setDefaultDeliveryDateForProducts(Addcontractofpurchaseform.value.deliveryDate);
 	}
 }
 

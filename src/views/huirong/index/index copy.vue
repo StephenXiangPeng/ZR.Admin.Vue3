@@ -1,284 +1,281 @@
 <template>
   <div class="home">
-    <!-- 任务看板 - 优化布局 -->
-    <el-row :gutter="12" class="dashboard-header">
-      <el-col :lg="8" class="mb8">
-        <el-card class="dashboard-card" shadow="hover">
-          <div class="card-header">
-            <el-icon class="card-icon">
-              <Clock />
-            </el-icon>
-            <span class="card-title">待办流程</span>
-          </div>
-          <div class="card-content">
-            <div class="metric-row">
-              <span class="metric-label">待您处理</span>
-              <el-button type="text" class="metric-value primary" @click="WaitingforyouProcessedClick">
-                {{ pendingCount }}
-              </el-button>
-            </div>
-            <div class="metric-row">
-              <span class="metric-label">超时未处理</span>
-              <el-button type="text" class="metric-value danger" @click="TimeoutNotProcessedClick">
-                {{ TimeoutNotProcessedCount }}
-              </el-button>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :lg="8" class="mb8">
-        <el-card class="dashboard-card" shadow="hover">
-          <div class="card-header">
-            <el-icon class="card-icon">
-              <Warning />
-            </el-icon>
-            <span class="card-title">业务示警</span>
-          </div>
-          <div class="card-content">
-            <div class="metric-row">
-              <span class="metric-label">交货逾期</span>
-              <el-button type="text" class="metric-value danger" @click="OverdueDeliveryContractClick">
-                {{ OverdueDeliveryContractCount }}
-              </el-button>
-            </div>
-            <div class="metric-row">
-              <span class="metric-label">货款逾期</span>
-              <el-button type="text" class="metric-value danger" @click="PaymentoverdueClick">
-                {{ PaymentoverdueCount }}
-              </el-button>
-            </div>
-            <div class="metric-row">
-              <span class="metric-label">沟通逾期</span>
-              <el-button type="text" class="metric-value danger" @click="CommunicationOverdueClick">
-                {{ CommunicationOverdueCount }}
-              </el-button>
-            </div>
+    <!-- 任务看板 -->
+    <el-row :gutter="15" style="font-size: 25px;">
+      <el-col :lg="8" class="mb10">
+        <el-card style="height: 100%; border: 0px;" shadow="never">
+          <div class="text-warning mb10">待办流程</div>
+          <el-divider></el-divider>
+          <div class="work-wrap" style="font-size: 25px;">
+            <el-row>
+              <el-col>
+                <span>待您处理</span>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col>
+                <span>超时未处理</span>
+              </el-col>
+            </el-row>
+            <span>&nbsp;&nbsp;&nbsp;<el-button type="text" style="font-weight: bold;font-size: 30px; color: black;"
+                @click="WaitingforyouProcessedClick">{{
+                  pendingCount }}</el-button></span>
+            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<el-button type="text"
+                style="font-weight: bold;font-size: 30px; color: red;" @click="TimeoutNotProcessedClick">{{
+                  TimeoutNotProcessedCount }}</el-button></span>
           </div>
         </el-card>
       </el-col>
 
-      <el-col :lg="8" class="mb8">
-        <el-card class="dashboard-card" shadow="hover">
-          <div class="card-header">
-            <el-icon class="card-icon">
-              <Message />
-            </el-icon>
-            <span class="card-title">工作任务</span>
+      <el-col :lg="8" class="mb10">
+        <el-card style="height: 100%; border: 0px;" shadow="never">
+          <div class="text-warning mb10">业务示警</div>
+          <el-divider></el-divider>
+          <div class="work-wrap2">
+            <el-row>
+              <el-col>
+                <span>交货逾期</span>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col>
+                <span>货款逾期</span>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col>
+                <span>沟通逾期</span>
+              </el-col>
+            </el-row>
+            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;
+              <el-button type="text" style="font-weight: bold;font-size: 30px; color: red;"
+                @click="OverdueDeliveryContractClick">{{ OverdueDeliveryContractCount }}
+              </el-button>
+            </span>
+            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp;
+              <el-button type="text" style="font-weight: bold;font-size: 30px; color: red;"
+                @click="PaymentoverdueClick">{{ PaymentoverdueCount }}
+              </el-button></span>
+            <span style="font-weight: bold;font-size: 30px;">&nbsp;&nbsp; <el-button type="text"
+                style="font-weight: bold;font-size: 30px; color: red;" @click="CommunicationOverdueClick">{{
+                  CommunicationOverdueCount }}
+              </el-button></span>
           </div>
-          <div class="card-content">
-            <div class="metric-row">
-              <span class="metric-label">待您处理</span>
-              <el-button type="text" class="metric-value primary" @click="showPendingEmails">
-                {{ pendingEmailCount }}
-              </el-button>
-            </div>
-            <div class="metric-row">
-              <span class="metric-label">超时未处理</span>
-              <el-button type="text" class="metric-value danger" @click="showOverdueEmails">
-                {{ overdueEmailCount }}
-              </el-button>
-            </div>
+        </el-card>
+      </el-col>
+
+      <el-col :lg="8" class="mb10">
+        <el-card style="height: 100%;border: 0px;" shadow="never">
+          <div class="text-warning mb10">工作任务</div>
+          <el-divider></el-divider>
+          <div class="work-wrap">
+            <el-row>
+              <el-col>
+                <span>待您处理</span>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col>
+                <span>超时未处理</span>
+              </el-col>
+            </el-row>
+            <span style="font-weight: bold;font-size: 30px; cursor: pointer;"
+              @click="showPendingEmails">&nbsp;&nbsp;&nbsp;&nbsp;{{
+                pendingEmailCount }}</span>
+            <span style="color: red; font-weight: bold;font-size: 30px; cursor: pointer;"
+              @click="showOverdueEmails">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{
+                overdueEmailCount }}</span>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 主要内容区域 -->
-    <div class="main-content">
-      <!-- 左侧：日历和任务 -->
-      <div class="left-panel">
-        <!-- 紧凑型日历 -->
-        <el-card class="calendar-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <el-icon class="card-icon">
-                <Calendar />
-              </el-icon>
-              <span class="card-title">计划任务日历</span>
-            </div>
-          </template>
-          <div class="compact-calendar">
-            <div class="calendar-header">
-              <el-button-group>
-                <el-button size="small" @click="previousMonth">
-                  <el-icon>
-                    <ArrowLeft />
-                  </el-icon>
-                </el-button>
-                <span class="current-month">{{ currentMonthYear }}</span>
-                <el-button size="small" @click="nextMonth">
-                  <el-icon>
-                    <ArrowRight />
-                  </el-icon>
-                </el-button>
-              </el-button-group>
-            </div>
-            <div class="calendar-grid">
-              <div class="calendar-weekdays">
-                <div v-for="day in weekdays" :key="day" class="weekday">{{ day }}</div>
-              </div>
-              <div class="calendar-days">
-                <div v-for="date in calendarDays" :key="date.date" :class="['calendar-day', {
-                  'other-month': !date.isCurrentMonth,
-                  'today': date.isToday,
-                  'has-tasks': date.taskCount > 0
-                }]" @click="selectDate(date)">
-                  <div class="day-number">{{ date.day }}</div>
-                  <div v-if="date.taskCount > 0" class="task-indicator">
-                    <el-tag size="small" :type="date.hasOverdue ? 'danger' : 'warning'">
-                      {{ date.taskCount }}
-                    </el-tag>
-                  </div>
-                </div>
-              </div>
-              <!-- 调试信息 -->
-              <div v-if="calendarDays.length === 0" style="text-align: center; padding: 20px; color: #999;">
-                日历数据加载中...
-              </div>
-            </div>
-            <!-- 颜色含义提示 -->
-            <div class="calendar-legend">
-              <div class="legend-title">颜色说明：</div>
-              <div class="legend-items">
-                <div class="legend-item">
-                  <div class="legend-color normal"></div>
-                  <span class="legend-text">普通日期</span>
-                </div>
-                <div class="legend-item">
-                  <div class="legend-color today"></div>
-                  <span class="legend-text">今天</span>
-                </div>
-                <div class="legend-item">
-                  <div class="legend-color has-tasks"></div>
-                  <span class="legend-text">有任务</span>
-                </div>
-                <div class="legend-item">
-                  <div class="legend-color other-month"></div>
-                  <span class="legend-text">其他月份</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 工作任务 -->
-        <!-- 提醒事项和财务任务合并表格 -->
-        <el-card class="tasks-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <el-icon class="card-icon">
-                <List />
-              </el-icon>
-              <span class="card-title">待办事项</span>
-              <el-tabs v-model="tasksActiveTab" class="compact-tabs">
-                <el-tab-pane label="提醒事项" name="reminders"></el-tab-pane>
-                <el-tab-pane label="财务任务" name="financial"></el-tab-pane>
-              </el-tabs>
-            </div>
-          </template>
-
-          <!-- 提醒事项 -->
-          <div v-if="tasksActiveTab === 'reminders'" class="tasks-content">
-            <el-table :data="TaskReminderTableData" size="small" :max-height="200">
-              <el-table-column prop="taskName" label="项目分类" width="120" />
-              <el-table-column prop="taskDescription" label="内容" />
-              <el-table-column prop="reminderTime" label="时间节点" width="120">
-                <template #default="scope">
-                  {{ formatDateTime(scope.row.reminderTime) }}
-                </template>
-              </el-table-column>
-            </el-table>
-            <el-pagination v-model:current-page="TaskReminderTableCurrentPage"
-              v-model:page-size="TaskReminderTablePageSize" :total="TaskReminderTableTotalItems"
-              @current-change="TaskReminderTableshandlePageChange" layout="total, prev, pager, next" size="small" />
+    <!-- 计划任务日历 -->
+    <el-calendar class="custom-calendar" v-model="currentDate">
+      <template #date-cell="{ data }">
+        <div class="calendar-cell">
+          <!-- 日期显示部分 -->
+          <div :class="[
+            'date-text',
+            isToday(data.day) ? 'is-today' : '',
+            data.isSelected ? 'is-selected' : '',
+            calendarDates.find(d => formatDate(d.date) === data.day)?.type
+          ]">
+            {{ data.day.split('-').slice(1).join('-') }}
+            <span v-if="isToday(data.day)" class="today-icon">今日</span>
+            <span v-if="getDateTasks(data.day).length > 0" class="task-count">{{ getDateTasks(data.day).length }}</span>
           </div>
 
-          <!-- 财务任务 -->
-          <div v-if="tasksActiveTab === 'financial'" class="tasks-content">
-            <el-table :data="FinancialTasksTableData" size="small" :max-height="200">
-              <el-table-column prop="receiptNumber" label="收款单号" width="120" />
-              <el-table-column prop="receiptDate" label="收汇日期" width="100" />
-              <el-table-column prop="ourCompany" label="我方公司" width="100" />
-              <el-table-column prop="amount" label="金额" width="100">
-                <template #default="{ row }">
-                  {{ formatAmountWithCurrency(row.amount, row.foreignCurrencyValue) }}
-                </template>
-              </el-table-column>
-              <el-table-column prop="bank" label="收汇银行" width="100" />
-              <el-table-column fixed="right" label="操作" width="80">
-                <template #default="{ row }">
-                  <el-button link type="primary" size="small" @click="handleClaim(row)">领取</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-            <el-pagination v-model:current-page="FinancialTasksTableCurrentPage"
-              v-model:page-size="FinancialTasksTablePageSize" :total="FinancialTasksTableTotalItems"
-              @current-change="FinancialTasksTableshandlePageChange" layout="total, prev, pager, next" size="small" />
+          <!-- 任务列表部分 -->
+          <div class="tasks-container">
+            <template v-for="task in getDateTasks(data.day)" :key="task.id">
+              <el-tooltip
+                :content="`${task.itemName}<br/>时间：${formatDateTime(task.timePoint)}<br/>备注：${task.remark || '无'}`"
+                raw-content placement="top">
+                <div class="task-item" :class="{ 'is-overdue': isOverdue(task.timePoint) }"
+                  @click="handleTaskClick(task)">
+                  <el-tag size="small" :type="isOverdue(task.timePoint) ? 'danger' : 'warning'">
+                    {{ task.itemName }}
+                  </el-tag>
+                </div>
+              </el-tooltip>
+            </template>
           </div>
-        </el-card>
-      </div>
+        </div>
+      </template>
+    </el-calendar>
+
+    <!-- 工作任务 -->
+    <span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;提醒事项</span>
+    <el-divider></el-divider>
+    <el-table :data="TaskReminderTableData" style="width: 50%;">
+      <el-table-column prop="taskName" label="项目分类" style="width: 25%;" />
+      <el-table-column prop="taskDescription" label="内容" style="width: 25%;" />
+      <el-table-column prop="reminderTime" label="原设定时间节点" style="width: 25%;">
+        <template #default="scope">
+          {{ formatDateTime(scope.row.reminderTime) }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="isCompleted" label="是否通知" style="width: 25%;" v-if="false">
+        <template #default="scope">
+          <span :class="scope.row.isCompleted ? 'text-success' : 'text-danger'">
+            {{ scope.row.isCompleted ? '已通知' : '未通知' }}
+          </span>
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-pagination v-model:current-page="TaskReminderTableCurrentPage" v-model:page-size="TaskReminderTablePageSize"
+      :total="TaskReminderTableTotalItems" @current-change="TaskReminderTableshandlePageChange"
+      layout="total, prev, pager, next" />
+
+    <div style="margin-top: 30px;"></div>
+    <!-- 财务任务 -->
+    <span style="font-size: 20px; font-weight: bold; margin-top: 30px;">&nbsp;&nbsp;财务任务</span>
+    <el-divider></el-divider>
+    <!--财务任务列表 -->
+    <el-table :data="FinancialTasksTableData" style="width: 100%">
+      <!-- 其他列... -->
+      <el-table-column prop="id" label="ID" v-if="false" />
+      <el-table-column prop="receiptNumber" label="收款单号" />
+      <el-table-column prop="receiptDate" label="收汇日期" />
+      <el-table-column prop="ourCompany" label="我方公司" />
+      <el-table-column prop="foreignCurrency" label="外销币种" v-if="false" />
+      <el-table-column prop="exchangeRate" label="汇率" v-if="false" />
+      <el-table-column prop="amount" label="金额">
+        <template #default="{ row }">
+          {{ formatAmountWithCurrency(row.amount, row.foreignCurrencyValue) }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="bank" label="收汇银行" />
+      <el-table-column label="收款凭证" width="120" v-if="false">
+        <template #default="{ row }">
+          <el-image v-if="row.receiptImageUrl" style="width: 50px; height: 50px; cursor: pointer"
+            :src="row.receiptImageUrl" :preview-src-list="[row.receiptImageUrl]" preview-teleported fit="cover"
+            :initial-index="0" hide-on-click-modal>
+            <template #error>
+              <div class="image-error">
+                <el-icon>
+                  <Picture />
+                </el-icon>
+              </div>
+            </template>
+          </el-image>
+          <span v-else>无图片</span>
+        </template>
+      </el-table-column>
+      <el-table-column fixed="right" label="操作" style="width: 25%;">
+        <template #default="{ row }">
+          <el-button link type="primary" size="small" @click="handleClaim(row)">领取</el-button>
+        </template>
+      </el-table-column>
+      <!-- 其他列... -->
+    </el-table>
+    <!-- 分页组件 -->
+    <el-pagination v-model:current-page="FinancialTasksTableCurrentPage" v-model:page-size="FinancialTasksTablePageSize"
+      :total="FinancialTasksTableTotalItems" @current-change="FinancialTasksTableshandlePageChange"
+      layout="total, prev, pager, next" />
 
 
-      <!-- 右侧：商机看板 -->
-      <div class="right-panel">
-        <el-card class="opportunities-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <el-icon class="card-icon">
-                <Message />
-              </el-icon>
-              <span class="card-title">商机看板</span>
+    <div style="margin-top: 30px;"></div>
+    <span style="font-size: 20px; font-weight: bold; ">&nbsp;&nbsp;商机</span>
+    <el-divider></el-divider>
+    <div style="display: flex; margin-top: 5px;">
+      <div v-for="stage in sortedStages" :key="stage.salesStage" style="width: 20%; height: 560px;">
+        <!-- 标题栏 -->
+        <div
+          style="background-color: #41c16e; height: 8%; padding: 10px; text-align: center; color: white; font-weight:500;">
+          {{ stage.salesStage }}（{{ stage.count }}）
+        </div>
+
+        <!-- 金额显示 - 询盘和沟通需求显示0，其他阶段显示实际金额 -->
+        <div style="text-align: center;">
+          <span style="color: black; font-weight: 600;">
+            CNY {{ shouldShowZeroAmount(stage.salesStage) ? '0.00' : formatAmount(stage.totalAmount) }}
+          </span>
+        </div>
+
+        <!-- 商机卡片列表 -->
+        <div style="overflow: auto; height: 490px;">
+          <el-card v-for="item in stage.details" :key="item.id" style="margin: 3px;" class="box-card">
+            <template #header>
+              <div class="card-header">
+                <span v-if="item.sourceType === 'api' && (stage.salesStage === '初次报价' || stage.salesStage === '再次报价')">
+                  报价单号：{{ item.opportunityNumber }}
+                </span>
+                <span v-else-if="item.sourceType === 'api' && stage.salesStage === '合同确定'">
+                  合同编号：{{ item.opportunityNumber }}
+                </span>
+                <span v-else>
+                  商机编号：{{ item.opportunityNumber }}
+                </span>
+              </div>
+            </template>
+            <!-- 报价单号显示特殊格式 -->
+            <div v-if="item.sourceType === 'api' && (stage.salesStage === '初次报价' || stage.salesStage === '再次报价')">
+              <div class="text item">创建时间：{{ formatDateTime(item.create_time) }}</div>
+              <div class="text item">客户简称：
+                <el-tooltip :content="item.businessName" placement="top" :disabled="item.businessName.length <= 8">
+                  <span class="truncate-text">{{ truncateText(item.businessName, 8) }}</span>
+                </el-tooltip>
+              </div>
+              <div class="text item">项目简介：
+                <el-tooltip :content="item.projectDescription" placement="top"
+                  :disabled="item.projectDescription.length <= 16">
+                  <span class="truncate-text">{{ truncateText(item.projectDescription, 16) }}</span>
+                </el-tooltip>
+              </div>
+              <div class="text item">金额：{{ formatAmountWithCurrency(item.amount, item.currency) }}</div>
             </div>
-          </template>
-          <div class="opportunities-container">
-            <div class="opportunities-grid">
-              <div v-for="stage in sortedStages" :key="stage.salesStage" class="opportunity-column">
-                <div class="column-header">
-                  <span class="stage-name">{{ stage.salesStage }}</span>
-                  <span class="stage-count">({{ stage.count }})</span>
-                </div>
-                <div class="column-amount">
-                  <span class="amount-text">
-                    CNY {{ shouldShowZeroAmount(stage.salesStage) ? '0.00' : formatAmount(stage.totalAmount) }}
-                  </span>
-                </div>
-                <div class="opportunities-list">
-                  <div v-for="item in stage.details" :key="item.id" class="opportunity-item"
-                    @click="handleOpportunityClick(item)">
-                    <div class="item-header">
-                      <span class="item-number">
-                        {{ item.sourceType === 'api' && (stage.salesStage === '初次报价' || stage.salesStage === '再次报价')
-                          ? `报价单号：${item.opportunityNumber}`
-                          : item.sourceType === 'api' && stage.salesStage === '合同确定'
-                            ? `合同编号：${item.opportunityNumber}`
-                            : `商机编号：${item.opportunityNumber}` }}
-                      </span>
-                    </div>
-                    <div class="item-content">
-                      <div class="item-row">
-                        <span class="item-label">客户：</span>
-                        <el-tooltip :content="item.businessName" placement="top"
-                          :disabled="item.businessName.length <= 8">
-                          <span class="item-value truncate">{{ truncateText(item.businessName, 8) }}</span>
-                        </el-tooltip>
-                      </div>
-                      <div class="item-row">
-                        <span class="item-label">时间：</span>
-                        <span class="item-value">{{ formatDate(item.create_time) }}</span>
-                      </div>
-                      <div v-if="shouldShowAmount(stage.salesStage)" class="item-row">
-                        <span class="item-label">金额：</span>
-                        <span class="item-value">{{ formatAmount(item.amount) }}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
+            <!-- 其他商机显示原有格式 -->
+            <div v-else>
+              <div class="text item">
+                <span v-if="item.sourceType === 'api'">客户名称：</span>
+                <span v-else>商机名称：</span>
+                <el-tooltip :content="item.businessName" placement="top" :disabled="item.businessName.length <= 8">
+                  <span class="truncate-text">{{ truncateText(item.businessName, 8) }}</span>
+                </el-tooltip>
+              </div>
+              <div class="text item">{{ item.customerLabel || '客户邮箱' }}：
+                <el-tooltip :content="item.customer" placement="top" :disabled="item.customer.length <= 16">
+                  <span class="truncate-text">{{ truncateText(item.customer, 16) }}</span>
+                </el-tooltip>
+              </div>
+              <div class="text item">创建时间：{{ formatDateTime(item.create_time) }}</div>
+              <!-- 根据销售阶段显示不同信息 -->
+              <div class="text item" v-if="shouldShowAmount(stage.salesStage)">
+                <span v-if="item.sourceType === 'api' && stage.salesStage === '合同确定'">
+                  合同金额：{{ formatAmount(item.amount) }}
+                </span>
+                <span v-else>
+                  预估金额：{{ formatAmount(item.amount) }}
+                </span>
               </div>
             </div>
-          </div>
-        </el-card>
+            <div class="text item" v-if="stage.salesStage === '沟通需求' && item.emailcreatetime">
+              最后沟通：{{ formatDateTime(item.emailcreatetime) }}
+            </div>
+          </el-card>
+        </div>
       </div>
     </div>
     <!-- <el-row :gutter="15" style=" margin-top: 30px; font-size: 25px;">
@@ -2161,7 +2158,7 @@
 </template>
 
 <script lang="ts" setup>
-import { getCurrentInstance, reactive, toRefs, ref, onMounted, h, watch, computed } from 'vue'
+import { getCurrentInstance, reactive, toRefs, ref, onMounted, h, watch } from 'vue'
 import { ElMessage, ElMessageBox, ElDatePicker, ElLoading, ElNotification } from "element-plus";
 import request from '@/utils/request';
 import dayjs from 'dayjs';
@@ -2169,7 +2166,7 @@ import useUserStore from '@/store/modules/user'
 import useSocketStore from '@/store/modules/socket'
 // 时间插件
 import duration from 'dayjs/plugin/duration'
-import { Picture, Warning, CircleCheck, Clock, Message, Calendar, List, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { Picture, Warning, CircleCheck } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { useRouter } from 'vue-router'
 import { eventBus } from '@/utils/eventBus'
@@ -2177,15 +2174,6 @@ import { useRoute } from 'vue-router'
 
 
 const totalAmount = ref(0);
-
-// 新增的响应式数据
-const tasksActiveTab = ref('reminders');
-const currentMonthYear = ref('');
-const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-const calendarDays = ref([]);
-
-// 确保calendarDays有初始值
-// 移除重复的onMounted，保留原有的
 
 const handleAddRowReceivingPaymentsDetails = () => {
   // 检查是否还有剩余金额可以分配
@@ -2406,158 +2394,6 @@ const getAssociatedDocumentOptionsData = async () => {
 const getAssociatedDocumentOptions = (module) => {
   // 直接返回从接口获取的数据，不再根据模块区分
   return associatedDocumentOptions.value || [];
-};
-
-// 日历相关方法
-const previousMonth = () => {
-  let currentDate;
-  if (currentMonthYear.value) {
-    const match = currentMonthYear.value.match(/(\d{4})年(\d{1,2})月/);
-    if (match) {
-      const year = parseInt(match[1]);
-      const month = parseInt(match[2]) - 1;
-      currentDate = new Date(year, month, 1);
-    } else {
-      currentDate = new Date();
-    }
-  } else {
-    currentDate = new Date();
-  }
-
-  currentDate.setMonth(currentDate.getMonth() - 1);
-  currentMonthYear.value = currentDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' });
-  generateCalendarDays();
-
-  // 获取上个月的任务数据
-  const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-  getPlanTaskItems(formatDate(startDate), formatDate(endDate));
-};
-
-const nextMonth = () => {
-  let currentDate;
-  if (currentMonthYear.value) {
-    const match = currentMonthYear.value.match(/(\d{4})年(\d{1,2})月/);
-    if (match) {
-      const year = parseInt(match[1]);
-      const month = parseInt(match[2]) - 1;
-      currentDate = new Date(year, month, 1);
-    } else {
-      currentDate = new Date();
-    }
-  } else {
-    currentDate = new Date();
-  }
-
-  currentDate.setMonth(currentDate.getMonth() + 1);
-  currentMonthYear.value = currentDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' });
-  generateCalendarDays();
-
-  // 获取下个月的任务数据
-  const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-  getPlanTaskItems(formatDate(startDate), formatDate(endDate));
-};
-
-const selectDate = (date) => {
-  // 实现日期选择逻辑
-  console.log('选择日期:', date);
-};
-
-const handleOpportunityClick = (item) => {
-  // 实现商机点击逻辑
-  console.log('点击商机:', item);
-};
-
-// 生成日历数据
-const generateCalendarDays = () => {
-  const today = new Date();
-  let currentDate;
-
-  // 安全地解析当前月份年份
-  if (currentMonthYear.value) {
-    // 尝试解析中文日期格式 "2024年1月"
-    const match = currentMonthYear.value.match(/(\d{4})年(\d{1,2})月/);
-    if (match) {
-      const year = parseInt(match[1]);
-      const month = parseInt(match[2]) - 1; // 月份从0开始
-      currentDate = new Date(year, month, 1);
-    } else {
-      currentDate = new Date();
-    }
-  } else {
-    currentDate = new Date();
-  }
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-
-  // 获取当月第一天和最后一天
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-
-  // 获取上个月的最后几天
-  const firstDayOfWeek = firstDay.getDay();
-  const prevMonthDays = [];
-  for (let i = firstDayOfWeek - 1; i >= 0; i--) {
-    const date = new Date(year, month, -i);
-    prevMonthDays.push({
-      date: date.toISOString().split('T')[0],
-      day: date.getDate(),
-      isCurrentMonth: false,
-      isToday: date.toDateString() === today.toDateString(),
-      taskCount: 0,
-      hasOverdue: false
-    });
-  }
-
-  // 获取当月的天数
-  const currentMonthDays = [];
-  for (let i = 1; i <= lastDay.getDate(); i++) {
-    const date = new Date(year, month, i);
-    const dateStr = date.toISOString().split('T')[0];
-    const tasks = getDateTasks(dateStr);
-    currentMonthDays.push({
-      date: dateStr,
-      day: i,
-      isCurrentMonth: true,
-      isToday: date.toDateString() === today.toDateString(),
-      taskCount: tasks.length,
-      hasOverdue: tasks.some(task => isOverdue(task.timePoint))
-    });
-  }
-
-  // 获取下个月的前几天
-  const lastDayOfWeek = lastDay.getDay();
-  const nextMonthDays = [];
-  for (let i = 1; i <= 6 - lastDayOfWeek; i++) {
-    const date = new Date(year, month + 1, i);
-    nextMonthDays.push({
-      date: date.toISOString().split('T')[0],
-      day: date.getDate(),
-      isCurrentMonth: false,
-      isToday: date.toDateString() === today.toDateString(),
-      taskCount: 0,
-      hasOverdue: false
-    });
-  }
-
-  calendarDays.value = [...prevMonthDays, ...currentMonthDays, ...nextMonthDays];
-  console.log('生成的日历数据:', calendarDays.value);
-};
-
-// 初始化日历
-const initCalendar = () => {
-  const today = new Date();
-  currentMonthYear.value = today.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' });
-  console.log('初始化日历，当前月份年份:', currentMonthYear.value);
-  generateCalendarDays();
-  console.log('生成的日历数据:', calendarDays.value);
-
-  // 获取当前月份的任务数据
-  const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  getPlanTaskItems(formatDate(startDate), formatDate(endDate));
 };
 
 
@@ -2959,7 +2795,7 @@ const handleClaim = async (row) => {
         receiptDate: details.receiptDate || '',
         ourCompany: details.ourCompany || '',
         foreignCurrency: details.foreignCurrency || '',
-        exchangeRate: details.exchangeRate ? String(parseFloat(details.exchangeRate)) : '',
+        exchangeRate: details.exchangeRate ? parseFloat(details.exchangeRate) : '',
         amount: details.amount || '',
         bank: details.bank || '',
         attachment: details.attachment || '',
@@ -4781,21 +4617,8 @@ const getPlanTaskItems = async (startDate, endDate) => {
       }
     })
     if (response.code === 200) {
-      // 处理新的数据结构：data是包含date和items的数组
-      if (Array.isArray(response.data)) {
-        // 将嵌套结构扁平化为任务数组
-        planTaskItems.value = response.data.reduce((acc, dateGroup) => {
-          if (dateGroup.items && Array.isArray(dateGroup.items)) {
-            return acc.concat(dateGroup.items)
-          }
-          return acc
-        }, [])
-      } else {
-        planTaskItems.value = []
-      }
-      console.log('处理后的计划任务数据:', planTaskItems.value)
-      // 重新生成日历数据以显示任务
-      generateCalendarDays()
+      // 确保response.data是数组
+      planTaskItems.value = Array.isArray(response.data) ? response.data : []
     } else {
       ElMessage.error('获取计划任务失败：' + response.msg)
       planTaskItems.value = []
@@ -4809,34 +4632,23 @@ const getPlanTaskItems = async (startDate, endDate) => {
 
 // 获取指定日期的任务
 const getDateTasks = (dateString) => {
-  // 从真实的计划任务数据中筛选指定日期的任务
-  const tasks = planTaskItems.value.filter(task => {
-    if (!task.timePoint) return false;
+  if (!Array.isArray(planTaskItems.value)) {
+    return []
+  }
 
-    // 直接解析时间字符串，避免时区问题
-    const taskDate = task.timePoint.split(' ')[0]; // 只取日期部分 "2025-08-24"
-    const matches = taskDate === dateString;
+  const dateData = planTaskItems.value.find(item => {
+    // 将接口返回的日期格式化为 YYYY-MM-DD 格式进行比较
+    const itemDate = formatDate(new Date(item.date))
+    return itemDate === dateString
+  })
 
-    // 调试信息
-    if (taskDate === '2025-08-24' || dateString === '2025-08-24') {
-      console.log('任务日期匹配:', {
-        taskDate,
-        dateString,
-        matches,
-        taskName: task.itemName
-      });
-    }
-
-    return matches;
-  });
-
-  return tasks;
+  return dateData?.items || []
 }
 
 // 格式化日期时间
 const formatDateTime = (dateTimeString) => {
   const date = new Date(dateTimeString)
-  if (isNaN(date.getTime())) {
+  if (isNaN(date)) {
     return ''
   }
   return `${formatDate(date)} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
@@ -4844,17 +4656,8 @@ const formatDateTime = (dateTimeString) => {
 
 // 判断任务是否过期
 const isOverdue = (timePoint) => {
-  if (!timePoint) return false;
-
-  // 解析时间字符串，避免时区问题
-  const [dateStr, timeStr] = timePoint.split(' ');
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const [hour, minute, second] = timeStr ? timeStr.split(':').map(Number) : [0, 0, 0];
-
-  const taskDate = new Date(year, month - 1, day, hour, minute, second);
-  const now = new Date();
-
-  return taskDate < now;
+  const date = new Date(timePoint)
+  return !isNaN(date) && date < new Date()
 }
 
 // 监听日历日期范围变化，获取对应时间段的任务
@@ -5470,9 +5273,6 @@ const shoppinglisttableDatahandleRowDblClick = (row) => {
 }
 
 onMounted(() => {
-  // 初始化日历
-  initCalendar();
-
   if (userStore.userInfo && userStore.userInfo.deptId === 210) {
     getInquiryList();
     GetProcurementequirements();
@@ -5973,505 +5773,6 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
 
   :deep(.el-input__inner) {
     color: #f56c6c;
-  }
-}
-
-/* 新增的紧凑布局样式 */
-.home {
-  padding: 8px;
-  background-color: #f5f7fa;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 仪表板头部样式 */
-.dashboard-header {
-  margin-bottom: 8px;
-  flex-shrink: 0;
-}
-
-.mb8 {
-  margin-bottom: 8px;
-}
-
-.dashboard-card {
-  height: 120px;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.dashboard-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.card-icon {
-  font-size: 18px;
-  color: #409eff;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.card-content {
-  padding: 0;
-}
-
-.metric-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2px;
-}
-
-.metric-label {
-  font-size: 12px;
-  color: #606266;
-}
-
-.metric-value {
-  font-size: 18px;
-  font-weight: 600;
-  padding: 0;
-  height: auto;
-}
-
-.metric-value.primary {
-  color: #409eff;
-}
-
-.metric-value.danger {
-  color: #f56c6c;
-}
-
-/* 主要内容区域 */
-.main-content {
-  flex: 1;
-  display: flex;
-  gap: 8px;
-}
-
-.left-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 0;
-}
-
-.right-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0;
-}
-
-/* 日历卡片样式 */
-.calendar-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 400px;
-  margin-bottom: 0;
-}
-
-.compact-calendar {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.calendar-header {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 8px;
-}
-
-.current-month {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0 12px;
-  line-height: 32px;
-}
-
-.calendar-grid {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 200px;
-}
-
-.calendar-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0;
-  margin-bottom: 4px;
-}
-
-.weekday {
-  text-align: center;
-  font-size: 12px;
-  color: #909399;
-  font-weight: 500;
-  padding: 4px 0;
-}
-
-.calendar-days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(6, 1fr);
-  gap: 0;
-  flex: 1;
-  min-height: 160px;
-}
-
-.calendar-day {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  border-radius: 0;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  min-height: 32px;
-  border: 1px solid transparent;
-  background-color: white;
-}
-
-.calendar-day:hover {
-  background-color: #f0f9ff;
-  border-color: #409eff;
-}
-
-.calendar-day.other-month {
-  color: #c0c4cc;
-  background-color: #fafafa;
-}
-
-.calendar-day.today {
-  background-color: #409eff;
-  color: white;
-  font-weight: bold;
-}
-
-.calendar-day.has-tasks {
-  background-color: #fff7e6;
-  border: 1px solid #ffd666;
-}
-
-/* 颜色含义提示样式 */
-.calendar-legend {
-  margin-top: 8px;
-  padding: 8px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  border: 1px solid #e4e7ed;
-}
-
-.legend-title {
-  font-size: 12px;
-  font-weight: 500;
-  color: #606266;
-  margin-bottom: 6px;
-}
-
-.legend-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 2px;
-  border: 1px solid #dcdfe6;
-}
-
-.legend-color.normal {
-  background-color: white;
-}
-
-.legend-color.today {
-  background-color: #409eff;
-}
-
-.legend-color.has-tasks {
-  background-color: #fff7e6;
-  border-color: #ffd666;
-}
-
-.legend-color.other-month {
-  background-color: #fafafa;
-}
-
-.legend-text {
-  font-size: 11px;
-  color: #606266;
-}
-
-.calendar-day.other-month {
-  color: #c0c4cc;
-}
-
-.day-number {
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.task-indicator {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-}
-
-/* 任务卡片样式 */
-.tasks-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 340px;
-  margin-bottom: 0;
-}
-
-.compact-tabs {
-  margin-left: auto;
-}
-
-.compact-tabs :deep(.el-tabs__header) {
-  margin: 0;
-}
-
-.compact-tabs :deep(.el-tabs__nav-wrap) {
-  padding: 0;
-}
-
-.compact-tabs :deep(.el-tabs__item) {
-  padding: 8px 16px;
-  font-size: 12px;
-}
-
-.tasks-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  margin-bottom: 0;
-}
-
-.tasks-content .el-table {
-  flex: 1;
-  overflow: hidden;
-}
-
-.tasks-content .el-table__body-wrapper {
-  overflow-y: auto;
-  max-height: none;
-}
-
-/* 商机看板样式 */
-.opportunities-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 740px;
-  margin-bottom: 0;
-}
-
-.opportunities-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  margin-bottom: 0;
-}
-
-.opportunities-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.opportunities-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-  height: 100%;
-}
-
-.opportunity-column {
-  display: flex;
-  flex-direction: column;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  overflow: hidden;
-  height: 100%;
-  border: 1px solid #e4e7ed;
-  gap: 4px;
-}
-
-.column-header {
-  background-color: #41c16e;
-  color: white;
-  padding: 4px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.stage-name {
-  display: block;
-}
-
-.stage-count {
-  display: block;
-  font-size: 10px;
-  opacity: 0.8;
-}
-
-.column-amount {
-  padding: 4px;
-  text-align: center;
-  background-color: white;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.amount-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.opportunities-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.opportunity-item {
-  background-color: white;
-  border-radius: 0;
-  padding: 4px;
-  margin-bottom: 0;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid #e4e7ed;
-  border-bottom: none;
-  min-height: 60px;
-  height: auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.opportunity-item:last-child {
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.opportunity-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
-  z-index: 10;
-  position: relative;
-}
-
-.item-header {
-  margin-bottom: 2px;
-}
-
-.item-number {
-  font-size: 11px;
-  color: #409eff;
-  font-weight: 500;
-}
-
-.item-content {
-  font-size: 11px;
-}
-
-.item-row {
-  display: flex;
-  margin-bottom: 1px;
-}
-
-.item-label {
-  color: #909399;
-  min-width: 40px;
-}
-
-.item-value {
-  color: #303133;
-  flex: 1;
-}
-
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-
-
-/* 自定义滚动条样式 */
-.opportunities-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.opportunities-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.opportunities-list::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.opportunities-list::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* 响应式设计 */
-@media (max-width: 1200px) {
-  .opportunities-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .opportunities-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .left-panel,
-  .right-panel {
-    height: auto;
   }
 }
 </style>
