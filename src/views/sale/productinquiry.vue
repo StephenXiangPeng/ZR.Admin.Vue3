@@ -128,15 +128,19 @@
 							<!-- 如果有图片，显示预览和删除按钮 -->
 							<template v-else>
 								<div>
-									<el-image style="width: 100px; height: 100px" :src="scope.row.productimage"
+									<el-image style="width: 37.8px; height: 37.8px" :src="scope.row.productimage"
 										:preview-src-list="[scope.row.productimage]" :zoom-rate="1.2" :max-scale="7"
-										:min-scale="0.2" fit="cover" preview-teleported="true">
+										:min-scale="0.2" fit="cover" preview-teleported="true"
+										class="product-image-small"
+										@mouseenter="showHoverImage($event, scope.row.productimage)"
+										@mouseleave="hideHoverImage">
 										<template #error>
 											<span>加载失败</span>
 										</template>
 									</el-image>
 									<div v-if="!isEditable && scope.row.status !== 1">
-										<el-button type="danger" @click="handleImageDelete(scope.$index)">删除</el-button>
+										<el-button type="danger" @click="handleImageDelete(scope.$index)"
+											size="small">删除</el-button>
 									</div>
 								</div>
 							</template>
@@ -229,31 +233,38 @@
 							<span v-else-if="row.status === 1" class="highlight-field">{{ row.price }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="singleproductsalessize" label="单个产品销售尺寸(CM)" width="120" align="center">
-						<el-table-column prop="productlength" label="长" width="120" align="center">
+					<el-table-column prop="singleproductsalessize" label="单个产品销售尺寸(CM)" width="120" align="center"
+						v-if="false">
+						<el-table-column prop="productlength" label="长" width="120" align="center" v-if="false">
 							<template #default="{ row }">
 								<el-input v-if="!isEditable" v-model="row.productlength" />
 								<span v-else>{{ row.productlength }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="productwidth" label="宽" width="120" align="center">
+						<el-table-column prop="productwidth" label="宽" width="120" align="center" v-if="false">
 							<template #default="{ row }">
 								<el-input v-if="!isEditable" v-model="row.productwidth" />
 								<span v-else>{{ row.productwidth }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="productheight" label="高" width="120" align="center">
+						<el-table-column prop="productheight" label="高" width="120" align="center" v-if="false">
 							<template #default="{ row }">
 								<el-input v-if="!isEditable" v-model="row.productheight" />
 								<span v-else>{{ row.productheight }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="productweight" label="克重" width="120" align="center">
+						<!-- <el-table-column prop="productweight" label="克重" width="120" align="center">
 							<template #default="{ row }">
 								<el-input v-if="!isEditable" v-model="row.productweight" />
 								<span v-else>{{ row.productweight }}</span>
 							</template>
-						</el-table-column>
+						</el-table-column> -->
+					</el-table-column>
+					<el-table-column prop="productweight" label="克重" width="120" align="center">
+						<template #default="{ row }">
+							<el-input v-if="!isEditable" v-model="row.productweight" />
+							<span v-else>{{ row.productweight }}</span>
+						</template>
 					</el-table-column>
 					<el-table-column prop="boxing" label="装箱" width="120" align="center">
 						<el-table-column prop="mediumpackaging" label="中包装" width="120" align="center">
@@ -268,7 +279,8 @@
 								<span v-else>{{ row.outerbox }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="middlebagorouterbox" label="中包/外箱" width="120" align="center">
+						<el-table-column prop="middlebagorouterbox" label="中包/外箱" width="120" align="center"
+							v-if="false">
 							<template #default="{ row }">
 								<el-input v-if="!isEditable" v-model="row.middlebagorouterbox" />
 								<span v-else>{{ row.middlebagorouterbox }}</span>
@@ -423,6 +435,12 @@
 				</span>
 			</template>
 		</el-dialog>
+
+		<!-- 悬停图片容器 -->
+		<div v-if="hoverImageVisible" class="hover-image-container"
+			:style="{ left: hoverImagePosition.x + 'px', top: hoverImagePosition.y + 'px' }">
+			<img :src="hoverImageSrc" alt="产品图片" />
+		</div>
 	</div>
 </template>
 <script setup lang="ts">
@@ -503,7 +521,7 @@ const handleRowDblClick = (row) => {
 		inquryProductTableData.value.push({
 			productId: row.id,
 			date: dayjs().format('YYYY-MM-DD'),
-			productimage: '',
+			productimage: row.productPhotoPath || '', // 如果有图片则导入，否则为空
 			productsupplementarydocuments: '',
 			productnumber: row.productCode,
 			productspecifications: row.chineseSpecification,
@@ -627,6 +645,11 @@ const selectedImages = ref([]); // 存储用户选择的图片文件
 const previewImage = ref(''); // 存储要预览的图片
 const previewVisible = ref(false); // 控制预览对话框的显示
 
+// 悬停图片相关
+const hoverImageVisible = ref(false);
+const hoverImageSrc = ref('');
+const hoverImagePosition = ref({ x: 0, y: 0 });
+
 const handleImageSelect = (event, index) => {
 	if (isEditable.value) return; // 如果不可编辑，直接返回
 	const file = event.raw || event; // 兼容不同的事件对象格式
@@ -648,6 +671,21 @@ const handleImageDelete = (index) => {
 	if (isEditable.value) return; // 如果不可编辑，直接返回
 	inquryProductTableData.value[index].productimage = ''; // 清空图片
 	selectedImages.value[index] = null; // 清空已选择的文件
+};
+
+// 显示悬停图片
+const showHoverImage = (event, imageSrc) => {
+	hoverImageSrc.value = imageSrc;
+	hoverImagePosition.value = {
+		x: event.clientX + 10,
+		y: event.clientY - 100
+	};
+	hoverImageVisible.value = true;
+};
+
+// 隐藏悬停图片
+const hideHoverImage = () => {
+	hoverImageVisible.value = false;
 };
 
 const isEditable = ref(true);
@@ -845,6 +883,7 @@ const uploadFilesAndSaveInquiry = async () => {
 		// 上传产品图片（每个产品只有一个图片）
 		for (let i = 0; i < inquryProductTableData.value.length; i++) {
 			const product = inquryProductTableData.value[i]
+			// 如果有新选择的图片文件，则上传
 			if (selectedImages.value[i]) {
 				const imageUrl = await uploadImageToLocal(selectedImages.value[i])
 				if (imageUrl) {
@@ -853,6 +892,8 @@ const uploadFilesAndSaveInquiry = async () => {
 					throw new Error(`产品 ${i + 1} 图片上传失败`)
 				}
 			}
+			// 如果没有新选择的图片，但productimage字段有值（可能是导入的图片），则保持原值
+			// 这样导入的图片路径会被保留
 		}
 
 		// 上传询价单附件
@@ -1666,5 +1707,30 @@ const SubmitInquiry = async () => {
 	padding: 2px 6px;
 	border-radius: 4px;
 	border: 1px solid #b3d8ff;
+}
+
+/* 产品图片悬停效果 */
+.product-image-small {
+	cursor: pointer;
+}
+
+/* 悬停图片容器 */
+.hover-image-container {
+	position: fixed;
+	z-index: 99999;
+	background: white;
+	border: 1px solid #dcdfe6;
+	border-radius: 4px;
+	box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.15);
+	padding: 6px;
+	pointer-events: none;
+}
+
+.hover-image-container img {
+	width: 189px;
+	/* 5cm = 189px (37.8px * 5) */
+	height: 189px;
+	object-fit: cover;
+	border-radius: 2px;
 }
 </style>

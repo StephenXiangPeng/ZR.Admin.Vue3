@@ -57,7 +57,8 @@
 		</div>
 
 		<!-- 处理询价单弹窗 -->
-		<el-dialog v-model="dialogVisible" :title="dialogEditMode ? '询价单处理' : '询价单详情'" width="80%" @close="closeDialog">
+		<el-dialog v-model="dialogVisible" :title="dialogEditMode ? '询价单处理' : '询价单详情'" width="80%" @close="closeDialog"
+			:close-on-click-modal="false">
 			<el-form ref="formRef" :model="dialogForm" :rules="rules" label-position="right">
 				<el-row>
 					<el-col :span="6">
@@ -106,9 +107,11 @@
 					<el-table-column prop="productimage" label="询价产品图片" width="150" align="center">
 						<template #default="scope">
 							<div v-if="scope.row.productimage">
-								<el-image style="width: 100px; height: 100px" :src="scope.row.productimage"
+								<el-image style="width: 37.8px; height: 37.8px" :src="scope.row.productimage"
 									:preview-src-list="[scope.row.productimage]" :zoom-rate="1.2" :max-scale="7"
-									:min-scale="0.2" fit="cover" preview-teleported="true">
+									:min-scale="0.2" fit="cover" preview-teleported="true" class="product-image-small"
+									@mouseenter="showHoverImage($event, scope.row.productimage)"
+									@mouseleave="hideHoverImage">
 									<template #error>
 										<span>加载失败</span>
 									</template>
@@ -152,11 +155,12 @@
 					<el-table-column prop="supplierID" label="供应商" width="200" align="center">
 						<template #default="{ row }">
 							<el-select v-if="dialogEditMode" v-model="row.supplierID" filterable clearable
-								style="width: 180px">
+								placeholder="请选择供应商" style="width: 180px">
 								<el-option v-for="item in row.supplierOptions" :key="item.value" :label="item.label"
 									:value="item.value" />
 							</el-select>
-							<span v-else>{{ getSupplierLabelForProduct(row.supplierID, row.supplierOptions) }}</span>
+							<span v-else>{{ row.supplierID === 0 ? '无供应商' : getSupplierLabelForProduct(row.supplierID,
+								row.supplierOptions) }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="quoteNotes" label="备注" width="200" align="center">
@@ -185,13 +189,14 @@
 							</template>
 						</el-table-column>
 					</el-table-column>
-					<el-table-column prop="priceTerms" label="价格条款" width="170" align="center">
+					<el-table-column prop="priceTerms" label="价格条款" width="200" align="center">
 						<template #default="{ row }">
-							<el-select v-if="dialogEditMode" v-model="row.priceTerms" filterable placeholder="选择价格条款">
+							<el-select v-if="dialogEditMode" v-model="row.priceTerms" filterable placeholder="请选择价格条款">
 								<el-option v-for="dict in optionss.hr_purchase_pricing_term" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
-							<span v-else>{{ getPriceTermsLabel(row.priceTerms) }}</span>
+							<span v-else>{{ row.priceTerms === 0 ? '无价格条款' : getPriceTermsLabel(row.priceTerms)
+							}}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="taxincluded" label="含税+/-(%)" width="120" align="center">
@@ -212,40 +217,50 @@
 							<span v-else>{{ row.price }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="singleproductsalessize" label="单个产品销售尺寸(CM)" width="120" align="center">
-						<el-table-column prop="productlength" label="长" width="120" align="center">
+					<el-table-column prop="singleproductsalessize" label="单个产品销售尺寸(CM)" width="120" align="center"
+						v-if="false">
+						<el-table-column prop="productlength" label="长" width="120" align="center" v-if="false">
 							<template #default="{ row }">
 								<span>{{ row.productlength }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="productwidth" label="宽" width="120" align="center">
+						<el-table-column prop="productwidth" label="宽" width="120" align="center" v-if="false">
 							<template #default="{ row }">
 								<span>{{ row.productwidth }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="productheight" label="高" width="120" align="center">
+						<el-table-column prop="productheight" label="高" width="120" align="center" v-if="false">
 							<template #default="{ row }">
 								<span>{{ row.productheight }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="productweight" label="克重" width="120" align="center">
+						<!-- <el-table-column prop="productweight" label="克重" width="120" align="center">
 							<template #default="{ row }">
 								<span>{{ row.productweight }}</span>
 							</template>
-						</el-table-column>
+						</el-table-column> -->
+					</el-table-column>
+					<el-table-column prop="productweight" label="克重" width="120" align="center">
+						<template #default="{ row }">
+							<span>{{ row.productweight }}</span>
+						</template>
 					</el-table-column>
 					<el-table-column prop="boxing" label="装箱" width="120" align="center">
 						<el-table-column prop="mediumpackaging" label="中包装" width="120" align="center">
 							<template #default="{ row }">
-								<span>{{ row.mediumpackaging }}</span>
+								<el-input v-if="dialogEditMode" v-model="row.mediumpackaging"
+									@input="calculateVolume(row)" />
+								<span v-else>{{ row.mediumpackaging }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerbox" label="外箱" width="120" align="center">
 							<template #default="{ row }">
-								<span>{{ row.outerbox }}</span>
+								<el-input v-if="dialogEditMode" v-model="row.outerbox" @input="calculateVolume(row)" />
+								<span v-else>{{ row.outerbox }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="middlebagorouterbox" label="中包/外箱" width="120" align="center">
+						<el-table-column prop="middlebagorouterbox" label="中包/外箱" width="120" align="center"
+							v-if="false">
 							<template #default="{ row }">
 								<span>{{ row.middlebagorouterbox }}</span>
 							</template>
@@ -254,17 +269,23 @@
 					<el-table-column prop="outerboxdata" label="外箱数据(CM)" width="120" align="center">
 						<el-table-column prop="outerboxlength" label="长" width="120" align="center">
 							<template #default="{ row }">
-								<span>{{ row.outerboxlength }}</span>
+								<el-input v-if="dialogEditMode" v-model="row.outerboxlength"
+									@input="calculateVolume(row)" />
+								<span v-else>{{ row.outerboxlength }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxwidth" label="宽" width="120" align="center">
 							<template #default="{ row }">
-								<span>{{ row.outerboxwidth }}</span>
+								<el-input v-if="dialogEditMode" v-model="row.outerboxwidth"
+									@input="calculateVolume(row)" />
+								<span v-else>{{ row.outerboxwidth }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxheight" label="高" width="120" align="center">
 							<template #default="{ row }">
-								<span>{{ row.outerboxheight }}</span>
+								<el-input v-if="dialogEditMode" v-model="row.outerboxheight"
+									@input="calculateVolume(row)" />
+								<span v-else>{{ row.outerboxheight }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxvolume" label="体积m³" width="120" align="center">
@@ -274,7 +295,8 @@
 						</el-table-column>
 						<el-table-column prop="outerboxgrossweight" label="毛重KGS" width="120" align="center">
 							<template #default="{ row }">
-								<span>{{ row.outerboxgrossweight }}</span>
+								<el-input v-if="dialogEditMode" v-model="row.outerboxgrossweight" />
+								<span v-else>{{ row.outerboxgrossweight }}</span>
 							</template>
 						</el-table-column>
 					</el-table-column>
@@ -352,6 +374,12 @@
 				</span>
 			</template>
 		</el-dialog>
+
+		<!-- 悬停图片容器 -->
+		<div v-if="hoverImageVisible" class="hover-image-container"
+			:style="{ left: hoverImagePosition.x + 'px', top: hoverImagePosition.y + 'px' }">
+			<img :src="hoverImageSrc" alt="产品图片" />
+		</div>
 	</div>
 </template>
 
@@ -361,6 +389,7 @@ import { ElMessage, ElMessageBox, FormInstance } from 'element-plus';
 import { Plus, Picture } from '@element-plus/icons-vue';
 import request from '@/utils/request'; // 导入请求工具
 import { useRoute } from 'vue-router';
+import { getDicts } from '@/api/system/dict/data';
 
 /*动态下拉框start*/
 const proxy = getCurrentInstance().proxy
@@ -373,9 +402,11 @@ const state = reactive({
 })
 const { optionss } = toRefs(state)
 var dictParams = [{ dictType: 'hr_purchase_pricing_term' }, { dictType: 'sql_hr_sale' }]
-proxy.getDicts(dictParams).then((response) => {
+getDicts(dictParams).then((response) => {
+	console.log('字典数据加载结果:', response);
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
+		console.log(`加载字典 ${element.dictType}:`, element.list);
 	})
 })
 /*动态下拉框end*/
@@ -439,14 +470,53 @@ const getSupplierLabel = (supplierId) => {
 
 // 获取产品特定的供应商标签
 const getSupplierLabelForProduct = (supplierId, productSupplierOptions) => {
-	const supplier = productSupplierOptions?.find(item => item.value === supplierId);
+	console.log('getSupplierLabelForProduct 调用:', { supplierId, productSupplierOptions });
+	if (!supplierId || supplierId === 0) return '';
+	// 确保类型匹配
+	const supplier = productSupplierOptions?.find(item => Number(item.value) === Number(supplierId));
+	console.log('找到的供应商:', supplier);
 	return supplier ? supplier.label : '';
 };
 
 // 获取价格条款标签
 const getPriceTermsLabel = (priceTerms) => {
+	console.log('getPriceTermsLabel 调用:', { priceTerms, availableOptions: optionss.value.hr_purchase_pricing_term });
+	if (!priceTerms || priceTerms === 0) return '';
+	// 确保类型匹配
 	const priceTerm = optionss.value.hr_purchase_pricing_term.find(item => Number(item.dictValue) === Number(priceTerms));
+	console.log('找到的价格条款:', priceTerm);
 	return priceTerm ? priceTerm.dictLabel : '';
+};
+
+// 计算体积
+const calculateVolume = (row) => {
+	const length = parseFloat(row.outerboxlength) || 0;
+	const width = parseFloat(row.outerboxwidth) || 0;
+	const height = parseFloat(row.outerboxheight) || 0;
+
+	// 计算体积 (长 * 宽 * 高) / 1000000 转换为立方米
+	const volume = (length * width * height) / 1000000;
+	row.outerboxvolume = volume.toFixed(4);
+};
+
+// 悬停图片相关
+const hoverImageVisible = ref(false);
+const hoverImageSrc = ref('');
+const hoverImagePosition = ref({ x: 0, y: 0 });
+
+// 显示悬停图片
+const showHoverImage = (event, imageSrc) => {
+	hoverImageSrc.value = imageSrc;
+	hoverImagePosition.value = {
+		x: event.clientX + 10,
+		y: event.clientY - 100
+	};
+	hoverImageVisible.value = true;
+};
+
+// 隐藏悬停图片
+const hideHoverImage = () => {
+	hoverImageVisible.value = false;
 };
 
 // 获取询价单列表
@@ -583,7 +653,6 @@ const editDetail = async (row) => {
 	console.log('编辑详情，传入的row:', row); // 添加调试日志
 	Object.assign(dialogForm, row);
 	dialogEditMode.value = true;
-
 	// 先加载产品详细信息（包括每个产品的供应商列表）
 	await loadInquiryDocuments(row.id);
 
@@ -598,7 +667,6 @@ const viewDetail = async (row) => {
 
 	// 先加载产品详细信息（包括每个产品的供应商列表）
 	await loadInquiryDocuments(row.id);
-
 	dialogVisible.value = true;
 };
 
@@ -626,7 +694,15 @@ const saveDetail = async () => {
 				Remark: product.quoteNotes || '无',
 				BuyerID: 0, // 后端会自动设置
 				IsDraft: 0,
-				Status: 1
+				Status: 1,
+				// 新增的包装和尺寸字段
+				MediumPackaging: Number(product.mediumpackaging || 0),
+				OuterBox: Number(product.outerbox || 0),
+				OuterBoxLength: Number(product.outerboxlength || 0),
+				OuterBoxWidth: Number(product.outerboxwidth || 0),
+				OuterBoxHeight: Number(product.outerboxheight || 0),
+				OuterBoxVolume: Number(product.outerboxvolume || 0),
+				OuterBoxGrossWeight: Number(product.outerboxgrossweight || 0)
 			};
 		});
 
@@ -677,7 +753,15 @@ const saveDetailAsDraft = async () => {
 				Remark: product.quoteNotes || '无',
 				BuyerID: 0, // 后端会自动设置
 				IsDraft: 1,
-				Status: 0
+				Status: 0,
+				// 新增的包装和尺寸字段
+				MediumPackaging: Number(product.mediumpackaging || 0),
+				OuterBox: Number(product.outerbox || 0),
+				OuterBoxLength: Number(product.outerboxlength || 0),
+				OuterBoxWidth: Number(product.outerboxwidth || 0),
+				OuterBoxHeight: Number(product.outerboxheight || 0),
+				OuterBoxVolume: Number(product.outerboxvolume || 0),
+				OuterBoxGrossWeight: Number(product.outerboxgrossweight || 0)
 			};
 		});
 
@@ -763,7 +847,14 @@ const loadInquiryDocuments = async (inquiryId) => {
 						}
 					}
 
-					processedProducts.push({
+					// 添加调试日志
+					console.log(`产品 ${product.productNumber} 的原始数据:`, {
+						supplierID: product.supplierID,
+						priceTerms: product.priceTerms,
+						productID: product.productID
+					});
+
+					const processedProduct = {
 						// 产品基本信息
 						id: product.id,
 						productID: product.productID,
@@ -777,15 +868,15 @@ const loadInquiryDocuments = async (inquiryId) => {
 						IsNewProduct: product.isNewProduct || 0,
 
 						// 可编辑字段
-						supplierID: product.supplierID || 0,
+						supplierID: product.supplierID !== undefined && product.supplierID !== null ? product.supplierID : 0,
 						quoteNotes: product.quoteNotes || '',
-						moq: product.moq || 0,
-						negotiateprice: product.negotiateprice || 0,
-						custommade: product.customMade || 0,
-						priceTerms: product.priceTerms || 0,
-						taxincluded: product.taxIncluded || 0,
-						quoteQuantity: product.quoteQuantity || 0,
-						price: product.price || 0,
+						moq: product.moq !== undefined && product.moq !== null ? product.moq : 0,
+						negotiateprice: product.negotiateprice !== undefined && product.negotiateprice !== null ? product.negotiateprice : 0,
+						custommade: product.customMade !== undefined && product.customMade !== null ? product.customMade : 0,
+						priceTerms: product.priceTerms !== undefined && product.priceTerms !== null ? product.priceTerms : 0,
+						taxincluded: product.taxIncluded !== undefined && product.taxIncluded !== null ? product.taxIncluded : 0,
+						quoteQuantity: product.quoteQuantity !== undefined && product.quoteQuantity !== null ? product.quoteQuantity : 0,
+						price: product.price !== undefined && product.price !== null ? product.price : 0,
 
 						// 产品尺寸信息
 						productlength: product.productLength || '',
@@ -807,11 +898,24 @@ const loadInquiryDocuments = async (inquiryId) => {
 
 						// 该产品的供应商选项
 						supplierOptions: productSupplierOptions
-					});
+					};
+
+					processedProducts.push(processedProduct);
 				}
 
 				productList.value = processedProducts;
 				console.log('处理后的产品列表:', productList.value); // 添加调试日志
+
+				// 添加详细的调试信息
+				productList.value.forEach((product, index) => {
+					console.log(`产品 ${index + 1} 详细信息:`, {
+						productName: product.productName,
+						supplierID: product.supplierID,
+						supplierOptions: product.supplierOptions,
+						priceTerms: product.priceTerms,
+						availablePriceTerms: optionss.value.hr_purchase_pricing_term
+					});
+				});
 			} else {
 				productList.value = [];
 			}
@@ -967,5 +1071,30 @@ onMounted(() => {
 :deep(.message-box-custom) {
 	width: 80%;
 	max-width: 800px;
+}
+
+/* 产品图片悬停效果 */
+.product-image-small {
+	cursor: pointer;
+}
+
+/* 悬停图片容器 */
+.hover-image-container {
+	position: fixed;
+	z-index: 99999;
+	background: white;
+	border: 1px solid #dcdfe6;
+	border-radius: 4px;
+	box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.15);
+	padding: 6px;
+	pointer-events: none;
+}
+
+.hover-image-container img {
+	width: 189px;
+	/* 5cm = 189px (37.8px * 5) */
+	height: 189px;
+	object-fit: cover;
+	border-radius: 2px;
 }
 </style>

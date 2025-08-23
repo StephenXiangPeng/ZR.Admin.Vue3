@@ -725,25 +725,54 @@
 									{{ formatDate(scope.row.update_time) }}
 								</template>
 							</el-table-column>
-							<el-table-column prop="supplierID" label="供应商编号" width="150" v-if="false"></el-table-column>
-							<el-table-column prop="supplierName" label="供应商简称" width="150"></el-table-column>
 							<el-table-column prop="productImage" label="产品图片" width="150">
 								<template #default="scope">
-									<el-image v-if="scope.row.productImage" :src="scope.row.productImage"
-										style="width: 50px; height: 50px; object-fit: cover;" fit="cover">
-									</el-image>
+									<div v-if="scope.row.productImage">
+										<el-image style="width: 37.8px; height: 37.8px" :src="scope.row.productImage"
+											:preview-src-list="[scope.row.productImage]" :zoom-rate="1.2" :max-scale="7"
+											:min-scale="0.2" fit="cover" preview-teleported="true"
+											class="product-image-small"
+											@mouseenter="showHoverImage($event, scope.row.productImage)"
+											@mouseleave="hideHoverImage">
+											<template #error>
+												<span>加载失败</span>
+											</template>
+										</el-image>
+									</div>
+									<div v-else class="no-image">
+										<el-icon>
+											<Picture />
+										</el-icon>
+										<span>暂无图片</span>
+									</div>
 								</template>
 							</el-table-column>
-							<el-table-column prop="productName" label="名称型号及规格" width="150"></el-table-column>
-							<el-table-column prop="smallPackagingMethod" label="包装方式" width="150"></el-table-column>
-							<el-table-column prop="minimumOrderQuantity" label="起订量" width="150"></el-table-column>
-							<el-table-column prop="discountOrderQuantity" label="折扣价起订量" width="150"></el-table-column>
-							<el-table-column prop="customOrderQuantity" label="定制起订量" width="150"></el-table-column>
-							<el-table-column prop="priceTerms" label="价格条款" width="150"></el-table-column>
-							<el-table-column prop="destination" label="报价目的地" width="150"></el-table-column>
-							<el-table-column prop="price" label="单价" width="150"></el-table-column>
-							<el-table-column prop="unitOfMeasurement" label="计量单位" width="150"></el-table-column>
+							<el-table-column prop="supplierID" label="规格" width="150" v-if="false"></el-table-column>
+							<el-table-column prop="mainMaterials" label="主要材料" width="150"></el-table-column>
+							<el-table-column prop="smallPackagingMethod" label="小包装方式" width="150"></el-table-column>
+							<el-table-column prop="supplierID" label="供应商" width="150">
+								<template #default="scope">
+									{{ getSupplierLabel(scope.row.supplierID) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="quoteNotes" label="备注" width="150"></el-table-column>
+							<el-table-column prop="moq" label="MOQ" width="150"></el-table-column>
+							<el-table-column prop="negotiateprice" label="议价" width="150"></el-table-column>
+							<el-table-column prop="customMade" label="定制" width="150"></el-table-column>
+							<el-table-column prop="priceTerms" label="价格条款" width="150">
+								<template #default="scope">
+									{{ getPriceTermsLabel(scope.row.priceTerms) }}
+								</template>
+							</el-table-column>
 							<el-table-column prop="taxIncluded" label="含税+/-" width="150"></el-table-column>
+							<el-table-column prop="quoteQuantity" label="报价数量" width="150"></el-table-column>
+							<el-table-column prop="price" label="价格" width="150"></el-table-column>
+							<el-table-column prop="productWeight" label="克重" width="150"></el-table-column>
+							<el-table-column prop="outerBoxLength" label="长" width="150"></el-table-column>
+							<el-table-column prop="outerBoxWidth" label="宽" width="150"></el-table-column>
+							<el-table-column prop="outerBoxHeight" label="高" width="150"></el-table-column>
+							<el-table-column prop="outerBoxVolume" label="体积" width="150"></el-table-column>
+							<el-table-column prop="outerBoxGrossWeight" label="毛重" width="150"></el-table-column>
 						</el-table>
 					</el-tab-pane>
 					<el-tab-pane label="销售历史" name="SaleHistoryTab">
@@ -809,13 +838,19 @@
 				</span>
 			</template>
 		</el-dialog>
+
+		<!-- 悬停图片容器 -->
+		<div v-if="hoverImageVisible" class="hover-image-container"
+			:style="{ left: hoverImagePosition.x + 'px', top: hoverImagePosition.y + 'px' }">
+			<img :src="hoverImageSrc" alt="产品图片" />
+		</div>
 	</div>
 </template>
 <script setup lang="ts">
 
 import { createApp, getCurrentInstance, reactive, toRefs, ref, callWithAsyncErrorHandling, nextTick, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox, ElForm, ElTable, ElDialog, ElDivider, ElButton, ElInput, ElSelect, ElOption, ElDatePicker, ElCascader, ElRow, ElCol, ElFormItem, ElTableColumn, ElImage, ElPagination, ElTabs, ElTabPane, ElUpload, ElIcon, ElTree, ElTreeV2 } from 'element-plus'
-import { Plus, Delete, Edit, Folder, ArrowLeft, ArrowRight, TopRight } from '@element-plus/icons-vue'
+import { Plus, Delete, Edit, Folder, ArrowLeft, ArrowRight, TopRight, Picture } from '@element-plus/icons-vue'
 import useUserStore from '@/store/modules/user'
 import { useDict } from '@/utils/dict'
 import request from '@/utils/request'
@@ -1358,12 +1393,13 @@ const state = reactive({
 		hr_calculate_unit: [],
 		hr_inspectionmark: [],
 		sql_supplier_info: [],
-		sql_all_user: []
+		sql_all_user: [],
+		hr_purchase_pricing_term: []
 	}
 })
 const { optionss } = toRefs(state)
 var dictParams = [{ dictType: 'hr_packing' }, { dictType: 'hr_calculate_unit' },
-{ dictType: 'hr_inspectionmark' }, { dictType: 'sql_supplier_info' }, { dictType: 'sql_all_user' }]
+{ dictType: 'hr_inspectionmark' }, { dictType: 'sql_supplier_info' }, { dictType: 'sql_all_user' }, { dictType: 'hr_purchase_pricing_term' }]
 
 // 封装Promise，等字典加载完再resolve
 const dictsLoaded = new Promise((resolve) => {
@@ -2323,6 +2359,40 @@ const OpenProductInfoDetailDialog = async (row) => {
 	// 获取询价记录并绑定到工厂报价表格
 	await loadInquiryProductHistory();
 }
+
+// 获取供应商标签
+const getSupplierLabel = (supplierID) => {
+	if (!supplierID) return '';
+	const supplier = state.optionss.sql_supplier_info?.find(item => Number(item.dictValue) === Number(supplierID));
+	return supplier ? supplier.dictLabel : supplierID;
+};
+
+// 获取价格条款标签
+const getPriceTermsLabel = (priceTerms) => {
+	if (!priceTerms) return '';
+	const priceTerm = state.optionss.hr_purchase_pricing_term?.find(item => Number(item.dictValue) === Number(priceTerms));
+	return priceTerm ? priceTerm.dictLabel : priceTerms;
+};
+
+// 悬停图片相关
+const hoverImageVisible = ref(false);
+const hoverImageSrc = ref('');
+const hoverImagePosition = ref({ x: 0, y: 0 });
+
+// 显示悬停图片
+const showHoverImage = (event, imageSrc) => {
+	hoverImageSrc.value = imageSrc;
+	hoverImagePosition.value = {
+		x: event.clientX + 10,
+		y: event.clientY - 100
+	};
+	hoverImageVisible.value = true;
+};
+
+// 隐藏悬停图片
+const hideHoverImage = () => {
+	hoverImageVisible.value = false;
+};
 
 // 加载询价产品历史记录
 const loadInquiryProductHistory = async () => {
@@ -3317,6 +3387,44 @@ const EditSaveDraft = async () => {
 /* 当图片被点击预览时，提高其z-index */
 .el-table .el-image:hover {
 	z-index: 2;
+}
+
+/* 产品图片悬停效果 */
+.product-image-small {
+	cursor: pointer;
+}
+
+/* 悬停图片容器 */
+.hover-image-container {
+	position: fixed;
+	z-index: 99999;
+	background: white;
+	border: 1px solid #dcdfe6;
+	border-radius: 4px;
+	box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.15);
+	padding: 6px;
+	pointer-events: none;
+}
+
+.hover-image-container img {
+	width: 189px;
+	/* 5cm = 189px (37.8px * 5) */
+	height: 189px;
+	object-fit: cover;
+	border-radius: 2px;
+}
+
+.no-image {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 37.8px;
+	height: 37.8px;
+	border: 1px dashed #dcdfe6;
+	border-radius: 4px;
+	color: #909399;
+	font-size: 12px;
 }
 
 /* 右键菜单样式 */
