@@ -156,10 +156,10 @@
 						<template #default="{ row }">
 							<el-select v-if="dialogEditMode" v-model="row.supplierID" filterable clearable
 								placeholder="请选择供应商" style="width: 180px">
-								<el-option v-for="item in row.supplierOptions" :key="item.value" :label="item.label"
-									:value="item.value" />
+								<el-option v-for="item in row.supplierOptions.filter(option => option.value !== 0)"
+									:key="item.value" :label="item.label" :value="item.value" />
 							</el-select>
-							<span v-else>{{ row.supplierID === 0 ? '无供应商' : getSupplierLabelForProduct(row.supplierID,
+							<span v-else>{{ !row.supplierID ? '无供应商' : getSupplierLabelForProduct(row.supplierID,
 								row.supplierOptions) }}</span>
 						</template>
 					</el-table-column>
@@ -192,10 +192,11 @@
 					<el-table-column prop="priceTerms" label="价格条款" width="200" align="center">
 						<template #default="{ row }">
 							<el-select v-if="dialogEditMode" v-model="row.priceTerms" filterable placeholder="请选择价格条款">
-								<el-option v-for="dict in optionss.hr_purchase_pricing_term" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
+								<el-option
+									v-for="dict in optionss.hr_purchase_pricing_term.filter(option => option.dictValue !== 0)"
+									:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
-							<span v-else>{{ row.priceTerms === 0 ? '无价格条款' : getPriceTermsLabel(row.priceTerms)
+							<span v-else>{{ !row.priceTerms ? '无价格条款' : getPriceTermsLabel(row.priceTerms)
 							}}</span>
 						</template>
 					</el-table-column>
@@ -405,8 +406,13 @@ var dictParams = [{ dictType: 'hr_purchase_pricing_term' }, { dictType: 'sql_hr_
 getDicts(dictParams).then((response) => {
 	console.log('字典数据加载结果:', response);
 	response.data.forEach((element) => {
-		state.optionss[element.dictType] = element.list
-		console.log(`加载字典 ${element.dictType}:`, element.list);
+		// 对于价格条款字典，过滤掉值为0的选项
+		if (element.dictType === 'hr_purchase_pricing_term') {
+			state.optionss[element.dictType] = element.list.filter(item => item.dictValue !== 0);
+		} else {
+			state.optionss[element.dictType] = element.list;
+		}
+		console.log(`加载字典 ${element.dictType}:`, state.optionss[element.dictType]);
 	})
 })
 /*动态下拉框end*/
@@ -689,7 +695,7 @@ const saveDetail = async () => {
 				CustomMade: Number(product.custommade || 0),
 				TaxIncluded: Number(product.taxincluded || 0),
 				PriceTerms: product.priceTerms ? Number(product.priceTerms) : null,
-				SupplierID: product.supplierID,
+				SupplierID: product.supplierID ? Number(product.supplierID) : 0,
 				QuoteNotes: product.quoteNotes || '',
 				Remark: product.quoteNotes || '无',
 				BuyerID: 0, // 后端会自动设置
@@ -837,10 +843,13 @@ const loadInquiryDocuments = async (inquiryId) => {
 								}
 							});
 							if (supplierRes.code === 200) {
-								productSupplierOptions = supplierRes.data.map(item => ({
-									value: item.dictValue,
-									label: item.dictLabel
-								}));
+								// 过滤掉值为0的供应商选项
+								productSupplierOptions = supplierRes.data
+									.filter(item => item.dictValue !== 0)
+									.map(item => ({
+										value: item.dictValue,
+										label: item.dictLabel
+									}));
 							}
 						} catch (error) {
 							console.error(`获取产品${product.productID}的供应商列表失败:`, error);
@@ -868,12 +877,12 @@ const loadInquiryDocuments = async (inquiryId) => {
 						IsNewProduct: product.isNewProduct || 0,
 
 						// 可编辑字段
-						supplierID: product.supplierID !== undefined && product.supplierID !== null ? product.supplierID : 0,
+						supplierID: product.supplierID !== undefined && product.supplierID !== null && product.supplierID !== 0 ? product.supplierID : null,
 						quoteNotes: product.quoteNotes || '',
 						moq: product.moq !== undefined && product.moq !== null ? product.moq : 0,
 						negotiateprice: product.negotiateprice !== undefined && product.negotiateprice !== null ? product.negotiateprice : 0,
 						custommade: product.customMade !== undefined && product.customMade !== null ? product.customMade : 0,
-						priceTerms: product.priceTerms !== undefined && product.priceTerms !== null ? product.priceTerms : 0,
+						priceTerms: product.priceTerms !== undefined && product.priceTerms !== null && product.priceTerms !== 0 ? product.priceTerms : null,
 						taxincluded: product.taxIncluded !== undefined && product.taxIncluded !== null ? product.taxIncluded : 0,
 						quoteQuantity: product.quoteQuantity !== undefined && product.quoteQuantity !== null ? product.quoteQuantity : 0,
 						price: product.price !== undefined && product.price !== null ? product.price : 0,
