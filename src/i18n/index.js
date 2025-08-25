@@ -48,12 +48,27 @@ const i18n = createI18n({
 })
 
 const loadLocale = () => {
-  listLangByLocale(language.value).then((res) => {
-    const { code, data } = res
-    if (code == 200) {
-      i18n.global.mergeLocaleMessage(language.value, data)
-    }
-  })
+  // 添加错误处理，确保即使API调用失败也能正常工作
+  try {
+    listLangByLocale(language.value).then((res) => {
+      const { code, data } = res
+      if (code == 200) {
+        console.log('动态加载的国际化数据:', data)
+        i18n.global.mergeLocaleMessage(language.value, data)
+      }
+    }).catch((error) => {
+      console.error('加载国际化数据失败:', error)
+      // 如果动态加载失败，使用静态文件作为备用
+      console.log('使用静态国际化文件作为备用')
+    })
+  } catch (error) {
+    console.error('国际化初始化失败:', error)
+  }
 }
-loadLocale()
+
+// 确保在DOM加载完成后执行
+if (typeof window !== 'undefined') {
+  loadLocale()
+}
+
 export default i18n

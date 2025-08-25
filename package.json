@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build:prod": "vite build",
+    "build:prod": "VITE_APP_TITLE='奔驰马具生产管理系统' VITE_APP_ROUTER_PREFIX='/' VITE_APP_BASE_API='/prod-api' VITE_APP_API_HOST='http://localhost:8888' VITE_APP_SOCKET_API='ws://localhost:8888' VITE_APP_UPLOAD_URL='/common/upload' vite build",
     "build:stage": "vite build --mode staging",
     "preview": "vite preview"
   },

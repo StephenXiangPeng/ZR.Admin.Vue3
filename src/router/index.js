@@ -65,6 +65,11 @@ export const constantRoutes = [
     hidden: true
   },
   {
+    path: '/test-i18n',
+    component: () => import('@/views/test-i18n'),
+    hidden: true
+  },
+  {
     path: '',
     component: Layout,
     redirect: '/index',

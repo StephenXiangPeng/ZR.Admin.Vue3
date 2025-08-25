@@ -12,10 +12,12 @@ export default defineConfig(({ mode, command }) => {
     // 设置别名
     '@': path.resolve(__dirname, './src')
   }
-  if (command === 'serve') {
-    // 解决警告You are running the esm-bundler build of vue-i18n.
+
+  // 确保生产环境也使用正确的vue-i18n版本
+  if (command === 'serve' || command === 'build') {
     alias['vue-i18n'] = 'vue-i18n/dist/vue-i18n.cjs.js'
   }
+
   return {
     plugins: createVitePlugins(env, command === 'build'),
     resolve: {
@@ -28,7 +30,7 @@ export default defineConfig(({ mode, command }) => {
     css: {
       devSourcemap: true //开发模式时启用
     },
-    base: env.VITE_APP_ROUTER_PREFIX,
+    base: env.VITE_APP_ROUTER_PREFIX || '/',
     // 打包配置
     build: {
       sourcemap: command === 'build' ? false : 'inline',
@@ -52,12 +54,12 @@ export default defineConfig(({ mode, command }) => {
       proxy: {
         // https://cn.vitejs.dev/config/#server-proxy
         '/dev-api': {
-          target: env.VITE_APP_API_HOST,
+          target: env.VITE_APP_API_HOST || 'http://localhost:8888',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/dev-api/, '')
         },
         '/msghub': {
-          target: env.VITE_APP_API_HOST,
+          target: env.VITE_APP_API_HOST || 'http://localhost:8888',
           ws: true,
           rewrite: (path) => path.replace(/^\/msgHub/, '')
         }

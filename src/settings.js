@@ -6,7 +6,7 @@ export default {
   /**
    * 网页标题
    */
-  title: import.meta.env.VITE_APP_TITLE,
+  title: import.meta.env.VITE_APP_TITLE || '奔驰马具生产管理系统',
   /**
    * 侧边栏主题 深色主题theme-dark，浅色主题theme-light
    */
@@ -55,7 +55,7 @@ export default {
   /**
    * 版权信息
    */
-  copyright: 'Copyright ©2024 <a target="_black" href="http://www.izhaorui.cn">ZRAdmin.NET</a> All Rights Reserved.',
+  copyright: 'Copyright ©2025 <a target="_black" href="#">奔驰马具生产管理系统</a> All Rights Reserved.',
   /**
    * 是否显示底部栏
    */
@@ -67,7 +67,7 @@ export default {
   /**
    * 水印文案
    */
-  watermarkText: 'ZRAdmin.NET',
+  watermarkText: '奔驰马具生产管理系统',
   /**
    * 是否显示其他登录
    */
@@ -87,11 +87,11 @@ export default {
   /**
    * 是否显示QR登录
    */
-  showQrLogin: true,
+  showQrLogin: false,
   /**
    * 是否显示手机号登录
    */
-  showPhoneLogin: true,
+  showPhoneLogin: false,
   /**
    * 标签页持久化
    */

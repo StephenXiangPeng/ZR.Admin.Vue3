@@ -54,17 +54,17 @@
         </el-form-item>
 
         <div style="display: flex; justify-content: space-between; align-items: center">
-          <el-checkbox v-model="loginForm.rememberMe">{{ $t('login.rememberMe') }}</el-checkbox>
+          <!-- <el-checkbox v-model="loginForm.rememberMe">{{ $t('login.rememberMe') }}</el-checkbox> -->
           <span style="font-size: 12px">
-            <router-link class="link-type" :to="'/register'">{{ $t('login.register') }}</router-link>
-            <span @click="handleForgetPwd()" class="forget-pwd">{{ $t('login.forgotPwd') }}</span>
+            <!-- <router-link class="link-type" :to="'/register'">{{ $t('login.register') }}</router-link>
+            <span @click="handleForgetPwd()" class="forget-pwd">{{ $t('login.forgotPwd') }}</span> -->
           </span>
         </div>
       </el-form>
 
       <qrLogin ref="qrLoginRef" v-if="loginType == 3"></qrLogin>
-      <phoneLogin v-if="loginType == 2"></phoneLogin>
-      <oauthLogin v-if="defaultSettings.showOtherLogin"></oauthLogin>
+      <!-- <phoneLogin v-if="loginType == 2"></phoneLogin> -->
+      <!-- <oauthLogin v-if="defaultSettings.showOtherLogin"></oauthLogin> -->
     </div>
 
     <div class="el-login-footer">

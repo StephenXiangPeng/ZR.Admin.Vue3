@@ -35,12 +35,14 @@ const usePermissionStore = defineStore('permission', {
       return new Promise((resolve) => {
         // 向后端请求路由数据
         getRouters().then((res) => {
+          console.log('后端返回的菜单数据:', res.data)
           const sdata = JSON.parse(JSON.stringify(res.data))
           const rdata = JSON.parse(JSON.stringify(res.data))
           const defaultData = JSON.parse(JSON.stringify(res.data))
           const sidebarRoutes = filterAsyncRouter(sdata)
           const rewriteRoutes = filterAsyncRouter(rdata, false, true)
           const defaultRoutes = filterAsyncRouter(defaultData)
+          console.log('处理后的侧边栏路由:', sidebarRoutes)
           this.setRoutes(rewriteRoutes)
           this.setSidebarRouters(constantRoutes.concat(sidebarRoutes))
           this.setDefaultRoutes(sidebarRoutes)
