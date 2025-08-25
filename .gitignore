@@ -21,3 +21,15 @@ selenium-debug.log
 package-lock.json
 yarn.lock
 /deploy.js
+
+# 构建产物和压缩包
+*.tar
+*.tar.gz
+*.zip
+*.rar
+build/
+output/
+
+# 临时文件
+*.tmp
+*.temp
