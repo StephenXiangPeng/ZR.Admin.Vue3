@@ -109,8 +109,13 @@ router.onError((error) => {
   const componentError = /Failed to resolve component/gi.test(error.message);
 
   if (failedChunk || failedToResolve || componentError) {
-    console.log('检测到资源加载失败，正在尝试刷新页面...');
-    window.location.reload(); // 自动刷新页面
+    console.log('检测到资源加载失败，尝试重新加载组件...');
+    // 不要刷新整个页面，而是尝试重新加载当前路由
+    const currentRoute = router.currentRoute.value
+    router.replace({
+      path: '/redirect' + currentRoute.fullPath,
+      query: currentRoute.query
+    })
   }
 });
 

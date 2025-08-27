@@ -53,8 +53,8 @@
 				:page-size="SearchInquirypageSize" :total="SearchInquirytotalItems" background
 				layout="prev, pager, next" style="margin-top: 5px;" />
 		</div>
-		<el-dialog v-model="CreateInquiryDialog" title="创建询价单" :close-on-click-modal=false style="width: 80%;"
-			@close="CloseInquiryDialog">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="CreateInquiryDialog" title="创建询价单"
+			:close-on-click-modal=false style="width: 80%;" @close="CloseInquiryDialog">
 			<el-form label-position="right">
 				<el-row>
 					<el-col :span="6">

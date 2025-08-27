@@ -10,7 +10,7 @@
 				<el-button type="primary" @click="OpenPlanTaskDialog">新建计划/任务</el-button>
 			</el-form-item>
 		</el-form> -->
-		<el-dialog v-model="PlanTaskDialogVisible" title="新建计划/任务" width="1000">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="PlanTaskDialogVisible" title="新建计划/任务" width="1000">
 			<el-form ref="PlanTaskFormRef" :model="PlanTaskForm" :rules="rules" label-width="120px"
 				class="demo-ruleForm" status-icon :inline="true">
 				<el-row>

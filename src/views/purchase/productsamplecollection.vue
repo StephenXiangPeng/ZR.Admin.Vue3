@@ -66,8 +66,8 @@
 		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
 			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
 
-		<el-dialog v-model="CreateDialog" title="创建收样/寄样" :close-on-click-modal=false style="width: 70%;"
-			@closed="handleDialogClosed">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="CreateDialog" title="创建收样/寄样"
+			:close-on-click-modal=false style="width: 70%;" @closed="handleDialogClosed">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="CreateDialogform" label-width="120px">

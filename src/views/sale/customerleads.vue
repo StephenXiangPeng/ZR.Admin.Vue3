@@ -22,7 +22,6 @@
 				<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode" :label="dict.dictLabel"
 					:value="dict.dictValue"></el-option>
 			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
 		</div>
 		<div style="width: 100%; margin-top: 5px;">
 			<el-select filterable v-model="nationSelect" class="m-2" placeholder="选择国家" style="width: 15%;">
@@ -79,7 +78,8 @@
 		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
 			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
 
-		<el-dialog v-model="dialogFormVisible" title="新建线索" :close-on-click-modal=false :inline="true">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="dialogFormVisible" title="新建线索"
+			:close-on-click-modal=false :inline="true">
 			<span style="font-size: 20px; font-weight: bold;">公司信息</span>
 			<el-divider></el-divider>
 			<el-form ref="NewCustomerleadsformRef" :rules="rules" :model="NewCustomerleadsform" label-width="auto"

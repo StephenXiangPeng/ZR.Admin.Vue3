@@ -117,8 +117,8 @@
 				</el-main>
 			</el-container>
 		</el-container>
-		<el-dialog v-model="AddProductDialog" title="添加产品" :close-on-click-modal=false style="width: 70%;"
-			@close="closeAddProductDialog()">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="AddProductDialog" title="添加产品"
+			:close-on-click-modal=false style="width: 70%;" @close="closeAddProductDialog()">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form ref="ProductformRef" :rules="ProductformRules" :model="Productform" label-width="120px">

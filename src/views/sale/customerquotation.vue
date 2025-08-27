@@ -77,8 +77,8 @@
 		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
 			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
 
-		<el-dialog v-model="quotationDialog" title="创建报价单" :close-on-click-modal=false style="width: 70%;"
-			@close="quotationDialogHandClose">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="quotationDialog" title="创建报价单"
+			:close-on-click-modal=false style="width: 70%;" @close="quotationDialogHandClose">
 			<div v-if="quotationDialogform.version > 1" style="margin-bottom: 15px;">
 				<el-alert type="info" :closable="false">
 					<template #default>
@@ -173,7 +173,7 @@
 					<el-input v-model="quotationDialogform.exchangerate" style="width: 250px;" :disabled="isDisabled"
 						@change="calculateTotal" />
 				</el-form-item>
-				<el-form-item label="统一利润率">
+				<el-form-item label="统一利润率" v-if="false">
 					<el-input v-model="quotationDialogform.uniformprofitmargin" style="width: 250px;"
 						:disabled="isDisabled" />
 				</el-form-item>
@@ -338,7 +338,7 @@
 					</el-table-column>
 					<el-table-column prop="additionalpackagingcosts" label="单个产品额外包装费用" width="180">
 						<template #default="{ row }">
-							<el-input @blur="formatNumber(row, 'additionalpackagingcosts')"
+							<el-input @blur="formatNumber2(row, 'additionalpackagingcosts')"
 								v-model="row.additionalpackagingcosts" @change="calculateTotal"
 								:disabled="isDisabled" />
 						</template>

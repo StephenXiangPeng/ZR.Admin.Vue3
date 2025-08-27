@@ -54,8 +54,8 @@
 		<el-pagination @current-change="TaxrefundtableDataHandlePageChange"
 			:current-page="TaxrefundtableDataCurrentPage" :page-size="TaxrefundtableDataPageSize"
 			:total="TaxrefundtableDataTotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<el-dialog v-model="addctaxrefunddialog" title="新增退税" :close-on-click-modal=false style="width: 70%;"
-			@close="clearTaxrefundDialog()">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="addctaxrefunddialog" title="新增退税"
+			:close-on-click-modal=false style="width: 70%;" @close="clearTaxrefundDialog()">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="addctaxrefundform" label-width="100px">

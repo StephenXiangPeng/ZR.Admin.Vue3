@@ -58,7 +58,8 @@
 			v-model:limit="queryParams.pageSize" @pagination="getList" />
 
 		<!-- 添加或修改物流公司对话框 -->
-		<el-dialog :title="title" v-model="open" width="800px" append-to-body>
+		<el-dialog :modal="false" :modal-penetrable="true" :title="title" v-model="open" width="800px"
+			:close-on-click-modal=false>
 			<el-form ref="logisticsCompanyRef" :model="form" :rules="rules" label-width="120px">
 				<el-tabs v-model="activeTab">
 					<el-tab-pane label="基本信息" name="basic">

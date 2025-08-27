@@ -71,8 +71,9 @@
 		</el-table>
 		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
 			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<el-dialog v-model="addcustomercollectiondialog" :title="isReadOnly ? '查看收款单据' : (isEdit ? '编辑收款单据' : '新增收款单据')"
-			:close-on-click-modal=false style="width: 70%;" @close="Closeaddcustomercollectiondialog()">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="addcustomercollectiondialog"
+			:title="isReadOnly ? '查看收款单据' : (isEdit ? '编辑收款单据' : '新增收款单据')" :close-on-click-modal=false
+			style="width: 70%;" @close="Closeaddcustomercollectiondialog()">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="addcustomercollectionform" label-width="120px">

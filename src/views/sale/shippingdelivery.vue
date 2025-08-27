@@ -108,8 +108,8 @@
 			:current-page="ShippingDeliveriesTableDataCurrentPage" :page-size="ShippingDeliveriesTableDataPageSize"
 			:total="ShippingDeliveriesTableDataTotalItems" background layout="prev, pager, next"
 			style="margin-top: 5px;" />
-		<el-dialog v-model="CreateshippingdeliveryDialog" title="创建出运发货单" :close-on-click-modal=false
-			style="width: 70%;" @close="CreateshippingdeliveryDialogClose()">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="CreateshippingdeliveryDialog" title="创建出运发货单"
+			:close-on-click-modal=false style="width: 70%;" @close="CreateshippingdeliveryDialogClose()">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="AddShippingDeliveryform" label-width="120px">

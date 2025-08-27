@@ -65,8 +65,8 @@
 		<el-pagination @current-change="SupplierInfoTableDatahandlePageChange"
 			:current-page="SupplierInfoTableDatacurrentPage" :page-size="SupplierInfoTableDatapageSize"
 			:total="SupplierInfoTableDatatotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<el-dialog v-model="AddSupperDialog" title="添加供应商" :close-on-click-modal=false style="width: 70%;"
-			@close="Closeaddsupperdialog">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="AddSupperDialog" title="添加供应商"
+			:close-on-click-modal=false style="width: 70%;" @close="Closeaddsupperdialog">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="Addsupperinfoform" label-width="120px">

@@ -57,8 +57,8 @@
 		</div>
 
 		<!-- 处理询价单弹窗 -->
-		<el-dialog v-model="dialogVisible" :title="dialogEditMode ? '询价单处理' : '询价单详情'" width="80%" @close="closeDialog"
-			:close-on-click-modal="false">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="dialogVisible"
+			:title="dialogEditMode ? '询价单处理' : '询价单详情'" width="80%" @close="closeDialog" :close-on-click-modal="false">
 			<el-form ref="formRef" :model="dialogForm" :rules="rules" label-position="right">
 				<el-row>
 					<el-col :span="6">

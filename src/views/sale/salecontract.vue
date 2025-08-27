@@ -144,8 +144,8 @@
 				:total="contractsTableDatatotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
 
 		</div>
-		<el-dialog v-model="contractDialog" title="创建销售合同" :close-on-click-modal=false style="width: 70%;"
-			@close="handlecontractDialogclose">
+		<el-dialog :modal="false" modal-penetrable v-model="contractDialog" title="创建销售合同" :close-on-click-modal=false
+			style="width: 70%;" @close="handlecontractDialogclose">
 			<span style="font-size: 20px; font-weight: bold;">基本信息【{{ contractReviewStatus }}】</span>
 			<el-divider></el-divider>
 			<el-form ref="NewcontractformRef" :rules="rules" :model="Newcontractform" label-width="120px">
@@ -195,8 +195,8 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="报价单号" prop="quotationNumber">
-							<el-select filterable v-model="Newcontractform.quotationNumber" placeholder="请选择报价单号"
-								:disabled="isDisabled" style="width: 300px" id="quotationNumber"
+							<el-select clearable filterable v-model="Newcontractform.quotationNumber"
+								placeholder="请选择报价单号" :disabled="isDisabled" style="width: 300px" id="quotationNumber"
 								@change="GetQutaionProductListByID(Newcontractform.quotationNumber)">
 								<el-option v-for="dict in quotationNumberOptions" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
@@ -586,7 +586,7 @@
 							<el-table-column prop="AdditionalPackagingCosts" label="单个产品额外包装费用" width="185">
 								<template #default="{ row }">
 									<el-input v-model="row.AdditionalPackagingCosts" @change="calculateTotal"
-										:disabled="isDisabled" />
+										@blur="formatNumber2(row, 'AdditionalPackagingCosts')" :disabled="isDisabled" />
 								</template>
 							</el-table-column>
 							<el-table-column prop="singleProductGrossProfit" label="单个产品毛利" width="130">
@@ -1075,7 +1075,7 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { createApp, getCurrentInstance, reactive, toRefs, ref, watch, computed, onMounted } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn,
 	ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile,
@@ -1201,7 +1201,8 @@ const handlecontractDialogclose = async () => {
 	if (Newcontractform.salesperson.toString() == userId.toString()) {
 		await removeContractEditLock(SelctedContractId.value);
 	}
-	hasChangedProducts.value = false;
+	// hasChangedProducts 是一个计算属性，不能直接赋值
+	// 这里应该重新计算产品数据来触发计算属性更新
 	SelctedContractId.value = 0;
 	isDisabled.value = false;
 	showEditBtn.value = false;
@@ -1263,6 +1264,326 @@ const ApproveDocumentRequest = reactive({
 //产品资料tab&客户相关费用tab
 const activeTab = ref('productMaterialtab');
 const CustomerRelaterExoensesTableData = ref([]);
+
+// 表单数据持久化相关
+const FORM_STORAGE_KEY = 'saleContractFormData'
+const DIALOG_STORAGE_KEY = 'saleContractDialogState'
+const saveFormDataTimer = ref(null)
+
+// 保存表单数据到 localStorage（优化性能）
+const saveFormData = () => {
+	try {
+		// 快速检查是否有实际数据（优先检查产品数据和费用数据）
+		const hasProductData = productData.value && productData.value.length > 0
+		const hasExpenseData = CustomerRelaterExoensesTableData.value && CustomerRelaterExoensesTableData.value.length > 0
+
+		// 如果有产品数据或费用数据，直接保存
+		if (hasProductData || hasExpenseData) {
+			const formData = {
+				Newcontractform: { ...Newcontractform },
+				productData: [...productData.value],
+				CustomerRelaterExoensesTableData: [...CustomerRelaterExoensesTableData.value],
+				contractDialog: contractDialog.value,
+				activeTab: activeTab.value,
+				timestamp: Date.now()
+			}
+			localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData))
+			return
+		}
+
+		// 只有在没有产品数据时才检查表单数据
+		const hasFormData = Object.entries(Newcontractform).some(([key, value]) => {
+			// 排除默认值和空值
+			if (value === null || value === '' || value === undefined) return false
+			if (key === 'hasDeposit' && value === false) return false
+			if (key === 'receivedDeposit' && value === 0) return false
+			if (key === 'id' && value === 0) return false
+			if (key === 'contractDate' && value === new Date().toISOString().split('T')[0]) return false
+			if (key === 'contractStatus' && value === 1) return false
+			if (key === 'salesperson' && value === userId.toString()) return false
+			return true
+		})
+
+		// 只有当有实际数据时才保存
+		if (hasFormData) {
+			const formData = {
+				Newcontractform: { ...Newcontractform },
+				productData: [...productData.value],
+				CustomerRelaterExoensesTableData: [...CustomerRelaterExoensesTableData.value],
+				contractDialog: contractDialog.value,
+				activeTab: activeTab.value,
+				timestamp: Date.now()
+			}
+			localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData))
+		} else {
+			// 如果没有实际数据，清除保存的数据
+			localStorage.removeItem(FORM_STORAGE_KEY)
+		}
+	} catch (error) {
+		console.error('保存表单数据失败:', error)
+	}
+}
+
+// 从 localStorage 恢复表单数据（优化性能）
+const restoreFormData = async () => {
+	try {
+		const savedData = localStorage.getItem(FORM_STORAGE_KEY)
+		if (savedData) {
+			const formData = JSON.parse(savedData)
+
+			// 检查数据是否过期（24小时）
+			const isExpired = Date.now() - formData.timestamp > 24 * 60 * 60 * 1000
+			if (isExpired) {
+				localStorage.removeItem(FORM_STORAGE_KEY)
+				return false
+			}
+
+			// 快速检查是否有实际数据（优先检查产品数据和费用数据）
+			const hasProductData = formData.productData && formData.productData.length > 0
+			const hasExpenseData = formData.CustomerRelaterExoensesTableData && formData.CustomerRelaterExoensesTableData.length > 0
+
+			// 如果有产品数据或费用数据，直接恢复
+			if (hasProductData || hasExpenseData) {
+				// 保存客户编号，因为恢复后需要重新获取相关选项
+				const savedCustomerId = formData.Newcontractform.customerid
+				const savedContactPerson = formData.Newcontractform.contactPerson
+				const savedQuotationNumber = formData.Newcontractform.quotationNumber
+
+				// 恢复表单数据
+				Object.assign(Newcontractform, formData.Newcontractform)
+				productData.value = formData.productData
+				CustomerRelaterExoensesTableData.value = formData.CustomerRelaterExoensesTableData
+				contractDialog.value = formData.contractDialog
+				activeTab.value = formData.activeTab
+
+				// 重新计算总计
+				calculateTotal()
+
+				// 如果有客户编号，需要重新获取报价单号和联系人选项
+				if (savedCustomerId) {
+					// 异步获取客户相关信息
+					await restoreCustomerRelatedData(savedCustomerId, savedContactPerson, savedQuotationNumber)
+				}
+
+				console.log('表单数据已恢复')
+				return true
+			}
+
+			// 只有在没有产品数据时才检查表单数据
+			const hasFormData = Object.entries(formData.Newcontractform).some(([key, value]) => {
+				// 排除默认值和空值
+				if (value === null || value === '' || value === undefined) return false
+				if (key === 'hasDeposit' && value === false) return false
+				if (key === 'receivedDeposit' && value === 0) return false
+				if (key === 'id' && value === 0) return false
+				if (key === 'contractDate' && value === new Date().toISOString().split('T')[0]) return false
+				if (key === 'contractStatus' && value === 1) return false
+				if (key === 'salesperson' && value === userId.toString()) return false
+				return true
+			})
+
+			// 只有当有实际数据时才恢复
+			if (hasFormData) {
+				// 保存客户编号，因为恢复后需要重新获取相关选项
+				const savedCustomerId = formData.Newcontractform.customerid
+				const savedContactPerson = formData.Newcontractform.contactPerson
+				const savedQuotationNumber = formData.Newcontractform.quotationNumber
+
+				// 恢复表单数据
+				Object.assign(Newcontractform, formData.Newcontractform)
+				productData.value = formData.productData
+				CustomerRelaterExoensesTableData.value = formData.CustomerRelaterExoensesTableData
+				contractDialog.value = formData.contractDialog
+				activeTab.value = formData.activeTab
+
+				// 重新计算总计
+				calculateTotal()
+
+				// 如果有客户编号，需要重新获取报价单号和联系人选项
+				if (savedCustomerId) {
+					// 异步获取客户相关信息
+					await restoreCustomerRelatedData(savedCustomerId, savedContactPerson, savedQuotationNumber)
+				}
+
+				console.log('表单数据已恢复')
+				return true
+			} else {
+				// 如果没有实际数据，清除保存的数据
+				localStorage.removeItem(FORM_STORAGE_KEY)
+				return false
+			}
+		}
+	} catch (error) {
+		console.error('恢复表单数据失败:', error)
+	}
+	return false
+}
+
+// 恢复客户相关数据的函数
+const restoreCustomerRelatedData = async (customerId, savedContactPerson, savedQuotationNumber) => {
+	try {
+		console.log('开始恢复客户相关数据:', { customerId, savedContactPerson, savedQuotationNumber })
+
+		// 设置当前选中的客户ID
+		selectedCustomerId.value = customerId
+
+		// 获取客户信息
+		console.log('开始请求客户信息，customerId:', customerId)
+		const customerResponse = await request({
+			url: 'CustomerInfoMation/getCustomerInfoByID/GetCustomerInfo',
+			method: 'GET',
+			params: {
+				ID: customerId
+			}
+		})
+		console.log('客户信息请求响应:', customerResponse)
+
+		if (customerResponse) {
+			const customerData = customerResponse
+			console.log('获取到客户信息:', customerData)
+
+			// 设置客户相关信息
+			Newcontractform.customerNumber = customerId.toString()
+			Newcontractform.customerAbbreviation = customerId.toString()
+			Newcontractform.customerLevel = state.optionss['hr_customer_level'].find(item => item.dictValue == customerData.customerLevel?.toString())?.dictValue
+
+			// 如果没有保存的报价单号，从客户信息设置价格条款
+			if (!savedQuotationNumber) {
+				Newcontractform.priceTerms = state.optionss['hr_pricing_term'].find(item => item.dictValue == customerData.pricingTerm?.toString())?.dictValue
+				console.log('从客户信息设置价格条款:', Newcontractform.priceTerms)
+			}
+
+			Newcontractform.settlementType = state.optionss['hr_settlement_way'].find(item => item.dictValue == customerData.settlementWay?.toString())?.dictValue
+			Newcontractform.tradeCountry = state.optionss['hr_nation'].find(item => item.dictValue == customerData.tradingCountry?.toString())?.dictValue
+
+			// 设置联系人选项
+			if (customerData.contactPerson && Array.isArray(customerData.contactPerson)) {
+				contactpersonSelectOptions.value = customerData.contactPerson.map(item => ({
+					value: item.id,
+					label: item.name,
+					email: item.email
+				}))
+				console.log('联系人选项已设置:', contactpersonSelectOptions.value)
+
+				// 如果没有保存的报价单号，从客户信息设置默认联系人
+				if (!savedQuotationNumber) {
+					// 设置第一个联系人为默认值
+					if (contactpersonSelectOptions.value.length > 0) {
+						const defaultContact = contactpersonSelectOptions.value[0];
+						Newcontractform.contactPerson = defaultContact.value;
+						Newcontractform.contactEmail = defaultContact.email;
+						console.log('从客户信息设置默认联系人:', defaultContact);
+					}
+				}
+			}
+
+			// 获取报价单号选项
+			console.log('开始获取报价单号选项...')
+			await loadQuotationNumberOptions(customerId)
+			console.log('报价单号选项已获取:', quotationNumberOptions.value)
+
+			// 如果有保存的报价单号，获取报价单详细信息并设置联系人
+			if (savedQuotationNumber) {
+				console.log('开始获取报价单详细信息...')
+				try {
+					const quotationResponse = await request({
+						url: 'Quotation/GetQuotaionInfoByID/GetQuotaionInfo',
+						method: 'get',
+						params: {
+							QuotationID: savedQuotationNumber
+						}
+					})
+
+					if (quotationResponse && quotationResponse.data && quotationResponse.data.quotaionInfo) {
+						const quotationInfo = quotationResponse.data.quotaionInfo
+						console.log('获取到报价单信息:', quotationInfo)
+
+						// 从报价单信息设置价格条款（优先级更高）
+						Newcontractform.priceTerms = state.optionss['hr_pricing_term'].find(x => x.dictValue == quotationInfo.pricingTerm?.toString())?.dictValue;
+						console.log('从报价单信息设置价格条款:', Newcontractform.priceTerms)
+
+						// 从报价单信息设置联系人（优先级更高）
+						const contactPersonOption = contactpersonSelectOptions.value.find(x => x.value == quotationInfo.contactPerson);
+						if (contactPersonOption) {
+							Newcontractform.contactPerson = contactPersonOption.value;
+							Newcontractform.contactEmail = contactPersonOption.email;
+							console.log('从报价单信息设置联系人:', contactPersonOption)
+						} else {
+							console.warn('报价单中的联系人ID', quotationInfo.contactPerson, '在联系人选项中未找到')
+						}
+					}
+				} catch (error) {
+					console.error('获取报价单详细信息失败:', error)
+				}
+			}
+
+			// 等待下一个 tick，确保所有选项都已渲染
+			await nextTick()
+
+			// 直接恢复选择值，因为选项已经加载完成
+			console.log('开始恢复选择值...')
+			restoreSelectedValues(savedContactPerson, savedQuotationNumber)
+
+			// 重置历史产品分页参数
+			historyProductCurrentPage.value = 1
+
+			console.log('客户相关数据已恢复完成')
+		} else {
+			console.error('获取客户信息失败 - 响应数据为空:', customerResponse)
+		}
+	} catch (error) {
+		console.error('恢复客户相关数据失败:', error)
+		console.error('错误详情:', {
+			message: error.message,
+			status: error.response?.status,
+			statusText: error.response?.statusText,
+			data: error.response?.data
+		})
+		// 如果恢复失败，至少清空相关选项
+		contactpersonSelectOptions.value = []
+		quotationNumberOptions.value = []
+	}
+}
+
+// 恢复选择值的函数
+const restoreSelectedValues = (savedContactPerson, savedQuotationNumber) => {
+	// 恢复之前选择的联系人
+	if (savedContactPerson) {
+		// 确保联系人ID是数字类型进行比较
+		const contactPersonId = typeof savedContactPerson === 'string' ? parseInt(savedContactPerson) : savedContactPerson
+
+		// 验证联系人选项是否存在
+		const contactPersonExists = contactpersonSelectOptions.value.some(option => option.value === contactPersonId)
+		if (contactPersonExists) {
+			Newcontractform.contactPerson = contactPersonId
+			// 设置联系人邮箱
+			const contactPerson = contactpersonSelectOptions.value.find(item => item.value === contactPersonId)
+			if (contactPerson) {
+				Newcontractform.contactEmail = contactPerson.email
+			}
+		}
+	}
+
+	// 恢复之前选择的报价单号
+	if (savedQuotationNumber) {
+		// 确保报价单号ID是数字类型进行比较
+		const quotationId = typeof savedQuotationNumber === 'string' ? parseInt(savedQuotationNumber) : savedQuotationNumber
+
+		// 验证报价单号选项是否存在
+		const quotationExists = quotationNumberOptions.value.some(option => option.dictValue === quotationId)
+		if (quotationExists) {
+			Newcontractform.quotationNumber = quotationId
+		}
+	}
+
+	console.log('客户相关数据已恢复完成')
+}
+
+// 清除保存的表单数据
+const clearSavedFormData = () => {
+	localStorage.removeItem(FORM_STORAGE_KEY)
+	localStorage.removeItem(DIALOG_STORAGE_KEY)
+}
 
 //查找产品窗体
 const SearchProcutDialog = ref(false)
@@ -2040,14 +2361,15 @@ const handleCustomerSelection = (value) => {
 		}
 	}).then(response => {
 		if (response != null) {
+			const customerData = response;
 			Newcontractform.customerNumber = value.toString();
 			Newcontractform.customerAbbreviation = value.toString();
-			Newcontractform.customerLevel = state.optionss['hr_customer_level'].filter(item => item.dictValue == response.customerLevel.toString()).map(item => item.dictValue).values().next().value;
-			Newcontractform.priceTerms = state.optionss['hr_pricing_term'].filter(item => item.dictValue == response.pricingTerm.toString()).map(item => item.dictValue).values().next().value;
-			Newcontractform.settlementType = state.optionss['hr_settlement_way'].filter(item => item.dictValue == response.settlementWay.toString()).map(item => item.dictValue).values().next().value;
-			Newcontractform.tradeCountry = state.optionss['hr_nation'].filter(item => item.dictValue == response.tradingCountry.toString()).map(item => item.dictValue).values().next().value;
-			if (response.contactPerson != null) {
-				contactpersonSelectOptions.value = response.contactPerson.map(item => ({
+			Newcontractform.customerLevel = state.optionss['hr_customer_level'].filter(item => item.dictValue == customerData.customerLevel?.toString()).map(item => item.dictValue).values().next().value;
+			Newcontractform.priceTerms = state.optionss['hr_pricing_term'].filter(item => item.dictValue == customerData.pricingTerm?.toString()).map(item => item.dictValue).values().next().value;
+			Newcontractform.settlementType = state.optionss['hr_settlement_way'].filter(item => item.dictValue == customerData.settlementWay?.toString()).map(item => item.dictValue).values().next().value;
+			Newcontractform.tradeCountry = state.optionss['hr_nation'].filter(item => item.dictValue == customerData.tradingCountry?.toString()).map(item => item.dictValue).values().next().value;
+			if (customerData.contactPerson != null) {
+				contactpersonSelectOptions.value = customerData.contactPerson.map(item => ({
 					value: item.id,
 					label: item.name,
 					email: item.email
@@ -2512,6 +2834,8 @@ const SaveContract = async (formEl: FormInstance | undefined) => {
 					SelctedContractId.value = response.data;
 					SubmitForReview();
 					contractDialog.value = false;
+					// 清除保存的表单数据
+					clearSavedFormData();
 					// 刷新列表
 					GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
 				}
@@ -2618,6 +2942,9 @@ const clearAll = () => {
 	quotationNumberOptions.value = [];
 	// 清空数据后重新计算总计
 	calculateTotal();
+
+	// 清除保存的表单数据
+	clearSavedFormData();
 }
 
 //获取销售合同编号
@@ -2637,6 +2964,9 @@ const GetContractNumber = () => {
 }
 
 const openContractDialog = () => {
+	// 清除之前保存的数据
+	clearSavedFormData();
+
 	clearAll();
 	isDisabled.value = false;
 	showEditBtn.value = false;
@@ -3242,6 +3572,8 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 				SubmitForReview();
 				ElMessage.success('提交合同成功');
 				contractDialog.value = false;
+				// 清除保存的表单数据
+				clearSavedFormData();
 				// 刷新列表
 				GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
 				// 更新按钮状态
@@ -3765,6 +4097,8 @@ const SaveContractDraft = async (formEl: FormInstance | undefined) => {
 			if (res.code === 200) {
 				ElMessage.success('保存草稿成功');
 				contractDialog.value = false;
+				// 清除保存的表单数据
+				clearSavedFormData();
 				// 刷新列表
 				GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
 			} else {
@@ -3900,9 +4234,10 @@ const GetCustomerContactPerson = (customerId) => {
 			ID: customerId
 		}
 	}).then(response => {
-		if (response != null) {
-			if (response.contactPerson != null) {
-				contactpersonSelectOptions.value = response.contactPerson.map(item => ({
+		if (response != null && response.data) {
+			const customerData = response.data;
+			if (customerData.contactPerson != null) {
+				contactpersonSelectOptions.value = customerData.contactPerson.map(item => ({
 					value: item.id,
 					label: item.name,
 					email: item.email
@@ -3922,6 +4257,15 @@ const GetCustomerContactPerson = (customerId) => {
 // 在现有的import语句附近添加
 // 在script setup部分添加route定义
 const route = useRoute()
+
+// 添加缺失的变量定义
+const quotationNum = ref('')
+const customerinfoselect = ref('')
+const customerinfoselectoptions = ref([])
+const productselect = ref('')
+const productselectoptions = ref([])
+const inquiryDate = ref('')
+const quotationDate = ref('')
 
 // 添加自动加载合同详情的函数
 const autoLoadContractDetail = () => {
@@ -3949,10 +4293,45 @@ const autoLoadContractDetail = () => {
 	}
 }
 
-// 添加onMounted钩子
+// 监听表单数据变化，自动保存（优化性能）
+watch(
+	[Newcontractform, productData, CustomerRelaterExoensesTableData, contractDialog],
+	() => {
+		// 防抖保存，避免频繁保存
+		if (saveFormDataTimer.value) {
+			clearTimeout(saveFormDataTimer.value)
+		}
+		saveFormDataTimer.value = setTimeout(() => {
+			// 只在对话框打开时才保存数据
+			if (contractDialog.value) {
+				saveFormData()
+			}
+		}, 2000) // 增加防抖时间到2秒
+	},
+	{ deep: true }
+)
+
+// 添加onMounted钩子（优化性能）
 onMounted(() => {
 	console.log('销售合同页面挂载，检查路由参数')
-	autoLoadContractDetail()
+	// 使用 nextTick 延迟执行，避免阻塞页面渲染
+	nextTick(async () => {
+		// 尝试恢复保存的表单数据
+		const restored = await restoreFormData()
+		// if (restored) {
+		// 	ElMessage.info('已恢复上次未保存的销售合同数据')
+		// }
+
+		autoLoadContractDetail()
+	})
+})
+
+// 在组件卸载时保存数据
+onUnmounted(() => {
+	if (saveFormDataTimer.value) {
+		clearTimeout(saveFormDataTimer.value)
+	}
+	saveFormData()
 })
 
 // 删除销售合同
@@ -3998,7 +4377,6 @@ const loadQuotationNumberOptions = async (customerId) => {
 		if (response && response.code === 200) {
 			// 根据当前场景过滤报价单选项
 			let filteredData = response.data;
-
 			// 如果是新增销售合同（SelctedContractId.value === 0），则过滤掉 RelatedSalesContract != 0 的选项
 			if (SelctedContractId.value === 0) {
 				filteredData = response.data.filter(item => !item.relatedSalesContract || item.relatedSalesContract === 0);
@@ -4011,7 +4389,6 @@ const loadQuotationNumberOptions = async (customerId) => {
 					item.id === Newcontractform.quotationNumber
 				);
 			}
-
 			quotationNumberOptions.value = filteredData.map(item => ({
 				dictValue: item.id,
 				dictLabel: item.quotationNum
@@ -4027,20 +4404,56 @@ const loadQuotationNumberOptions = async (customerId) => {
 
 const GetQutaionProductListByID = (quotationId) => {
 	request({
-		url: 'Quotation/GetQutaionProductListByID/GetQutaionProductList',
+		url: 'Quotation/GetQuotaionInfoByID/GetQuotaionInfo',
 		method: 'get',
 		params: {
-			ID: quotationId
+			QuotationID: quotationId
 		}
 	}).then(response => {
-		console.log(response)
+		console.log('报价单信息响应:', response)
+		//处理报价单信息
+		if (response.data.quotaionInfo) {
+			console.log('处理报价单信息，当前价格条款:', Newcontractform.priceTerms)
+
+			// 从报价单信息设置价格条款（手动选择报价单时）
+			Newcontractform.priceTerms = state.optionss['hr_pricing_term'].find(x => x.dictValue == response.data.quotaionInfo.pricingTerm?.toString())?.dictValue;
+			console.log('手动选择报价单时设置价格条款:', Newcontractform.priceTerms)
+
+			// 从报价单信息设置联系人（手动选择报价单时）
+			const contactPersonOption = contactpersonSelectOptions.value.find(x => x.value == response.data.quotaionInfo.contactPerson);
+			if (contactPersonOption) {
+				Newcontractform.contactPerson = contactPersonOption.value;
+				Newcontractform.contactEmail = contactPersonOption.email;
+				console.log('手动选择报价单时设置联系人:', contactPersonOption)
+			} else {
+				console.warn('报价单中的联系人ID', response.data.quotaionInfo.contactPerson, '在联系人选项中未找到')
+			}
+			Newcontractform.ourCompany = state.optionss.hr_ourcompany.find(x => x.dictValue == response.data.quotaionInfo.ourCompany)?.dictValue;
+			Newcontractform.foreignCurrency = state.optionss.hr_export_currency.find(x => x.dictValue == response.data.quotaionInfo.exportCurrency)?.dictValue;
+			Newcontractform.exchangeRate = response.data.quotaionInfo.exchangeRate;
+			Newcontractform.settlementMethod = state.optionss.hr_settlement_way.find(x => x.dictValue == response.data.quotaionInfo.settlementWay)?.dictValue;
+			// 注意：价格条款已在恢复过程中从客户信息设置，这里不再覆盖
+			// Newcontractform.priceTerms = state.optionss.hr_pricing_term.find(x => x.dictValue == response.data.quotaionInfo.pricingTerm)?.dictValue;
+			Newcontractform.shippingPort = state.optionss.hr_transport_port.find(x => x.dictValue == response.data.quotaionInfo.shippingPort)?.dictValue;
+			Newcontractform.destinationPort = response.data.quotaionInfo.destinationPort;
+			Newcontractform.tradeCountry = state.optionss.hr_nation.find(x => x.dictValue == response.data.quotaionInfo.tradingCountry)?.dictValue;
+			Newcontractform.transportation = state.optionss.hr_transportation_method.find(x => x.dictValue == response.data.quotaionInfo.transportationMethod)?.dictValue;
+			Newcontractform.oceanFreight = response.data.quotaionInfo.oceanFreight;
+			Newcontractform.shippingCurrency = state.optionss.hr_export_currency.find(x => x.dictValue == response.data.quotaionInfo.shippingCurrency)?.dictValue;
+			Newcontractform.shippingrate = response.data.quotaionInfo.shippingRate;
+			Newcontractform.portMiscellaneousFees = response.data.quotaionInfo.portMiscellaneousFees;
+			Newcontractform.freightForwarderCustomsClearanceFees = response.data.quotaionInfo.freightForwarderCustomsClearanceFees;
+			Newcontractform.BankFee = response.data.quotaionInfo.bankFee;
+			Newcontractform.DocumentationFees = response.data.quotaionInfo.documentationFees;
+		}
+
 		// 处理获取到的报价单产品列表
-		if (response && response.data && response.data.length > 0) {
+		if (response && response.data && response.data.quotationProductList && response.data.quotationProductList.length > 0) {
 			// 清空当前产品列表
 			productData.value = [];
 
 			// 遍历报价单产品列表，添加到产品资料列表中
-			response.data.forEach(item => {
+			response.data.quotationProductList.forEach(item => {
 				// 获取计量单位的dictValue作为编号，dictLabel作为显示值
 				const unitMeasurement = state.optionss.hr_calculate_unit.find(x => x.dictValue == item.unitOfMeasurement?.toString());
 				// 根据价格条款设置invoice值
@@ -4095,7 +4508,7 @@ const GetQutaionProductListByID = (quotationId) => {
 			});
 			// 重新计算总计
 			calculateTotal();
-			ElMessage.success(`成功导入 ${response.data.length} 个产品`);
+			ElMessage.success(`成功导入 ${response.data.quotationProductList.length} 个产品`);
 		} else {
 			ElMessage.warning('该报价单没有产品数据');
 		}
@@ -4104,6 +4517,14 @@ const GetQutaionProductListByID = (quotationId) => {
 		ElMessage.error('获取报价单产品列表失败')
 	})
 }
+
+function formatNumber2(row, key) {
+	if (row[key] !== null && row[key] !== undefined) {
+		row[key] = parseFloat(row[key]).toFixed(2);
+	}
+}
+
+
 </script>
 <style scoped>
 /* 基础红色文本 */

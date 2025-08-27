@@ -100,8 +100,8 @@
 		<el-pagination @current-change="paymentrequesttableDataHandlePageChange"
 			:current-page="paymentrequesttableDataCurrentPage" :page-size="paymentrequesttableDataPageSize"
 			:total="paymentrequesttableDataTotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<el-dialog v-model="addpaymentrequestdialog" title="付款申请" :close-on-click-modal=false style="width: 70%;"
-			@close="Closeaddpaymentrequestdialog()">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="addpaymentrequestdialog" title="付款申请"
+			:close-on-click-modal=false style="width: 70%;" @close="Closeaddpaymentrequestdialog()">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="addpaymentrequestform" label-width="120px" ref="paymentFormRef">

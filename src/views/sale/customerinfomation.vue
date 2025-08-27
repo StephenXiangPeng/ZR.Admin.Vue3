@@ -86,8 +86,8 @@
 		</el-table>
 		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
 			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<el-dialog v-model="CustomerProfileDialog" title="客户建档" :close-on-click-modal=false style="width: 70%;"
-			@close="resetCustomerProfileDialog()">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="CustomerProfileDialog" title="客户建档"
+			:close-on-click-modal=false style="width: 70%;" @close="resetCustomerProfileDialog()">
 			<span style="font-size: 20px; font-weight: bold;">客户基本信息</span>
 			<el-divider></el-divider>
 			<el-button type="primary" :icon="Plus" size="default" @click="OpenLeadImportDialog"
@@ -332,7 +332,8 @@
 				<el-table-column prop="create_by" label="创建人" style="width: 8%;" />
 			</el-table>
 		</el-dialog>
-		<el-dialog v-model="CustomerProfileDetailDialog" title="客户详情" :close-on-click-modal=false style="width: 70%;">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="CustomerProfileDetailDialog" title="客户详情"
+			:close-on-click-modal=false style="width: 70%;">
 			<span style="font-size: 20px; font-weight: bold;">客户基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="CustomerProfileDetailDialogform" inline=true label-position="left" size="default">
