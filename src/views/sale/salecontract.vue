@@ -5,44 +5,63 @@
 		</div>
 		<el-divider></el-divider>
 		<el-button type="primary" @click="openContractDialog">销售合同</el-button>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<el-divider></el-divider>
-		<div style="width: 100%; margin-top: 30px;">
-			<el-input v-model="quotationNum" clearable style="width: 15%"
-				placeholder="输入合同编号" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="customerinfoselect" placeholder="选择客户（可输入查询）" style="width: 15%">
-				<el-option v-for="item in customerinfoselectoptions" :key="item.value" :label="item.label"
-					:value="item.value" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="productselect" placeholder="选择产品（可输入查询）" style="width: 15%">
-				<el-option v-for="item in productselectoptions" :key="item.value" :label="item.label"
-					:value="item.value" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="customerinfoselect" filterable placeholder="选择销售员（可输入查询）" style="width: 15%">
-				<el-option v-for="item in customerinfoselectoptions" :key="item.value" :label="item.label"
-					:value="item.value" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="customerinfoselect" filterable placeholder="选择合同状态" style="width: 15%">
-				<el-option v-for="item in customerinfoselectoptions" :key="item.value" :label="item.label"
-					:value="item.value" />
-			</el-select>
-		</div>
-		<div style="width: 100%; margin-top: 30px;">
-			<el-date-picker v-model="inquiryDate" type="date" placeholder="请选择合同日期" size="Default"
-				style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="quotationDate" type="date" placeholder="请选择合同日期" size="Default"
-				style="width: 15%" />
-		</div>
-		<div style="width: 100%; margin-top: 5px;">
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" plain>查询</el-button>
-				<el-button>重置</el-button>
-			</el-row>
-		</div>
+		<el-collapse v-model="filterCollapseActive" style="margin-top: 30px;">
+			<el-collapse-item title="过滤条件" name="filter">
+				<template #title>
+					<span style="font-size: 16px; font-weight: bold;">过滤条件</span>
+				</template>
+				<div style="width: 100%; margin-top: 20px;">
+					<el-row :gutter="20">
+						<el-col :span="6">
+							<el-input v-model="quotationNum" clearable placeholder="输入合同编号" />
+						</el-col>
+						<el-col :span="6">
+							<el-select filterable v-model="customerinfoselect" placeholder="选择客户（可输入查询）"
+								style="width: 100%">
+								<el-option v-for="item in customerinfoselectoptions" :key="item.value"
+									:label="item.label" :value="item.value" />
+							</el-select>
+						</el-col>
+						<el-col :span="6">
+							<el-select filterable v-model="productselect" placeholder="选择产品（可输入查询）" style="width: 100%">
+								<el-option v-for="item in productselectoptions" :key="item.value" :label="item.label"
+									:value="item.value" />
+							</el-select>
+						</el-col>
+						<el-col :span="6">
+							<el-select v-model="salespersonSelect" filterable placeholder="选择销售员（可输入查询）"
+								style="width: 100%">
+								<el-option v-for="item in salespersonSelectOptions" :key="item.value"
+									:label="item.label" :value="item.value" />
+							</el-select>
+						</el-col>
+					</el-row>
+					<el-row :gutter="20" style="margin-top: 20px;">
+						<el-col :span="6">
+							<el-select v-model="contractStatusSelect" filterable placeholder="选择合同状态"
+								style="width: 100%">
+								<el-option v-for="item in contractStatusSelectOptions" :key="item.value"
+									:label="item.label" :value="item.value" />
+							</el-select>
+						</el-col>
+						<el-col :span="6">
+							<el-date-picker v-model="inquiryDate" type="date" placeholder="请选择合同日期起"
+								style="width: 100%" />
+						</el-col>
+						<el-col :span="6">
+							<el-date-picker v-model="quotationDate" type="date" placeholder="请选择合同日期止"
+								style="width: 100%" />
+						</el-col>
+						<el-col :span="6">
+							<div style="text-align: right;">
+								<el-button type="primary" plain @click="searchContracts">查询</el-button>
+								<el-button @click="resetFilters">重置</el-button>
+							</div>
+						</el-col>
+					</el-row>
+				</div>
+			</el-collapse-item>
+		</el-collapse>
 		<div style="margin-top: 30px;">
 			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;销售合同表</span>
 			<el-divider></el-divider>
@@ -830,11 +849,12 @@
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="货值合计">
-							<el-input v-model="Newcontractform.TotalValueOfGoods" style="width: 300px"
-								disabled></el-input>
+							<el-input
+								:value="formatTotalValueOfGoods(Newcontractform.TotalValueOfGoods, Newcontractform.foreignCurrency)"
+								style="width: 300px" disabled></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="数量合计">
 							<el-input v-model="Newcontractform.TotalQuantity" style="width: 300px" disabled></el-input>
 						</el-form-item>
@@ -845,14 +865,14 @@
 								disabled></el-input>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="毛重合计">
 							<el-input v-model="Newcontractform.TotalGrossWeight" style="width: 300px"
 								disabled></el-input>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8">
 						<el-form-item label="净重合计">
 							<el-input v-model="Newcontractform.TotalNetWeight" style="width: 300px" disabled></el-input>
@@ -863,17 +883,17 @@
 							<el-input v-model="Newcontractform.TotalVolume" style="width: 300px" disabled></el-input>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="采购合计">
-							<el-input v-model="Newcontractform.TotalPurchases" style="width: 300px"
+							<el-input :value="formatCNYAmount(Newcontractform.TotalPurchases)" style="width: 300px"
 								:disabled="isDisabled" :style="hasChangedProducts ? {
 									'--el-input-text-color': 'red',
 									'--el-disabled-text-color': 'red',
 								} : {}"></el-input>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8" v-if="false">
 						<el-form-item label="退税总额">
 							<el-input v-model="Newcontractform.TotalTaxRefund" style="width: 300px" :style="hasChangedProducts ? {
@@ -888,12 +908,30 @@
 								disabled></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="8" v-if="false">
 						<el-form-item label="美金/欧元换算">
 							<el-input v-model="Newcontractform.usdConversion" style="width: 300px" :style="hasChangedProducts ? {
 								'--el-input-text-color': 'red',
 								'--el-disabled-text-color': 'red',
 							} : {}" disabled></el-input>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="总毛利合计">
+							<el-input :value="formatCNYAmount(Newcontractform.Totalgrossprofit)" disabled
+								style="width: 300px;" :style="hasChangedProducts ? {
+									'--el-input-text-color': 'red',
+									'--el-disabled-text-color': 'red',
+								} : {}" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="其它费用合计">
+							<el-input :value="formatCNYAmount(Newcontractform.TotalOtherFees)" disabled
+								style="width: 300px;" :style="hasChangedProducts ? {
+									'--el-input-text-color': 'red',
+									'--el-disabled-text-color': 'red',
+								} : {}" />
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -906,22 +944,7 @@
 							} : {}" disabled></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
-						<el-form-item label="总毛利合计">
-							<el-input v-model="Newcontractform.Totalgrossprofit" disabled style="width: 300px;" :style="hasChangedProducts ? {
-								'--el-input-text-color': 'red',
-								'--el-disabled-text-color': 'red',
-							} : {}" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="其它费用合计">
-							<el-input v-model="Newcontractform.TotalOtherFees" disabled style="width: 300px;" :style="hasChangedProducts ? {
-								'--el-input-text-color': 'red',
-								'--el-disabled-text-color': 'red',
-							} : {}" />
-						</el-form-item>
-					</el-col>
+
 				</el-row>
 				<el-row>
 
@@ -931,7 +954,7 @@
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="利润金额">
-							<el-input v-model="Newcontractform.ProfitAmount" :style="hasChangedProducts ? {
+							<el-input :value="formatCNYAmount(Newcontractform.ProfitAmount)" :style="hasChangedProducts ? {
 								'--el-input-text-color': 'red',
 								'--el-disabled-text-color': 'red',
 							} : {}" disabled style="width: 300px;" />
@@ -939,7 +962,7 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="退税总额">
-							<el-input v-model="Newcontractform.TotalTaxRefund" :style="hasChangedProducts ? {
+							<el-input :value="formatCNYAmount(Newcontractform.TotalTaxRefund)" :style="hasChangedProducts ? {
 								'--el-input-text-color': 'red',
 								'--el-disabled-text-color': 'red',
 							} : {}" disabled style="width: 300px;" />
@@ -947,7 +970,7 @@
 					</el-col>
 					<el-col :span="8">
 						<el-form-item label="总利润率%">
-							<el-input v-model="Newcontractform.Totalprofitmargin" :style="hasChangedProducts ? {
+							<el-input :value="formatPercentage(Newcontractform.Totalprofitmargin)" :style="hasChangedProducts ? {
 								'--el-input-text-color': 'red',
 								'--el-disabled-text-color': 'red',
 							} : {}" disabled style="width: 300px;" />
@@ -1855,7 +1878,7 @@ const calculateTotal = () => {
 	Newcontractform.Totalgrossprofit = Totalgrossprofit || 0;
 	Newcontractform.Totalprofitmargin = Totalprofitmargin || 0;
 	//金额合计
-	Newcontractform.amountTotal = TotalvalueOfGoods;
+	Newcontractform.amountTotal = Number((TotalvalueOfGoods * Newcontractform.exchangeRate).toFixed(2));
 	//美金换算
 	Newcontractform.usdConversion = Number((Newcontractform.amountTotal / Newcontractform.exchangeRate).toFixed(3));
 }
@@ -2202,12 +2225,18 @@ var dictParams = [
 	{ dictType: 'sql_hr_customer_contactperson' }, { dictType: 'sql_hr_all_quotationnum' },
 	{ dictType: 'sql_product' }, { dictType: 'sql_product_name' },
 	{ dictType: 'sql_hr_customer_abbreviation' }, { dictType: 'hr_yes_no' },
-	{ dictType: 'hr_bank' }, { dictType: 'funds_type' }
+	{ dictType: 'hr_bank' }, { dictType: 'funds_type' }, { dictType: 'sql_all_user' }
 ]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
 	});
+
+	// 初始化过滤条件选项
+	salespersonSelectOptions.value = state.optionss.sql_hr_sale || [];
+	contractStatusSelectOptions.value = state.optionss.hr_contract_status || [];
+	customerinfoselectoptions.value = state.optionss.sql_user_customers || [];
+
 	GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
 })
 
@@ -2250,13 +2279,39 @@ const contractsTableDatahandlePageChange = async (newPage) => {
 
 function GetContractList(start, end) {
 	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
+		// 构建过滤参数
+		const filterParams = {
+			PageNum: start,
+			PageSize: end
+		};
+
+		// 添加过滤条件
+		if (quotationNum.value) {
+			filterParams.contractNumber = quotationNum.value;
+		}
+		if (customerinfoselect.value) {
+			filterParams.customerId = customerinfoselect.value;
+		}
+		if (productselect.value) {
+			filterParams.productId = productselect.value;
+		}
+		if (salespersonSelect.value) {
+			filterParams.salesperson = salespersonSelect.value;
+		}
+		if (contractStatusSelect.value) {
+			filterParams.contractStatus = contractStatusSelect.value;
+		}
+		if (inquiryDate.value) {
+			filterParams.startDate = inquiryDate.value;
+		}
+		if (quotationDate.value) {
+			filterParams.endDate = quotationDate.value;
+		}
+
 		request({
 			url: 'Contracts/GetContractsList/GetList',
 			method: 'GET',
-			params: {
-				PageNum: start,
-				PageSize: end
-			}
+			params: filterParams
 		}).then(response => {
 			if (response.data.result.length > 0) {
 				contractsTableData.value = response.data.result;
@@ -4234,8 +4289,8 @@ const GetCustomerContactPerson = (customerId) => {
 			ID: customerId
 		}
 	}).then(response => {
-		if (response != null && response.data) {
-			const customerData = response.data;
+		if (response != null) {
+			const customerData = response;
 			if (customerData.contactPerson != null) {
 				contactpersonSelectOptions.value = customerData.contactPerson.map(item => ({
 					value: item.id,
@@ -4266,6 +4321,13 @@ const productselect = ref('')
 const productselectoptions = ref([])
 const inquiryDate = ref('')
 const quotationDate = ref('')
+
+// 过滤条件相关变量
+const filterCollapseActive = ref(['filter']) // 默认展开过滤条件
+const salespersonSelect = ref('')
+const salespersonSelectOptions = ref([])
+const contractStatusSelect = ref('')
+const contractStatusSelectOptions = ref([])
 
 // 添加自动加载合同详情的函数
 const autoLoadContractDetail = () => {
@@ -4522,6 +4584,77 @@ function formatNumber2(row, key) {
 	if (row[key] !== null && row[key] !== undefined) {
 		row[key] = parseFloat(row[key]).toFixed(2);
 	}
+}
+
+// 获取货币符号的函数
+const getCurrencySymbol = (currencyValue) => {
+	if (!currencyValue) return '';
+
+	const currencyOption = state.optionss.hr_export_currency.find(item => item.dictValue == currencyValue);
+	if (!currencyOption) return '';
+
+	switch (currencyOption.dictLabel) {
+		case '美元':
+			return 'USD';
+		case '欧元':
+			return 'EUR';
+		case '人民币':
+			return 'CNY';
+		case '日元':
+			return 'JPY';
+		case '英镑':
+			return 'GBP';
+		default:
+			return currencyOption.dictLabel;
+	}
+};
+
+// 格式化货值合计显示
+const formatTotalValueOfGoods = (value, currencyValue) => {
+	if (!value || value === 0) return '0.00';
+
+	const symbol = getCurrencySymbol(currencyValue);
+	const formattedValue = Number(value).toFixed(2);
+
+	return `${symbol} ${formattedValue}`;
+};
+
+// 格式化人民币金额显示
+const formatCNYAmount = (value) => {
+	if (!value || value === 0) return 'CNY 0.00';
+
+	const formattedValue = Number(value).toFixed(2);
+	return `CNY ${formattedValue}`;
+};
+
+// 格式化百分比显示
+const formatPercentage = (value) => {
+	if (!value || value === 0) return '0.00%';
+
+	const formattedValue = Number(value).toFixed(2);
+	return `${formattedValue}%`;
+};
+
+// 查询合同列表
+const searchContracts = () => {
+	// 重置到第一页
+	contractsTableDatacurrentPage.value = 1;
+	// 调用获取合同列表函数
+	GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
+}
+
+// 重置过滤条件
+const resetFilters = () => {
+	quotationNum.value = '';
+	customerinfoselect.value = '';
+	productselect.value = '';
+	salespersonSelect.value = '';
+	contractStatusSelect.value = '';
+	inquiryDate.value = '';
+	quotationDate.value = '';
+	// 重置到第一页并重新加载数据
+	contractsTableDatacurrentPage.value = 1;
+	GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);
 }
 
 

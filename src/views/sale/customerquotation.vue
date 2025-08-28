@@ -55,7 +55,11 @@
 			<el-table-column prop="validityPeriod" label="有效期限" :width="150" />
 			<el-table-column prop="customerNum" label="客户编号" :width="150" v-if="false" />
 			<el-table-column prop="customerName" label="客户简称" :width="150" />
-			<el-table-column prop="totalValueOfGoods" label="货值合计" :width="150" />
+			<el-table-column prop="totalValueOfGoods" label="货值合计" :width="150">
+				<template #default="scope">
+					{{ formatTotalValueOfGoods(scope.row.totalValueOfGoods, scope.row.exportCurrency) }}
+				</template>
+			</el-table-column>
 			<el-table-column prop="totalQuantity" label="数量合计" :width="150" v-if="false" />
 			<el-table-column prop="totalNumberOfBoxes" label="箱数合计" :width="150" v-if="false" />
 			<el-table-column prop="totalGrossWeight" label="毛重合计" :width="150" v-if="false" />
@@ -64,7 +68,11 @@
 			<el-table-column prop="totalPurchases" label="采购合计" :width="150" v-if="false" />
 			<el-table-column prop="totalOtherFees" label="其它费用合计" :width="150" v-if="false" />
 			<el-table-column prop="totalTaxRefund" label="退税总额" :width="150" v-if="false" />
-			<el-table-column prop="profitAmount" label="利润金额" :width="150" />
+			<el-table-column prop="profitAmount" label="利润金额" :width="150">
+				<template #default="scope">
+					{{ formatCNYAmount(scope.row.profitAmount) }}
+				</template>
+			</el-table-column>
 			<el-table-column prop="createBy" label="创建人" :width="150" />
 			<el-table-column fixed="right" prop="operate" label="操作" :width="150">
 				<template v-slot:default="scope">
@@ -271,7 +279,45 @@
 					:disabled="isDisabled">添加新产品</el-button>
 				<el-table :data="productData" style="width: 100%;margin-bottom: 15px;" max-height="550">
 					<el-table-column prop="productNum" label="产品编号" width="120" />
-					<el-table-column prop="customerNum" label="客户货号" width="120" />
+					<el-table-column prop="customerNum" label="客户货号" width="120">
+						<template #default="{ row }">
+							<el-input v-model="row.customerNum" :disabled="isDisabled"></el-input>
+						</template>
+					</el-table-column>
+					<el-table-column prop="productPhotoPath" label="产品图片" width="150" align="center">
+						<template #default="scope">
+							<!-- 如果没有图片且可编辑，显示上传按钮 -->
+							<template v-if="!scope.row.productPhotoPath && !isDisabled">
+								<el-upload :auto-upload="false" :show-file-list="false"
+									:on-change="(file) => handleImageSelect(file, scope.$index)" accept="image/*">
+									<el-button type="primary" icon="UploadFilled" size="small">选择图片</el-button>
+								</el-upload>
+							</template>
+							<!-- 如果没有图片且不可编辑，显示无图片文本 -->
+							<template v-else-if="!scope.row.productPhotoPath">
+								<span>无图片</span>
+							</template>
+							<!-- 如果有图片，显示预览和删除按钮 -->
+							<template v-else>
+								<div>
+									<el-image style="width: 37.8px; height: 37.8px" :src="scope.row.productPhotoPath"
+										:preview-src-list="[scope.row.productPhotoPath]" :zoom-rate="1.2" :max-scale="7"
+										:min-scale="0.2" fit="cover" preview-teleported="true"
+										class="product-image-small"
+										@mouseenter="showHoverImage($event, scope.row.productPhotoPath)"
+										@mouseleave="hideHoverImage">
+										<template #error>
+											<span>加载失败</span>
+										</template>
+									</el-image>
+									<div v-if="!isDisabled">
+										<el-button type="danger" @click="handleImageDelete(scope.$index)"
+											size="small">删除</el-button>
+									</div>
+								</div>
+							</template>
+						</template>
+					</el-table-column>
 					<el-table-column prop="cproductname" label="中文品名" width="120">
 						<template #default="{ row }">
 							<span v-if="row.isImported">{{ row.cproductname }}</span>
@@ -514,9 +560,11 @@
 				<span style="font-size: 20px; font-weight: bold;">利润预估</span>
 				<el-divider></el-divider>
 				<el-form-item label="货值合计">
-					<el-input v-model="quotationDialogform.TotalValueOfGoods" disabled style="width: 250px;" />
+					<el-input
+						:value="formatTotalValueOfGoods(quotationDialogform.TotalValueOfGoods, quotationDialogform.exportcurrency)"
+						disabled style="width: 250px;" />
 				</el-form-item>
-				<el-form-item label="数量合计">
+				<el-form-item label="数量合计" v-if="false">
 					<el-input v-model="quotationDialogform.TotalQuantity" disabled style="width: 250px;" />
 				</el-form-item>
 				<el-form-item label="箱数合计">
@@ -532,30 +580,40 @@
 					<el-input v-model="quotationDialogform.TotalVolume" disabled style="width: 250px;" />
 				</el-form-item>
 				<el-form-item label="采购合计">
-					<el-input v-model="quotationDialogform.TotalPurchases" disabled style="width: 250px;" />
+					<el-input :value="formatCNYAmount(quotationDialogform.TotalPurchases)" disabled
+						style="width: 250px;" />
 				</el-form-item>
 				<el-form-item label="其它费用合计">
-					<el-input v-model="quotationDialogform.TotalOtherFees" disabled style="width: 250px;" />
+					<el-input :value="formatCNYAmount(quotationDialogform.TotalOtherFees)" disabled
+						style="width: 250px;" />
 				</el-form-item>
 				<el-form-item label="退税总额">
-					<el-input v-model="quotationDialogform.TotalTaxRefund" disabled style="width: 250px;" />
+					<el-input :value="formatCNYAmount(quotationDialogform.TotalTaxRefund)" disabled
+						style="width: 250px;" />
 				</el-form-item>
 				<el-form-item label="利润金额">
-					<el-input v-model="quotationDialogform.ProfitAmount" disabled style="width: 250px;" />
+					<el-input :value="formatCNYAmount(quotationDialogform.ProfitAmount)" disabled
+						style="width: 250px;" />
 				</el-form-item>
 				<el-form-item label="总毛利合计">
-					<el-input v-model="quotationDialogform.Totalgrossprofit" disabled style="width: 250px;" />
+					<el-input :value="formatCNYAmount(quotationDialogform.Totalgrossprofit)" disabled
+						style="width: 250px;" />
 				</el-form-item>
 				<el-form-item label="总利润率%">
-					<el-input v-model="quotationDialogform.Totalprofitmargin" disabled style="width: 250px;" />
+					<el-input :value="formatPercentage(quotationDialogform.Totalprofitmargin)" disabled
+						style="width: 250px;" />
 				</el-form-item>
 				<el-form-item label="银行费用">
-					<el-input v-model="quotationDialogform.BankFee" :disabled="isDisabled" style="width: 250px;"
-						@change="calculateTotal" />
+					<el-input
+						:value="isDisabled ? formatCNYAmount(quotationDialogform.BankFee) : quotationDialogform.BankFee"
+						:disabled="isDisabled" style="width: 250px;" @change="calculateTotal"
+						@input="(val) => { if (!isDisabled) quotationDialogform.BankFee = val }" />
 				</el-form-item>
 				<el-form-item label="文件杂费">
-					<el-input v-model="quotationDialogform.DocumentationFees" :disabled="isDisabled"
-						style="width: 250px;" @change="calculateTotal" />
+					<el-input
+						:value="isDisabled ? formatCNYAmount(quotationDialogform.DocumentationFees) : quotationDialogform.DocumentationFees"
+						:disabled="isDisabled" style="width: 250px;" @change="calculateTotal"
+						@input="(val) => { if (!isDisabled) quotationDialogform.DocumentationFees = val }" />
 				</el-form-item>
 				<br><span style="font-size: 20px; font-weight: bold;">备注信息</span>
 				<el-divider></el-divider>
@@ -628,8 +686,16 @@
 				</el-table-column>
 				<el-table-column prop="realQuotationDate" label="报价日期" :width="150" :formatter="formatDate" />
 				<el-table-column prop="createBy" label="创建人" :width="120" />
-				<el-table-column prop="totalValueOfGoods" label="货值合计" :width="120" />
-				<el-table-column prop="profitAmount" label="利润金额" :width="120" />
+				<el-table-column prop="totalValueOfGoods" label="货值合计" :width="120">
+					<template #default="scope">
+						{{ formatTotalValueOfGoods(scope.row.totalValueOfGoods, scope.row.exportCurrency) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="profitAmount" label="利润金额" :width="120">
+					<template #default="scope">
+						{{ formatCNYAmount(scope.row.profitAmount) }}
+					</template>
+				</el-table-column>
 				<el-table-column fixed="right" label="操作" :width="200">
 					<template #default="scope">
 						<el-button link type="primary" size="small" @click="viewVersionDetail(scope.row)">查看</el-button>
@@ -642,6 +708,12 @@
 				</span>
 			</template>
 		</el-dialog>
+
+		<!-- 悬停图片显示 -->
+		<div v-if="hoverImageVisible" class="hover-image-container"
+			:style="{ left: hoverImagePosition.x + 'px', top: hoverImagePosition.y + 'px' }">
+			<img :src="hoverImageSrc" alt="产品图片" class="hover-image" />
+		</div>
 	</div>
 </template>
 <style scoped>
@@ -660,13 +732,34 @@
 		background-color: transparent;
 	}
 }
+
+.hover-image-container {
+	position: fixed;
+	z-index: 9999;
+	background: white;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	padding: 4px;
+}
+
+.hover-image {
+	max-width: 200px;
+	max-height: 200px;
+	object-fit: contain;
+}
+
+.product-image-small {
+	border-radius: 4px;
+	cursor: pointer;
+}
 </style>
 
 <script setup lang="ts">
 import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElMessageBox, ElMessage, FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/request';
-import { Search } from '@element-plus/icons-vue';
+import { Search, UploadFilled } from '@element-plus/icons-vue';
 import DictData from '../components/dictData.vue';
 import { isNumber } from '@vueuse/core';
 import useUserStore from "@/store/modules/user";
@@ -700,6 +793,12 @@ const showSaveDraftBtn = ref(false);
 const isViewDetails = ref(false); // 新增变量，用于标记是否是通过查看详情打开的对话框
 const QuotationRemarksTextarea = ref('');
 var userId = useUserStore().userId;
+
+// 图片相关变量
+const selectedImages = ref({}); // 存储已选择的图片文件
+const hoverImageVisible = ref(false);
+const hoverImageSrc = ref('');
+const hoverImagePosition = ref({ x: 0, y: 0 });
 //查询条件
 const SearchQuotationNum = ref('');
 const SechaerCustomerSelect = ref('');
@@ -974,6 +1073,8 @@ const OpenQuotationDialog = () => {
 	quotationDialogform.inquirydate = formattedDate;
 	quotationDialogform.realquotationdate = formattedDate;
 	quotationDialogform.quorationstatus = state.optionss.hr_quotation_status[0].dictValue;
+	quotationDialogform.exportcurrency = state.optionss.hr_export_currency[0].dictValue;//默认美元
+	quotationDialogform.exchangerate = 7.2;//默认汇率7.2
 	quotationDialogform.shippingcurrency = state.optionss.hr_export_currency[2].dictValue;//默认人民币
 	quotationDialogform.shippingrate = 1;//默认1
 	quotationDialogform.seller = state.optionss.sql_all_user.find(item => item.dictValue == userId).dictValue;
@@ -1206,6 +1307,7 @@ const handleRowDblClick = (row) => {
 			innerBoxLoading: row.mediumPackagingVolume,
 			outerboxloading: row.outerBoxPackingQuantity,
 			inlandfreightprice: 0,
+			productPhotoPath: '', // 新增产品图片字段
 			isImported: true
 		});
 	}
@@ -1258,6 +1360,7 @@ const onAddquotationProductItem = () => {
 		innerBoxLoading: 0,
 		outerboxloading: 0,
 		inlandfreightprice: 0,
+		productPhotoPath: '', // 新增产品图片字段
 		isImported: false
 	});
 }
@@ -1552,7 +1655,7 @@ const addQuotationRequest = reactive({
 });
 const AddQuotation = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
-	await formEl.validate((valid, fields) => {
+	await formEl.validate(async (valid, fields) => {
 		if (valid) {
 			// 过滤掉没有填写报价数量和利润率的产品
 			const validProducts = productData.value.filter(item =>
@@ -1566,6 +1669,22 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 				productData.value = validProducts;
 				calculateTotal(); // 重新计算总值
 				ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
+			}
+
+			// 上传所有新选择的图片
+			ElMessage.info('正在上传产品图片...');
+			for (let i = 0; i < productData.value.length; i++) {
+				const product = productData.value[i];
+				// 如果有新选择的图片文件，则上传
+				if (selectedImages.value[i]) {
+					const imageUrl = await uploadImageToServer(selectedImages.value[i]);
+					if (imageUrl) {
+						product.productPhotoPath = imageUrl;
+					} else {
+						ElMessage.error(`产品 ${i + 1} 图片上传失败`);
+						return;
+					}
+				}
 			}
 			addQuotationRequest.customerid = parseInt(quotationDialogform.customernum);
 			addQuotationRequest.quotationProductDetailsList = [];
@@ -1661,6 +1780,7 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 					Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct,
 					Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct,
 					inlandfreightprice: item.inlandfreightprice,
+					productPhotoPath: item.productPhotoPath || '', // 新增产品图片字段
 					IsNewProduct: item.isImported == true ? 0 : 1
 				});
 			});
@@ -1737,6 +1857,22 @@ const SaveDraft = async () => {
 		productData.value = validProducts;
 		calculateTotal(); // 重新计算总值
 		ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
+	}
+
+	// 上传所有新选择的图片
+	ElMessage.info('正在上传产品图片...');
+	for (let i = 0; i < productData.value.length; i++) {
+		const product = productData.value[i];
+		// 如果有新选择的图片文件，则上传
+		if (selectedImages.value[i]) {
+			const imageUrl = await uploadImageToServer(selectedImages.value[i]);
+			if (imageUrl) {
+				product.productPhotoPath = imageUrl;
+			} else {
+				ElMessage.error(`产品 ${i + 1} 图片上传失败`);
+				return;
+			}
+		}
 	}
 
 	// 设置默认值
@@ -1835,6 +1971,7 @@ const SaveDraft = async () => {
 			Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct || 0,
 			Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct || 0,
 			inlandfreightprice: item.inlandfreightprice || 0,
+			productPhotoPath: item.productPhotoPath || '', // 新增产品图片字段
 			IsNewProduct: item.isImported == true ? 0 : 1,
 			ProfitMargin: item.ProfitMargin || 0
 		});
@@ -2087,6 +2224,7 @@ const GetQuotationDetailsList = (ID) => {
 						inlandfreightprice: element.inlandfreightprice,
 						IsNewProduct: element.IsNewProduct,
 						ProfitMargin: element.profitMargin,
+						productPhotoPath: element.productPhotoPath || '', // 新增产品图片字段
 						isImported: element.IsNewProduct === 0
 					});
 			});
@@ -2109,7 +2247,7 @@ const EditQuotation = () => {
 //编辑保存报价单
 const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
-	await formEl.validate((valid, fields) => {
+	await formEl.validate(async (valid, fields) => {
 		if (valid) {
 			// 过滤掉没有填写报价数量和利润率的产品
 			const validProducts = productData.value.filter(item =>
@@ -2123,6 +2261,22 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 				productData.value = validProducts;
 				calculateTotal(); // 重新计算总值
 				ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
+			}
+
+			// 上传所有新选择的图片
+			ElMessage.info('正在上传产品图片...');
+			for (let i = 0; i < productData.value.length; i++) {
+				const product = productData.value[i];
+				// 如果有新选择的图片文件，则上传
+				if (selectedImages.value[i]) {
+					const imageUrl = await uploadImageToServer(selectedImages.value[i]);
+					if (imageUrl) {
+						product.productPhotoPath = imageUrl;
+					} else {
+						ElMessage.error(`产品 ${i + 1} 图片上传失败`);
+						return;
+					}
+				}
 			}
 			for (let key in addQuotationRequest) {
 				addQuotationRequest[key] = null;
@@ -2222,6 +2376,7 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 					Oceanfreightforasingleproduct: item.Oceanfreightforasingleproduct,
 					Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct,
 					inlandfreightprice: item.inlandfreightprice,
+					productPhotoPath: item.productPhotoPath || '', // 新增产品图片字段
 					IsNewProduct: item.isImported == true ? 0 : 1
 				});
 			});
@@ -2485,6 +2640,7 @@ const CreateRevision = () => {
 									inlandfreightprice: element.inlandfreightprice,
 									IsNewProduct: element.IsNewProduct,
 									ProfitMargin: element.profitMargin,
+									productPhotoPath: element.productPhotoPath || '', // 新增产品图片字段
 									isImported: element.IsNewProduct === 0
 								});
 							});
@@ -2539,5 +2695,154 @@ const DeleteQuotation = (row) => {
 	}).catch(() => {
 		ElMessage.info('已取消删除');
 	});
+};
+
+// 获取货币符号的函数
+const getCurrencySymbol = (currencyValue) => {
+	if (!currencyValue) return '';
+
+	const currencyOption = state.optionss.hr_export_currency.find(item => item.dictValue == currencyValue);
+	if (!currencyOption) return '';
+
+	switch (currencyOption.dictLabel) {
+		case '美元':
+			return 'USD';
+		case '欧元':
+			return 'EUR';
+		case '人民币':
+			return 'CNY';
+		case '日元':
+			return 'JPY';
+		case '英镑':
+			return 'GBP';
+		default:
+			return currencyOption.dictLabel;
+	}
+};
+
+// 格式化货值合计显示
+const formatTotalValueOfGoods = (value, currencyValue) => {
+	if (!value || value === 0) return '0.00';
+
+	const symbol = getCurrencySymbol(currencyValue);
+	const formattedValue = Number(value).toFixed(2);
+
+	return `${symbol} ${formattedValue}`;
+};
+
+// 格式化人民币金额显示
+const formatCNYAmount = (value) => {
+	if (!value || value === 0) return 'CNY 0.00';
+
+	const formattedValue = Number(value).toFixed(2);
+	return `CNY ${formattedValue}`;
+};
+
+// 格式化百分比显示
+const formatPercentage = (value) => {
+	if (!value || value === 0) return '0.00%';
+
+	const formattedValue = Number(value).toFixed(2);
+	return `${formattedValue}%`;
+};
+
+// 上传图片到服务器
+const uploadImageToServer = async (file) => {
+	if (!file) {
+		console.error('No file to upload');
+		ElMessage.error('没有可上传的图片文件');
+		return null;
+	}
+
+	// 检查文件大小（200KB限制）
+	const maxSize = 200 * 1024; // 200KB in bytes
+	if (file.size > maxSize) {
+		ElMessage.error('图片大小不能超过200KB');
+		return null;
+	}
+
+	// 检查文件类型
+	if (!file.type.startsWith('image/')) {
+		ElMessage.error('请选择有效的图片文件');
+		return null;
+	}
+
+	const formData = new FormData()
+	formData.append('File', file)
+	formData.append('FileDir', 'Quotation/ProductImages')
+	formData.append('FileNameType', '1')
+	formData.append('FileName', file.name)
+
+	try {
+		const response = await request.post('Common/UploadFile', formData, {
+			params: { storeType: 1 }, // 1 表示保存到本地
+			headers: { 'Content-Type': 'multipart/form-data' }
+		})
+		if (response.code === 200) {
+			return response.data.url // 返回上传后的图片地址
+		} else {
+			throw new Error(response.msg || '上传失败')
+		}
+	} catch (error) {
+		console.error('图片上传失败:', error)
+		ElMessage.error('图片上传失败: ' + (error.message || '未知错误'))
+		return null
+	}
+}
+
+// 图片处理函数
+const handleImageSelect = async (event, index) => {
+	if (isDisabled.value) return; // 如果不可编辑，直接返回
+	const file = event.raw || event; // 兼容不同的事件对象格式
+	if (!file) {
+		console.error('No file selected');
+		ElMessage.error('请选择图片文件');
+		return;
+	}
+
+	// 显示加载状态
+	ElMessage.info('正在上传图片...');
+
+	// 上传图片到服务器
+	const imageUrl = await uploadImageToServer(file);
+	if (imageUrl) {
+		productData.value[index].productPhotoPath = imageUrl;
+		selectedImages.value[index] = file;
+		ElMessage.success('图片上传成功');
+	} else {
+		ElMessage.error('图片上传失败');
+	}
+};
+
+// 删除图片的处理函数
+const handleImageDelete = (index) => {
+	if (isDisabled.value) return; // 如果不可编辑，直接返回
+
+	ElMessageBox.confirm('确定要删除这张图片吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		productData.value[index].productPhotoPath = ''; // 清空图片
+		selectedImages.value[index] = null; // 清空已选择的文件
+		ElMessage.success('图片已删除');
+	}).catch(() => {
+		// 用户取消删除
+	});
+};
+
+// 显示悬停图片
+const showHoverImage = (event, imageSrc) => {
+	hoverImageSrc.value = imageSrc;
+	hoverImagePosition.value = {
+		x: event.clientX + 10,
+		y: event.clientY - 100
+	};
+	hoverImageVisible.value = true;
+};
+
+// 隐藏悬停图片
+const hideHoverImage = () => {
+	hoverImageVisible.value = false;
 };
 </script>

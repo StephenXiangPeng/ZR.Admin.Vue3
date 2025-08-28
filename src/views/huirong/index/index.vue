@@ -87,7 +87,7 @@
     <!-- 主要内容区域 -->
     <div class="main-content">
       <!-- 左侧：日历和任务 -->
-      <div class="left-panel">
+      <div :class="['left-panel', { 'full-width': isPurchaseRole() }]">
         <!-- 紧凑型日历 -->
         <el-card class="calendar-card" shadow="hover">
           <template #header>
@@ -221,7 +221,7 @@
 
 
       <!-- 右侧：商机看板 -->
-      <div class="right-panel">
+      <div v-if="!isPurchaseRole()" class="right-panel">
         <el-card class="opportunities-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -245,7 +245,7 @@
                 </div>
                 <div class="opportunities-list">
                   <div v-for="item in stage.details" :key="item.id" class="opportunity-item"
-                    @click="handleOpportunityClick(item)">
+                    @dblclick="handleOpportunityClick(item)">
                     <div class="item-header">
                       <span class="item-number">
                         {{ item.sourceType === 'api' && (stage.salesStage === '初次报价' || stage.salesStage === '再次报价')
@@ -2459,14 +2459,131 @@ const nextMonth = () => {
   getPlanTaskItems(formatDate(startDate), formatDate(endDate));
 };
 
+// 判断是否为采购角色的函数
+const isPurchaseRole = () => {
+  // 根据用户信息判断是否为采购角色
+  // 可以通过部门ID、角色名称等方式判断
+  if (userStore.userInfo && userStore.userInfo.deptId) {
+    // 采购部门的ID为210
+    const isPurchase = userStore.userInfo.deptId === 210;
+    console.log('用户部门ID:', userStore.userInfo.deptId, '是否为采购角色:', isPurchase);
+    return isPurchase;
+  }
+  // 也可以通过角色名称判断
+  if (userStore.roles && userStore.roles.length > 0) {
+    const isPurchase = userStore.roles.some(role =>
+      role.includes('采购') ||
+      role.includes('purchase') ||
+      role.includes('PURCHASE')
+    );
+    console.log('用户角色:', userStore.roles, '是否为采购角色:', isPurchase);
+    return isPurchase;
+  }
+  console.log('无法判断用户角色，默认显示商机看板');
+  return false;
+};
+
+// 获取商机当前阶段的辅助函数
+const getCurrentStage = (item) => {
+  // 遍历所有阶段，找到包含该商机的阶段
+  for (const stage of businessStages.value) {
+    if (stage.details.some(detail => detail.id === item.id)) {
+      return stage.salesStage;
+    }
+  }
+  return null;
+};
+
 const selectDate = (date) => {
   // 实现日期选择逻辑
   console.log('选择日期:', date);
 };
 
 const handleOpportunityClick = (item) => {
-  // 实现商机点击逻辑
-  console.log('点击商机:', item);
+  // 实现商机双击跳转逻辑
+  console.log('双击商机:', item);
+
+  // 根据商机类型和阶段进行跳转
+  if (item.sourceType === 'api') {
+    // API数据来源的商机
+    if (item.opportunityNumber && item.opportunityNumber !== '无编号') {
+      // 根据不同的阶段跳转到对应的页面
+      const currentStage = getCurrentStage(item);
+      console.log('当前阶段:', currentStage);
+      console.log('商机编号:', item.opportunityNumber);
+
+      // 根据商机编号前缀判断类型
+      if (item.opportunityNumber.startsWith('SC') || item.opportunityNumber.includes('合同')) {
+        // 合同编号，跳转到销售合同页面
+        console.log('识别为合同，跳转到销售合同页面');
+        router.push({
+          path: '/sale/sale/salecontract',
+          query: {
+            contractId: item.id,
+            viewDetail: 'true'
+          }
+        });
+      } else if (item.opportunityNumber.startsWith('Q') || item.opportunityNumber.includes('报价')) {
+        // 报价单号，跳转到报价详情页面
+        console.log('识别为报价单，跳转到报价详情页面');
+        router.push({
+          path: '/sale/customerquotation',
+          query: {
+            id: item.id,
+            viewDetail: 'true'
+          }
+        });
+      } else {
+        // 根据阶段判断
+        switch (currentStage) {
+          case '初次报价':
+          case '再次报价':
+            // 跳转到报价详情页面
+            console.log('根据阶段判断为报价，跳转到报价详情页面');
+            router.push({
+              path: '/sale/customerquotation',
+              query: {
+                id: item.id,
+                viewDetail: 'true'
+              }
+            });
+            break;
+          case '合同确定':
+            // 跳转到销售合同页面
+            console.log('根据阶段判断为合同，跳转到销售合同页面');
+            router.push({
+              path: '/sale/salecontract',
+              query: {
+                contractNumber: item.opportunityNumber,
+                contractId: item.id,
+                viewDetail: 'true'
+              }
+            });
+            break;
+          default:
+            // 其他阶段（询盘、沟通需求）跳转到客户资料页面
+            console.log('其他阶段，跳转到客户资料页面');
+            router.push({
+              path: '/sale/customerinfomation',
+              query: {
+                customerId: item.customerId || item.id
+              }
+            });
+            break;
+        }
+      }
+    } else {
+      ElMessage.warning('该商机暂无详细信息');
+    }
+  } else {
+    // 非API数据来源的商机，跳转到客户资料页面
+    router.push({
+      path: '/sale/customerinfomation',
+      query: {
+        customerId: item.customerId || item.id
+      }
+    });
+  }
 };
 
 // 生成日历数据
@@ -5275,16 +5392,22 @@ onMounted(async () => {
     getPlanTaskItems(startDate, endDate);
   });
   try {
-    await Promise.all([
+    const dataPromises = [
       GetPlantTaskItemList(),
       getWithin24hoursEmailCount(),
       getOutside24hoursEmailCount(),
       getOverduePendingTaskPlanItemList(),
       fetchTaskReminderData(),
-      fetchDashboardData(),
       getUnreadMessages(),
       getAssociatedDocumentOptionsData() // 获取关联单号选项数据
-    ])
+    ];
+
+    // 只有非采购角色才获取商机看板数据
+    if (!isPurchaseRole()) {
+      dataPromises.push(fetchDashboardData());
+    }
+
+    await Promise.all(dataPromises);
   } catch (error) {
     console.error('数据加载失败:', error)
     ElMessage.error('数据加载失败，请刷新页面重试')
@@ -6073,6 +6196,11 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
   min-height: 0;
 }
 
+.left-panel.full-width {
+  flex: 2;
+  max-width: 100%;
+}
+
 .right-panel {
   flex: 1;
   display: flex;
@@ -6419,6 +6547,33 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
   z-index: 10;
   position: relative;
+}
+
+.opportunity-item:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* 添加双击提示样式 */
+.opportunity-item::after {
+  content: "双击查看详情";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+
+.opportunity-item:hover::after {
+  opacity: 1;
 }
 
 .item-header {
