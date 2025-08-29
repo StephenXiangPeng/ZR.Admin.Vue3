@@ -1065,10 +1065,14 @@
         </span>
       </template>
     </el-dialog>
-    <el-dialog v-model="PurchaseContractDialog" title="采购合同审批" :close-on-click-modal=false style="width: 70%;">
+    <el-dialog :modal="false" :modal-penetrable="true" v-model="PurchaseContractDialog" title="采购合同审批"
+      :close-on-click-modal=false style="width: 70%;">
       <span style="font-size: 20px; font-weight: bold;">基本信息</span>
       <el-divider></el-divider>
       <el-descriptions :column="3" :border="true" label-width="120px">
+        <el-descriptions-item label="供应商">
+          {{ PurchaseContractDialogData.vendorCode }}
+        </el-descriptions-item>
         <el-descriptions-item label="采购合同">
           {{ PurchaseContractDialogData.purchaseContract }}
         </el-descriptions-item>
@@ -1081,8 +1085,14 @@
         <el-descriptions-item label="采购币种">
           {{ PurchaseContractDialogData.purchaseCurrency }}
         </el-descriptions-item>
-        <el-descriptions-item label="已付定金">
-          {{ PurchaseContractDialogData.deposit }}
+        <el-descriptions-item label="价格条款">
+          {{ PurchaseContractDialogData.priceTerms }}
+        </el-descriptions-item>
+        <el-descriptions-item label="付款天数">
+          {{ PurchaseContractDialogData.paymentDays }}
+        </el-descriptions-item>
+        <el-descriptions-item label="销售合同">
+          {{ PurchaseContractDialogData.salesContract }}
         </el-descriptions-item>
         <el-descriptions-item label="销售员">
           {{ PurchaseContractDialogData.salesperson }}
@@ -1090,26 +1100,28 @@
         <el-descriptions-item label="采购员">
           {{ PurchaseContractDialogData.purchaser }}
         </el-descriptions-item>
-        <el-descriptions-item label="价格条款">
-          {{ PurchaseContractDialogData.priceTerms }}
+        <el-descriptions-item label="交货地点">
+          {{ PurchaseContractDialogData.deliveryLocation }}
         </el-descriptions-item>
-        <el-descriptions-item label="付款天数">
-          {{ PurchaseContractDialogData.paymentDays }}
+        <el-descriptions-item label="定金金额">
+          {{ PurchaseContractDialogData.deposit }}
+        </el-descriptions-item>
+        <el-descriptions-item label="有无定金">
+          {{ PurchaseContractDialogData.hasDeposit ? '是' : '否' }}
         </el-descriptions-item>
       </el-descriptions>
 
       <el-tabs v-model="PurchaseContractDialogData.activeName" class="demo-tabs">
         <el-tab-pane label="产品资料" name="productinfo">
           <el-table :data="PurchaseContractDialogData.productinfotableData">
-            <el-table-column prop="productSupplier" label="产品供应商" width="150"></el-table-column>
             <el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
             <el-table-column prop="customerCode" label="客户货号" width="150"></el-table-column>
             <el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
             <el-table-column prop="englishName" label="英文品名" width="150"></el-table-column>
-            <el-table-column prop="chineseSpec" label="中文规格" width="150"></el-table-column>
+            <el-table-column prop="chineseSpecification" label="中文规格" width="150"></el-table-column>
             <el-table-column prop="unit" label="计量单位" width="150"></el-table-column>
             <el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
-            <el-table-column prop="purchasePrice" label="采购单价" width="150"></el-table-column>
+            <el-table-column prop="purchaseUnitPrice" label="采购单价" width="150"></el-table-column>
             <el-table-column prop="purchaseTotalPrice" label="采购总价" width="150"></el-table-column>
             <el-table-column prop="deliveryDate" label="交货日期" width="150"></el-table-column>
             <el-table-column prop="productionLeadTime" label="生产交期" width="150"></el-table-column>
@@ -1134,26 +1146,27 @@
         </el-tab-pane>
       </el-tabs>
 
+      <div style="margin-top: 30px;"></div>
       <span style="font-size: 20px; font-weight: bold;">合计信息</span>
       <el-divider></el-divider>
       <el-descriptions :column="3" :border="true" label-width="120px">
         <el-descriptions-item label="货值合计">
-          {{ PurchaseContractDialogData.TotalValueOfGoods }}
+          {{ PurchaseContractDialogData.totalValue }}
         </el-descriptions-item>
         <el-descriptions-item label="数量合计">
-          {{ PurchaseContractDialogData.TotalQuantity }}
+          {{ PurchaseContractDialogData.totalQuantity }}
         </el-descriptions-item>
         <el-descriptions-item label="箱数合计">
-          {{ PurchaseContractDialogData.TotalNumberOfBoxes }}
+          {{ PurchaseContractDialogData.totalBoxCount }}
         </el-descriptions-item>
         <el-descriptions-item label="毛重合计">
-          {{ PurchaseContractDialogData.TotalGrossWeight }}
+          {{ PurchaseContractDialogData.totalGrossWeight }}
         </el-descriptions-item>
         <el-descriptions-item label="净重合计">
-          {{ PurchaseContractDialogData.TotalNetWeight }}
+          {{ PurchaseContractDialogData.totalNetWeight }}
         </el-descriptions-item>
         <el-descriptions-item label="体积合计">
-          {{ PurchaseContractDialogData.TotalVolume }}
+          {{ PurchaseContractDialogData.totalVolume }}
         </el-descriptions-item>
         <el-descriptions-item label="已申请付款">
           {{ PurchaseContractDialogData.appliedPayment }}
@@ -3473,15 +3486,18 @@ const PurchaseContractDialogData = ref({
   purchaser: '',
   priceTerms: '',
   paymentDays: '',
+  salesContract: '',
+  deliveryLocation: '',
+  hasDeposit: false,
   activeName: 'productinfo',
   productinfotableData: [],
   CustomerRelaterExoensesTableData: [],
-  TotalValueOfGoods: '',
-  TotalQuantity: '',
-  TotalNumberOfBoxes: '',
-  TotalGrossWeight: '',
-  TotalNetWeight: '',
-  TotalVolume: '',
+  totalValue: '',
+  totalQuantity: '',
+  totalBoxCount: '',
+  totalGrossWeight: '',
+  totalNetWeight: '',
+  totalVolume: '',
   TotalPurchases: '',
   TotalTaxRefund: '',
   customerExpenseTotal: '',
@@ -3729,19 +3745,22 @@ const openSaleContractDialog = (row) => {
         PurchaseContractDialogData.value.purchaseContract = purchaseContracts.purchaseContractNumber;
         PurchaseContractDialogData.value.contractStatus = state.optionss['hr_contract_status'].find(item => item.dictValue === purchaseContracts.contractStatus.toString()).dictLabel;
         PurchaseContractDialogData.value.deliveryDate = purchaseContracts.deliveryDate;
-        //PurchaseContractDialogData.value.vendorCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === purchaseContracts.vendorCode.toString()).dictLabel;
+        PurchaseContractDialogData.value.vendorCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === purchaseContracts.vendorCode.toString())?.dictLabel || '未知供应商';
         PurchaseContractDialogData.value.purchaseCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === purchaseContracts.purchaseCurrency.toString()).dictLabel;
-        PurchaseContractDialogData.value.deposit = purchaseContracts.deposit;
+        PurchaseContractDialogData.value.deposit = purchaseContracts.deposit || '0';
         PurchaseContractDialogData.value.salesperson = (state.optionss['sql_hr_sale'].find(item => item.dictValue === purchaseContracts.salesperson.toString()) || { dictLabel: '未知销售员' }).dictLabel;
         PurchaseContractDialogData.value.purchaser = (state.optionss['sql_hr_purchase'].find(item => item.dictValue === purchaseContracts.purchaser.toString()) || { dictLabel: '未知采购员' }).dictLabel;
-        PurchaseContractDialogData.value.priceTerms = (state.optionss['hr_pricing_term'].find(item => item.dictValue === purchaseContracts.priceTerms.toString()) || { dictLabel: '未知价格条款' }).dictLabel;
-        PurchaseContractDialogData.value.paymentDays = purchaseContracts.paymentDays;
-        PurchaseContractDialogData.value.TotalValueOfGoods = purchaseContracts.totalGoodsValue;
-        PurchaseContractDialogData.value.TotalQuantity = purchaseContracts.totalQuantity;
-        PurchaseContractDialogData.value.TotalNumberOfBoxes = purchaseContracts.totalBoxCount;
-        PurchaseContractDialogData.value.TotalGrossWeight = purchaseContracts.totalGrossWeight;
-        PurchaseContractDialogData.value.TotalNetWeight = purchaseContracts.totalNetWeight;
-        PurchaseContractDialogData.value.TotalVolume = purchaseContracts.totalVolume;
+        PurchaseContractDialogData.value.priceTerms = (state.optionss['hr_purchase_pricing_term'].find(item => item.dictValue === purchaseContracts.priceTerms.toString()) || { dictLabel: '未知价格条款' }).dictLabel;
+        PurchaseContractDialogData.value.paymentDays = (state.optionss['hr_purchase_payment_days'].find(item => item.dictValue === purchaseContracts.paymentDays.toString()) || { dictLabel: '未知付款天数' }).dictLabel;
+        PurchaseContractDialogData.value.salesContract = state.optionss['sql_sale_contracts'].find(item => item.dictValue === purchaseContracts.salesContract.toString())?.dictLabel || '未知合同';
+        PurchaseContractDialogData.value.deliveryLocation = purchaseContracts.deliveryLocation || '';
+        PurchaseContractDialogData.value.hasDeposit = parseFloat(purchaseContracts.deposit || '0') > 0;
+        PurchaseContractDialogData.value.totalValue = purchaseContracts.totalGoodsValue;
+        PurchaseContractDialogData.value.totalQuantity = purchaseContracts.totalQuantity;
+        PurchaseContractDialogData.value.totalBoxCount = purchaseContracts.totalBoxes;
+        PurchaseContractDialogData.value.totalGrossWeight = purchaseContracts.totalGrossWeight;
+        PurchaseContractDialogData.value.totalNetWeight = purchaseContracts.totalNetWeight;
+        PurchaseContractDialogData.value.totalVolume = purchaseContracts.totalVolume;
         PurchaseContractDialogData.value.TotalPurchases = purchaseContracts.totalPurchases;
         PurchaseContractDialogData.value.TotalTaxRefund = purchaseContracts.totalTaxRefund;
         PurchaseContractDialogData.value.customerExpenseTotal = purchaseContracts.customerExpenseTotal;
@@ -3750,10 +3769,16 @@ const openSaleContractDialog = (row) => {
         PurchaseContractDialogData.value.unpaidAmount = purchaseContracts.unpaidAmount;
         PurchaseContractDialogData.value.paidAmount = purchaseContracts.paidAmount;
         response.data.purchaseContractProducts.forEach(productData => {
-          productData.productSupplier = state.optionss['sql_supplier_info'].find(item => item.dictValue === productData.supplierID.toString()).dictLabel;
-          //productData.unit = state.optionss['hr_calculate_unit'].find(item => item.dictValue === productData.unit.toString()).dictLabel;
-          //productData.packaging = state.optionss['hr_packing'].find(item => item.dictValue === productData.packaging.toString()).dictLabel;
+          productData.unit = state.optionss['hr_calculate_unit'].find(item => item.dictValue === productData.unit.toString())?.dictLabel || '无';
+          productData.packaging = state.optionss['hr_packing'].find(item => item.dictValue === productData.packaging.toString())?.dictLabel || '无';
           productData.invoice = productData.invoice == 0 ? "否" : "是";
+          // 确保字段名与表格显示一致
+          if (productData.chineseSpec) {
+            productData.chineseSpecification = productData.chineseSpec;
+          }
+          if (productData.purchasePrice) {
+            productData.purchaseUnitPrice = productData.purchasePrice;
+          }
         });
         PurchaseContractDialogData.value.productinfotableData = response.data.purchaseContractProducts;
         PurchaseContractDialogData.value.CustomerRelaterExoensesTableData = response.data.purchaseContractVendorExpenses;
@@ -4414,6 +4439,8 @@ var dictParams = [
   { dictType: 'hr_customer_level' },
   { dictType: 'hr_settlement_way' },
   { dictType: 'hr_pricing_term' },
+  { dictType: 'hr_purchase_pricing_term' },
+  { dictType: 'hr_purchase_payment_days' },
   { dictType: 'hr_nation' },
   { dictType: 'sql_hr_sale' },
   { dictType: 'hr_bank' },

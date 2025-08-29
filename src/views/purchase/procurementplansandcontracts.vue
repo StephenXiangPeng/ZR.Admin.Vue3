@@ -88,6 +88,10 @@
 			<el-table-column prop="salesperson" label="销售员" width="150"></el-table-column>
 			<el-table-column prop="purchaser" label="采购员" width="150"></el-table-column>
 			<el-table-column prop="createTime" label="创建日期" width="150"></el-table-column>
+			<el-table-column prop="deliveryLocation" label="交货地点" width="150" v-if="false"></el-table-column>
+			<el-table-column prop="paymentDays" label="付款天数" width="150" v-if="false"></el-table-column>
+			<el-table-column prop="deposit" label="定金金额" width="150" v-if="false"></el-table-column>
+			<el-table-column prop="hasDeposit" label="有无定金" width="150" v-if="false"></el-table-column>
 			<el-table-column fixed="right" label="操作" width="280">
 				<template #default="scope">
 					<el-button type="text" size="small" @click="CheckDetails(scope.row)">查看详情</el-button>
@@ -103,11 +107,22 @@
 			:total="purchasecontractsTableDatatotalItems" background layout="prev, pager, next"
 			style="margin-top: 5px;" />
 
-		<el-dialog v-model="Addcontractofpurchasedialog" title="新增采购合同" :close-on-click-modal=false style="width: 70%;"
-			@close="handleAddcontractofpurchasedialogclose">
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="Addcontractofpurchasedialog" title="新增采购合同"
+			:close-on-click-modal=false style="width: 70%;" @close="handleAddcontractofpurchasedialogclose">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="Addcontractofpurchaseform" label-width="120px">
+				<el-row>
+					<el-col :span="8">
+						<el-form-item label="供应商">
+							<el-select v-model="Addcontractofpurchaseform.vendorCode" placeholder="请选择供应商"
+								style="width: 300px" :disabled="isFormDisabled">
+								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+				</el-row>
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="采购合同">
@@ -135,17 +150,41 @@
 				<el-row>
 					<el-col :span="8">
 						<el-form-item label="采购币种">
-							<el-select v-model="Addcontractofpurchaseform.purchaseCurrency" disabled
-								style="width: 300px">
+							<el-select v-model="Addcontractofpurchaseform.purchaseCurrency" style="width: 300px"
+								:disabled="isFormDisabled">
 								<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="已付定金">
-							<el-input v-model="Addcontractofpurchaseform.deposit" disabled
-								style="width: 300px"></el-input>
+						<el-form-item label="价格条款">
+							<el-select v-model="Addcontractofpurchaseform.priceTerms" style="width: 300px"
+								:disabled="isFormDisabled">
+								<el-option v-for="dict in optionss.hr_purchase_pricing_term" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+
+					<el-col :span="8">
+						<el-form-item label="付款天数" prop="paymentDays">
+							<el-select v-model="Addcontractofpurchaseform.paymentDays" style="width: 300px"
+								:disabled="isFormDisabled">
+								<el-option v-for="dict in optionss.hr_purchase_payment_days" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<el-row>
+					<el-col :span="8">
+						<el-form-item label="销售合同">
+							<el-select v-model="Addcontractofpurchaseform.salesContract" placeholder="请选择销售合同"
+								style="width: 300px" :disabled="isFormDisabled">
+								<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+							</el-select>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
@@ -156,8 +195,6 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
 					<el-col :span="8">
 						<el-form-item label="采购员">
 							<el-select disabled v-model="Addcontractofpurchaseform.purchaser" placeholder="请选择采购员"
@@ -167,19 +204,25 @@
 							</el-select>
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="8">
-						<el-form-item label="价格条款">
-							<el-select v-model="Addcontractofpurchaseform.priceTerms" disabled style="width: 300px">
-								<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
+						<el-form-item label="交货地点">
+							<el-input v-model="Addcontractofpurchaseform.deliveryLocation" style="width: 300px"
+								:disabled="isFormDisabled"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="8">
-						<el-form-item label="付款天数" prop="paymentDays">
-							<el-input v-model="Addcontractofpurchaseform.paymentDays" placeholder="请输入付款天数"
-								style="width: 300px" :disabled="isFormDisabled">
-							</el-input>
+						<el-form-item label="定金金额">
+							<el-input v-model="Addcontractofpurchaseform.deposit"
+								:disabled="!Addcontractofpurchaseform.hasDeposit || isFormDisabled" style="width: 300px"
+								placeholder="请输入定金金额"></el-input>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="有无定金" prop="hasDeposit">
+							<el-checkbox v-model="Addcontractofpurchaseform.hasDeposit" @change="handleDepositChange"
+								:disabled="isFormDisabled"></el-checkbox>
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -229,16 +272,6 @@
 			<el-tabs v-model="activeName" class="demo-tabs" @tab-click="handleClick">
 				<el-tab-pane label="产品资料" name="productinfo">
 					<el-table :data="productinfotableData">
-						<el-table-column prop="vendorCode" label="供应商" width="200">
-							<template #default="scope">
-								<el-select :disabled="isFormDisabled" v-model="scope.row.vendorCode"
-									placeholder="请选择供应商" filterable>
-									<el-option v-for="dict in (supplierCache[scope.row.productId] || [])"
-										:key="dict.dictValue" :label="dict.dictLabel" :value="dict.dictValue">
-									</el-option>
-								</el-select>
-							</template>
-						</el-table-column>
 						<el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
 						<el-table-column prop="customerCode" label="客户货号" width="150"></el-table-column>
 						<el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
@@ -519,8 +552,8 @@ onMounted(() => {
 // 添加自动加载合同详情的函数
 const autoLoadpurchaseContractDetail = () => {
 	// 检查URL参数
-	const purchaseContractId = router.query.purchaseContractId
-	const viewDetail = router.query.viewDetail
+	const purchaseContractId = router.currentRoute.value.query.purchaseContractId
+	const viewDetail = router.currentRoute.value.query.viewDetail
 	if (purchaseContractId && viewDetail === 'true') {
 		console.log('自动加载合同详情, ID:', purchaseContractId)
 
@@ -544,58 +577,7 @@ const showOperationColumn = computed(() => {
 	return detailsTableData.value.some(row => row.productId === 0 || row.productId === null);
 });
 
-// 产品供应商选项
-const ProductSupplierOptions = ref([]);
-
-// 添加供应商缓存
-const supplierCache = reactive({});
-
-// 根据产品ID获取供应商列表
-const getSupplierListByProduct = async (productID: number) => {
-	if (!productID) {
-		return [];
-	}
-
-	// 如果缓存中有数据，直接返回
-	if (supplierCache[productID]) {
-		return supplierCache[productID];
-	}
-
-	try {
-		const res = await request({
-			url: 'ProductInformation/GetSupplierListByProductID/GetProductSupplierList',
-			method: 'get',
-			params: {
-				productID: productID
-			}
-		});
-		if (res.code == 200) {
-			// 将数据存入缓存
-			supplierCache[productID] = res.data;
-			return res.data;
-		} else {
-			ElMessage.error(res.msg || '获取供应商列表失败');
-			return [];
-		}
-	} catch (error) {
-		console.error('获取供应商列表失败', error);
-		ElMessage.error('获取供应商列表失败');
-		return [];
-	}
-};
-
-// 在表格数据加载时预加载供应商数据
-const loadSupplierData = async (products) => {
-	if (!products || !Array.isArray(products)) {
-		return;
-	}
-
-	for (const product of products) {
-		if (product.productId && !supplierCache[product.productId]) {
-			await getSupplierListByProduct(product.productId);
-		}
-	}
-};
+// 移除产品供应商相关代码，统一使用基本信息中的供应商
 
 const GeneratePurchaseContract = (row) => {
 	ElMessageBox.confirm('确定生成采购合同吗?', '提示', {
@@ -626,7 +608,7 @@ const GeneratePurchaseContract = (row) => {
 				// 绑定基本信息
 				Addcontractofpurchaseform.value.purchaser = state.optionss.sql_hr_purchase.find(item => item.dictValue === userId.toString())?.dictValue;
 				Addcontractofpurchaseform.value.contractStatus = "1";
-				Addcontractofpurchaseform.value.salesContract = row.contractId;
+				Addcontractofpurchaseform.value.salesContract = state.optionss.sql_sale_contracts.find(item => item.dictValue === response.data.contract.id.toString())?.dictValue;
 				Addcontractofpurchaseform.value.customerContract = response.data.contract.customerContract;
 				Addcontractofpurchaseform.value.customerid = response.data.contract.customerId;
 				Addcontractofpurchaseform.value.customerAbbreviation = response.data.contract.customerAbbreviation;
@@ -634,18 +616,19 @@ const GeneratePurchaseContract = (row) => {
 				// 设置采购币种默认为人民币
 				Addcontractofpurchaseform.value.purchaseCurrency = "3";
 				Addcontractofpurchaseform.value.deposit = "0";
+				Addcontractofpurchaseform.value.hasDeposit = false;
 				Addcontractofpurchaseform.value.salesperson = response.data.contract.salesperson.toString();
 				Addcontractofpurchaseform.value.priceTerms = response.data.contract.priceTerms.toString();
+				Addcontractofpurchaseform.value.deliveryLocation = response.data.contract.deliveryLocation || '';
 
 				// 绑定商品信息
 				if (response.data.contractProducts && response.data.contractProducts.length > 0) {
 					productinfotableData.value = response.data.contractProducts.map(product => ({
 						id: product.id,
 						productId: product.productID, // 确保这里设置了productId
-						vendorCode: product.vendorCode,
 						productCode: product.productCode,
 						chineseName: product.chineseName,
-						chineseSpecification: product.chineseSpecification,
+						chineseSpecification: product.chineseSpec,
 						unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === product.unit.toString())?.dictLabel || '无',
 						contractQuantity: product.contractQuantity,
 						purchaseUnitPrice: product.purchaseUnitPrice,
@@ -660,8 +643,6 @@ const GeneratePurchaseContract = (row) => {
 						invoice: product.invoice == 1 ? '是' : '否',
 						remark: product.remark
 					}));
-					// 先加载供应商数据
-					await loadSupplierData(productinfotableData.value);
 					// 设置默认交货日期
 					setDefaultDeliveryDateForProducts(Addcontractofpurchaseform.value.deliveryDate);
 				}
@@ -717,13 +698,15 @@ const OpenAddcontractofpurchasedialog = async () => {
 	Addcontractofpurchaseform.value.contractStatus = '1';
 	// 设置采购币种默认为人民币
 	Addcontractofpurchaseform.value.purchaseCurrency = "3";
+	// 设置定金相关字段
+	Addcontractofpurchaseform.value.deposit = "0";
+	Addcontractofpurchaseform.value.hasDeposit = false;
 	Addcontractofpurchasedialog.value = true;
 	isSaveBtnShow.value = true;
 	showApproveRejectBtn.value = false;
 	showApprovePassBtn.value = false;
-	// 新增：如果有产品数据，加载供应商数据
+	// 新增：如果有产品数据，设置默认交货日期
 	if (productinfotableData.value.length > 0) {
-		await loadSupplierData(productinfotableData.value);
 		// 设置默认交货日期
 		setDefaultDeliveryDateForProducts(Addcontractofpurchaseform.value.deliveryDate);
 	}
@@ -855,7 +838,7 @@ const updateGenerateStatusByContractId = (contractId) => {
 				// 供应商简称
 				resolve(response);  // Resolve the promise with the response data
 			} else {
-				console.error(error);
+				console.error('获取供应商信息失败');
 			}
 		}).catch(error => {
 			console.error(error);
@@ -956,7 +939,9 @@ const state = reactive({
 		sql_supplier_info: [],
 		sql_hr_purchase: [],
 		hr_packing: [],
-		sql_product: []
+		sql_product: [],
+		hr_purchase_pricing_term: [],
+		hr_purchase_payment_days: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -965,7 +950,7 @@ var dictParams = [{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' }
 { dictType: 'hr_transportation_method' }, { dictType: 'sys_yes_no' }, { dictType: 'hr_calculate_unit' }, { dictType: 'hr_contract_status' },
 { dictType: 'hr_customer_level' }, { dictType: 'hr_signing_place' }, { dictType: 'hr_quotation_basis' }, { dictType: 'hr_outerbox_unit' },
 { dictType: 'hr_supplier_level' }, { dictType: 'hr_business_scope' }, { dictType: 'hr_china_provinces' }, { dictType: 'hr_china_city' }, { dictType: 'sql_sale_contracts' },
-{ dictType: 'sql_supplier_info' }, { dictType: 'sql_hr_purchase' }, { dictType: 'hr_packing' }, { dictType: 'sql_product' }]
+{ dictType: 'sql_supplier_info' }, { dictType: 'sql_hr_purchase' }, { dictType: 'hr_packing' }, { dictType: 'sql_product' }, { dictType: 'hr_purchase_pricing_term' }, { dictType: 'hr_purchase_payment_days' }]
 
 
 async function fetchDataAndExecute() {
@@ -997,12 +982,14 @@ const Addcontractofpurchaseform = ref({
 	customerAbbreviation: '',
 	deliveryDate: '',
 	purchaseCurrency: '',
-	deposit: '',
+	deposit: '0',
 	salesperson: '',
 	purchaser: '',
 	paymentDays: '',
 	priceTerms: '',
-	customerid: ''
+	customerid: '',
+	hasDeposit: false,
+	deliveryLocation: ''
 })
 
 const GetSupplierInfo = () => {
@@ -1052,6 +1039,14 @@ const expenseChange = (row) => {
 
 const handleDelete = (index) => {
 	CustomerRelaterExoensesTableData.value.splice(index, 1);
+}
+
+// 处理定金变化
+const handleDepositChange = (checked) => {
+	if (!checked) {
+		// 如果取消选中，将定金金额设置为0
+		Addcontractofpurchaseform.value.deposit = '0';
+	}
 }
 
 const contractofpurchaseRequest = reactive({
@@ -1108,13 +1103,13 @@ const submitPurchaseContract = () => {
 	const mappedProducts = productinfotableData.value.map(product => ({
 		id: product.id || 0,
 		productId: product.productId || 0,
-		SupplierID: product.vendorCode || 0,
+		SupplierID: Addcontractofpurchaseform.value.vendorCode || 0, // 使用基本信息中的供应商
 		purchaseContractId: 0, // 新增时为0
-		productCode: state.optionss.sql_product.find(item => item.dictLabel === product.productCode.toString())?.dictValue,
+		productCode: product.productCode || '',
 		customerCode: product.customerCode || '',
 		chineseName: product.chineseName || '',
 		englishName: product.englishName || '',
-		chineseSpec: product.chineseSpec || '',
+		chineseSpec: product.chineseSpecification || '',
 		contractQuantity: parseFloat(product.contractQuantity),
 		unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
 		purchasePrice: parseFloat(product.purchaseUnitPrice),
@@ -1187,7 +1182,11 @@ const submitPurchaseContract = () => {
 		purchaseContractProducts: mappedProducts,
 		purchaseContractVendorExpenses: mappedExpenses,
 		isDraft: 1,
-		ProcurementRequirementID: ProcurementRequirementID.value
+		ProcurementRequirementID: ProcurementRequirementID.value,
+		hasdeposit: Addcontractofpurchaseform.value.hasDeposit ? 1 : 0, // 转换为数字：0否，1是
+		SupplierID: parseInt(Addcontractofpurchaseform.value.vendorCode) || 0, // 供应商ID
+		deliveryLocation: Addcontractofpurchaseform.value.deliveryLocation || '', // 交货地点
+		salesContractID: parseInt(Addcontractofpurchaseform.value.salesContract) || 0 // 销售合同ID
 	};
 	// 提交采购合同
 	request.post("PurchaseContracts/AddPurchaseContracts/Add", contractRequest)
@@ -1254,12 +1253,13 @@ const saveEditContract = () => {
 			Id: product.id || 0,
 			ProductId: product.productId || 0,
 			PurchaseContractId: currentContractId.value,
-			SupplierID: parseInt(product.vendorCode) || 0,
+			ProductNumber: product.productNumber || '',
+			SupplierID: parseInt(Addcontractofpurchaseform.value.vendorCode) || 0, // 使用基本信息中的供应商
 			ProductCode: product.productCode || '',
 			CustomerCode: product.customerCode || '',
 			ChineseName: product.chineseName || '',
 			EnglishName: product.englishName || '',
-			chineseSpec: product.chineseSpec || '',
+			chineseSpec: product.chineseSpecification || '',
 			ContractQuantity: parseFloat(product.contractQuantity) || 0,
 			Unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
 			PurchasePrice: parseFloat(product.purchaseUnitPrice),
@@ -1272,8 +1272,7 @@ const saveEditContract = () => {
 			InnerBoxQuantity: parseInt(product.innerBoxQuantity),
 			OuterBoxQuantity: parseInt(product.outerBoxQuantity),
 			Remark: product.remark || '',
-			IsDelete: 0,
-			SupplierID: parseInt(product.vendorCode)
+			IsDelete: 0
 		}));
 
 		// 构建厂商费用数据
@@ -1319,7 +1318,11 @@ const saveEditContract = () => {
 			PurchaseContractProducts: mappedProducts,
 			PurchaseContractVendorExpenses: mappedExpenses,
 			isDraft: 1,
-			ProcurementRequirementID: ProcurementRequirementID.value
+			ProcurementRequirementID: ProcurementRequirementID.value,
+			hasdeposit: Addcontractofpurchaseform.value.hasDeposit ? 1 : 0, // 转换为数字：0否，1是
+			SupplierID: parseInt(Addcontractofpurchaseform.value.vendorCode) || 0, // 供应商ID
+			deliveryLocation: Addcontractofpurchaseform.value.deliveryLocation || '', // 交货地点
+			salesContractID: parseInt(Addcontractofpurchaseform.value.salesContract) || 0 // 销售合同ID
 		};
 
 		// 发送请求
@@ -1374,14 +1377,9 @@ const submitForReview = () => {
 		type: 'warning'
 	}).then(async () => {
 		if (currentContractId.value == null) {
-			let isCheckVendor = true;
-			productinfotableData.value.forEach(item => {
-				if (item.vendorCode == null || item.vendorCode == 0 || item.vendorCode == undefined || item.vendorCode == '') {
-					isCheckVendor = false;
-				}
-			});
-			if (!isCheckVendor) {
-				ElMessage.error('请为产品列表中的产品选择供应商！');
+			// 检查基本信息中是否选择了供应商
+			if (!Addcontractofpurchaseform.value.vendorCode) {
+				ElMessage.error('请选择供应商！');
 				return;
 			}
 			try {
@@ -1389,7 +1387,7 @@ const submitForReview = () => {
 				const mappedProducts = productinfotableData.value.map(product => ({
 					id: product.id || 0,
 					ProductID: product.productId || 0,
-					SupplierID: product.vendorCode || 0,
+					SupplierID: Addcontractofpurchaseform.value.vendorCode || 0, // 使用基本信息中的供应商
 					purchaseContractId: 0, // 新增时为0
 					productCode: state.optionss.sql_product.find(item => item.dictLabel === product.productCode.toString())?.dictValue,
 					customerCode: product.customerCode || '',
@@ -1468,7 +1466,11 @@ const submitForReview = () => {
 					purchaseContractProducts: mappedProducts,
 					purchaseContractVendorExpenses: mappedExpenses,
 					isDraft: 1,
-					ProcurementRequirementID: ProcurementRequirementID.value
+					ProcurementRequirementID: ProcurementRequirementID.value,
+					hasdeposit: Addcontractofpurchaseform.value.hasDeposit ? 1 : 0, // 转换为数字：0否，1是
+					SupplierID: parseInt(Addcontractofpurchaseform.value.vendorCode) || 0, // 供应商ID
+					deliveryLocation: Addcontractofpurchaseform.value.deliveryLocation || '', // 交货地点
+					salesContractID: parseInt(Addcontractofpurchaseform.value.salesContract) || 0 // 销售合同ID
 				};
 				// 提交采购合同
 				request.post("PurchaseContracts/AddPurchaseContracts/Add", contractRequest)
@@ -1545,7 +1547,7 @@ const submitForReview = () => {
 };
 
 
-const handleClick = (tab: TabsPaneContext, event: Event) => {
+const handleClick = (tab, event) => {
 
 }
 
@@ -1823,19 +1825,25 @@ const CheckDetails = async (row) => {
 	showEditSaveBtn.value = false;
 	isFormDisabled.value = true;          // 禁用表单编辑
 	isSaveBtnShow.value = false;
+
 	Addcontractofpurchaseform.value.purchaseContract = row.purchaseContractNumber;
 	Addcontractofpurchaseform.value.contractStatus = row.contractStatus.toString();
-	Addcontractofpurchaseform.value.vendorCode = row.vendorCode;
+	Addcontractofpurchaseform.value.vendorCode = state.optionss.sql_supplier_info.find(item =>
+		item.dictValue == row.supplierID.toString())?.dictValue || '';
 	Addcontractofpurchaseform.value.vendorAbbreviation = row.vendorAbbreviation;
 	Addcontractofpurchaseform.value.salesContract = row.salesContract;
 	Addcontractofpurchaseform.value.customerContract = row.customerContract;
 	Addcontractofpurchaseform.value.customerAbbreviation = row.customerAbbreviation;
 	Addcontractofpurchaseform.value.deliveryDate = row.deliveryDate;
 	Addcontractofpurchaseform.value.purchaseCurrency = row.purchaseCurrency;
-	Addcontractofpurchaseform.value.deposit = row.deposit;
+	Addcontractofpurchaseform.value.deposit = row.deposit || '0';
+	Addcontractofpurchaseform.value.deliveryLocation = row.deliveryLocation || '';
+	Addcontractofpurchaseform.value.paymentDays = state.optionss.hr_purchase_payment_days.find(item =>
+		item.dictValue == row.paymentDays.toString())?.dictValue || '';
+	// 根据定金金额判断是否有定金
+	Addcontractofpurchaseform.value.hasDeposit = parseFloat(row.deposit || '0') > 0;
 	Addcontractofpurchaseform.value.salesperson = row.salesperson;
 	Addcontractofpurchaseform.value.purchaser = row.purchaser;
-	Addcontractofpurchaseform.value.paymentDays = row.paymentDays;
 	Addcontractofpurchaseform.value.priceTerms = row.priceTerms;
 	Totalvalueofgoodsform.value.totalValue = row.totalGoodsValue;
 	Totalvalueofgoodsform.value.totalQuantity = row.totalQuantity;
@@ -1863,8 +1871,7 @@ const CheckDetails = async (row) => {
 					return {
 						id: element.id,
 						productId: element.productNumber, // 确保这里设置了productId
-						vendorCode: element.supplierID, // 存储供应商ID
-						productCode: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
+						productCode: element.productCode || '',
 						chineseName: element.chineseName,
 						chineseSpecification: element.chineseSpecification,
 						unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
@@ -1881,9 +1888,7 @@ const CheckDetails = async (row) => {
 						remark: element.remark
 					};
 				});
-				// 先加载供应商数据
-				await loadSupplierData(products);
-				// 然后设置产品数据
+				// 设置产品数据
 				productinfotableData.value = products;
 			}
 			if (response.data.purchaseContractVendorExpenses.length > 0) {
@@ -1940,11 +1945,13 @@ const clearAll = () => {
 	Addcontractofpurchaseform.value.customerAbbreviation = '';
 	Addcontractofpurchaseform.value.deliveryDate = '';
 	Addcontractofpurchaseform.value.purchaseCurrency = '';
-	Addcontractofpurchaseform.value.deposit = '';
+	Addcontractofpurchaseform.value.deposit = '0';
+	Addcontractofpurchaseform.value.hasDeposit = false;
 	Addcontractofpurchaseform.value.salesperson = '';
 	Addcontractofpurchaseform.value.purchaser = '';
 	Addcontractofpurchaseform.value.paymentDays = '';
 	Addcontractofpurchaseform.value.priceTerms = '';
+	Addcontractofpurchaseform.value.deliveryLocation = '';
 	Totalvalueofgoodsform.value.totalValue = '';
 	Totalvalueofgoodsform.value.totalQuantity = '';
 	Totalvalueofgoodsform.value.totalBoxCount = '';
@@ -2151,7 +2158,7 @@ const DeletePurchaseContract = (row) => {
 				ElMessage.success(response.msg || '删除成功');
 				GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
 			} else {
-				ElMessage.error(res.msg || '删除失败');
+				ElMessage.error(response.msg || '删除失败');
 			}
 		}).catch(() => {
 			ElMessage.error('删除失败，请稍后重试');
