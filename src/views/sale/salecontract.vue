@@ -1,61 +1,57 @@
 <template>
 	<div>
-		<div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click="openContractDialog">销售合同</el-button>
-		<el-collapse v-model="filterCollapseActive" style="margin-top: 30px;">
+		<el-collapse v-model="filterCollapseActive" style="margin-top: 0px;">
 			<el-collapse-item title="过滤条件" name="filter">
 				<template #title>
-					<span style="font-size: 16px; font-weight: bold;">过滤条件</span>
+					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
 				</template>
 				<div style="width: 100%; margin-top: 20px;">
 					<el-row :gutter="20">
-						<el-col :span="6">
-							<el-input v-model="quotationNum" clearable placeholder="输入合同编号" />
+						<el-col :span="4">
+							<el-input v-model="quotationNum" clearable placeholder="请输入合同编号" size="default" />
 						</el-col>
-						<el-col :span="6">
-							<el-select filterable v-model="customerinfoselect" placeholder="选择客户（可输入查询）"
-								style="width: 100%">
+						<el-col :span="4">
+							<el-select filterable v-model="customerinfoselect" placeholder="请选择客户（可输入查询）"
+								style="width: 100%" size="default">
 								<el-option v-for="item in customerinfoselectoptions" :key="item.value"
 									:label="item.label" :value="item.value" />
 							</el-select>
 						</el-col>
-						<el-col :span="6">
-							<el-select filterable v-model="productselect" placeholder="选择产品（可输入查询）" style="width: 100%">
+						<el-col :span="4">
+							<el-select filterable v-model="productselect" placeholder="请选择产品（可输入查询）" style="width: 100%"
+								size="default">
 								<el-option v-for="item in productselectoptions" :key="item.value" :label="item.label"
 									:value="item.value" />
 							</el-select>
 						</el-col>
-						<el-col :span="6">
-							<el-select v-model="salespersonSelect" filterable placeholder="选择销售员（可输入查询）"
-								style="width: 100%">
+						<el-col :span="4">
+							<el-select v-model="salespersonSelect" filterable placeholder="请选择销售员（可输入查询）"
+								style="width: 100%" size="default">
 								<el-option v-for="item in salespersonSelectOptions" :key="item.value"
 									:label="item.label" :value="item.value" />
 							</el-select>
 						</el-col>
-					</el-row>
-					<el-row :gutter="20" style="margin-top: 20px;">
-						<el-col :span="6">
-							<el-select v-model="contractStatusSelect" filterable placeholder="选择合同状态"
-								style="width: 100%">
+						<el-col :span="4">
+							<el-select v-model="contractStatusSelect" filterable placeholder="请选择合同状态"
+								style="width: 100%" size="default">
 								<el-option v-for="item in contractStatusSelectOptions" :key="item.value"
 									:label="item.label" :value="item.value" />
 							</el-select>
 						</el-col>
-						<el-col :span="6">
-							<el-date-picker v-model="inquiryDate" type="date" placeholder="请选择合同日期起"
-								style="width: 100%" />
+						<el-col :span="4">
+							<el-date-picker v-model="inquiryDate" type="date" placeholder="请选择合同日期起" style="width: 100%"
+								size="default" />
 						</el-col>
-						<el-col :span="6">
+					</el-row>
+					<el-row :gutter="20" style="margin-top: 20px;">
+						<el-col :span="4">
 							<el-date-picker v-model="quotationDate" type="date" placeholder="请选择合同日期止"
-								style="width: 100%" />
+								style="width: 100%" size="default" />
 						</el-col>
-						<el-col :span="6">
-							<div style="text-align: right;">
-								<el-button type="primary" plain @click="searchContracts">查询</el-button>
-								<el-button @click="resetFilters">重置</el-button>
+						<el-col :span="4">
+							<div style="text-align: left;">
+								<el-button type="primary" plain @click="searchContracts" size="default">查询</el-button>
+								<el-button @click="resetFilters" size="default">重置</el-button>
 							</div>
 						</el-col>
 					</el-row>
@@ -64,6 +60,9 @@
 		</el-collapse>
 		<div style="margin-top: 30px;">
 			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;销售合同表</span>
+			<div>
+				&nbsp;&nbsp;<el-button type="primary" @click="openContractDialog" size="default">创建合同</el-button>
+			</div>
 			<el-divider></el-divider>
 			<el-table :data="contractsTableData" style="width: 100%">
 				<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
@@ -136,7 +135,7 @@
 				<el-table-column prop="stockProgress" label="备货进度" width="150"></el-table-column>
 				<el-table-column prop="deliveryProgress" label="交货进度" width="150"></el-table-column>
 				<el-table-column prop="estimatedProfitMargin" label="预估利润率" width="150"></el-table-column>
-				<el-table-column fixed="right" label="操作" width="400">
+				<el-table-column fixed="right" label="操作" width="200">
 					<template #default="scope">
 						<template v-if="scope.row.salesperson == userId">
 							<el-button type="text" size="small" icon="Bell"
@@ -164,823 +163,858 @@
 
 		</div>
 		<el-dialog :modal="false" modal-penetrable v-model="contractDialog" title="创建销售合同" :close-on-click-modal=false
-			style="width: 70%;" @close="handlecontractDialogclose">
-			<span style="font-size: 20px; font-weight: bold;">基本信息【{{ contractReviewStatus }}】</span>
-			<el-divider></el-divider>
-			<el-form ref="NewcontractformRef" :rules="rules" :model="Newcontractform" label-width="120px">
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="销售合同">
-							<el-input v-model="Newcontractform.contractNumber" disabled style="width: 300px"
-								placeholder="自动生成"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="合同日期">
-							<el-date-picker v-model="Newcontractform.contractDate" type="date" placeholder="请选择合同日期"
-								:disabled="isDisabled" style="width: 300px"></el-date-picker>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="合同状态">
-							<el-select filterable v-model="Newcontractform.contractStatus" placeholder="请选择合同状态"
-								disabled style="width: 300px">
-								<el-option v-for="dict in optionss.hr_contract_status" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="客户编号" prop="customerNumber">
-							<el-select filterable v-model="Newcontractform.customerNumber" placeholder="请选择客户编号"
-								:disabled="isDisabled" style="width: 300px" @change="handleCustomerSelection"
-								id="customerNumber">
-								<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="客户简称" prop="customerAbbreviation">
-							<el-select v-model="Newcontractform.customerAbbreviation" filterable placeholder="请选择客户简称"
-								:disabled="isDisabled" style="width: 300px;" @change="handleCustomerSelection"
-								id="customerAbbreviation">
-								<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="报价单号" prop="quotationNumber">
-							<el-select clearable filterable v-model="Newcontractform.quotationNumber"
-								placeholder="请选择报价单号" :disabled="isDisabled" style="width: 300px" id="quotationNumber"
-								@change="GetQutaionProductListByID(Newcontractform.quotationNumber)">
-								<el-option v-for="dict in quotationNumberOptions" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="联系人" prop="contactPerson">
-							<el-select filterable v-model="Newcontractform.contactPerson" placeholder="请选择联系人"
-								style="width: 300px" :disabled="isDisabled" @change="handleContactpersonSelection"
-								id="contactPerson">
-								<el-option v-for="item in contactpersonSelectOptions" :key="item.value"
-									:label="item.label" :value="item.value" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="联系人Email">
-							<el-input v-model="Newcontractform.contactEmail" disabled style="width: 300px"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="生效日期">
-							<el-date-picker v-model="Newcontractform.effectiveDate" type="date" placeholder="请选择生效日期"
-								disabled style="width: 300px"></el-date-picker>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="客户等级">
-							<el-select filterable v-model="Newcontractform.customerLevel" placeholder="请选择客户等级" disabled
-								style="width: 300px">
-								<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="客户合同">
-							<el-input v-model="Newcontractform.customerContract" style="width: 300px"
-								:disabled="isDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="交货日期" prop="deliveryDate">
-							<el-date-picker v-model="Newcontractform.deliveryDate" type="date" placeholder="请选择交货日期"
-								:disabled="isDisabled" style="width: 300px"></el-date-picker>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="我方公司" prop="ourCompany">
-							<el-select filterable v-model="Newcontractform.ourCompany" placeholder="请选择我方公司"
-								style="width: 300px" :disabled="isDisabled">
-								<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="外销币种" prop="foreignCurrency">
-							<el-select filterable v-model="Newcontractform.foreignCurrency" placeholder="请选择外销币种"
-								:disabled="isDisabled" style="width: 300px">
-								<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="结算类别" prop="settlementType">
-							<el-select filterable v-model="Newcontractform.settlementType" placeholder="请选择结算类别"
-								:disabled="isDisabled" style="width: 300px">
-								<el-option label="类别1" value="1"></el-option>
-								<el-option label="类别2" value="2"></el-option>
-								<el-option label="类别3" value="3"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="汇率" prop="exchangeRate">
-							<el-input v-model="Newcontractform.exchangeRate" style="width: 300px" :disabled="isDisabled"
-								@blur="formatExchangeRate"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="结汇方式" prop="settlementMethod">
-							<el-select filterable v-model="Newcontractform.settlementMethod" placeholder="请选择结汇方式"
-								:disabled="isDisabled" style="width: 300px">
-								<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="价格条款" prop="priceTerms">
-							<el-select filterable v-model="Newcontractform.priceTerms" placeholder="请选择价格条款"
-								style="width: 300px" :disabled="isDisabled" @change="FreightChange()">
-								<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="美金汇率" prop="usdExchangeRate">
-							<el-input v-model="Newcontractform.usdExchangeRate" style="width: 300px"
-								:disabled="isDisabled" @change="calculateTotal"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="出运口岸" prop="shippingPort">
-							<el-select filterable v-model="Newcontractform.shippingPort" placeholder="请选择出运口岸"
-								:disabled="isDisabled" style="width: 300px">
-								<el-option v-for="dict in optionss.hr_transport_port" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="目的口岸" prop="destinationPort">
-							<el-input v-model="Newcontractform.destinationPort" style="width: 300px"
-								:disabled="isDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="贸易国别" prop="tradeCountry">
-							<el-select filterable v-model="Newcontractform.tradeCountry" placeholder="请选择贸易国别"
-								:disabled="isDisabled" style="width: 300px">
-								<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="运输方式" prop="transportation">
-							<el-select filterable v-model="Newcontractform.transportation" placeholder="请选择运输方式"
-								:disabled="isDisabled" style="width: 300px" @change="FreightChange()">
-								<el-option v-for="dict in optionss.hr_transportation_method" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="销售员" prop="salesperson">
-							<el-select filterable v-model="Newcontractform.salesperson" placeholder="请选择销售员"
-								style="width: 300px" disabled>
-								<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="有无定金" prop="hasDeposit">
-							<el-checkbox v-model="Newcontractform.hasDeposit" :disabled="isDisabled"
-								@change="hasDeposithandleCheckboxChange"></el-checkbox>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="已收定金" v-show=DepositShow prop="receivedDeposit">
-							<el-input v-model="Newcontractform.receivedDeposit" style="width: 300px"
-								:disabled="isDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="定金日期" v-show=DepositShow prop="depositDate">
-							<el-date-picker v-model="Newcontractform.depositDate" type="date" placeholder="请选择定金日期"
-								:disabled="isDisabled" style="width: 300px"
-								@change="handleDepositDateChange"></el-date-picker>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="定金比例" v-show=DepositShow prop="Depositratio">
-							<el-input v-model="Newcontractform.Depositratio" style="width: 300px"
-								:disabled="isDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<span style="font-size: 20px; font-weight: bold;">辅助信息</span>
-				<el-divider></el-divider>
-				<el-row v-if="false">
-					<el-col :span="8" v-if="false">
-						<el-form-item label="签约地点">
-							<el-select filterable v-model="Newcontractform.signingLocation" placeholder="请选择签约地点"
-								:disabled="isDisabled" style="width: 300px">
-								<el-option v-for="dict in optionss.hr_signing_place" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="可否分批">
-							<el-select filterable v-model="Newcontractform.canPartial" placeholder="请选择可否分批"
-								:disabled="isDisabled" style="width: 300px">
-								<el-option v-for="dict in optionss.sys_yes_no" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="可否转运">
-							<el-select filterable v-model="Newcontractform.canTransit" placeholder="请选择可否转运"
-								:disabled="isDisabled" style="width: 300px">
-								<el-option v-for="dict in optionss.sys_yes_no" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="佣金比率">
-							<el-input v-model="Newcontractform.commissionRate" style="width: 300px"
-								:disabled="isDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="保险加成">
-							<el-input v-model="Newcontractform.insuranceAddition" style="width: 300px"
-								:disabled="isDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="保险比率">
-							<el-input v-model="Newcontractform.insuranceRate" style="width: 300px"
-								:disabled="isDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="海运费/m³">
-							<el-input v-model="Newcontractform.oceanFreight" style="width: 300px;"
-								@change="calculateTotal" :disabled="isDisabled" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="海运费币种" prop="shippingCurrency">
-							<el-select v-model="Newcontractform.shippingCurrency" filterable placeholder="选择运费币种"
-								:disabled="isDisabled" style="width: 300px;" @change="shippingcurrencyChange">
-								<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="海运费汇率">
-							<el-input v-model="Newcontractform.shippingrate" style="width: 300px;"
-								:disabled="isDisabled" @change="calculateTotal" />
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="港杂费/m³">
-							<el-input v-model="Newcontractform.portMiscellaneousFees" style="width: 300px;"
-								@change="calculateTotal" :disabled="isDisabled" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="货代报关杂费">
-							<el-input v-model="Newcontractform.freightForwarderCustomsClearanceFees"
-								style="width: 300px;" :disabled="isDisabled" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="银行费用">
-							<el-input v-model="Newcontractform.BankFee" style="width: 300px;" @change="calculateTotal"
-								:disabled="isDisabled" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="收汇银行">
-							<el-input v-model="Newcontractform.receivingBank" style="width: 300px"
-								:disabled="isDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
+			style="width: 75%;" @close="handlecontractDialogclose">
+			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="基本信息" name="basicInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">基本信息【{{ contractReviewStatus }}】</span>
+					</template>
+					<el-form ref="NewcontractformRef" :rules="rules" :model="Newcontractform" label-width="120px">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="销售合同">
+									<el-input v-model="Newcontractform.contractNumber" disabled style="width: 300px"
+										placeholder="自动生成" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="合同日期">
+									<el-date-picker v-model="Newcontractform.contractDate" type="date"
+										placeholder="请选择合同日期" :disabled="isDisabled" style="width: 300px"
+										size="default"></el-date-picker>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="合同状态">
+									<el-select filterable v-model="Newcontractform.contractStatus" placeholder="请选择合同状态"
+										disabled style="width: 300px" size="default">
+										<el-option v-for="dict in optionss.hr_contract_status" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户编号" prop="customerNumber">
+									<el-select filterable v-model="Newcontractform.customerNumber" placeholder="请选择客户编号"
+										:disabled="isDisabled" style="width: 300px" @change="handleCustomerSelection"
+										size="default" id="customerNumber">
+										<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
 
-					<el-col :span="8">
-						<el-form-item label="文件杂费">
-							<el-input v-model="Newcontractform.DocumentationFees" style="width: 300px;"
-								@change="calculateTotal" :disabled="isDisabled" />
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="付款日期">
-							<el-date-picker v-model="Newcontractform.paymentDate" type="date" placeholder="请选择付款日期"
-								:disabled="isDisabled" style="width: 300px"></el-date-picker>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<span style="font-size: 20px; font-weight: bold;">产品资料&客户相关费用</span>
-				<el-divider></el-divider>
-				<el-button class="mt-4" type="primary" @click="OpenSearchProcutDialog" style="margin-bottom: 10px;"
-					:disabled="isDisabled">导入产品</el-button>
-				<el-button class="mt-4" type="primary" @click="onAddquotationProductItem" style="margin-bottom: 10px;"
-					:disabled="isDisabled">添加新产品</el-button>
-				<el-button class="mt-4" type="primary" @click="handleAddRow" style="margin-bottom: 10px;"
-					:disabled="isDisabled">添加相关费用</el-button>
-				<el-tabs v-model="activeTab" tab-position="top" class="demo-tabs">
-					<el-tab-pane label="产品资料" name="productMaterialtab">
-						<el-table :data="productData" style="width: 100%;margin-bottom: 15px;">
-							<el-table-column prop="productID" label="产品ID" width="120" v-if="false" />
-							<el-table-column prop="productNum" label="产品编号" width="120" />
-							<el-table-column prop="customerNum" label="客户货号" width="120" />
-							<el-table-column prop="cproductname" label="中文品名" width="120">
-								<template #default="{ row }">
-									<span v-if="row.isImported">{{ row.cproductname }}</span>
-									<el-input v-else v-model="row.cproductname" :disabled="isDisabled"></el-input>
-								</template>
-							</el-table-column>
-							<el-table-column prop="cspecification" label="中文规格" width="120">
-								<template #default="{ row }">
-									<span v-if="row.isImported">{{ row.cspecification }}</span>
-									<el-input v-else v-model="row.cspecification" :disabled="isDisabled"></el-input>
-								</template>
-							</el-table-column>
-							<el-table-column prop="contractQuantity" label="合同数量" width="110">
-								<template #default="{ row }">
-									<el-input v-model="row.contractQuantity" @change="calculateTotal"
-										:disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="exportunitprice" label="外销单价" width="110">
-								<template #default="{ row }">
-									<el-input v-model="row.exportunitprice" @change="calculateTotal"
-										:disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="exporttotalprice" label="外销总价" width="110">
-								<template #default="scope">
-									<span>{{ scope.row.exporttotalprice }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="unitofmeasurement" label="计量单位编号" width="100" v-if="false">
-								<template #default="scope">
-									<el-select v-model="scope.row.unitofmeasurement" filterable placeholder="单位"
-										style="width: 100%;" disabled>
-										<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
-											:label="dict.dictLabel" :value="dict.dictValue" />
+							<el-col :span="6" v-if="false">
+								<el-form-item label="客户简称" prop="customerAbbreviation">
+									<el-select v-model="Newcontractform.customerAbbreviation" filterable
+										placeholder="请选择客户简称" :disabled="isDisabled" style="width: 300px;"
+										@change="handleCustomerSelection" size="default" id="customerAbbreviation">
+										<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
 									</el-select>
-								</template>
-							</el-table-column>
-							<el-table-column label="计量单位" width="100">
-								<template #default="scope">
-									{{scope.row.unitOfMeasurementLabel || state.optionss.hr_calculate_unit.find(x =>
-										x.dictValue == scope.row.unitofmeasurement)?.dictLabel || '-'}}
-								</template>
-							</el-table-column>
-							<el-table-column prop="purchasecurrency" label="采购币种" width="110">
-								<template #default="scope">
-									<el-select v-model="scope.row.purchasecurrency" filterable placeholder="币种"
-										style="width: 100%;" :disabled="isDisabled">
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="报价单号" prop="quotationNumber">
+									<el-select clearable filterable v-model="Newcontractform.quotationNumber"
+										placeholder="请选择报价单号" :disabled="isDisabled" style="width: 300px"
+										id="quotationNumber" size="default"
+										@change="GetQutaionProductListByID(Newcontractform.quotationNumber)">
+										<el-option v-for="dict in quotationNumberOptions" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="联系人" prop="contactPerson">
+									<el-select filterable v-model="Newcontractform.contactPerson" placeholder="请选择联系人"
+										style="width: 300px" :disabled="isDisabled"
+										@change="handleContactpersonSelection" size="default" id="contactPerson">
+										<el-option v-for="item in contactpersonSelectOptions" :key="item.value"
+											:label="item.label" :value="item.value" size="default" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="生效日期">
+									<el-date-picker v-model="Newcontractform.effectiveDate" type="date"
+										placeholder="请选择生效日期" disabled style="width: 300px"
+										size="default"></el-date-picker>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户等级">
+									<el-select filterable v-model="Newcontractform.customerLevel" placeholder="请选择客户等级"
+										disabled style="width: 300px" size="default">
+										<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="联系人Email">
+									<el-input v-model="Newcontractform.contactEmail" disabled style="width: 300px"
+										size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户合同">
+									<el-input v-model="Newcontractform.customerContract" style="width: 300px"
+										:disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="交货日期" prop="deliveryDate">
+									<el-date-picker v-model="Newcontractform.deliveryDate" type="date"
+										placeholder="请选择交货日期" :disabled="isDisabled" style="width: 300px"
+										size="default"></el-date-picker>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="我方公司" prop="ourCompany">
+									<el-select filterable v-model="Newcontractform.ourCompany" placeholder="请选择我方公司"
+										style="width: 300px" :disabled="isDisabled" size="default">
+										<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="外销币种" prop="foreignCurrency">
+									<el-select filterable v-model="Newcontractform.foreignCurrency"
+										placeholder="请选择外销币种" :disabled="isDisabled" style="width: 300px"
+										size="default">
 										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+
+						</el-row>
+						<el-row>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="结算类别" prop="settlementType">
+									<el-select filterable v-model="Newcontractform.settlementType" placeholder="请选择结算类别"
+										:disabled="isDisabled" style="width: 300px" size="default">
+										<el-option label="类别1" value="1"></el-option>
+										<el-option label="类别2" value="2"></el-option>
+										<el-option label="类别3" value="3" size="default"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="汇率" prop="exchangeRate">
+									<el-input v-model="Newcontractform.exchangeRate" style="width: 300px"
+										:disabled="isDisabled" @blur="formatExchangeRate" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="结汇方式" prop="settlementMethod">
+									<el-select filterable v-model="Newcontractform.settlementMethod"
+										placeholder="请选择结汇方式" :disabled="isDisabled" style="width: 300px"
+										size="default">
+										<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
-								</template>
-							</el-table-column>
-							<el-table-column prop="purchaseunitprice" label="采购单价" width="110">
-								<template #default="{ row }">
-									<el-input v-model="row.purchaseunitprice" @change="calculateTotal"
-										:disabled="isDisabled" :style="row.isPriceChanged === 1 ? {
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="价格条款" prop="priceTerms">
+									<el-select filterable v-model="Newcontractform.priceTerms" placeholder="请选择价格条款"
+										style="width: 300px" :disabled="isDisabled" @change="FreightChange()"
+										size="default">
+										<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="出运口岸" prop="shippingPort">
+									<el-select filterable v-model="Newcontractform.shippingPort" placeholder="请选择出运口岸"
+										:disabled="isDisabled" style="width: 300px" size="default">
+										<el-option v-for="dict in optionss.hr_transport_port" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="美金汇率" prop="usdExchangeRate">
+									<el-input v-model="Newcontractform.usdExchangeRate" style="width: 300px"
+										:disabled="isDisabled" @change="calculateTotal" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="目的口岸" prop="destinationPort">
+									<el-input v-model="Newcontractform.destinationPort" style="width: 300px"
+										:disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="贸易国别" prop="tradeCountry">
+									<el-select filterable v-model="Newcontractform.tradeCountry" placeholder="请选择贸易国别"
+										:disabled="isDisabled" style="width: 300px" size="default">
+										<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="运输方式" prop="transportation">
+									<el-select filterable v-model="Newcontractform.transportation" placeholder="请选择运输方式"
+										:disabled="isDisabled" style="width: 300px" @change="FreightChange()"
+										size="default">
+										<el-option v-for="dict in optionss.hr_transportation_method"
+											:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue"
+											size="default" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="销售员" prop="salesperson">
+									<el-select filterable v-model="Newcontractform.salesperson" placeholder="请选择销售员"
+										style="width: 300px" disabled size="default">
+										<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="有无定金" prop="hasDeposit">
+									<el-checkbox v-model="Newcontractform.hasDeposit" :disabled="isDisabled"
+										@change="hasDeposithandleCheckboxChange" size="default"></el-checkbox>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="定金比例" v-show=DepositShow prop="Depositratio">
+									<el-input v-model="Newcontractform.Depositratio" style="width: 300px"
+										:disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="已收定金" v-show=DepositShow prop="receivedDeposit">
+									<el-input v-model="Newcontractform.receivedDeposit" style="width: 300px"
+										:disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="定金日期" v-show=DepositShow prop="depositDate">
+									<el-date-picker v-model="Newcontractform.depositDate" type="date"
+										placeholder="请选择定金日期" :disabled="isDisabled" style="width: 300px"
+										@change="handleDepositDateChange" size="default"></el-date-picker>
+								</el-form-item>
+							</el-col>
+
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+			<el-collapse v-model="auxiliaryInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="辅助信息" name="auxiliaryInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">辅助信息</span>
+					</template>
+					<el-form :model="Newcontractform" label-width="120px">
+						<el-row v-if="false">
+							<el-col :span="6" v-if="false">
+								<el-form-item label="签约地点">
+									<el-select filterable v-model="Newcontractform.signingLocation"
+										placeholder="请选择签约地点" :disabled="isDisabled" style="width: 300px"
+										size="default">
+										<el-option v-for="dict in optionss.hr_signing_place" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="可否分批">
+									<el-select filterable v-model="Newcontractform.canPartial" placeholder="请选择可否分批"
+										:disabled="isDisabled" style="width: 300px" size="default">
+										<el-option v-for="dict in optionss.sys_yes_no" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="可否转运">
+									<el-select filterable v-model="Newcontractform.canTransit" placeholder="请选择可否转运"
+										:disabled="isDisabled" style="width: 300px" size="default">
+										<el-option v-for="dict in optionss.sys_yes_no" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="佣金比率">
+									<el-input v-model="Newcontractform.commissionRate" style="width: 300px"
+										:disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="保险加成">
+									<el-input v-model="Newcontractform.insuranceAddition" style="width: 300px"
+										:disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="保险比率">
+									<el-input v-model="Newcontractform.insuranceRate" style="width: 300px"
+										:disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="海运费/m³">
+									<el-input v-model="Newcontractform.oceanFreight" style="width: 300px;"
+										@change="calculateTotal" :disabled="isDisabled" size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="海运费币种" prop="shippingCurrency">
+									<el-select v-model="Newcontractform.shippingCurrency" filterable
+										placeholder="选择运费币种" :disabled="isDisabled" style="width: 300px;"
+										@change="shippingcurrencyChange" size="default">
+										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" size="default" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="海运费汇率">
+									<el-input v-model="Newcontractform.shippingrate" style="width: 300px;"
+										:disabled="isDisabled" @change="calculateTotal" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="港杂费/m³">
+									<el-input v-model="Newcontractform.portMiscellaneousFees" style="width: 300px;"
+										@change="calculateTotal" :disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+
+							<el-col :span="6">
+								<el-form-item label="货代报关杂费">
+									<el-input v-model="Newcontractform.freightForwarderCustomsClearanceFees"
+										style="width: 300px;" :disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="银行费用">
+									<el-input v-model="Newcontractform.BankFee" style="width: 300px;"
+										@change="calculateTotal" :disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="收汇银行">
+									<el-input v-model="Newcontractform.receivingBank" style="width: 300px"
+										:disabled="isDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="文件杂费">
+									<el-input v-model="Newcontractform.DocumentationFees" style="width: 300px;"
+										@change="calculateTotal" :disabled="isDisabled" size="default" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="付款日期">
+									<el-date-picker v-model="Newcontractform.paymentDate" type="date"
+										placeholder="请选择付款日期" :disabled="isDisabled" style="width: 300px"
+										size="default"></el-date-picker>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+			<span style="font-size: 20px; font-weight: bold;">产品资料&客户相关费用</span>
+			<el-divider></el-divider>
+			<el-button class="mt-4" type="primary" @click="OpenSearchProcutDialog" style="margin-bottom: 10px;"
+				:disabled="isDisabled" size="default">导入产品</el-button>
+			<el-button class="mt-4" type="primary" @click="onAddquotationProductItem" style="margin-bottom: 10px;"
+				:disabled="isDisabled" size="default">添加新产品</el-button>
+			<el-button class="mt-4" type="primary" @click="handleAddRow" style="margin-bottom: 10px;"
+				:disabled="isDisabled" size="default">添加相关费用</el-button>
+			<el-tabs v-model="activeTab" tab-position="top" class="demo-tabs">
+				<el-tab-pane label="产品资料" name="productMaterialtab">
+					<el-table :data="productData" style="width: 100%;margin-bottom: 15px;">
+						<el-table-column prop="productID" label="产品ID" width="120" v-if="false" />
+						<el-table-column prop="productNum" label="产品编号" width="120" />
+						<el-table-column prop="customerNum" label="客户货号" width="120" />
+						<el-table-column prop="cproductname" label="中文品名" width="120">
+							<template #default="{ row }">
+								<span v-if="row.isImported">{{ row.cproductname }}</span>
+								<el-input v-else v-model="row.cproductname" :disabled="isDisabled"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="cspecification" label="中文规格" width="120">
+							<template #default="{ row }">
+								<span v-if="row.isImported">{{ row.cspecification }}</span>
+								<el-input v-else v-model="row.cspecification" :disabled="isDisabled"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="contractQuantity" label="合同数量" width="110">
+							<template #default="{ row }">
+								<el-input v-model="row.contractQuantity" @change="calculateTotal"
+									:disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="exportunitprice" label="外销单价" width="110">
+							<template #default="{ row }">
+								<el-input v-model="row.exportunitprice" @change="calculateTotal"
+									:disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="exporttotalprice" label="外销总价" width="110">
+							<template #default="scope">
+								<span>{{ scope.row.exporttotalprice }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="unitofmeasurement" label="计量单位编号" width="100" v-if="false">
+							<template #default="scope">
+								<el-select v-model="scope.row.unitofmeasurement" filterable placeholder="单位"
+									style="width: 100%;" disabled size="default">
+									<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column label="计量单位" width="100">
+							<template #default="scope">
+								{{scope.row.unitOfMeasurementLabel || state.optionss.hr_calculate_unit.find(x =>
+									x.dictValue == scope.row.unitofmeasurement)?.dictLabel || '-'}}
+							</template>
+						</el-table-column>
+						<el-table-column prop="purchasecurrency" label="采购币种" width="110">
+							<template #default="scope">
+								<el-select v-model="scope.row.purchasecurrency" filterable placeholder="币种"
+									style="width: 100%;" :disabled="isDisabled" size="default">
+									<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="purchaseunitprice" label="采购单价" width="110">
+							<template #default="{ row }">
+								<el-input v-model="row.purchaseunitprice" @change="calculateTotal"
+									:disabled="isDisabled" :style="row.isPriceChanged === 1 ? {
+										'--el-input-text-color': 'red',
+										'--el-disabled-text-color': 'red',
+									} : {}">
+								</el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop=" inlandfreightprice" label="内陆运费(m³)" width="130">
+							<template #default="{ row }">
+								<el-input v-model="row.inlandfreightprice" @change="calculateTotal"
+									:disabled="isDisabled" size="default" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="AdditionalPackagingCosts" label="单个产品额外包装费用" width="185">
+							<template #default="{ row }">
+								<el-input v-model="row.AdditionalPackagingCosts" @change="calculateTotal"
+									@blur="formatNumber2(row, 'AdditionalPackagingCosts')" :disabled="isDisabled"
+									size="default" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="singleProductGrossProfit" label="单个产品毛利" width="130">
+							<template #default="scope">
+								<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
+									scope.row.singleProductGrossProfit }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="160">
+							<template #default="scope">
+								<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
+									scope.row.singleProductGrossProfitTotal }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="grossProfitRate" label="毛利率%" width="110">
+							<template #default="scope">
+								<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
+									scope.row.grossProfitRate
+								}}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="isInvoicingc" label="是否开票" width="120">
+							<template #default="scope">
+								<el-select v-model="scope.row.isInvoicingc" filterable placeholder="请选择"
+									style="width: 100%;" :disabled="isDisabled">
+									<el-option v-for="dict in optionss.hr_yes_no" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="packaging" label="包装方式" width="150">
+							<template #default="scope">
+								<el-select v-model="scope.row.packaging" filterable :disabled="isDisabled"
+									placeholder="请选择" style="width: 100%;">
+									<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="specialrequirements" label="特殊要求" width="200">
+							<template #default="{ row }">
+								<el-input v-model="row.specialrequirements" @change="calculateTotal"
+									:disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="rebaterate" label="退税率%" width="100">
+							<template #default="{ row }">
+								<el-input v-model="row.rebaterate" @change="calculateTotal" :disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="innerBoxLoading" label="内盒装量" width="100">
+							<template #default="{ row }">
+								<el-input v-model="row.innerBoxLoading" @change="calculateTotal"
+									:disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="outerboxloading" label="外箱装量" width="100">
+							<template #default="{ row }">
+								<el-input v-model="row.outerboxloading" @change="calculateTotal"
+									:disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="outerboxunit" label="外箱单位" width="150">
+							<template #default="scope">
+								<el-select v-model="scope.row.outerboxunit" filterable placeholder="外箱单位"
+									style="width: 100%;" :disabled="isDisabled">
+									<el-option v-for="dict in optionss.hr_outerbox_unit" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="outerboxlength" label="外箱长度(CM)" width="120">
+							<template #default="{ row }">
+								<el-input v-model="row.outerboxlength" @change="calculateTotal"
+									@blur="formatNumber(row, 'outerboxlength')" :disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="outerboxwidth" label="外箱宽度(CM)" width="120">
+							<template #default="{ row }">
+								<el-input v-model="row.outerboxwidth" @change="calculateTotal"
+									@blur="formatNumber(row, 'outerboxwidth')" :disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="outerboxheight" label="外箱高度(CM)" width="120">
+							<template #default="{ row }">
+								<el-input v-model="row.outerboxheight" @change="calculateTotal"
+									@blur="formatNumber(row, 'outerboxheight')" :disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="outerboxnetweight" label="外箱净重(KG)" width="120">
+							<template #default="{ row }">
+								<el-input v-model="row.outerboxnetweight" @change="calculateTotal"
+									@blur="formatNumber(row, 'outerboxnetweight')" :disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="outerboxgrossweight" label="外箱毛重(KG)" width="120">
+							<template #default="{ row }">
+								<el-input v-model="row.outerboxgrossweight" @change="calculateTotal"
+									@blur="formatNumber(row, 'outerboxgrossweight')" :disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="outerboxvolume" label="外箱体积(m³)" width="120">
+							<template #default="scope">
+								<span>{{ scope.row.outerboxvolume }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="NumberOfBoxes" label="箱数" width="100">
+							<template #default="scope">
+								<span>{{ scope.row.NumberOfBoxes }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="totalNetWeight" label="总净重(KG)" width="130">
+							<template #default="scope">
+								<span>{{ scope.row.totalNetWeight }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="totalGrossWeight" label="总毛重(KG)" width="130">
+							<template #default="scope">
+								<span>{{ scope.row.totalGrossWeight }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="totalVolume" label="总体积(m³)" width="130">
+							<template #default="scope">
+								<span>{{ scope.row.totalVolume }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="OtherFees" label="单个产品其它费用" width="160">
+							<template #default="{ row }">
+								<el-input v-model="row.OtherFees" @change="calculateTotal" :disabled="isDisabled" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="SinglesalesrevenueA" label="单个销售收入A" width="160" v-if="true">
+							<template #default="scope">
+								<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
+									scope.row.SinglesalesrevenueA }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="Singleproductvolume" label="单个产品体积(m³)" width="160" v-if="true">
+							<template #default="scope">
+								<span>{{ scope.row.Singleproductvolume }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="Portchargesforindividualproducts" label="单个产品的港杂费" width="160"
+							v-if="true">
+							<template #default="scope">
+								<span>{{ scope.row.Portchargesforindividualproducts }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="Oceanfreightforasingleproduct" label="单个产品海运费" width="130" v-if="true">
+							<template #default="scope">
+								<span>{{ scope.row.Oceanfreightforasingleproduct }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="Inlandfreightforasingleproduct" label="单个产品内陆运费" width="160" v-if="true">
+							<template #default="scope">
+								<span>{{ scope.row.Inlandfreightforasingleproduct }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="isPriceChanged" label="是否价格变动" width="140" v-if="true">
+							<template #default="scope">
+								<span>{{ scope.row.isPriceChanged }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column fixed="right" label="操作" width="120">
+							<template #default="scope">
+								<el-button :disabled="isDisabled" link type="primary"
+									@click.prevent="deleteRow(scope.$index)">
+									删除
+								</el-button>
+							</template>
+						</el-table-column>
+					</el-table>
+				</el-tab-pane>
+				<el-tab-pane label="客户相关费用" name="CustomerRelaterExoensestab">
+					<el-table :data="CustomerRelaterExoensesTableData" style="width: 100%; ">
+						<el-table-column prop=" expenseName" label="费用名称" width="150">
+							<template #default="{ row }">
+								<el-input v-model="row.expenseName" placeholder="输入费用名称" size="small"
+									:disabled="isDisabled"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="currency" label="币种" width="150">
+							<template #default="{ row }">
+								<el-select filterable v-model="row.currency" placeholder="选择币种" size="small"
+									@change="currencyChange(row)" :disabled="isDisabled">
+									<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="exchangeRate" label="汇率" width="150">
+							<template #default="{ row }">
+								<el-input v-model="row.exchangeRate" placeholder="输入汇率" size="small"
+									:disabled="isDisabled"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="expense" label="费用" width="150">
+							<template #default="{ row }">
+								<el-input v-model="row.expense" placeholder="输入费用" size="small"
+									@input="expenseChange(row)" :disabled="isDisabled"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="amount" label="金额" width="150">
+							<template #default="{ row }">
+								<el-input v-model="row.amount" disabled size="small"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="remark" label="备注" width="150">
+							<template #default="{ row }">
+								<el-input v-model="row.remark" placeholder="输入备注" size="small"
+									:disabled="isDisabled"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column label="操作" width="100" fixed="right">
+							<template #default="scope">
+								<el-button type="text" size="small" @click="handleDelete(scope.$index)"
+									:disabled="isDisabled">删除</el-button>
+							</template>
+						</el-table-column>
+					</el-table>
+				</el-tab-pane>
+				<el-tab-pane label="已收费用详情" name="ReceivedExpenseDetailsTab">
+					<el-table :data="ReceivedExpenseDetailsTableData" style="width: 100%; ">
+						<el-table-column prop="receiptNumber" label="收款单号" width="150"></el-table-column>
+						<el-table-column prop="fundsType" label="收款类型" width="150"></el-table-column>
+						<el-table-column prop="receiptDate" label="收汇日期" width="150"
+							:formatter="(row, column, cellValue) => formatDate(cellValue)"></el-table-column>
+						<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
+						<el-table-column prop="foreignCurrency" label="外销币种" width="150"></el-table-column>
+						<el-table-column prop="exchangeRate" label="汇率" width="150"></el-table-column>
+						<el-table-column prop="amount" label="金额" width="150"></el-table-column>
+						<el-table-column prop="bank" label="收汇银行" width="150"></el-table-column>
+					</el-table>
+				</el-tab-pane>
+			</el-tabs>
+			<el-collapse v-model="profitCalculationCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="合计信息&利润预估" name="profitCalculation">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">合计信息&利润预估</span>
+					</template>
+					<el-form :model="Newcontractform" label-width="120px">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="货值合计">
+									<el-input
+										:value="formatTotalValueOfGoods(Newcontractform.TotalValueOfGoods, Newcontractform.foreignCurrency)"
+										style="width: 300px" disabled size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="数量合计">
+									<el-input v-model="Newcontractform.TotalQuantity" style="width: 300px" disabled
+										size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="箱数合计">
+									<el-input v-model="Newcontractform.TotalNumberOfBoxes" style="width: 300px" disabled
+										size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="毛重合计">
+									<el-input v-model="Newcontractform.TotalGrossWeight" style="width: 300px" disabled
+										size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="净重合计">
+									<el-input v-model="Newcontractform.TotalNetWeight" style="width: 300px" disabled
+										size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="体积合计">
+									<el-input v-model="Newcontractform.TotalVolume" style="width: 300px" disabled
+										size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="采购合计">
+									<el-input :value="formatCNYAmount(Newcontractform.TotalPurchases)"
+										style="width: 300px" disabled :style="hasChangedProducts ? {
 											'--el-input-text-color': 'red',
 											'--el-disabled-text-color': 'red',
-										} : {}">
-									</el-input>
-								</template>
-							</el-table-column>
-							<el-table-column prop=" inlandfreightprice" label="内陆运费(m³)" width="130">
-								<template #default="{ row }">
-									<el-input v-model="row.inlandfreightprice" @change="calculateTotal"
-										:disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="AdditionalPackagingCosts" label="单个产品额外包装费用" width="185">
-								<template #default="{ row }">
-									<el-input v-model="row.AdditionalPackagingCosts" @change="calculateTotal"
-										@blur="formatNumber2(row, 'AdditionalPackagingCosts')" :disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="singleProductGrossProfit" label="单个产品毛利" width="130">
-								<template #default="scope">
-									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
-										scope.row.singleProductGrossProfit }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="160">
-								<template #default="scope">
-									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
-										scope.row.singleProductGrossProfitTotal }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="grossProfitRate" label="毛利率%" width="110">
-								<template #default="scope">
-									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
-										scope.row.grossProfitRate
-									}}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="isInvoicingc" label="是否开票" width="120">
-								<template #default="scope">
-									<el-select v-model="scope.row.isInvoicingc" filterable placeholder="请选择"
-										style="width: 100%;" :disabled="isDisabled">
-										<el-option v-for="dict in optionss.hr_yes_no" :key="dict.dictCode"
-											:label="dict.dictLabel" :value="dict.dictValue" />
-									</el-select>
-								</template>
-							</el-table-column>
-							<el-table-column prop="packaging" label="包装方式" width="150">
-								<template #default="scope">
-									<el-select v-model="scope.row.packaging" filterable :disabled="isDisabled"
-										placeholder="请选择" style="width: 100%;">
-										<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
-											:label="dict.dictLabel" :value="dict.dictValue" />
-									</el-select>
-								</template>
-							</el-table-column>
-							<el-table-column prop="specialrequirements" label="特殊要求" width="200">
-								<template #default="{ row }">
-									<el-input v-model="row.specialrequirements" @change="calculateTotal"
-										:disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="rebaterate" label="退税率%" width="100">
-								<template #default="{ row }">
-									<el-input v-model="row.rebaterate" @change="calculateTotal"
-										:disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="innerBoxLoading" label="内盒装量" width="100">
-								<template #default="{ row }">
-									<el-input v-model="row.innerBoxLoading" @change="calculateTotal"
-										:disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="outerboxloading" label="外箱装量" width="100">
-								<template #default="{ row }">
-									<el-input v-model="row.outerboxloading" @change="calculateTotal"
-										:disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="outerboxunit" label="外箱单位" width="150">
-								<template #default="scope">
-									<el-select v-model="scope.row.outerboxunit" filterable placeholder="外箱单位"
-										style="width: 100%;" :disabled="isDisabled">
-										<el-option v-for="dict in optionss.hr_outerbox_unit" :key="dict.dictCode"
-											:label="dict.dictLabel" :value="dict.dictValue" />
-									</el-select>
-								</template>
-							</el-table-column>
-							<el-table-column prop="outerboxlength" label="外箱长度(CM)" width="120">
-								<template #default="{ row }">
-									<el-input v-model="row.outerboxlength" @change="calculateTotal"
-										@blur="formatNumber(row, 'outerboxlength')" :disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="outerboxwidth" label="外箱宽度(CM)" width="120">
-								<template #default="{ row }">
-									<el-input v-model="row.outerboxwidth" @change="calculateTotal"
-										@blur="formatNumber(row, 'outerboxwidth')" :disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="outerboxheight" label="外箱高度(CM)" width="120">
-								<template #default="{ row }">
-									<el-input v-model="row.outerboxheight" @change="calculateTotal"
-										@blur="formatNumber(row, 'outerboxheight')" :disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="outerboxnetweight" label="外箱净重(KG)" width="120">
-								<template #default="{ row }">
-									<el-input v-model="row.outerboxnetweight" @change="calculateTotal"
-										@blur="formatNumber(row, 'outerboxnetweight')" :disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="outerboxgrossweight" label="外箱毛重(KG)" width="120">
-								<template #default="{ row }">
-									<el-input v-model="row.outerboxgrossweight" @change="calculateTotal"
-										@blur="formatNumber(row, 'outerboxgrossweight')" :disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="outerboxvolume" label="外箱体积(m³)" width="120">
-								<template #default="scope">
-									<span>{{ scope.row.outerboxvolume }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="NumberOfBoxes" label="箱数" width="100">
-								<template #default="scope">
-									<span>{{ scope.row.NumberOfBoxes }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="totalNetWeight" label="总净重(KG)" width="130">
-								<template #default="scope">
-									<span>{{ scope.row.totalNetWeight }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="totalGrossWeight" label="总毛重(KG)" width="130">
-								<template #default="scope">
-									<span>{{ scope.row.totalGrossWeight }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="totalVolume" label="总体积(m³)" width="130">
-								<template #default="scope">
-									<span>{{ scope.row.totalVolume }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="OtherFees" label="单个产品其它费用" width="160">
-								<template #default="{ row }">
-									<el-input v-model="row.OtherFees" @change="calculateTotal" :disabled="isDisabled" />
-								</template>
-							</el-table-column>
-							<el-table-column prop="SinglesalesrevenueA" label="单个销售收入A" width="160" v-if="true">
-								<template #default="scope">
-									<span :class="{ 'red-text': scope.row.isPriceChanged }">{{
-										scope.row.SinglesalesrevenueA }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="Singleproductvolume" label="单个产品体积(m³)" width="160" v-if="true">
-								<template #default="scope">
-									<span>{{ scope.row.Singleproductvolume }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="Portchargesforindividualproducts" label="单个产品的港杂费" width="160"
-								v-if="true">
-								<template #default="scope">
-									<span>{{ scope.row.Portchargesforindividualproducts }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="Oceanfreightforasingleproduct" label="单个产品海运费" width="130"
-								v-if="true">
-								<template #default="scope">
-									<span>{{ scope.row.Oceanfreightforasingleproduct }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="Inlandfreightforasingleproduct" label="单个产品内陆运费" width="160"
-								v-if="true">
-								<template #default="scope">
-									<span>{{ scope.row.Inlandfreightforasingleproduct }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column prop="isPriceChanged" label="是否价格变动" width="140" v-if="true">
-								<template #default="scope">
-									<span>{{ scope.row.isPriceChanged }}</span>
-								</template>
-							</el-table-column>
-							<el-table-column fixed="right" label="操作" width="120">
-								<template #default="scope">
-									<el-button :disabled="isDisabled" link type="primary"
-										@click.prevent="deleteRow(scope.$index)">
-										删除
-									</el-button>
-								</template>
-							</el-table-column>
-						</el-table>
-					</el-tab-pane>
-					<el-tab-pane label="客户相关费用" name="CustomerRelaterExoensestab">
-						<el-table :data="CustomerRelaterExoensesTableData" style="width: 100%; " height="280">
-							<el-table-column prop=" expenseName" label="费用名称" width="150">
-								<template #default="{ row }">
-									<el-input v-model="row.expenseName" placeholder="输入费用名称" size="small"
-										:disabled="isDisabled"></el-input>
-								</template>
-							</el-table-column>
-							<el-table-column prop="currency" label="币种" width="150">
-								<template #default="{ row }">
-									<el-select filterable v-model="row.currency" placeholder="选择币种" size="small"
-										@change="currencyChange(row)" :disabled="isDisabled">
-										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
-											:label="dict.dictLabel" :value="dict.dictValue" />
-									</el-select>
-								</template>
-							</el-table-column>
-							<el-table-column prop="exchangeRate" label="汇率" width="150">
-								<template #default="{ row }">
-									<el-input v-model="row.exchangeRate" placeholder="输入汇率" size="small"
-										:disabled="isDisabled"></el-input>
-								</template>
-							</el-table-column>
-							<el-table-column prop="expense" label="费用" width="150">
-								<template #default="{ row }">
-									<el-input v-model="row.expense" placeholder="输入费用" size="small"
-										@input="expenseChange(row)" :disabled="isDisabled"></el-input>
-								</template>
-							</el-table-column>
-							<el-table-column prop="amount" label="金额" width="150">
-								<template #default="{ row }">
-									<el-input v-model="row.amount" disabled size="small"></el-input>
-								</template>
-							</el-table-column>
-							<el-table-column prop="remark" label="备注" width="150">
-								<template #default="{ row }">
-									<el-input v-model="row.remark" placeholder="输入备注" size="small"
-										:disabled="isDisabled"></el-input>
-								</template>
-							</el-table-column>
-							<el-table-column label="操作" width="100" fixed="right">
-								<template #default="scope">
-									<el-button type="text" size="small" @click="handleDelete(scope.$index)"
-										:disabled="isDisabled">删除</el-button>
-								</template>
-							</el-table-column>
-						</el-table>
-					</el-tab-pane>
-					<el-tab-pane label="已收费用详情" name="ReceivedExpenseDetailsTab">
-						<el-table :data="ReceivedExpenseDetailsTableData" style="width: 100%; " height="280">
-							<el-table-column prop="receiptNumber" label="收款单号" width="150"></el-table-column>
-							<el-table-column prop="fundsType" label="收款类型" width="150"></el-table-column>
-							<el-table-column prop="receiptDate" label="收汇日期" width="150"
-								:formatter="(row, column, cellValue) => formatDate(cellValue)"></el-table-column>
-							<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
-							<el-table-column prop="foreignCurrency" label="外销币种" width="150"></el-table-column>
-							<el-table-column prop="exchangeRate" label="汇率" width="150"></el-table-column>
-							<el-table-column prop="amount" label="金额" width="150"></el-table-column>
-							<el-table-column prop="bank" label="收汇银行" width="150"></el-table-column>
-						</el-table>
-					</el-tab-pane>
-				</el-tabs>
-				<span style="font-size: 20px; font-weight: bold;">合计信息</span>
-				<el-divider></el-divider>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="货值合计">
-							<el-input
-								:value="formatTotalValueOfGoods(Newcontractform.TotalValueOfGoods, Newcontractform.foreignCurrency)"
-								style="width: 300px" disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="数量合计">
-							<el-input v-model="Newcontractform.TotalQuantity" style="width: 300px" disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="箱数合计">
-							<el-input v-model="Newcontractform.TotalNumberOfBoxes" style="width: 300px"
-								disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="毛重合计">
-							<el-input v-model="Newcontractform.TotalGrossWeight" style="width: 300px"
-								disabled></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="净重合计">
-							<el-input v-model="Newcontractform.TotalNetWeight" style="width: 300px" disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="体积合计">
-							<el-input v-model="Newcontractform.TotalVolume" style="width: 300px" disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="采购合计">
-							<el-input :value="formatCNYAmount(Newcontractform.TotalPurchases)" style="width: 300px"
-								:disabled="isDisabled" :style="hasChangedProducts ? {
-									'--el-input-text-color': 'red',
-									'--el-disabled-text-color': 'red',
-								} : {}"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="退税总额">
-							<el-input v-model="Newcontractform.TotalTaxRefund" style="width: 300px" :style="hasChangedProducts ? {
-								'--el-input-text-color': 'red',
-								'--el-disabled-text-color': 'red',
-							} : {}" disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="客户费用合计">
-							<el-input v-model="Newcontractform.customerExpenseTotal" style="width: 300px"
-								disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="美金/欧元换算">
-							<el-input v-model="Newcontractform.usdConversion" style="width: 300px" :style="hasChangedProducts ? {
-								'--el-input-text-color': 'red',
-								'--el-disabled-text-color': 'red',
-							} : {}" disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="总毛利合计">
-							<el-input :value="formatCNYAmount(Newcontractform.Totalgrossprofit)" disabled
-								style="width: 300px;" :style="hasChangedProducts ? {
-									'--el-input-text-color': 'red',
-									'--el-disabled-text-color': 'red',
-								} : {}" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="其它费用合计">
-							<el-input :value="formatCNYAmount(Newcontractform.TotalOtherFees)" disabled
-								style="width: 300px;" :style="hasChangedProducts ? {
-									'--el-input-text-color': 'red',
-									'--el-disabled-text-color': 'red',
-								} : {}" />
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="金额合计">
-							<el-input v-model="Newcontractform.amountTotal" style="width: 300px" :style="hasChangedProducts ? {
-								'--el-input-text-color': 'red',
-								'--el-disabled-text-color': 'red',
-							} : {}" disabled></el-input>
-						</el-form-item>
-					</el-col>
+										} : {}" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户费用合计">
+									<el-input v-model="Newcontractform.customerExpenseTotal" style="width: 300px"
+										disabled size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="总毛利合计">
+									<el-input :value="formatCNYAmount(Newcontractform.Totalgrossprofit)" disabled
+										style="width: 300px;" :style="hasChangedProducts ? {
+											'--el-input-text-color': 'red',
+											'--el-disabled-text-color': 'red',
+										} : {}" size="default" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="退税总额">
+									<el-input v-model="Newcontractform.TotalTaxRefund" style="width: 300px" :style="hasChangedProducts ? {
+										'--el-input-text-color': 'red',
+										'--el-disabled-text-color': 'red',
+									} : {}" disabled size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="美金/欧元换算">
+									<el-input v-model="Newcontractform.usdConversion" style="width: 300px" :style="hasChangedProducts ? {
+										'--el-input-text-color': 'red',
+										'--el-disabled-text-color': 'red',
+									} : {}" disabled size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="其它费用合计">
+									<el-input :value="formatCNYAmount(Newcontractform.TotalOtherFees)" disabled
+										style="width: 300px;" :style="hasChangedProducts ? {
+											'--el-input-text-color': 'red',
+											'--el-disabled-text-color': 'red',
+										} : {}" size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="利润金额">
+									<el-input :value="formatCNYAmount(Newcontractform.ProfitAmount)" :style="hasChangedProducts ? {
+										'--el-input-text-color': 'red',
+										'--el-disabled-text-color': 'red',
+									} : {}" disabled style="width: 300px;" size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="退税总额">
+									<el-input :value="formatCNYAmount(Newcontractform.TotalTaxRefund)" :style="hasChangedProducts ? {
+										'--el-input-text-color': 'red',
+										'--el-disabled-text-color': 'red',
+									} : {}" disabled style="width: 300px;" size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="总利润率%">
+									<el-input :value="formatPercentage(Newcontractform.Totalprofitmargin)" :style="hasChangedProducts ? {
+										'--el-input-text-color': 'red',
+										'--el-disabled-text-color': 'red',
+									} : {}" disabled style="width: 300px;" size="default" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6" v-if="false">
+								<el-form-item label="金额合计">
+									<el-input v-model="Newcontractform.amountTotal" style="width: 300px" :style="hasChangedProducts ? {
+										'--el-input-text-color': 'red',
+										'--el-disabled-text-color': 'red',
+									} : {}" disabled size="default"></el-input>
+								</el-form-item>
+							</el-col>
 
-				</el-row>
-				<el-row>
+						</el-row>
+						<el-row>
 
-				</el-row>
-				<span style="font-size: 20px; font-weight: bold;">利润预估</span>
-				<el-divider></el-divider>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="利润金额">
-							<el-input :value="formatCNYAmount(Newcontractform.ProfitAmount)" :style="hasChangedProducts ? {
-								'--el-input-text-color': 'red',
-								'--el-disabled-text-color': 'red',
-							} : {}" disabled style="width: 300px;" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="退税总额">
-							<el-input :value="formatCNYAmount(Newcontractform.TotalTaxRefund)" :style="hasChangedProducts ? {
-								'--el-input-text-color': 'red',
-								'--el-disabled-text-color': 'red',
-							} : {}" disabled style="width: 300px;" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="总利润率%">
-							<el-input :value="formatPercentage(Newcontractform.Totalprofitmargin)" :style="hasChangedProducts ? {
-								'--el-input-text-color': 'red',
-								'--el-disabled-text-color': 'red',
-							} : {}" disabled style="width: 300px;" />
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<span style="font-size: 20px; font-weight: bold;">备注信息</span>
-				<el-divider></el-divider>
-				<el-input v-model="Newcontractform.contractremark" :autosize="{ minRows: 5, maxRows: 10 }"
-					type="textarea" placeholder="请输入备注信息" :disabled="isDisabled" />
+						</el-row>
+						<el-row>
+
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+			<el-form :model="Newcontractform" label-width="120px">
+				<el-form-item label="备注信息">
+					<el-input v-model="Newcontractform.contractremark" :autosize="{ minRows: 5, maxRows: 10 }"
+						type="textarea" placeholder="请输入备注信息" :disabled="isDisabled" size="default" />
+				</el-form-item>
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
@@ -4324,6 +4358,9 @@ const quotationDate = ref('')
 
 // 过滤条件相关变量
 const filterCollapseActive = ref(['filter']) // 默认展开过滤条件
+const basicInfoCollapseActive = ref(['basicInfo']) // 默认展开基本信息
+const auxiliaryInfoCollapseActive = ref(['auxiliaryInfo']) // 默认展开辅助信息
+const profitCalculationCollapseActive = ref(['profitCalculation']) // 默认展开合计信息&利润预估
 const salespersonSelect = ref('')
 const salespersonSelectOptions = ref([])
 const contractStatusSelect = ref('')
