@@ -2979,6 +2979,8 @@ const clearAll = () => {
 	Newcontractform.hasDeposit = false;
 	Newcontractform.receivedDeposit = null;
 	Newcontractform.depositDate = '';
+	Newcontractform.Depositratio = null;
+	DepositShow.value = false;
 	Newcontractform.stockProgress = '';
 	Newcontractform.deliveryProgress = '';
 	Newcontractform.profitCalculation = '';
