@@ -45,7 +45,6 @@
             <el-image :src="codeUrl" @click="getCode" class="login-code-img" />
           </div>
         </el-form-item>
-
         <el-form-item style="width: 100%" :style="{ 'margin-top': captchaOnOff == 'off' ? '40px' : '' }">
           <el-button :loading="loading" size="default" round type="primary" style="width: 100%" @click.prevent="handleLogin">
             <span v-if="!loading">{{ $t('login.btnLogin') }}</span>
@@ -54,7 +53,7 @@
         </el-form-item>
 
         <div style="display: flex; justify-content: space-between; align-items: center">
-          <!-- <el-checkbox v-model="loginForm.rememberMe">{{ $t('login.rememberMe') }}</el-checkbox> -->
+          <!-- <el-checkbox v-model="loginForm.rememberMe">{{ $t('login.rememberMe') }}</el-checkbox>  -->
           <span style="font-size: 12px">
             <!-- <router-link class="link-type" :to="'/register'">{{ $t('login.register') }}</router-link>
             <span @click="handleForgetPwd()" class="forget-pwd">{{ $t('login.forgotPwd') }}</span> -->
