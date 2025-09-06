@@ -55,7 +55,7 @@ export default {
   /**
    * 版权信息
    */
-  copyright: 'Copyright ©2024 <a target="_black" href="http://www.izhaorui.cn">ZRAdmin.NET</a> All Rights Reserved.',
+  copyright: 'Copyright ©2024 <a target="_black" href="http://www.izhaorui.cn">鼎峰光学车房网下单系统</a> All Rights Reserved.',
   /**
    * 是否显示底部栏
    */
@@ -67,7 +67,7 @@ export default {
   /**
    * 水印文案
    */
-  watermarkText: 'ZRAdmin.NET',
+  watermarkText: '鼎峰光学车房网下单系统',
   /**
    * 是否显示其他登录
    */
