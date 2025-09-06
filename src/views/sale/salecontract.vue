@@ -64,7 +64,8 @@
 				&nbsp;&nbsp;<el-button type="primary" @click="openContractDialog" size="default">创建合同</el-button>
 			</div>
 			<el-divider></el-divider>
-			<el-table :data="contractsTableData" style="width: 100%">
+			<el-table :data="contractsTableData" style="width: 100%"
+				:header-cell-style="{ background: '#f5f7fa', color: '#333', fontWeight: 'bold' }">
 				<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
 				<el-table-column type="isDraft" label="是否草稿" width="100" v-if="false">
@@ -74,7 +75,7 @@
 						</el-tag>
 					</template>
 				</el-table-column>
-				<el-table-column prop="contractReviewStatusStr" label="审核状态" width="150" align="center">
+				<el-table-column prop="contractReviewStatusStr" label="审核状态" width="120" align="center" v-if="false">
 					<template #default="{ row }">
 						<template v-if="row.id"> <!-- 有ID才显示popover -->
 							<el-popover placement="right" :width="400" trigger="click">
@@ -107,34 +108,38 @@
 						</template>
 					</template>
 				</el-table-column>
-				<el-table-column prop="contractNumber" label="合同编号" width="150">
+				<el-table-column prop="contractNumber" label="合同编号" width="100">
 					<template #default="scope">
 						<span>{{ scope.row.contractNumber }}</span>
 						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
 							size="small">草稿</el-tag>
 					</template>
 				</el-table-column>
-				<el-table-column prop="contractDate" label="合同日期" width="150"></el-table-column>
-				<el-table-column prop="contractStatus" label="合同状态" width="150"></el-table-column>
+				<el-table-column prop="contractDate" label="合同日期" width="120"></el-table-column>
+				<el-table-column prop="contractStatus" label="合同状态" width="120"></el-table-column>
 				<el-table-column prop="customerId" label="客户ID" width="150" v-if="false"></el-table-column>
-				<el-table-column prop="customerNumber" label="客户编号" width="150"></el-table-column>
+				<el-table-column prop="customerNumber" label="客户编号" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="customerAbbreviation" label="客户简称" width="150"></el-table-column>
-				<el-table-column prop="effectiveDate" label="生效日期" width="150"></el-table-column>
-				<el-table-column prop="deliveryDate" label="交货日期" width="150"></el-table-column>
-				<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
-				<el-table-column prop="foreignCurrency" label="外销币种" width="150"></el-table-column>
-				<el-table-column prop="exchangeRate" label="汇率" width="150"></el-table-column>
-				<el-table-column prop="settlementMethod" label="结汇方式" width="150"></el-table-column>
-				<el-table-column prop="priceTerms" label="价格条款" width="150"></el-table-column>
-				<el-table-column prop="shippingPort" label="出运口岸" width="150"></el-table-column>
-				<el-table-column prop="destinationPort" label="目的口岸" width="150"></el-table-column>
-				<el-table-column prop="tradeCountry" label="贸易国别" width="150"></el-table-column>
-				<el-table-column prop="deposit" label="有无定金" width="150"></el-table-column>
-				<el-table-column prop="receivedDeposit" label="已收定金" width="150"></el-table-column>
-				<el-table-column prop="depositDate" label="定金日期" width="150"></el-table-column>
-				<el-table-column prop="stockProgress" label="备货进度" width="150"></el-table-column>
-				<el-table-column prop="deliveryProgress" label="交货进度" width="150"></el-table-column>
-				<el-table-column prop="estimatedProfitMargin" label="预估利润率" width="150"></el-table-column>
+				<el-table-column prop="customerContract" label="客户合同" width="120"></el-table-column>
+				<el-table-column prop="effectiveDate" label="生效日期" width="120" v-if="false"></el-table-column>
+				<el-table-column prop="deliveryDate" label="交货日期" width="120"></el-table-column>
+				<el-table-column prop="ourCompany" label="我方公司" width="120"></el-table-column>
+				<el-table-column prop="foreignCurrency" label="外销币种" width="100"></el-table-column>
+				<el-table-column prop="goodsValue" label="合同金额" width="100"></el-table-column>
+				<el-table-column prop="exchangeRate" label="汇率" width="80" v-if="false"></el-table-column>
+				<el-table-column prop="settlementMethod" label="结汇方式" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="priceTerms" label="价格条款" width="100"></el-table-column>
+				<el-table-column prop="shippingPort" label="出运口岸" width="120"></el-table-column>
+				<el-table-column prop="destinationPort" label="目的口岸" width="120"></el-table-column>
+				<el-table-column prop="tradeCountry" label="贸易国别" width="100"></el-table-column>
+				<el-table-column prop="deposit" label="有无定金" width="120" v-if="false"></el-table-column>
+				<el-table-column prop="receivedDeposit" label="已收定金" width="120" v-if="false"></el-table-column>
+				<el-table-column prop="depositDate" label="定金日期" width="120" v-if="false"></el-table-column>
+				<el-table-column prop="stockProgress" label="备货进度" width="120" v-if="false"></el-table-column>
+				<el-table-column prop="deliveryProgress" label="交货进度" width="120" v-if="false"></el-table-column>
+				<el-table-column prop="estimatedProfitMargin" label="预估利润率" width="120" v-if="false"></el-table-column>
+				<el-table-column prop="salesperson" label="销售员" width="120"></el-table-column>
+				<el-table-column prop="updateTime" label="更新时间" width="120"></el-table-column>
 				<el-table-column fixed="right" label="操作" width="200">
 					<template #default="scope">
 						<template v-if="scope.row.salesperson == userId">
@@ -169,7 +174,8 @@
 					<template #title>
 						<span style="font-size: 20px; font-weight: bold;">基本信息【{{ contractReviewStatus }}】</span>
 					</template>
-					<el-form ref="NewcontractformRef" :rules="rules" :model="Newcontractform" label-width="120px">
+					<el-form ref="NewcontractformRef" :rules="rules" :model="Newcontractform" label-width="120px"
+						:show-message="false">
 						<el-row>
 							<el-col :span="6">
 								<el-form-item label="销售合同">
@@ -195,9 +201,9 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="客户编号" prop="customerNumber">
-									<el-select filterable v-model="Newcontractform.customerNumber" placeholder="请选择客户编号"
-										:disabled="isDisabled" style="width: 300px" @change="handleCustomerSelection"
-										size="default" id="customerNumber">
+									<el-select filterable v-model="Newcontractform.customerNumber"
+										:placeholder="'请选择客户编号'" :disabled="isDisabled" style="width: 300px"
+										@change="handleCustomerSelection" size="default" id="customerNumber">
 										<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
 									</el-select>
@@ -229,8 +235,8 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="联系人" prop="contactPerson">
-									<el-select filterable v-model="Newcontractform.contactPerson" placeholder="请选择联系人"
-										style="width: 300px" :disabled="isDisabled"
+									<el-select filterable v-model="Newcontractform.contactPerson"
+										:placeholder="'请选择联系人'" style="width: 300px" :disabled="isDisabled"
 										@change="handleContactpersonSelection" size="default" id="contactPerson">
 										<el-option v-for="item in contactpersonSelectOptions" :key="item.value"
 											:label="item.label" :value="item.value" size="default" />
@@ -270,13 +276,13 @@
 							<el-col :span="6">
 								<el-form-item label="交货日期" prop="deliveryDate">
 									<el-date-picker v-model="Newcontractform.deliveryDate" type="date"
-										placeholder="请选择交货日期" :disabled="isDisabled" style="width: 300px"
+										:placeholder="'请选择交货日期'" :disabled="isDisabled" style="width: 300px"
 										size="default"></el-date-picker>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="我方公司" prop="ourCompany">
-									<el-select filterable v-model="Newcontractform.ourCompany" placeholder="请选择我方公司"
+									<el-select filterable v-model="Newcontractform.ourCompany" :placeholder="'请选择我方公司'"
 										style="width: 300px" :disabled="isDisabled" size="default">
 										<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" size="default" />
@@ -286,8 +292,8 @@
 							<el-col :span="6">
 								<el-form-item label="外销币种" prop="foreignCurrency">
 									<el-select filterable v-model="Newcontractform.foreignCurrency"
-										placeholder="请选择外销币种" :disabled="isDisabled" style="width: 300px"
-										size="default">
+										:placeholder="'请选择外销币种'" :disabled="isDisabled" style="width: 300px"
+										@change="foreignCurrencyChange" size="default">
 										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" size="default" />
 									</el-select>
@@ -311,13 +317,14 @@
 							<el-col :span="6">
 								<el-form-item label="汇率" prop="exchangeRate">
 									<el-input v-model="Newcontractform.exchangeRate" style="width: 300px"
-										:disabled="isDisabled" @blur="formatExchangeRate" size="default"></el-input>
+										:placeholder="'请输入汇率'" :disabled="isDisabled" @blur="formatExchangeRate"
+										size="default"></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="结汇方式" prop="settlementMethod">
 									<el-select filterable v-model="Newcontractform.settlementMethod"
-										placeholder="请选择结汇方式" :disabled="isDisabled" style="width: 300px"
+										:placeholder="'请选择结汇方式'" :disabled="isDisabled" style="width: 300px"
 										size="default">
 										<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
@@ -326,7 +333,7 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="价格条款" prop="priceTerms">
-									<el-select filterable v-model="Newcontractform.priceTerms" placeholder="请选择价格条款"
+									<el-select filterable v-model="Newcontractform.priceTerms" :placeholder="'请选择价格条款'"
 										style="width: 300px" :disabled="isDisabled" @change="FreightChange()"
 										size="default">
 										<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
@@ -336,8 +343,9 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="出运口岸" prop="shippingPort">
-									<el-select filterable v-model="Newcontractform.shippingPort" placeholder="请选择出运口岸"
-										:disabled="isDisabled" style="width: 300px" size="default">
+									<el-select filterable v-model="Newcontractform.shippingPort"
+										:placeholder="'请选择出运口岸'" :disabled="isDisabled" style="width: 300px"
+										size="default">
 										<el-option v-for="dict in optionss.hr_transport_port" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" size="default" />
 									</el-select>
@@ -356,13 +364,14 @@
 							<el-col :span="6">
 								<el-form-item label="目的口岸" prop="destinationPort">
 									<el-input v-model="Newcontractform.destinationPort" style="width: 300px"
-										:disabled="isDisabled" size="default"></el-input>
+										:placeholder="'请输入目的口岸'" :disabled="isDisabled" size="default"></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="贸易国别" prop="tradeCountry">
-									<el-select filterable v-model="Newcontractform.tradeCountry" placeholder="请选择贸易国别"
-										:disabled="isDisabled" style="width: 300px" size="default">
+									<el-select filterable v-model="Newcontractform.tradeCountry"
+										:placeholder="'请选择贸易国别'" :disabled="isDisabled" style="width: 300px"
+										size="default">
 										<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
 									</el-select>
@@ -370,9 +379,9 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="运输方式" prop="transportation">
-									<el-select filterable v-model="Newcontractform.transportation" placeholder="请选择运输方式"
-										:disabled="isDisabled" style="width: 300px" @change="FreightChange()"
-										size="default">
+									<el-select filterable v-model="Newcontractform.transportation"
+										:placeholder="'请选择运输方式'" :disabled="isDisabled" style="width: 300px"
+										@change="FreightChange()" size="default">
 										<el-option v-for="dict in optionss.hr_transportation_method"
 											:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue"
 											size="default" />
@@ -496,7 +505,8 @@
 							<el-col :span="6">
 								<el-form-item label="海运费汇率">
 									<el-input v-model="Newcontractform.shippingrate" style="width: 300px;"
-										:disabled="isDisabled" @change="calculateTotal" size="default"></el-input>
+										:disabled="isDisabled" @change="calculateTotal" @blur="formatShippingRate"
+										size="default"></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
@@ -1290,7 +1300,15 @@ const handleDepositDateChange = (date) => {
 //美金汇率触发函数，将美金汇率保留4位小数
 const formatExchangeRate = () => {
 	if (Newcontractform.exchangeRate) {
-		Newcontractform.exchangeRate = Number(Number(Newcontractform.exchangeRate).toFixed(4));
+		Newcontractform.exchangeRate = Number(Newcontractform.exchangeRate).toFixed(3);
+	}
+	calculateTotal();
+}
+
+//海运费汇率触发函数，将海运费汇率保留3位小数
+const formatShippingRate = () => {
+	if (Newcontractform.shippingrate) {
+		Newcontractform.shippingrate = Number(Newcontractform.shippingrate).toFixed(3);
 	}
 	calculateTotal();
 }
@@ -1760,9 +1778,17 @@ const handleRowDblClick = (row) => {
 
 const shippingcurrencyChange = (value) => {
 	if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 3) {
-		Newcontractform.shippingrate = 1;
+		Newcontractform.shippingrate = Number(1).toFixed(3);
 	} else {
 		Newcontractform.shippingrate = null;
+	}
+}
+
+const foreignCurrencyChange = (value) => {
+	if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 3) {
+		Newcontractform.exchangeRate = Number(1).toFixed(3);
+	} else {
+		Newcontractform.exchangeRate = null;
 	}
 }
 
@@ -2278,7 +2304,7 @@ proxy.getDicts(dictParams).then((response) => {
 const getUserCustomerData = async () => {
 	try {
 		const response = await request({
-			url: 'CustomerInfoMation/GetCustomerDataByUserID/GetSelectCustomerDataByUserID',
+			url: 'CustomerInfoMation/GetCustomerAbbNameDataByUserID/GetSelectCustomerAbbNameDataByUserID',
 			method: 'get'
 		})
 
@@ -2359,7 +2385,7 @@ function GetContractList(start, end) {
 						contractsTableData.value[i].customerNumber = state.optionss.sql_hr_customer.find(item => item.dictValue === contractsTableData.value[i].customerNumber.toString()).dictLabel;
 					}
 					if (contractsTableData.value[i].customerAbbreviation > 0) {
-						contractsTableData.value[i].customerAbbreviation = state.optionss.sql_hr_customer.find(item => item.dictValue === contractsTableData.value[i].customerAbbreviation.toString()).dictLabel;
+						contractsTableData.value[i].customerAbbreviation = state.optionss.sql_hr_customer_abbreviation.find(item => item.dictValue === contractsTableData.value[i].customerAbbreviation.toString()).dictLabel;
 					}
 					if (contractsTableData.value[i].ourCompany != null) {
 						contractsTableData.value[i].ourCompany = state.optionss.hr_ourcompany.find(item => item.dictValue === contractsTableData.value[i].ourCompany.toString()).dictLabel;
@@ -2396,6 +2422,12 @@ function GetContractList(start, end) {
 					}
 					if (contractsTableData.value[i].paymentDate != null) {
 						contractsTableData.value[i].paymentDate = contractsTableData.value[i].paymentDate.substring(0, 10);
+					}
+					if (contractsTableData.value[i].updateTime != null) {
+						contractsTableData.value[i].updateTime = contractsTableData.value[i].updateTime.substring(0, 10);
+					}
+					if (contractsTableData.value[i].salesperson != null) {
+						contractsTableData.value[i].salesperson = state.optionss.sql_all_user.find(item => item.dictValue === contractsTableData.value[i].salesperson.toString()).dictLabel;
 					}
 				}
 				contractsTableDatatotalItems.value = response.data.totalNum;
@@ -3151,7 +3183,7 @@ const checkContractsDetails = async (row) => {
 	}
 
 	if (row.customerAbbreviation != null && row.customerAbbreviation != "") {
-		CustomerID.value = state.optionss.sql_hr_customer.find(item => item.dictLabel === row.customerAbbreviation.toString()).dictValue;
+		CustomerID.value = state.optionss.sql_hr_customer_abbreviation.find(item => item.dictLabel === row.customerAbbreviation.toString()).dictValue;
 		Newcontractform.customerAbbreviation = CustomerID.value.toString();
 	}
 	if (row.customerId != 0) {
@@ -3214,7 +3246,7 @@ const checkContractsDetails = async (row) => {
 	if (row.transportation != null) {
 		Newcontractform.transportation = state.optionss.hr_transportation_method.find(item => item.dictLabel === row.transportation.toString()).dictValue;
 	}
-	Newcontractform.salesperson = state.optionss.sql_hr_sale.find(item => item.dictValue === row.salesperson.toString()).dictValue;
+	Newcontractform.salesperson = state.optionss.sql_hr_sale.find(item => item.dictLabel === row.salesperson.toString()).dictValue;
 	Newcontractform.hasDeposit = row.hasDeposit;
 	if (row.hasDeposit) {
 		DepositShow.value = true;
@@ -4793,5 +4825,37 @@ const resetFilters = () => {
 	white-space: pre-line;
 	max-height: 300px;
 	overflow-y: auto;
+}
+
+/* 创建合同和查看合同详情dialog中的表单组件间距减少一半 */
+.el-dialog .el-form-item {
+	margin-bottom: 5px !important;
+}
+
+.el-dialog .el-row {
+	margin-bottom: 2.5px !important;
+}
+
+/* 错误placeholder样式 */
+.error-placeholder .el-input__inner::placeholder,
+.error-placeholder .el-select__input::placeholder,
+.error-placeholder .el-date-editor__input::placeholder {
+	color: var(--el-color-danger) !important;
+}
+
+.error-placeholder .el-input__inner,
+.error-placeholder .el-select__input,
+.error-placeholder .el-date-editor__input {
+	border-color: var(--el-color-danger) !important;
+}
+
+/* 隐藏组件外部的验证信息显示 */
+.el-dialog .el-form-item__error,
+.el-dialog .el-form-item .el-form-item__error,
+.el-dialog .el-form-item.is-error .el-form-item__error {
+	display: none !important;
+	visibility: hidden !important;
+	height: 0 !important;
+	overflow: hidden !important;
 }
 </style>
