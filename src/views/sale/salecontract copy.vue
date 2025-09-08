@@ -1,69 +1,72 @@
 <template>
 	<div>
-		<!-- 销售合同表 -->
-		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
-			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
-					<el-col :span="4">
-						<el-input v-model="quotationNum" clearable placeholder="请输入合同编号" size="default" />
-					</el-col>
-					<el-col :span="4">
-						<el-select filterable v-model="customerinfoselect" placeholder="请选择客户（可输入查询）"
-							style="width: 100%" size="default">
-							<el-option v-for="item in customerinfoselectoptions" :key="item.value" :label="item.label"
-								:value="item.value" />
-						</el-select>
-					</el-col>
-					<el-col :span="4">
-						<el-select filterable v-model="productselect" placeholder="请选择产品（可输入查询）" style="width: 100%"
-							size="default">
-							<el-option v-for="item in productselectoptions" :key="item.value" :label="item.label"
-								:value="item.value" />
-						</el-select>
-					</el-col>
-					<el-col :span="4">
-						<el-select v-model="salespersonSelect" filterable placeholder="请选择销售员（可输入查询）"
-							style="width: 100%" size="default">
-							<el-option v-for="item in salespersonSelectOptions" :key="item.value" :label="item.label"
-								:value="item.value" />
-						</el-select>
-					</el-col>
-					<el-col :span="4">
-						<el-select v-model="contractStatusSelect" filterable placeholder="请选择合同状态" style="width: 100%"
-							size="default">
-							<el-option v-for="item in contractStatusSelectOptions" :key="item.value" :label="item.label"
-								:value="item.value" />
-						</el-select>
-					</el-col>
-					<el-col :span="4">
-						<el-date-picker v-model="inquiryDate" type="date" placeholder="请选择合同日期起" style="width: 100%"
-							size="default" />
-					</el-col>
-				</el-row>
-				<el-row :gutter="15">
-					<el-col :span="4">
-						<el-date-picker v-model="quotationDate" type="date" placeholder="请选择合同日期止" style="width: 100%"
-							size="default" />
-					</el-col>
-					<el-col :span="4">
-						<div style="text-align: left;">
-							<el-button type="primary" plain @click="searchContracts" size="default">查询</el-button>
-							<el-button @click="resetFilters" size="default">重置</el-button>
-						</div>
-					</el-col>
-					<el-col :span="16">
-						<div style="text-align: right;">
-							<el-button type="primary" @click="openContractDialog" size="default">创建合同</el-button>
-						</div>
-					</el-col>
-				</el-row>
+		<el-collapse v-model="filterCollapseActive" style="margin-top: 0px;">
+			<el-collapse-item title="过滤条件" name="filter">
+				<template #title>
+					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
+				</template>
+				<div style="width: 100%; margin-top: 20px;">
+					<el-row :gutter="20">
+						<el-col :span="4">
+							<el-input v-model="quotationNum" clearable placeholder="请输入合同编号" size="default" />
+						</el-col>
+						<el-col :span="4">
+							<el-select filterable v-model="customerinfoselect" placeholder="请选择客户（可输入查询）"
+								style="width: 100%" size="default">
+								<el-option v-for="item in customerinfoselectoptions" :key="item.value"
+									:label="item.label" :value="item.value" />
+							</el-select>
+						</el-col>
+						<el-col :span="4">
+							<el-select filterable v-model="productselect" placeholder="请选择产品（可输入查询）" style="width: 100%"
+								size="default">
+								<el-option v-for="item in productselectoptions" :key="item.value" :label="item.label"
+									:value="item.value" />
+							</el-select>
+						</el-col>
+						<el-col :span="4">
+							<el-select v-model="salespersonSelect" filterable placeholder="请选择销售员（可输入查询）"
+								style="width: 100%" size="default">
+								<el-option v-for="item in salespersonSelectOptions" :key="item.value"
+									:label="item.label" :value="item.value" />
+							</el-select>
+						</el-col>
+						<el-col :span="4">
+							<el-select v-model="contractStatusSelect" filterable placeholder="请选择合同状态"
+								style="width: 100%" size="default">
+								<el-option v-for="item in contractStatusSelectOptions" :key="item.value"
+									:label="item.label" :value="item.value" />
+							</el-select>
+						</el-col>
+						<el-col :span="4">
+							<el-date-picker v-model="inquiryDate" type="date" placeholder="请选择合同日期起" style="width: 100%"
+								size="default" />
+						</el-col>
+					</el-row>
+					<el-row :gutter="20" style="margin-top: 20px;">
+						<el-col :span="4">
+							<el-date-picker v-model="quotationDate" type="date" placeholder="请选择合同日期止"
+								style="width: 100%" size="default" />
+						</el-col>
+						<el-col :span="4">
+							<div style="text-align: left;">
+								<el-button type="primary" plain @click="searchContracts" size="default">查询</el-button>
+								<el-button @click="resetFilters" size="default">重置</el-button>
+							</div>
+						</el-col>
+					</el-row>
+				</div>
+			</el-collapse-item>
+		</el-collapse>
+		<div style="margin-top: 30px;">
+			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;销售合同表</span>
+			<div>
+				&nbsp;&nbsp;<el-button type="primary" @click="openContractDialog" size="default">创建合同</el-button>
 			</div>
-
-			<!-- 表格区域 -->
-			<el-table :data="contractsTableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-divider></el-divider>
+			<el-table :data="contractsTableData" style="width: 100%" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
-				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				:row-style="{ height: '40px' }" :cell-style="{ padding: '8px 0' }">
 				<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
 				<el-table-column type="isDraft" label="是否草稿" width="100" v-if="false">
@@ -123,16 +126,12 @@
 				<el-table-column prop="deliveryDate" label="交货日期" width="110"></el-table-column>
 				<el-table-column prop="ourCompany" label="我方公司" width="110"></el-table-column>
 				<el-table-column prop="foreignCurrency" label="外销币种" width="90"></el-table-column>
-				<el-table-column prop="goodsValue" label="合同金额" width="100">
-					<template #default="scope">
-						{{ formatAmount(scope.row.goodsValue) }}
-					</template>
-				</el-table-column>
+				<el-table-column prop="goodsValue" label="合同金额" width="100"></el-table-column>
 				<el-table-column prop="exchangeRate" label="汇率" width="80" v-if="false"></el-table-column>
 				<el-table-column prop="settlementMethod" label="结汇方式" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="priceTerms" label="价格条款" width="90"></el-table-column>
 				<el-table-column prop="shippingPort" label="出运口岸" width="120" v-if="false"></el-table-column>
-				<el-table-column prop="destinationPort" label="目的地/港" width="160"></el-table-column>
+				<el-table-column prop="destinationPort" label="目的地/港" width="110"></el-table-column>
 				<el-table-column prop="tradeCountry" label="贸易国别" width="90"></el-table-column>
 				<el-table-column prop="deposit" label="有无定金" width="120" v-if="false"></el-table-column>
 				<el-table-column prop="receivedDeposit" label="已收定金" width="120" v-if="false"></el-table-column>
@@ -141,7 +140,7 @@
 				<el-table-column prop="deliveryProgress" label="交货进度" width="120" v-if="false"></el-table-column>
 				<el-table-column prop="estimatedProfitMargin" label="预估利润率" width="120" v-if="false"></el-table-column>
 				<el-table-column prop="salesperson" label="销售员" width="120"></el-table-column>
-				<el-table-column prop="updateTime" label="更新时间" width="110"></el-table-column>
+				<el-table-column prop="updateTime" label="更新时间" width="120"></el-table-column>
 				<el-table-column fixed="right" label="操作" width="200">
 					<template #default="scope">
 						<template v-if="scope.row.salesperson == userId">
@@ -167,8 +166,8 @@
 			<el-pagination @current-change="contractsTableDatahandlePageChange"
 				:current-page="contractsTableDatacurrentPage" :page-size="contractsTableDatapageSize"
 				:total="contractsTableDatatotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		</div>
 
+		</div>
 		<el-dialog :modal="false" modal-penetrable v-model="contractDialog" title="创建销售合同" :close-on-click-modal=false
 			style="width: 75%;" @close="handlecontractDialogclose">
 			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
@@ -2331,7 +2330,7 @@ const contractsTableData = ref([])
 //销售合同列表分页组件
 const contractsTableDatatotalItems = ref(0);
 const contractsTableDatacurrentPage = ref(1);
-const contractsTableDatapageSize = ref(20);
+const contractsTableDatapageSize = ref(10);
 const contractsTableDatahandlePageChange = async (newPage) => {
 	contractsTableDatacurrentPage.value = newPage;
 	const start = newPage;
@@ -4708,11 +4707,6 @@ const formatPercentage = (value) => {
 	return `${formattedValue}%`;
 };
 
-const formatAmount = (value) => {
-	if (!value || value === 0) return '0.00';
-	return Number(value).toFixed(2);
-};
-
 // 查询合同列表
 const searchContracts = () => {
 	// 重置到第一页
@@ -4860,55 +4854,24 @@ const resetFilters = () => {
 .el-table .el-table__row,
 .el-table .el-table__body tr,
 .el-table .el-table__body .el-table__row {
-	height: 20px !important;
-}
-
-/* 表格列间距调整 */
-.el-table {
-	border-spacing: 0 !important;
-	border-collapse: collapse !important;
-	table-layout: fixed !important;
-}
-
-.el-table td {
-	border-spacing: 0 !important;
-	margin: 0 !important;
-	padding-left: 1px !important;
-	padding-right: 1px !important;
-	overflow: hidden !important;
-	text-overflow: ellipsis !important;
-	white-space: nowrap !important;
-}
-
-.el-table th {
-	padding-left: 1px !important;
-	padding-right: 1px !important;
-	overflow: hidden !important;
-	text-overflow: ellipsis !important;
-	white-space: nowrap !important;
+	height: 40% !important;
 }
 
 .el-table .el-table__row td,
 .el-table .el-table__body tr td,
 .el-table .el-table__body .el-table__row td {
-	padding: 2px 1px !important;
-	line-height: 12px !important;
-	overflow: hidden !important;
-	text-overflow: ellipsis !important;
-	white-space: nowrap !important;
+	padding: 8px 0 !important;
+	line-height: 20px !important;
 }
 
 /* 更具体的表格行高度控制 */
 .el-table tbody tr {
-	height: 20px !important;
+	height: 40% !important;
 }
 
 .el-table tbody tr td {
-	padding: 2px 1px !important;
-	line-height: 12px !important;
-	overflow: hidden !important;
-	text-overflow: ellipsis !important;
-	white-space: nowrap !important;
+	padding: 8px 0 !important;
+	line-height: 20% !important;
 }
 
 /* 隐藏组件外部的验证信息显示 */
