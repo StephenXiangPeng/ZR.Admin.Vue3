@@ -1,0 +1,151 @@
+version: '3.8'
+
+services:
+  # 生产环境前端应用
+  zr-admin-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: frontend-container
+    ports:
+      - "80:80"
+      - "443:443"  # 为HTTPS预留端口
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Shanghai
+      - VITE_APP_TITLE=车房网下单系统
+      - VITE_APP_VERSION=v20240105
+      - VITE_APP_BASE_API=/api
+      - VITE_APP_ROUTER_PREFIX=/
+      - VITE_APP_DEBUG=false
+      - VITE_APP_MOCK=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - zr-admin-network
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 简化版生产环境（避免配置问题）
+  zr-admin-simple:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: zr-admin-simple
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - zr-admin-network
+    profiles:
+      - simple
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 开发环境（可选）
+  zr-admin-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: zr-admin-dev
+    ports:
+      - "8887:8887"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - TZ=Asia/Shanghai
+    command: yarn dev
+    profiles:
+      - dev
+    networks:
+      - zr-admin-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 后端API服务（生产环境配置）
+  zr-admin-backend:
+    image: your-backend-image:latest  # 替换为您的后端镜像
+    container_name: backend-container
+    ports:
+      - "8888:8888"
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Shanghai
+      # 添加后端需要的环境变量
+    restart: unless-stopped
+    networks:
+      - zr-admin-network
+    profiles:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx反向代理（可选，用于多服务部署）
+  nginx-proxy:
+    image: nginx:1.25-alpine
+    container_name: zr-admin-proxy
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - zr-admin-frontend
+    restart: unless-stopped
+    profiles:
+      - proxy
+    networks:
+      - zr-admin-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  zr-admin-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  node_modules:

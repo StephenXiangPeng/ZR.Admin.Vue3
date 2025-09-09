@@ -1,0 +1,32 @@
+# 使用Node.js作为Web服务器的Dockerfile
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+COPY package.json yarn.lock* ./
+RUN yarn install --frozen-lockfile
+COPY . .
+RUN yarn build:prod
+
+# 运行阶段
+FROM node:18-alpine
+
+WORKDIR /app
+
+# 安装serve包来提供静态文件服务
+RUN npm install -g serve
+
+# 复制构建产物
+COPY --from=builder /app/dist ./dist
+
+# 创建非root用户
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# 设置权限
+RUN chown -R nextjs:nodejs /app
+USER nextjs
+
+EXPOSE 3000
+
+# 使用serve提供静态文件服务，支持SPA路由
+CMD ["serve", "-s", "dist", "-l", "3000", "--single"]
