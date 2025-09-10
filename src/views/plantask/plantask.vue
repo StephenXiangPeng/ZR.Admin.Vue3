@@ -1,45 +1,123 @@
 <template>
 	<div>
-		<!-- <el-form :model="queryParams" inline @submit.prevent ref="queryRef">
-			<el-form-item prop="queryText">
-				<el-input v-model="queryParams.queryText" placeholder="请输入计划任务名称" clearable @clear="Search_PlanTaskInfo"
-					style="width: 600px" />
-			</el-form-item>
-			<el-form-item>
-				<el-button type="primary" icon="search" @click="Search_PlanTaskInfo">{{ $t('btn.search') }}</el-button>
-				<el-button type="primary" @click="OpenPlanTaskDialog">新建计划/任务</el-button>
-			</el-form-item>
-		</el-form> -->
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="PlanTaskDialogVisible" title="新建计划/任务" width="1000">
-			<el-form ref="PlanTaskFormRef" :model="PlanTaskForm" :rules="rules" label-width="120px"
-				class="demo-ruleForm" status-icon :inline="true">
-				<el-row>
+		<!-- 计划任务表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
 					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="OpenPlanTaskDialog" size="default">新建计划/任务</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-radio-group v-model="PlanTaskStatusRadio" size="default">
+							<el-radio-button label="进行中" value="0" />
+							<el-radio-button label="已完成" value="1" />
+							<el-radio-button label="已作废" value="2" />
+						</el-radio-group>
+					</el-col>
+					<el-col :span="4">
+						<el-input v-model="queryParams.queryText" placeholder="请输入计划任务名称" clearable
+							@clear="Search_PlanTaskInfo" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="Search_PlanTaskInfo" size="default">查询</el-button>
+							<el-button @click="resetFilters" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+
+			<!-- 表格区域 -->
+			<el-table v-loading="loading" :data="dataPlanTasks" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }" border>
+				<el-table-column prop="id" label="任务ID" min-width="120" v-if="false">
+				</el-table-column>
+				<el-table-column prop="create_time" label="创建日期" min-width="120">
+					<template #default="{ row }">
+						<span>{{ formatDate(row.create_time) }}</span>
+						<el-tag v-if="row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column prop="taskName" label="计划任务名称" min-width="180">
+					<template #default="{ row }">
+						<el-tooltip :content="row.taskName" placement="top" :show-after="200">
+							<div class="truncated-text">{{ row.taskName }}</div>
+						</el-tooltip>
+					</template>
+				</el-table-column>
+				<el-table-column prop="totalLeaderIds" label="总负责人" min-width="120" />
+				<el-table-column prop="taskDescription" label="任务描述" min-width="200">
+					<template #default="{ row }">
+						<el-tooltip :content="row.taskDescription" placement="top" :show-after="200">
+							<div class="truncated-text">{{ row.taskDescription }}</div>
+						</el-tooltip>
+					</template>
+				</el-table-column>
+				<el-table-column label="当前进度" min-width="150">
+					<template #default="{ row }">
+						<el-progress :text-inside="true" :stroke-width="24" :percentage="row.completionRate"
+							:status="row.completionRate >= 1 ? 'success' : ''" />
+					</template>
+				</el-table-column>
+				<el-table-column label="时间范围" min-width="200">
+					<template #default="{ row }">
+						{{ formatDate(row.startTime) }} 至 {{ formatDate(row.endTime) }}
+					</template>
+				</el-table-column>
+				<el-table-column label="操作" width="180" fixed="right">
+					<template #default="{ row }">
+						<el-button type="primary" link @click="showTaskDetail(row)">
+							查看详情
+						</el-button>
+						<el-button v-if="isCurrentUserTotalLeader(row.totalLeaderIds) && row.planTaskStatus !== 2"
+							type="danger" link @click="InvalidTask(row)">
+							作废
+						</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="handlePageChange" :current-page="queryParams.pageNum"
+				:page-size="queryParams.pageSize" :total="total" background layout="prev, pager, next"
+				style="margin-top: 5px;" />
+		</div>
+
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="PlanTaskDialogVisible" title="新建计划/任务" width="75%">
+			<el-form ref="PlanTaskFormRef" :model="PlanTaskForm" :rules="rules" label-width="120px"
+				class="demo-ruleForm" status-icon :show-message="false">
+				<el-row>
+					<el-col :span="6">
 						<el-form-item label="计划/任务名称" prop="plantaskname">
-							<el-input v-model="PlanTaskForm.plantaskname" style="width: 300px" />
+							<el-input v-model="PlanTaskForm.plantaskname" style="width: 300px" size="default" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="12">
+					<el-col :span="6">
 						<el-form-item label="总负责人" prop="participants">
 							<el-select v-model="PlanTaskForm.participants" filterable placeholder="选择总负责人" multiple
-								clearable style="width: 300px">
+								clearable style="width: 300px" size="default">
 								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="12">
+					<el-col :span="6">
 						<el-form-item label="开始时间" prop="starttime">
 							<el-date-picker v-model="PlanTaskForm.starttime" type="date" aria-label="选择日期"
-								placeholder="请选择开始日期" style="width: 300px" />
+								placeholder="请选择开始日期" style="width: 300px" size="default" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="12">
+					<el-col :span="6">
 						<el-form-item label="结束时间" prop="endtime">
 							<el-date-picker v-model="PlanTaskForm.endtime" type="date" aria-label="选择日期"
-								placeholder="请选择结束日期" style="width: 300px" @change="(value) => {
+								placeholder="请选择结束日期" style="width: 300px" size="default" @change="(value) => {
 									if (!validateEndTime(value)) {
 										PlanTaskForm.endtime = '';
 									}
@@ -48,10 +126,10 @@
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="12">
+					<el-col :span="24">
 						<el-form-item label="计划/任务描述" prop="plantaskdescription">
 							<el-input v-model="PlanTaskForm.plantaskdescription" type="textarea" :rows="5"
-								style="width: 785px" />
+								style="width: 100%" size="default" />
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -98,8 +176,8 @@
 						<el-form-item label="附件上传" prop="attachments">
 							<el-upload action="#" :auto-upload="false" :on-change="handleMainTaskFileChange"
 								:on-remove="handleMainTaskFileRemove" :file-list="mainTaskFileList" multiple
-								style="width: 785px">
-								<el-button type="primary">选择文件</el-button>
+								style="width: 100%">
+								<el-button type="primary" size="default">选择文件</el-button>
 								<template #tip>
 									<div class="el-upload__tip">
 										支持任意类型文件
@@ -110,10 +188,10 @@
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="24">
+					<el-col :span="6">
 						<el-form-item label="总阶段数" prop="TotalStageNumber">
 							<el-input-number v-model="PlanTaskForm.TotalStageNumber" :min="1" :max="10"
-								@change="handleStageNumberChange" style="width: 300px" />
+								@change="handleStageNumberChange" style="width: 300px" size="default" />
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -121,12 +199,15 @@
 				<div v-for="(stage, stageIndex) in stages" :key="stageIndex" class="stage-container">
 					<el-divider>第{{ stageIndex + 1 }}阶段</el-divider>
 					<el-row>
-						<el-col :span="24">
-							<el-form-item :label="'阶段名称'" :prop="'stages.' + stageIndex + '.name'" style="width: 50%;">
-								<div style="display: flex; gap: 10px; align-items: center;">
-									<el-input v-model="stage.name" placeholder="请输入阶段名称" style="width: 350px;" />
-									<el-button type="primary" @click="addItem(stageIndex)">添加事项</el-button>
-								</div>
+						<el-col :span="18">
+							<el-form-item :label="'阶段名称'" :prop="'stages.' + stageIndex + '.name'">
+								<el-input v-model="stage.name" placeholder="请输入阶段名称" style="width: 100%;"
+									size="default" />
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item>
+								<el-button type="primary" @click="addItem(stageIndex)" size="default">添加事项</el-button>
 							</el-form-item>
 						</el-col>
 					</el-row>
@@ -134,17 +215,18 @@
 					<!-- 具体事项列表 -->
 					<div v-for="(item, itemIndex) in stage.items" :key="itemIndex" class="item-container">
 						<el-row>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item :label="'事项名称'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.name'">
-									<el-input v-model="item.name" placeholder="请输入事项名称" style="width: 300px" />
+									<el-input v-model="item.name" placeholder="请输入事项名称" style="width: 300px"
+										size="default" />
 								</el-form-item>
 							</el-col>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item :label="'执行人'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.executor'">
 									<el-select v-model="item.executor" filterable placeholder="选择执行人"
-										style="width: 300px"
+										style="width: 300px" size="default"
 										@change="handleExecutorChange(stageIndex, itemIndex, item.executor)">
 										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue">
@@ -152,24 +234,22 @@
 									</el-select>
 								</el-form-item>
 							</el-col>
-						</el-row>
-						<el-row>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item :label="'关联客户'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.customer'">
 									<el-select v-model="item.customer" filterable placeholder="选择关联客户"
-										style="width: 300px" clearable multiple>
+										style="width: 300px" clearable multiple size="default">
 										<el-option v-for="dict in item.customerOptions || []" :key="dict.dictValue"
 											:label="dict.dictLabel" :value="dict.dictValue">
 										</el-option>
 									</el-select>
 								</el-form-item>
 							</el-col>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item :label="'时间节点'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.deadline'">
 									<el-date-picker v-model="item.deadline" type="date" placeholder="选择时间节点"
-										style="width: 300px" @change="(value) => {
+										style="width: 300px" size="default" @change="(value) => {
 											if (!value) return;
 											if (!PlanTaskForm.starttime || !PlanTaskForm.endtime) {
 												ElMessage.warning('请先设置任务的开始时间和结束时间');
@@ -196,7 +276,7 @@
 								<el-form-item :label="'事项备注'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.ItemRemark'">
 									<el-input v-model="item.ItemRemark" type="textarea" :rows="5" placeholder="请输入备注信息"
-										style="width: 300px" />
+										style="width: 100%" size="default" />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -209,7 +289,7 @@
 										:on-change="(file, fileList) => handleItemFileChange(stageIndex, itemIndex, file, fileList)"
 										:on-remove="(file) => handleItemFileRemove(stageIndex, itemIndex, file)"
 										:file-list="item.fileList || []" multiple style="width: 300px">
-										<el-button type="primary">选择文件</el-button>
+										<el-button type="primary" size="default">选择文件</el-button>
 										<template #tip>
 											<div class="el-upload__tip">
 												支持任意类型文件
@@ -219,7 +299,8 @@
 								</el-form-item>
 							</el-col>
 							<el-col :span="12">
-								<el-button type="danger" @click="removeItem(stageIndex, itemIndex)">删除事项</el-button>
+								<el-button type="danger" @click="removeItem(stageIndex, itemIndex)"
+									size="default">删除事项</el-button>
 							</el-col>
 						</el-row>
 					</div>
@@ -243,95 +324,6 @@
 				</span>
 			</template>
 		</el-dialog>
-		<!-- <span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;计划/任务</span> -->
-		<!-- <el-divider></el-divider> -->
-		<div>
-			<el-form :model="queryParams" inline @submit.prevent ref="queryRef">
-				<el-form-item>
-					<el-radio-group v-model="PlanTaskStatusRadio" size="large">
-						<el-radio-button label="进行中" value="0" />
-						<el-radio-button label="已完成" value="1" />
-						<el-radio-button label="已作废" value="2" />
-					</el-radio-group>
-				</el-form-item>
-				<el-form-item prop="queryText">
-					<el-input v-model="queryParams.queryText" placeholder="请输入计划任务名称" clearable
-						@clear="Search_PlanTaskInfo" style="width: 600px" />
-				</el-form-item>
-				<el-form-item>
-					<el-button type="primary" icon="search" @click="Search_PlanTaskInfo">{{ $t('btn.search')
-					}}</el-button>
-					<el-button type="primary" @click="OpenPlanTaskDialog">新建计划/任务</el-button>
-				</el-form-item>
-			</el-form>
-		</div>
-		<el-divider></el-divider>
-		<!-- 任务列表 -->
-		<el-table v-loading="loading" :data="dataPlanTasks" style="width: 100%" border>
-			<el-table-column prop="id" label="任务ID" min-width="120" v-if="false">
-			</el-table-column>
-			<el-table-column prop="create_time" label="创建日期" min-width="120">
-				<template #default="{ row }">
-					<span>{{ formatDate(row.create_time) }}</span>
-					<el-tag v-if="row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-				</template>
-			</el-table-column>
-			<el-table-column prop="taskName" label="计划任务名称" min-width="180">
-				<template #default="{ row }">
-					<el-tooltip :content="row.taskName" placement="top" :show-after="200">
-						<div class="truncated-text">{{ row.taskName }}</div>
-					</el-tooltip>
-				</template>
-			</el-table-column>
-			<el-table-column prop="totalLeaderIds" label="总负责人" min-width="120" />
-			<el-table-column prop="taskDescription" label="任务描述" min-width="200">
-				<template #default="{ row }">
-					<el-tooltip :content="row.taskDescription" placement="top" :show-after="200">
-						<div class="truncated-text">{{ row.taskDescription }}</div>
-					</el-tooltip>
-				</template>
-			</el-table-column>
-			<el-table-column label="当前进度" min-width="150">
-				<template #default="{ row }">
-					<el-progress :text-inside="true" :stroke-width="24" :percentage="row.completionRate"
-						:status="row.completionRate >= 1 ? 'success' : ''" />
-				</template>
-			</el-table-column>
-			<el-table-column label="时间范围" min-width="200">
-				<template #default="{ row }">
-					{{ formatDate(row.startTime) }} 至 {{ formatDate(row.endTime) }}
-				</template>
-			</el-table-column>
-			<!-- <el-table-column label="附件" min-width="100">
-				<template #default="{ row }">
-					<div class="task-attachments">
-						<el-button v-if="row.attachmentUrls" type="primary" link @click="showAttachmentsDialog(row)">
-							<el-icon>
-								<Document />
-							</el-icon>
-							查看附件
-						</el-button>
-						<span v-else>无</span>
-					</div>
-				</template>
-			</el-table-column> -->
-			<el-table-column label="操作" width="180" fixed="right">
-				<template #default="{ row }">
-					<el-button type="primary" link @click="showTaskDetail(row)">
-						查看详情
-					</el-button>
-					<el-button v-if="isCurrentUserTotalLeader(row.totalLeaderIds) && row.planTaskStatus !== 2"
-						type="danger" link @click="InvalidTask(row)">
-						作废
-					</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-
-		<!-- 分页 -->
-		<el-pagination v-model:current-page="queryParams.pageNum" v-model:page-size="queryParams.pageSize"
-			:total="total" :page-sizes="[10, 20, 30, 40]" layout="total, sizes, prev, pager, next, jumper"
-			@size-change="handleSizeChange" @current-change="handlePageChange" />
 
 		<!-- 任务详情对话框 -->
 		<el-dialog v-model="taskDetailDialogVisible" :title="selectedTask?.taskName || '任务详情'" width="70%">
@@ -1244,6 +1236,15 @@ const Search_PlanTaskInfo = () => {
 	getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
 }
 
+// 重置过滤条件
+const resetFilters = () => {
+	queryParams.queryText = '';
+	PlanTaskStatusRadio.value = '0';
+	// 重置到第一页并重新加载数据
+	queryParams.pageNum = 1;
+	getPlanTasksList(queryParams.pageNum, queryParams.pageSize);
+}
+
 // 获取计划任务列表
 const getPlanTasksList = async (pageNum: number, pageSize: number) => {
 	loading.value = true;
@@ -1699,30 +1700,6 @@ const rules = reactive<FormRules<PlanTaskForm>>({
 	],
 	plantaskdescription: [
 		{ required: true, message: '请输入计划/任务描述', trigger: 'change,blur' }
-	],
-	'stages.*.items.*.deadline': [
-		{
-			validator: (rule, value, callback) => {
-				if (!value) {
-					callback();
-					return;
-				}
-				if (!PlanTaskForm.endtime) {
-					callback();
-					return;
-				}
-
-				const deadlineDate = new Date(value);
-				const endTimeDate = new Date(PlanTaskForm.endtime);
-
-				if (deadlineDate > endTimeDate) {
-					callback(new Error('时间节点不能超过任务结束时间'));
-				} else {
-					callback();
-				}
-			},
-			trigger: 'change,blur'
-		}
 	]
 });
 
@@ -2029,5 +2006,79 @@ onMounted(async () => {
 .el-dialog {
 	position: relative;
 	overflow: hidden;
+}
+
+/* 创建合同和查看合同详情dialog中的表单组件间距减少一半 */
+.el-dialog .el-form-item {
+	margin-bottom: 5px !important;
+}
+
+.el-dialog .el-row {
+	margin-bottom: 2.5px !important;
+}
+
+/* 表格行高度调整 */
+.el-table .el-table__row,
+.el-table .el-table__body tr,
+.el-table .el-table__body .el-table__row {
+	height: 20px !important;
+}
+
+/* 表格列间距调整 */
+.el-table {
+	border-spacing: 0 !important;
+	border-collapse: collapse !important;
+	table-layout: fixed !important;
+}
+
+.el-table td {
+	border-spacing: 0 !important;
+	margin: 0 !important;
+	padding-left: 1px !important;
+	padding-right: 1px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+.el-table th {
+	padding-left: 1px !important;
+	padding-right: 1px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+.el-table .el-table__row td,
+.el-table .el-table__body tr td,
+.el-table .el-table__body .el-table__row td {
+	padding: 2px 1px !important;
+	line-height: 12px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+/* 更具体的表格行高度控制 */
+.el-table tbody tr {
+	height: 20px !important;
+}
+
+.el-table tbody tr td {
+	padding: 2px 1px !important;
+	line-height: 12px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+/* 隐藏组件外部的验证信息显示 */
+.el-dialog .el-form-item__error,
+.el-dialog .el-form-item .el-form-item__error,
+.el-dialog .el-form-item.is-error .el-form-item__error {
+	display: none !important;
+	visibility: hidden !important;
+	height: 0 !important;
+	overflow: hidden !important;
 }
 </style>

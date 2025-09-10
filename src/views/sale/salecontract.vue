@@ -2,6 +2,16 @@
 	<div>
 		<!-- 销售合同表 -->
 		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="openContractDialog" size="default">创建合同</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
 			<!-- 过滤条件区域 -->
 			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
 				<el-row :gutter="15" style="margin-bottom: 10px;">
@@ -50,11 +60,6 @@
 						<div style="text-align: left;">
 							<el-button type="primary" plain @click="searchContracts" size="default">查询</el-button>
 							<el-button @click="resetFilters" size="default">重置</el-button>
-						</div>
-					</el-col>
-					<el-col :span="16">
-						<div style="text-align: right;">
-							<el-button type="primary" @click="openContractDialog" size="default">创建合同</el-button>
 						</div>
 					</el-col>
 				</el-row>
@@ -567,7 +572,9 @@
 				:disabled="isDisabled" size="default">添加相关费用</el-button>
 			<el-tabs v-model="activeTab" tab-position="top" class="demo-tabs">
 				<el-tab-pane label="产品资料" name="productMaterialtab">
-					<el-table :data="productData" style="width: 100%;margin-bottom: 15px;">
+					<el-table :data="productData" style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 						<el-table-column prop="productID" label="产品ID" width="120" v-if="false" />
 						<el-table-column prop="productNum" label="产品编号" width="120" />
 						<el-table-column prop="customerNum" label="客户货号" width="120" />
@@ -819,7 +826,9 @@
 					</el-table>
 				</el-tab-pane>
 				<el-tab-pane label="客户相关费用" name="CustomerRelaterExoensestab">
-					<el-table :data="CustomerRelaterExoensesTableData" style="width: 100%; ">
+					<el-table :data="CustomerRelaterExoensesTableData" style="width: 100%; table-layout: fixed;"
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 						<el-table-column prop=" expenseName" label="费用名称" width="150">
 							<template #default="{ row }">
 								<el-input v-model="row.expenseName" placeholder="输入费用名称" size="small"
@@ -867,7 +876,9 @@
 					</el-table>
 				</el-tab-pane>
 				<el-tab-pane label="已收费用详情" name="ReceivedExpenseDetailsTab">
-					<el-table :data="ReceivedExpenseDetailsTableData" style="width: 100%; ">
+					<el-table :data="ReceivedExpenseDetailsTableData" style="width: 100%; table-layout: fixed;"
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 						<el-table-column prop="receiptNumber" label="收款单号" width="150"></el-table-column>
 						<el-table-column prop="fundsType" label="收款类型" width="150"></el-table-column>
 						<el-table-column prop="receiptDate" label="收汇日期" width="150"
@@ -1058,7 +1069,9 @@
 			<el-tabs v-model="activeSearchProductTab">
 				<el-tab-pane label="产品资料库" name="productInfoTab">
 					<el-table :data="productDatatwo" :default-sort="{ prop: 'productCode', order: 'descending' }"
-						style="width: 100%" @row-dblclick="handleRowDblClick" stripe>
+						style="width: 100%; table-layout: fixed;" @row-dblclick="handleRowDblClick" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 						<el-table-column prop="productCode" label="产品编号" sortable width="120" />
 						<el-table-column prop="customerGoodsNumber" label="客户货号" width="120" />
 						<el-table-column prop="chineseProductName" label="中文品名" width="150" />
@@ -1081,8 +1094,10 @@
 				</el-tab-pane>
 				<el-tab-pane label="历史成交产品记录" name="productImageTab">
 					<template v-if="selectedCustomerId">
-						<el-table :data="historicalProducts" style="width: 100%" stripe
-							@row-dblclick="handleHistoricalProductRowDblClick">
+						<el-table :data="historicalProducts" style="width: 100%; table-layout: fixed;" stripe
+							@row-dblclick="handleHistoricalProductRowDblClick"
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 							<el-table-column prop="productCode" label="产品编号" sortable width="120" />
 							<el-table-column prop="customerCode" label="客户货号" width="120" />
 							<el-table-column prop="chineseProductName" label="中文品名" width="150" />

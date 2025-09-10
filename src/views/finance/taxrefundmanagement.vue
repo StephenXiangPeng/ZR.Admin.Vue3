@@ -1,185 +1,237 @@
 <template>
 	<div>
-		<div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click="openaddctaxrefunddialog">新增退税</el-button>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<el-divider> </el-divider>
-		<div style="width: 100%; margin-top: 30px;">
-			<!-- <el-select v-model="SearchInvoiceNumber" placeholder="选择发票号码" style="width: 15%">
-				<el-option v-for=" dict in optionss.sql_settlement_center_shipping" :key="dict.dictCode"
-					:label="dict.dictLabel" :value="dict.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="SearchCustomerID" filterable placeholder="选择客户简称" style="width: 15%">
-				<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
-			<el-date-picker v-model="SearchStartDate" type="date" placeholder="请选择退税日期起"
-				style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchEndDate" type="date" placeholder="请选择退税日期止" style="width: 15%" />
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" plain @click="SearchBtnClick()">查询</el-button>
-				<el-button @click="ResetBtnClick()">重置</el-button>
-			</el-row>
-		</div>
-
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;退税单据</span>
-		</div>
-		<el-divider> </el-divider>
-		<el-table :data="TaxrefundtableData" style="width: 100%">
-			<el-table-column prop="refundNumber" label="退税编号" width="150"></el-table-column>
-			<el-table-column prop="refundDate" label="退税日期" width="150">
-				<template #default="scope">
-					{{ formatDate(scope.row.refundDate) }}
-				</template>
-			</el-table-column>
-			<el-table-column prop="company" label="我方公司" width="150"></el-table-column>
-			<el-table-column prop="totalRefundAmount" label="应退税总额" width="150"></el-table-column>
-			<el-table-column prop="actualRefundAmount" label="实际退税额" width="150"></el-table-column>
-			<el-table-column prop="unrefundedAmount" label="未退税额" width="150"></el-table-column>
-			<el-table-column prop="remark" label="备注" width="150"></el-table-column>
-			<el-table-column fixed="right" label="操作" width="100">
-				<template #default="scope">
-					<el-button type="text" size="small" @click="CheckTaxrefundtableData(scope.row)">查看/编辑</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<el-pagination @current-change="TaxrefundtableDataHandlePageChange"
-			:current-page="TaxrefundtableDataCurrentPage" :page-size="TaxrefundtableDataPageSize"
-			:total="TaxrefundtableDataTotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="addctaxrefunddialog" title="新增退税"
-			:close-on-click-modal=false style="width: 70%;" @close="clearTaxrefundDialog()">
-			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
-			<el-divider></el-divider>
-			<el-form :model="addctaxrefundform" label-width="100px">
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="退税编号">
-							<el-input v-model="addctaxrefundform.taxRefundNumber" placeholder="请输入退税编号"
-								style="width: 300px;" disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="退税日期">
-							<el-date-picker v-model="addctaxrefundform.taxRefundDate" type="date" placeholder="请选择退税日期"
-								style="width: 300px;" :disabled=isDisable></el-date-picker>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="我方公司">
-							<el-select v-model="addctaxrefundform.ourCompany" placeholder="请选择我方公司" style="width: 300px"
-								:disabled=isDisable>
-								<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
+		<!-- 退税管理表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="openaddctaxrefunddialog" size="default">新增退税</el-button>
+						</div>
 					</el-col>
 				</el-row>
-			</el-form>
-			<div style="margin-top: 5px;"></div>
-			<span style="font-size: 20px; font-weight: bold;">退税明细</span>
-			<el-divider></el-divider>
-			<el-button class="mt-4" type="primary" @click="AddTaxRefundDetailsClick" style="margin-bottom: 10px;"
-				:disabled="isDisable">添加退税明细</el-button>
-			<el-table :data="addtaxrefundtableData" style="width: 100%" :disable="true">
-				<el-table-column prop="Id" label="Id" v-if="false">
-					<template #default="{ row }">
-						<el-input v-model="row.Id" size="small" :disabled=isDisable></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop="invoiceNumber" label="发票号码">
-					<template #default="{ row }">
-						<el-select v-model="row.InvoiceNumber" placeholder="选择发票号码" size="default"
-							@change="invoiceNumberChange(row)" :disabled=isDisable>
+			</div>
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-date-picker v-model="SearchStartDate" type="date" placeholder="请选择退税日期起" style="width: 100%"
+							size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchEndDate" type="date" placeholder="请选择退税日期止" style="width: 100%"
+							size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="SearchInvoiceNumber" placeholder="选择发票号码" style="width: 100%"
+							size="default">
 							<el-option v-for="dict in optionss.sql_settlement_center_shipping" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue" />
 						</el-select>
-					</template>
-				</el-table-column>
-				<el-table-column prop="CustomerAbbr" label="客户简称">
-					<template #default="{ row }">
-						<el-input v-model="row.CustomerAbbr" size="default" :disabled=isDisable></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop=" RefundAmount" label="应退税额">
-					<template #default="{ row }">
-						<el-input v-model="row.RefundAmount" placeholder="应退税额" size="Default" :precision="3"
-							@change="calculation" :disabled=isDisable></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop=" ActualRefundAmount" label="实际退税额">
-					<template #default="{ row }">
-						<el-input v-model="row.ActualRefundAmount" placeholder="输入实际退税额" size="Default" :precision="3"
-							@input="validateAndCalculate(row)" :disabled=isDisable>
-						</el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop="IsRefunded" label="是否已退">
-					<template #default="{ row }">
-						<el-select v-model="row.IsRefunded" placeholder="选择是否" size="Default" :disabled=isDisable>
-							<el-option v-for="dict in optionss.sys_yes_no" :key="dict.dictCode" :label="dict.dictLabel"
-								:value="dict.dictValue" />
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="SearchCustomerID" filterable placeholder="选择客户简称" style="width: 100%"
+							size="default">
+							<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue" />
 						</el-select>
-					</template>
-				</el-table-column>
-				<el-table-column prop="RefundDate" label="退税日期">
-					<template #default="{ row }">
-						<el-date-picker v-model="row.RefundDate" type="date" placeholder="请选择退税日期" size="Default"
-							style="width: 150px;" :disabled=isDisable></el-date-picker>
-					</template>
-				</el-table-column>
-				<el-table-column fixed="right" label="操作">
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="SearchBtnClick()" size="default">查询</el-button>
+							<el-button @click="ResetBtnClick()" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+
+			<!-- 表格区域 -->
+			<el-table :data="TaxrefundtableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="refundNumber" label="退税编号" width="130"></el-table-column>
+				<el-table-column prop="refundDate" label="退税日期" width="110">
 					<template #default="scope">
-						<el-button type="text" size="small" @click="addtaxrefundtableDatahandleDelete(scope.$index)"
-							:disabled=isDisable>删除</el-button>
+						{{ formatDate(scope.row.refundDate) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="company" label="我方公司" width="110"></el-table-column>
+				<el-table-column prop="totalRefundAmount" label="应退税总额" width="110"></el-table-column>
+				<el-table-column prop="actualRefundAmount" label="实际退税额" width="110"></el-table-column>
+				<el-table-column prop="unrefundedAmount" label="未退税额" width="110"></el-table-column>
+				<el-table-column prop="remark" label="备注" width="200"></el-table-column>
+				<el-table-column fixed="right" label="操作" width="200">
+					<template #default="scope">
+						<el-button type="text" size="small"
+							@click="CheckTaxrefundtableData(scope.row)">查看/编辑</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
-			<span style="font-size: 20px; font-weight: bold;">合计信息</span>
-			<el-divider></el-divider>
-			<el-form :model="addtaxrefundform2" label-width="100px">
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="应退税总额">
-							<el-input v-model="addtaxrefundform2.refundAmount" placeholder="请输入应退税总额"
-								style="width: 300px;" :disabled=isDisable></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="实际退税额">
-							<el-input v-model="addtaxrefundform2.actualRefundAmount" placeholder="请输入实际退税额"
-								style="width: 300px;" :disabled=isDisable></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="未退税额">
-							<el-input v-model="addtaxrefundform2.unrefundedAmount" placeholder="请输入未退税额"
-								style="width: 300px;" :disabled=isDisable></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-			</el-form>
-			<div style="margin-top: 30px;"></div>
-			<span style="font-size: 20px; font-weight: bold;">备注信息</span>
-			<el-divider></el-divider>
-			<el-form :model="addtaxrefundform3" label-width="100px">
-				<el-row>
-					<el-col :span="24">
-						<el-form-item label="备注信息">
-							<el-input type="textarea" :rows="10" placeholder="在此输入文字"
-								v-model="addtaxrefundform3.remarks" :disabled=isDisable></el-input>
-						</el-form-item>
-					</el-col>
+			<el-pagination @current-change="TaxrefundtableDataHandlePageChange"
+				:current-page="TaxrefundtableDataCurrentPage" :page-size="TaxrefundtableDataPageSize"
+				:total="TaxrefundtableDataTotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+		</div>
+		<el-dialog :modal="false" modal-penetrable v-model="addctaxrefunddialog" title="新增退税"
+			:close-on-click-modal=false style="width: 75%;" @close="clearTaxrefundDialog()">
+			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="基本信息" name="basicInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">基本信息</span>
+					</template>
+					<el-form :model="addctaxrefundform" label-width="120px" :show-message="false">
+						<el-row :gutter="15">
+							<el-col :span="6">
+								<el-form-item label="退税编号">
+									<el-input v-model="addctaxrefundform.taxRefundNumber" placeholder="请输入退税编号"
+										style="width: 300px;" disabled size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="退税日期">
+									<el-date-picker v-model="addctaxrefundform.taxRefundDate" type="date"
+										placeholder="请选择退税日期" style="width: 300px;" :disabled=isDisable
+										size="default"></el-date-picker>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="我方公司">
+									<el-select v-model="addctaxrefundform.ourCompany" placeholder="请选择我方公司"
+										style="width: 300px" :disabled=isDisable size="default">
+										<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="">
+									<!-- 占位列 -->
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+			<el-collapse v-model="detailInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="退税明细" name="detailInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">退税明细</span>
+					</template>
+					<el-button class="mt-4" type="primary" @click="AddTaxRefundDetailsClick"
+						style="margin-bottom: 10px;" :disabled="isDisable" size="default">添加退税明细</el-button>
+					<el-table :data="addtaxrefundtableData" style="width: 100%; table-layout: fixed;" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }" :disable="true">
+						<el-table-column prop="Id" label="Id" v-if="false">
+							<template #default="{ row }">
+								<el-input v-model="row.Id" size="small" :disabled=isDisable></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="invoiceNumber" label="发票号码">
+							<template #default="{ row }">
+								<el-select v-model="row.InvoiceNumber" placeholder="选择发票号码" size="default"
+									@change="invoiceNumberChange(row)" :disabled=isDisable>
+									<el-option v-for="dict in optionss.sql_settlement_center_shipping"
+										:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="CustomerAbbr" label="客户简称">
+							<template #default="{ row }">
+								<el-input v-model="row.CustomerAbbr" size="default" :disabled=isDisable></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop=" RefundAmount" label="应退税额">
+							<template #default="{ row }">
+								<el-input v-model="row.RefundAmount" placeholder="应退税额" size="default" :precision="3"
+									@change="calculation" :disabled=isDisable></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop=" ActualRefundAmount" label="实际退税额">
+							<template #default="{ row }">
+								<el-input v-model="row.ActualRefundAmount" placeholder="输入实际退税额" size="default"
+									:precision="3" @input="validateAndCalculate(row)" :disabled=isDisable>
+								</el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="IsRefunded" label="是否已退">
+							<template #default="{ row }">
+								<el-select v-model="row.IsRefunded" placeholder="选择是否" size="default"
+									:disabled=isDisable>
+									<el-option v-for="dict in optionss.sys_yes_no" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="RefundDate" label="退税日期">
+							<template #default="{ row }">
+								<el-date-picker v-model="row.RefundDate" type="date" placeholder="请选择退税日期"
+									size="default" style="width: 150px;" :disabled=isDisable></el-date-picker>
+							</template>
+						</el-table-column>
+						<el-table-column fixed="right" label="操作">
+							<template #default="scope">
+								<el-button type="text" size="small"
+									@click="addtaxrefundtableDatahandleDelete(scope.$index)"
+									:disabled=isDisable>删除</el-button>
+							</template>
+						</el-table-column>
+					</el-table>
+				</el-collapse-item>
+			</el-collapse>
 
-				</el-row>
-			</el-form>
+			<el-collapse v-model="summaryInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="合计信息" name="summaryInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">合计信息</span>
+					</template>
+					<el-form :model="addtaxrefundform2" label-width="120px" :show-message="false">
+						<el-row :gutter="15">
+							<el-col :span="6">
+								<el-form-item label="应退税总额">
+									<el-input v-model="addtaxrefundform2.refundAmount" placeholder="请输入应退税总额"
+										style="width: 300px;" :disabled=isDisable size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="实际退税额">
+									<el-input v-model="addtaxrefundform2.actualRefundAmount" placeholder="请输入实际退税额"
+										style="width: 300px;" :disabled=isDisable size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="未退税额">
+									<el-input v-model="addtaxrefundform2.unrefundedAmount" placeholder="请输入未退税额"
+										style="width: 300px;" :disabled=isDisable size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="">
+									<!-- 占位列 -->
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+
+			<el-collapse v-model="remarkInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="备注信息" name="remarkInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">备注信息</span>
+					</template>
+					<el-form :model="addtaxrefundform3" label-width="120px" :show-message="false">
+						<el-row :gutter="15">
+							<el-col :span="24">
+								<el-form-item label="备注信息">
+									<el-input type="textarea" :rows="10" placeholder="在此输入文字"
+										v-model="addtaxrefundform3.remarks" :disabled=isDisable></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="primary" @click="SaveClick()" v-if="isSaveBtnShow">
@@ -197,8 +249,8 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { createApp, ref } from 'vue'
-import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
+import { createApp, ref, reactive, toRefs, getCurrentInstance } from 'vue'
+import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile, ElCollapse, ElCollapseItem, ElRow, ElCol, ElSelect, ElOption, ElDatePicker, ElInput, ElPagination } from 'element-plus'
 import request from '@/utils/request';
 
 const isDisable = ref(false);
@@ -206,6 +258,12 @@ const isEdit = ref(false);
 const isEditBtnShow = ref(false);
 const isSaveBtnShow = ref(true);
 const isEditTaxrefundID = ref(0);
+
+// 折叠面板状态
+const basicInfoCollapseActive = ref(['basicInfo']);
+const detailInfoCollapseActive = ref(['detailInfo']);
+const summaryInfoCollapseActive = ref(['summaryInfo']);
+const remarkInfoCollapseActive = ref(['remarkInfo']);
 const addctaxrefundform = ref({
 	taxRefundNumber: '',
 	taxRefundDate: '',

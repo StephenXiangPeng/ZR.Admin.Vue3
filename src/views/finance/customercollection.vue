@@ -1,215 +1,252 @@
 <template>
 	<div>
-		<div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click="openAddCustomerCollection">新增客户收款</el-button>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<el-divider> </el-divider>
-		<div style="width: 100%; margin-top: 30px;">
-			<el-select v-model="SearchReceiptNumber" filterable placeholder="选择收款单号" style="width: 15%">
-				<el-option v-for="dict in optionss.sql_customercollections_no" :key="dict.dictCode"
-					:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="SearchBank" filterable placeholder="选择收汇银行" style="width: 15%">
-				<el-option v-for="dict in searchBankOptions" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchReceiptDateStart" type="date" placeholder="请选择收汇日期起" size="Default"
-				style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchReceiptDateEnd" type="date" placeholder="请选择收汇日期止" size="Default"
-				style="width: 15%" />
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" plain @click="SearchSubmit()">查询</el-button>
-				<el-button @click="resetSearch()">重置</el-button>
-			</el-row>
-		</div>
+		<!-- 客户收款表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="openAddCustomerCollection"
+								size="default">新增客户收款</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-select v-model="SearchReceiptNumber" filterable placeholder="选择收款单号" style="width: 100%"
+							size="default">
+							<el-option v-for="dict in optionss.sql_customercollections_no" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="SearchBank" filterable placeholder="选择收汇银行" style="width: 100%"
+							size="default">
+							<el-option v-for="dict in searchBankOptions" :key="dict.dictCode" :label="dict.dictLabel"
+								:value="dict.dictValue"></el-option>
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchReceiptDateStart" type="date" placeholder="请选择收汇日期起"
+							style="width: 100%" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchReceiptDateEnd" type="date" placeholder="请选择收汇日期止"
+							style="width: 100%" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="SearchSubmit()" size="default">查询</el-button>
+							<el-button @click="resetSearch()" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
 
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;收款单据</span>
+			<!-- 表格区域 -->
+			<el-table :data="customercollectiontableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="receiptNumber" label="收款单号" width="120">
+					<template #default="scope">
+						<span>{{ scope.row.receiptNumber }}</span>
+						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column prop="receiptDate" label="收汇日期" width="110"
+					:formatter="(row, column, cellValue) => formatDate(cellValue)"></el-table-column>
+				<el-table-column prop="ourCompany" label="我方公司" width="110"></el-table-column>
+				<el-table-column prop="foreignCurrency" label="外销币种" width="90"></el-table-column>
+				<el-table-column prop="exchangeRate" label="汇率" width="90"></el-table-column>
+				<el-table-column prop="amount" label="金额" width="130">
+					<template #default="scope">
+						<span>{{ formatTableAmount(scope.row.amount, scope.row.foreignCurrency) }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="bank" label="收汇银行" width="120"></el-table-column>
+				<el-table-column prop="isCollected" label="是否领取" width="90">
+					<template #default="scope">
+						<el-tag v-if="scope.row.isCollected" type="success" size="small">已领取</el-tag>
+						<el-tag v-else type="warning" size="small">待领取</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column fixed="right" prop="operate" label="操作" width="200">
+					<template v-slot:default="scope">
+						<el-button type="text" size="small"
+							@click=CheckCustomerCollectionDetails(scope.row)>查看详情</el-button>
+						<el-button v-if="!scope.row.isCollected" type="text" size="small"
+							@click="handleDelete(scope.row)">
+							删除
+						</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
+				:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
 		</div>
-		<el-divider> </el-divider>
-		<el-table :data="customercollectiontableData">
-			<el-table-column prop="receiptNumber" label="收款单号" width="180">
-				<template #default="scope">
-					<span>{{ scope.row.receiptNumber }}</span>
-					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-				</template>
-			</el-table-column>
-			<el-table-column prop="receiptDate" label="收汇日期" width="150"
-				:formatter="(row, column, cellValue) => formatDate(cellValue)"></el-table-column>
-			<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
-			<el-table-column prop="foreignCurrency" label="外销币种" width="150"></el-table-column>
-			<el-table-column prop="exchangeRate" label="汇率" width="150"></el-table-column>
-			<el-table-column prop="amount" label="金额" width="150">
-				<template #default="scope">
-					<span>{{ formatTableAmount(scope.row.amount, scope.row.foreignCurrency) }}</span>
-				</template>
-			</el-table-column>
-			<el-table-column prop="bank" label="收汇银行" width="150"></el-table-column>
-			<el-table-column prop="isCollected" label="是否领取" width="120">
-				<template #default="scope">
-					<el-tag v-if="scope.row.isCollected" type="success" size="small">已领取</el-tag>
-					<el-tag v-else type="warning" size="small">待领取</el-tag>
-				</template>
-			</el-table-column>
-			<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
-				<template v-slot:default="scope">
-					<el-button link type="primary" size="small"
-						@click=CheckCustomerCollectionDetails(scope.row)>查看详情</el-button>
-					<el-button v-if="!scope.row.isCollected" link type="danger" size="small"
-						@click="handleDelete(scope.row)">
-						删除
-					</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="addcustomercollectiondialog"
+		<el-dialog :modal="false" modal-penetrable v-model="addcustomercollectiondialog"
 			:title="isReadOnly ? '查看收款单据' : (isEdit ? '编辑收款单据' : '新增收款单据')" :close-on-click-modal=false
-			style="width: 70%;" @close="Closeaddcustomercollectiondialog()">
-			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
-			<el-divider></el-divider>
-			<el-form :model="addcustomercollectionform" label-width="120px">
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="收款单号">
-							<el-input v-model="addcustomercollectionform.receiptNumber" placeholder="自动生成"
-								style="width: 300px" disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="收汇日期">
-							<el-date-picker v-model="addcustomercollectionform.receiptDate" type="date"
-								placeholder="请选择收汇日期" style="width: 300px" :disabled="isReadOnly"></el-date-picker>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="我方公司">
-							<el-select v-model="addcustomercollectionform.ourCompany" placeholder="请选择我方公司"
-								style="width: 300px" @change="handleOurCompanyChange" :disabled="isReadOnly">
-								<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="外销币种">
-							<el-select v-model="addcustomercollectionform.foreignCurrency" placeholder="请选择外销币种"
-								style="width: 300px" @change="handleForeignCurrencyChange" :disabled="isReadOnly">
-								<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="汇率">
-							<el-input v-model="addcustomercollectionform.exchangeRate" placeholder="请输入汇率"
-								style="width: 300px" @input="handleExchangeRateInput" @blur="handleExchangeRateBlur"
-								@change="calculateSettlementAmount" :disabled="isReadOnly"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item :label="`收汇金额`">
-							<el-input v-if="!isReadOnly" v-model="addcustomercollectionform.amount" placeholder="请输入金额"
-								style="width: 300px" @input="handleAmountInput" @focus="handleAmountFocus"
-								@blur="handleAmountBlur" @change="calculateSettlementAmount"></el-input>
-							<el-input v-else :value="formattedAmount" placeholder="请输入金额" style="width: 300px"
-								disabled></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item :label="`结汇金额`">
-							<el-input :value="formattedSettlementAmount" placeholder="自动计算" style="width: 300px"
-								disabled></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="收汇银行">
-							<el-select v-model="addcustomercollectionform.bank" placeholder="请选择收汇银行"
-								style="width: 300px" @focus="handleBankSelectFocus"
-								:disabled="isReadOnly || !addcustomercollectionform.ourCompany">
-								<el-option v-for="dict in receivingBankOptions" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="isCollectedRecord">
-						<el-form-item label="客户">
-							<el-select v-model="addcustomercollectionform.customerID" style="width: 300px"
-								:disabled="isReadOnly || !addcustomercollectionform.ourCompany">
-								<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="isCollectedRecord">
-						<el-form-item label="领取人">
-							<el-select v-model="addcustomercollectionform.receivingUser" style="width: 300px"
-								:disabled="isReadOnly || !addcustomercollectionform.ourCompany">
-								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="16" v-if="isRemarkRequired">
-						<el-form-item label="备注" :required="isRemarkRequired">
-							<el-input v-model="addcustomercollectionform.remark" placeholder="请输入备注" type="textarea"
-								:rows="5" style="width: 900px" :maxlength="500" show-word-limit
-								:disabled="isReadOnly"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="16">
-						<el-form-item label="收款单据">
-							<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList"
-								limit="3" :disabled="isReadOnly || fileList.length >= 3" @change="handleChange"
-								:action="UploadUrl">
-								<el-icon>
-									<Plus />
-								</el-icon>
-								<template #file="{ file }">
-									<div>
-										<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
-										<span class="el-upload-list__item-actions">
-											<span class="el-upload-list__item-preview"
-												@click="handlePictureCardPreview(file)">
-												<el-icon><zoom-in /></el-icon>
-											</span>
-											<span v-if="!disabled && !isReadOnly" class="el-upload-list__item-delete"
-												@click="handleRemove(file)">
-												<el-icon>
-													<Delete />
-												</el-icon>
-											</span>
-										</span>
-									</div>
-								</template>
-							</el-upload>
-							<el-dialog v-model="dialogVisible">
-								<img style="max-width: 100%; max-height: 100%; width: auto; height: auto;" w-full
-									:src="dialogImageUrl" alt="Preview Image" />
-							</el-dialog>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row v-if="showReceivingPaymentsDetails">
-					<span style="font-size: 20px; font-weight: bold;">收款明细</span>
-					<el-divider></el-divider>
-					<el-table :data="ReceivingPaymentsDetailsTbaleData" style="width: 100%">
+			style="width: 75%;" @close="Closeaddcustomercollectiondialog()">
+			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="基本信息" name="basicInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">基本信息</span>
+					</template>
+					<el-form ref="addcustomercollectionformRef" :model="addcustomercollectionform" label-width="120px"
+						:show-message="false">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="收款单号">
+									<el-input v-model="addcustomercollectionform.receiptNumber" placeholder="自动生成"
+										style="width: 300px" disabled size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="收汇日期">
+									<el-date-picker v-model="addcustomercollectionform.receiptDate" type="date"
+										placeholder="请选择收汇日期" style="width: 300px" :disabled="isReadOnly"
+										size="default"></el-date-picker>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="我方公司">
+									<el-select v-model="addcustomercollectionform.ourCompany" placeholder="请选择我方公司"
+										style="width: 300px" @change="handleOurCompanyChange" :disabled="isReadOnly"
+										size="default">
+										<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="外销币种">
+									<el-select v-model="addcustomercollectionform.foreignCurrency" placeholder="请选择外销币种"
+										style="width: 300px" @change="handleForeignCurrencyChange"
+										:disabled="isReadOnly" size="default">
+										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="汇率">
+									<el-input v-model="addcustomercollectionform.exchangeRate" placeholder="请输入汇率"
+										style="width: 300px" @input="handleExchangeRateInput"
+										@blur="handleExchangeRateBlur" @change="calculateSettlementAmount"
+										:disabled="isReadOnly" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item :label="`收汇金额`">
+									<el-input v-if="!isReadOnly" v-model="addcustomercollectionform.amount"
+										placeholder="请输入金额" style="width: 300px" @input="handleAmountInput"
+										@focus="handleAmountFocus" @blur="handleAmountBlur"
+										@change="calculateSettlementAmount" size="default"></el-input>
+									<el-input v-else :value="formattedAmount" placeholder="请输入金额" style="width: 300px"
+										disabled size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item :label="`结汇金额`">
+									<el-input :value="formattedSettlementAmount" placeholder="自动计算" style="width: 300px"
+										disabled size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="收汇银行">
+									<el-select v-model="addcustomercollectionform.bank" placeholder="请选择收汇银行"
+										style="width: 300px" @focus="handleBankSelectFocus"
+										:disabled="isReadOnly || !addcustomercollectionform.ourCompany" size="default">
+										<el-option v-for="dict in receivingBankOptions" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row v-if="isCollectedRecord">
+							<el-col :span="6">
+								<el-form-item label="客户">
+									<el-select v-model="addcustomercollectionform.customerID" style="width: 300px"
+										:disabled="isReadOnly || !addcustomercollectionform.ourCompany" size="default">
+										<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="领取人">
+									<el-select v-model="addcustomercollectionform.receivingUser" style="width: 300px"
+										:disabled="isReadOnly || !addcustomercollectionform.ourCompany" size="default">
+										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row v-if="isRemarkRequired">
+							<el-col :span="24">
+								<el-form-item label="备注" :required="isRemarkRequired">
+									<el-input v-model="addcustomercollectionform.remark" placeholder="请输入备注"
+										type="textarea" :rows="5" style="width: 100%" :maxlength="500" show-word-limit
+										:disabled="isReadOnly" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="24">
+								<el-form-item label="收款单据">
+									<el-upload list-type="picture-card" :auto-upload="false"
+										v-model:file-list="fileList" limit="3"
+										:disabled="isReadOnly || fileList.length >= 3" @change="handleChange"
+										:action="UploadUrl">
+										<el-icon>
+											<Plus />
+										</el-icon>
+										<template #file="{ file }">
+											<div>
+												<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
+												<span class="el-upload-list__item-actions">
+													<span class="el-upload-list__item-preview"
+														@click="handlePictureCardPreview(file)">
+														<el-icon><zoom-in /></el-icon>
+													</span>
+													<span v-if="!disabled && !isReadOnly"
+														class="el-upload-list__item-delete" @click="handleRemove(file)">
+														<el-icon>
+															<Delete />
+														</el-icon>
+													</span>
+												</span>
+											</div>
+										</template>
+									</el-upload>
+									<el-dialog v-model="dialogVisible">
+										<img style="max-width: 100%; max-height: 100%; width: auto; height: auto;"
+											w-full :src="dialogImageUrl" alt="Preview Image" />
+									</el-dialog>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+
+			<el-collapse v-if="showReceivingPaymentsDetails" v-model="receivingDetailsCollapseActive"
+				style="margin-bottom: 20px;">
+				<el-collapse-item title="收款明细" name="receivingDetails">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">收款明细</span>
+					</template>
+					<el-table :data="ReceivingPaymentsDetailsTbaleData" style="width: 100%; table-layout: fixed;" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 						<el-table-column prop="fundsClassification" label="款项类别">
 							<template #default="{ row }">
 								<span>{{ getFundsClassificationLabel(row.fundsClassification) }}</span>
@@ -276,8 +313,8 @@
 							</div>
 						</div>
 					</div>
-				</el-row>
-			</el-form>
+				</el-collapse-item>
+			</el-collapse>
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="warning" v-if="isSaveBtnShow" @click="SaveCustomerCollection()">
@@ -620,6 +657,10 @@ const isReadOnly = ref(false); // 控制表单是否只读
 const isSaveBtnShow = ref(true);
 const isEditSaveBtnShow = ref(false);
 const isSubmitBtnShow = ref(false);
+
+// 折叠面板控制变量
+const basicInfoCollapseActive = ref(['basicInfo']);
+const receivingDetailsCollapseActive = ref(['receivingDetails']);
 
 /*动态下拉框start*/
 const proxy = getCurrentInstance().proxy
@@ -1450,3 +1491,10 @@ const getCustomerCollectionsDetailsList = async (customerCollectionID) => {
 	}
 };
 </script>
+
+<style scoped>
+/* 创建收款单据dialog中的表单组件间距减少一半 */
+.el-dialog .el-form-item {
+	margin-bottom: 5px !important;
+}
+</style>

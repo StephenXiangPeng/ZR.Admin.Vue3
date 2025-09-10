@@ -1,517 +1,554 @@
 <template>
 	<div>
-		<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		<el-divider> </el-divider>
-		<div style="width: 100%; margin-top: 30px;">
-			<el-select v-model="settlement_center_shipping" filterable placeholder="请选出运发货单号" clearable
-				style="width: 15%">
-				<el-option v-for="dict in optionss.sql_settlement_center_shipping" :key="dict.dictCode"
-					:label="dict.dictLabel" :value="dict.dictValue" />
-			</el-select>
-			<el-button style="margin-left: 20px;" type="warning" @click="CloseSettlement"
-				:disabled="isCloseButtonDisabled">关账</el-button>
-			<!-- 状态显示 -->
-			<el-tag size="large" style="margin-left: 20px;" v-if="hasQueried"
-				:type="getSettlementStatusType(SettlementStatus)">
-				{{ getSettlementStatusText(SettlementStatus) }}
-			</el-tag>
-			<!-- 审核流程弹窗 -->
-			<el-popover placement="right" :width="400" trigger="click" v-if="hasQueried">
-				<template #reference>
-					<el-tag size="large" style="margin-left: 20px; cursor: pointer"
-						:type="getApprovalStatusType(SettlementApprovalStatus)"
-						@click="getApprovalFlow(Number(settlement_center_shipping))">
-						{{ getApprovalStatusText(SettlementApprovalStatus) }}
-					</el-tag>
-				</template>
-
-				<!-- 有审批步骤才显示步骤条 -->
-				<template #default>
-					<div v-if="approvalSteps.length > 0" class="status-popover">
-						<el-steps :active="approvalSteps.length" size="small">
-							<el-step v-for="step in approvalSteps" :key="step.stageID" :title="step.approverUserName"
-								:description="getStatusText(step.status)" :status="getStatus(step.status)" />
-						</el-steps>
-					</div>
-					<div v-else>暂无审批流程</div>
-				</template>
-			</el-popover>
-			&nbsp;
-			<el-button type="danger" v-show="showApproveRejectBtn" @click="ApproveReject">
-				驳回
-			</el-button>
-			<el-button type="success" v-show="showApprovePassBtn" @click="Approvepass">
-				通过
-			</el-button>
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" plain @click="handleSearch">查询</el-button>
-				<el-button @click="handleReset">重置</el-button>
-			</el-row>
-		</div>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;主要信息</span>
-		</div>
-		<el-divider> </el-divider>
-		<el-form :model="shippingdeliveryform" label-width="120px">
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="发票号码">
-						<el-input v-model="shippingdeliveryform.invoiceNumber" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="出运日期">
-						<el-date-picker v-model="shippingdeliveryform.shippingDate" type="date" placeholder="请选择"
-							disabled :style="{ width: '300px' }"></el-date-picker>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="出运状态">
-						<el-input v-model="shippingdeliveryform.shippingStatus" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="销售合同">
-						<el-input v-model="shippingdeliveryform.salesContract" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="客户合同">
-						<el-input v-model="shippingdeliveryform.customerContract" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="客户名称">
-						<el-input v-model="shippingdeliveryform.customerName" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="我方公司">
-						<el-select v-model="shippingdeliveryform.ourCompany" filterable placeholder="请选择" disabled
-							:style="{ width: '300px' }">
-							<el-option v-for="item in optionss.ourCompany" :key="item.dictValue" :label="item.dictLabel"
-								:value="item.dictValue" />
+		<!-- 结算中心表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="6">
+						<el-select v-model="settlement_center_shipping" filterable placeholder="请选出运发货单号" clearable
+							style="width: 100%" size="default">
+							<el-option v-for="dict in optionss.sql_settlement_center_shipping" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue" />
 						</el-select>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="外销币种">
-						<el-input v-model="shippingdeliveryform.foreignCurrency" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="汇率">
-						<el-input v-model="shippingdeliveryform.exchangeRate" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="价格条款">
-						<el-input v-model="shippingdeliveryform.priceTerms" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="结汇方式">
-						<el-input v-model="shippingdeliveryform.settlementMethod" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="应收汇日">
-						<el-date-picker v-model="shippingdeliveryform.receivableDate" type="date" placeholder="请选择"
-							disabled :style="{ width: '300px' }"></el-date-picker>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="销售员">
-						<el-input v-model="shippingdeliveryform.salesperson" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="单证员">
-						<el-input v-model="shippingdeliveryform.documentOfficer" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="是否结账">
-						<el-checkbox v-model="shippingdeliveryform.isSettled" :style="{ width: '300px' }"></el-checkbox>
-					</el-form-item>
-				</el-col>
-			</el-row>
-		</el-form>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;客户收汇</span>
-		</div>
-		<el-divider></el-divider>
-		<el-form :model="CustomerReceiptForm" label-width="120px">
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="货值合计">
-						<el-input v-model="CustomerReceiptForm.totalValue" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="费用合计">
-						<el-input v-model="CustomerReceiptForm.totalCost" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="索赔金额">
-						<el-input v-model="CustomerReceiptForm.claimAmount" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="应收货款">
-						<el-input v-model="CustomerReceiptForm.totalReceivable" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="已收货款">
-						<el-input v-model="CustomerReceiptForm.totalReceived" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="已收货款￥">
-						<el-input v-model="CustomerReceiptForm.totalReceivedCNY" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="未收货款">
-						<el-input v-model="CustomerReceiptForm.totalUnreceived" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-		</el-form>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;退税情况</span>
-		</div>
-		<el-divider> </el-divider>
+					</el-col>
+					<el-col :span="6">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="handleSearch" size="default">查询</el-button>
+							<el-button @click="handleReset" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+				<el-row :gutter="15">
+					<el-col :span="6">
+						<el-button type="warning" @click="CloseSettlement" :disabled="isCloseButtonDisabled"
+							size="default">关账</el-button>
+						<!-- 状态显示 -->
+						<el-tag size="large" style="margin-left: 20px;" v-if="hasQueried"
+							:type="getSettlementStatusType(SettlementStatus)">
+							{{ getSettlementStatusText(SettlementStatus) }}
+						</el-tag>
+					</el-col>
+					<el-col :span="6">
+						<!-- 审核流程弹窗 -->
+						<el-popover placement="right" :width="400" trigger="click" v-if="hasQueried">
+							<template #reference>
+								<el-tag size="large" style="cursor: pointer"
+									:type="getApprovalStatusType(SettlementApprovalStatus)"
+									@click="getApprovalFlow(Number(settlement_center_shipping))">
+									{{ getApprovalStatusText(SettlementApprovalStatus) }}
+								</el-tag>
+							</template>
 
-		<el-form :model="TaxRefundForm" label-width="120px">
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="应退税￥">
-						<el-input v-model="TaxRefundForm.totalRefund" disabled :style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="已退税￥">
-						<el-input v-model="TaxRefundForm.totalRefunded" disabled :style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="未退税￥">
-						<el-input v-model="TaxRefundForm.totalUnrefunded" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="是否已退">
-						<el-checkbox v-model="TaxRefundForm.isRefunded" disabled
-							:style="{ width: '300px' }"></el-checkbox>
-					</el-form-item>
-				</el-col>
-			</el-row>
-		</el-form>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;国内费用</span>
+							<!-- 有审批步骤才显示步骤条 -->
+							<template #default>
+								<div v-if="approvalSteps.length > 0" class="status-popover">
+									<el-steps :active="approvalSteps.length" size="small">
+										<el-step v-for="step in approvalSteps" :key="step.stageID"
+											:title="step.approverUserName" :description="getStatusText(step.status)"
+											:status="getStatus(step.status)" />
+									</el-steps>
+								</div>
+								<div v-else>暂无审批流程</div>
+							</template>
+						</el-popover>
+					</el-col>
+					<el-col :span="6">
+						<el-button type="danger" v-show="showApproveRejectBtn" @click="ApproveReject" size="default">
+							驳回
+						</el-button>
+						<el-button type="success" v-show="showApprovePassBtn" @click="Approvepass" size="default">
+							通过
+						</el-button>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 主要信息区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<span style="font-size: 20px; font-weight: bold;">主要信息</span>
+			</div>
+			<div style="padding: 15px;">
+				<el-form :model="shippingdeliveryform" label-width="120px">
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="发票号码">
+								<el-input v-model="shippingdeliveryform.invoiceNumber" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="出运日期">
+								<el-date-picker v-model="shippingdeliveryform.shippingDate" type="date"
+									placeholder="请选择" disabled style="width: 300px" size="default"></el-date-picker>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="出运状态">
+								<el-input v-model="shippingdeliveryform.shippingStatus" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="销售合同">
+								<el-input v-model="shippingdeliveryform.salesContract" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+					</el-row>
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="客户合同">
+								<el-input v-model="shippingdeliveryform.customerContract" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="客户名称">
+								<el-input v-model="shippingdeliveryform.customerName" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="我方公司">
+								<el-select v-model="shippingdeliveryform.ourCompany" filterable placeholder="请选择"
+									disabled style="width: 300px" size="default">
+									<el-option v-for="item in optionss.ourCompany" :key="item.dictValue"
+										:label="item.dictLabel" :value="item.dictValue" />
+								</el-select>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="外销币种">
+								<el-input v-model="shippingdeliveryform.foreignCurrency" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+					</el-row>
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="汇率">
+								<el-input v-model="shippingdeliveryform.exchangeRate" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="价格条款">
+								<el-input v-model="shippingdeliveryform.priceTerms" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="结汇方式">
+								<el-input v-model="shippingdeliveryform.settlementMethod" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="应收汇日">
+								<el-date-picker v-model="shippingdeliveryform.receivableDate" type="date"
+									placeholder="请选择" disabled style="width: 300px" size="default"></el-date-picker>
+							</el-form-item>
+						</el-col>
+					</el-row>
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="销售员">
+								<el-input v-model="shippingdeliveryform.salesperson" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="单证员">
+								<el-input v-model="shippingdeliveryform.documentOfficer" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="是否结账">
+								<el-checkbox v-model="shippingdeliveryform.isSettled" style="width: 300px"
+									size="default"></el-checkbox>
+							</el-form-item>
+						</el-col>
+					</el-row>
+				</el-form>
+			</div>
+			<!-- 客户收汇区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<span style="font-size: 20px; font-weight: bold;">客户收汇</span>
+			</div>
+			<div style="padding: 15px;">
+				<el-form :model="CustomerReceiptForm" label-width="120px">
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="货值合计">
+								<el-input v-model="CustomerReceiptForm.totalValue" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="费用合计">
+								<el-input v-model="CustomerReceiptForm.totalCost" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="索赔金额">
+								<el-input v-model="CustomerReceiptForm.claimAmount" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="应收货款">
+								<el-input v-model="CustomerReceiptForm.totalReceivable" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+					</el-row>
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="已收货款">
+								<el-input v-model="CustomerReceiptForm.totalReceived" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="已收货款￥">
+								<el-input v-model="CustomerReceiptForm.totalReceivedCNY" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="未收货款">
+								<el-input v-model="CustomerReceiptForm.totalUnreceived" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+					</el-row>
+				</el-form>
+			</div>
+			<!-- 退税情况区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<span style="font-size: 20px; font-weight: bold;">退税情况</span>
+			</div>
+			<div style="padding: 15px;">
+				<el-form :model="TaxRefundForm" label-width="120px">
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="应退税￥">
+								<el-input v-model="TaxRefundForm.totalRefund" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="已退税￥">
+								<el-input v-model="TaxRefundForm.totalRefunded" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="未退税￥">
+								<el-input v-model="TaxRefundForm.totalUnrefunded" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="是否已退">
+								<el-checkbox v-model="TaxRefundForm.isRefunded" disabled style="width: 300px"
+									size="default"></el-checkbox>
+							</el-form-item>
+						</el-col>
+					</el-row>
+				</el-form>
+			</div>
+			<!-- 国内费用区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<span style="font-size: 20px; font-weight: bold;">国内费用</span>
+			</div>
+			<div style="padding: 15px;">
+				<el-form :model="DomesticFeesForm" label-width="120px">
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="前程运输">
+								<el-input v-model="DomesticFeesForm.transportation" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="应付运杂费￥">
+								<el-input v-model="DomesticFeesForm.totalPayable" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="已付运杂费">
+								<el-input v-model="DomesticFeesForm.totalPaid" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="未付运杂费">
+								<el-input v-model="DomesticFeesForm.totalUnpaid" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+					</el-row>
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="快件费用￥">
+								<el-input v-model="DomesticFeesForm.expressFee" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="其它国内费用￥">
+								<el-input v-model="DomesticFeesForm.otherDomesticCost" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+					</el-row>
+				</el-form>
+			</div>
+			<!-- 国外费用区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<span style="font-size: 20px; font-weight: bold;">国外费用</span>
+			</div>
+			<div style="padding: 15px;">
+				<el-form :model="ForeignExpensesForm" label-width="120px">
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="应付佣金">
+								<el-input v-model="ForeignExpensesForm.commissionPayable" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="已付佣金">
+								<el-input v-model="ForeignExpensesForm.commissionPaid" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="已付佣金￥">
+								<el-input v-model="ForeignExpensesForm.commissionPaidAmount" disabled
+									style="width: 300px" size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="未付佣金">
+								<el-input v-model="ForeignExpensesForm.commissionUnpaid" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+					</el-row>
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="船代公司">
+								<el-input v-model="ForeignExpensesForm.shippingAgentCompany" disabled
+									style="width: 300px" size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="海运费币种">
+								<el-input v-model="ForeignExpensesForm.shippingCurrency" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="海运费汇率">
+								<el-input v-model="ForeignExpensesForm.shippingExchangeRate" disabled
+									style="width: 300px" size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="应付海运">
+								<el-input v-model="ForeignExpensesForm.shippingPayable" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+					</el-row>
+					<el-row>
+						<el-col :span="6">
+							<el-form-item label="已付海运">
+								<el-input v-model="ForeignExpensesForm.shippingPaid" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="已付海运￥">
+								<el-input v-model="ForeignExpensesForm.shippingPaidAmount" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="未付海运￥">
+								<el-input v-model="ForeignExpensesForm.shippingUnpaidAmount" disabled
+									style="width: 300px" size="default"></el-input>
+							</el-form-item>
+						</el-col>
+						<el-col :span="6">
+							<el-form-item label="其它国外费用￥">
+								<el-input v-model="ForeignExpensesForm.otherForeignCost" disabled style="width: 300px"
+									size="default"></el-input>
+							</el-form-item>
+						</el-col>
+					</el-row>
+				</el-form>
+			</div>
+			<!-- 其它信息区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<span style="font-size: 20px; font-weight: bold;">其它信息</span>
+			</div>
+			<div style="padding: 15px;">
+				<el-tabs v-model="activeName" class="demo-tabs" @tab-click="handleClick">
+					<el-tab-pane label="工厂付款" name="factorypayment">
+						<el-table :data="factorypaymenttableData" height="500" style="width: 100%; table-layout: fixed;"
+							stripe :header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+							<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
+							<el-table-column prop="reviewStatus" label="审核状态Index" width="150"
+								v-if="false"></el-table-column>
+							<el-table-column prop="reviewStatusStr" label="审核状态" width="150">
+								<template #default="scope">
+									<el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
+										{{ scope.row.reviewStatusStr }}
+									</el-tag>
+								</template>
+							</el-table-column>
+							<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
+							<el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
+							<el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
+							<el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
+							<el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
+							<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
+							<el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
+							<el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
+							<el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
+							<el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
+							<el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
+							<el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
+							<el-table-column prop="handler" label="经手人" width="150"></el-table-column>
+							<el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
+						</el-table>
+					</el-tab-pane>
+					<el-tab-pane label="采购其它费用" name="PurchaseOtherTab">
+						<el-table :data="PurchaseOtherCostsTableData" style="width: 100%; table-layout: fixed;" stripe
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+							<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
+							<el-table-column prop="reviewStatus" label="审核状态Index" width="150"
+								v-if="false"></el-table-column>
+							<el-table-column prop="reviewStatusStr" label="审核状态" width="150">
+								<template #default="scope">
+									<el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
+										{{ scope.row.reviewStatusStr }}
+									</el-tag>
+								</template>
+							</el-table-column>
+							<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
+							<el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
+							<el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
+							<el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
+							<el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
+							<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
+							<el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
+							<el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
+							<el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
+							<el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
+							<el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
+							<el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
+							<el-table-column prop="handler" label="经手人" width="150"></el-table-column>
+							<el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
+						</el-table>
+					</el-tab-pane>
+					<el-tab-pane label="客户已收汇详情" name="customerreceipts">
+						<el-table :data="CustomerReceiptsTableData" style="width: 100%; table-layout: fixed;" stripe
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+							<el-table-column prop="ReceiptNumber" label="收汇单号" width="150"></el-table-column>
+							<el-table-column prop="ReceiptBank" label="收汇银行" width="150"></el-table-column>
+							<el-table-column prop="ReceiptDate" label="收汇日期" width="150"></el-table-column>
+							<el-table-column prop="OurCompany" label="我方公司" width="150"></el-table-column>
+							<el-table-column prop="FundsType" label="款项类型" width="150"></el-table-column>
+							<el-table-column prop="ReceiptAmount" label="收汇金额" width="150"></el-table-column>
+							<el-table-column prop="ReceiptCurrency" label="收汇币种" width="150"></el-table-column>
+							<el-table-column prop="ExchangeRate" label="汇率" width="150"></el-table-column>
+						</el-table>
+					</el-tab-pane>
+					<el-tab-pane label="退税详情" name="taxrefund">
+						<el-table :data="TaxRefundTableData" style="width: 100%; table-layout: fixed;" stripe
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+							<el-table-column prop="ReceiptNumber" label="退税单编号" width="150"></el-table-column>
+							<el-table-column prop="InvoiceNumber" label="发票号" width="150"></el-table-column>
+							<el-table-column prop="RefundAmount" label="应退税额" width="150"></el-table-column>
+							<el-table-column prop="ActualRefundAmount" label="实际退税额" width="150"></el-table-column>
+							<el-table-column prop="IsRefunded" label="是否已退" width="150"></el-table-column>
+							<el-table-column prop="RefundDate" label="退税日期" width="150"></el-table-column>
+						</el-table>
+					</el-tab-pane>
+					<el-tab-pane label="国内已付费用详情" name="Domesticpayments">
+						<el-table :data="DomesticPaymentsDataTable" style="width: 100%; table-layout: fixed;" stripe
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+							<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
+							<el-table-column prop="reviewStatus" label="审核状态Index" width="150"
+								v-if="false"></el-table-column>
+							<el-table-column prop="reviewStatusStr" label="审核状态" width="150">
+								<template #default="scope">
+									<el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
+										{{ scope.row.reviewStatusStr }}
+									</el-tag>
+								</template>
+							</el-table-column>
+							<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
+							<el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
+							<el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
+							<el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
+							<el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
+							<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
+							<el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
+							<el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
+							<el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
+							<el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
+							<el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
+							<el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
+							<el-table-column prop="handler" label="经手人" width="150"></el-table-column>
+							<el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
+						</el-table>
+					</el-tab-pane>
+					<el-tab-pane label="国外已付费用详情" name="internationalpayments">
+						<el-table :data="ForeignExpensesDataTable" style="width: 100%; table-layout: fixed;" stripe
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+							<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
+							<el-table-column prop="reviewStatus" label="审核状态Index" width="150"
+								v-if="false"></el-table-column>
+							<el-table-column prop="reviewStatusStr" label="审核状态" width="150">
+								<template #default="scope">
+									<el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
+										{{ scope.row.reviewStatusStr }}
+									</el-tag>
+								</template>
+							</el-table-column>
+							<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
+							<el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
+							<el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
+							<el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
+							<el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
+							<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
+							<el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
+							<el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
+							<el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
+							<el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
+							<el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
+							<el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
+							<el-table-column prop="handler" label="经手人" width="150"></el-table-column>
+							<el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
+						</el-table>
+					</el-tab-pane>
+				</el-tabs>
+			</div>
 		</div>
-		<el-divider></el-divider>
-
-		<el-form :model="DomesticFeesForm" label-width="120px">
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="前程运输">
-						<el-input v-model="DomesticFeesForm.transportation" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="应付运杂费￥">
-						<el-input v-model="DomesticFeesForm.totalPayable" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="已付运杂费">
-						<el-input v-model="DomesticFeesForm.totalPaid" disabled :style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="未付运杂费">
-						<el-input v-model="DomesticFeesForm.totalUnpaid" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="快件费用￥">
-						<el-input v-model="DomesticFeesForm.expressFee" disabled :style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="其它国内费用￥">
-						<el-input v-model="DomesticFeesForm.otherDomesticCost" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-		</el-form>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;国外费用</span>
-		</div>
-		<el-divider> </el-divider>
-		<el-form :model="ForeignExpensesForm" label-width="120px">
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="应付佣金">
-						<el-input v-model="ForeignExpensesForm.commissionPayable" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="已付佣金">
-						<el-input v-model="ForeignExpensesForm.commissionPaid" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="已付佣金￥">
-						<el-input v-model="ForeignExpensesForm.commissionPaidAmount" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="未付佣金">
-						<el-input v-model="ForeignExpensesForm.commissionUnpaid" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="船代公司">
-						<el-input v-model="ForeignExpensesForm.shippingAgentCompany" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="海运费币种">
-						<el-input v-model="ForeignExpensesForm.shippingCurrency" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="海运费汇率">
-						<el-input v-model="ForeignExpensesForm.shippingExchangeRate" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="应付海运">
-						<el-input v-model="ForeignExpensesForm.shippingPayable" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="已付海运">
-						<el-input v-model="ForeignExpensesForm.shippingPaid" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-			<el-row>
-				<el-col :span="8">
-					<el-form-item label="已付海运￥">
-						<el-input v-model="ForeignExpensesForm.shippingPaidAmount" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="未付海运￥">
-						<el-input v-model="ForeignExpensesForm.shippingUnpaidAmount" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-				<el-col :span="8">
-					<el-form-item label="其它国外费用￥">
-						<el-input v-model="ForeignExpensesForm.otherForeignCost" disabled
-							:style="{ width: '300px' }"></el-input>
-					</el-form-item>
-				</el-col>
-			</el-row>
-		</el-form>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;其它信息</span>
-		</div>
-		<el-divider> </el-divider>
-		<el-tabs v-model="activeName" class="demo-tabs" @tab-click="handleClick">
-			<el-tab-pane label="工厂付款" name="factorypayment">
-				<el-table :data="factorypaymenttableData" height="500">
-					<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
-					<el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
-					<el-table-column prop="reviewStatusStr" label="审核状态" width="150">
-						<template #default="scope">
-							<el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
-								{{ scope.row.reviewStatusStr }}
-							</el-tag>
-						</template>
-					</el-table-column>
-					<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
-					<el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
-					<el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
-					<el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
-					<el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
-					<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
-					<el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
-					<el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
-					<el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
-					<el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
-					<el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
-					<el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
-					<el-table-column prop="handler" label="经手人" width="150"></el-table-column>
-					<el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
-				</el-table>
-			</el-tab-pane>
-			<el-tab-pane label="采购其它费用" name="PurchaseOtherTab">
-				<el-table :data="PurchaseOtherCostsTableData">
-					<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
-					<el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
-					<el-table-column prop="reviewStatusStr" label="审核状态" width="150">
-						<template #default="scope">
-							<el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
-								{{ scope.row.reviewStatusStr }}
-							</el-tag>
-						</template>
-					</el-table-column>
-					<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
-					<el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
-					<el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
-					<el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
-					<el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
-					<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
-					<el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
-					<el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
-					<el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
-					<el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
-					<el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
-					<el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
-					<el-table-column prop="handler" label="经手人" width="150"></el-table-column>
-					<el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
-				</el-table>
-			</el-tab-pane>
-			<el-tab-pane label="客户已收汇详情" name="customerreceipts">
-				<el-table :data="CustomerReceiptsTableData">
-					<el-table-column prop="ReceiptNumber" label="收汇单号" width="150"></el-table-column>
-					<el-table-column prop="ReceiptBank" label="收汇银行" width="150"></el-table-column>
-					<el-table-column prop="ReceiptDate" label="收汇日期" width="150"></el-table-column>
-					<el-table-column prop="OurCompany" label="我方公司" width="150"></el-table-column>
-					<el-table-column prop="FundsType" label="款项类型" width="150"></el-table-column>
-					<el-table-column prop="ReceiptAmount" label="收汇金额" width="150"></el-table-column>
-					<el-table-column prop="ReceiptCurrency" label="收汇币种" width="150"></el-table-column>
-					<el-table-column prop="ExchangeRate" label="汇率" width="150"></el-table-column>
-				</el-table>
-			</el-tab-pane>
-			<el-tab-pane label="退税详情" name="taxrefund">
-				<el-table :data="TaxRefundTableData">
-					<el-table-column prop="ReceiptNumber" label="退税单编号" width="150"></el-table-column>
-					<el-table-column prop="InvoiceNumber" label="发票号" width="150"></el-table-column>
-					<el-table-column prop="RefundAmount" label="应退税额" width="150"></el-table-column>
-					<el-table-column prop="ActualRefundAmount" label="实际退税额" width="150"></el-table-column>
-					<el-table-column prop="IsRefunded" label="是否已退" width="150"></el-table-column>
-					<el-table-column prop="RefundDate" label="退税日期" width="150"></el-table-column>
-				</el-table>
-			</el-tab-pane>
-			<el-tab-pane label="国内已付费用详情" name="Domesticpayments">
-				<el-table :data="DomesticPaymentsDataTable">
-					<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
-					<el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
-					<el-table-column prop="reviewStatusStr" label="审核状态" width="150">
-						<template #default="scope">
-							<el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
-								{{ scope.row.reviewStatusStr }}
-							</el-tag>
-						</template>
-					</el-table-column>
-					<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
-					<el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
-					<el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
-					<el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
-					<el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
-					<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
-					<el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
-					<el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
-					<el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
-					<el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
-					<el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
-					<el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
-					<el-table-column prop="handler" label="经手人" width="150"></el-table-column>
-					<el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
-				</el-table>
-			</el-tab-pane>
-			<el-tab-pane label="国外已付费用详情" name="internationalpayments">
-				<el-table :data="ForeignExpensesDataTable">
-					<el-table-column prop="applicationNumber" label="申请单号" width="150"></el-table-column>
-					<el-table-column prop="reviewStatus" label="审核状态Index" width="150" v-if="false"></el-table-column>
-					<el-table-column prop="reviewStatusStr" label="审核状态" width="150">
-						<template #default="scope">
-							<el-tag :type="getStatusType(scope.row.reviewStatus)" effect="plain">
-								{{ scope.row.reviewStatusStr }}
-							</el-tag>
-						</template>
-					</el-table-column>
-					<el-table-column prop="paymentCategory" label="付款类别" width="150"></el-table-column>
-					<el-table-column prop="paymentName" label="款项名称" width="150"></el-table-column>
-					<el-table-column prop="payeeName" label="收款单位名称" width="150"></el-table-column>
-					<el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
-					<el-table-column prop="bankAccount" label="银行账号" width="150"></el-table-column>
-					<el-table-column prop="ourCompany" label="我方公司" width="150"></el-table-column>
-					<el-table-column prop="currencyCode" label="货币代码" width="150"></el-table-column>
-					<el-table-column prop="totalAmount" label="申请总额" width="150"></el-table-column>
-					<el-table-column prop="paidAmount" label="已付金额" width="150"></el-table-column>
-					<el-table-column prop="unpaidAmount" label="未付金额" width="150"></el-table-column>
-					<el-table-column prop="applicant" label="申请人" width="150"></el-table-column>
-					<el-table-column prop="applicationDepartment" label="申请部门" width="150"></el-table-column>
-					<el-table-column prop="handler" label="经手人" width="150"></el-table-column>
-					<el-table-column prop="applicationDate" label="申请日期" width="150"></el-table-column>
-				</el-table>
-			</el-tab-pane>
-		</el-tabs>
 	</div>
 </template>
 <script setup lang="ts">
@@ -1587,5 +1624,14 @@ const checkIfCurrentUserIsApprover = () => {
 <style scoped>
 .status-popover {
 	padding: 10px;
+}
+
+/* 确保表单行间距与销售合同页面dialog中的表单间距一致 */
+.el-form .el-row {
+	margin-bottom: 0;
+}
+
+.el-form .el-form-item {
+	margin-bottom: 9px;
 }
 </style>

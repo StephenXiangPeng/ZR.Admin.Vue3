@@ -1,37 +1,49 @@
 <template>
 	<div>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<el-divider></el-divider>
-		<div style="width: 100%; margin-top: 30px; display: flex; align-items: center;">
-			<el-radio-group v-model="searchParams.status" @change="searchInquiries" style="margin-right: 20px;">
-				<el-radio-button :label="0">待处理</el-radio-button>
-				<el-radio-button :label="1">已处理</el-radio-button>
-			</el-radio-group>
-			<el-input v-model="searchParams.inquiryNumber" clearable style="width: 15%; margin-right: 20px;"
-				placeholder="输入询价单号" @keyup.enter="searchInquiries" />
-			<el-select v-model="searchParams.salesId" placeholder="请选择销售员" style="width: 15%" clearable
-				@change="searchInquiries">
-				<el-option v-for="item in optionss.sql_hr_sale" :key="item.dictCode" :label="item.dictLabel"
-					:value="item.dictValue" />
-			</el-select>
-			<el-button type="primary" @click="searchInquiries" style="margin-left: 10px;">搜索</el-button>
-			<el-button @click="resetSearch" style="margin-left: 10px;">重置</el-button>
-		</div>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;询价单列表</span>
-			<el-divider></el-divider>
-			<el-table :data="inquiryList" style="width: 100%" stripe v-loading="loading">
-				<el-table-column prop="inquiry_number" label="询价单号">
+		<!-- 询价单表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="16" style="margin-bottom: 10px;">
+					<el-col :span="3">
+						<el-radio-group v-model="searchParams.status" @change="searchInquiries" size="default">
+							<el-radio-button :label="0">待处理</el-radio-button>
+							<el-radio-button :label="1">已处理</el-radio-button>
+						</el-radio-group>
+					</el-col>
+					<el-col :span="3">
+						<el-input v-model="searchParams.inquiryNumber" clearable placeholder="输入询价单号"
+							@keyup.enter="searchInquiries" size="default" />
+					</el-col>
+					<el-col :span="3">
+						<el-select v-model="searchParams.salesId" placeholder="请选择销售员" clearable
+							@change="searchInquiries" size="default" style="width: 100%">
+							<el-option v-for="item in optionss.sql_hr_sale" :key="item.dictCode" :label="item.dictLabel"
+								:value="item.dictValue" />
+						</el-select>
+					</el-col>
+					<el-col :span="3">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="searchInquiries" size="default">搜索</el-button>
+							<el-button @click="resetSearch" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+
+			<!-- 表格区域 -->
+			<el-table :data="inquiryList" style="width: 100%; table-layout: fixed;" stripe v-loading="loading"
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="inquiry_number" label="询价单号" width="120">
 					<template #default="scope">
 						<span>{{ scope.row.inquiry_number }}</span>
 						<el-tag v-if="Number(scope.row.isDraft) == 1" type="warning" style="margin-left: 5px;"
 							size="small">草稿</el-tag>
 					</template>
 				</el-table-column>
-				<el-table-column prop="subject" label="询价主题"></el-table-column>
-				<el-table-column prop="salePerson" label="销售员"></el-table-column>
+				<el-table-column prop="subject" label="询价主题" width="200"></el-table-column>
+				<el-table-column prop="salePerson" label="销售员" width="130"></el-table-column>
 				<el-table-column prop="status" label="状态" width="100">
 					<template #default="scope">
 						<el-tag
@@ -58,311 +70,324 @@
 
 		<!-- 处理询价单弹窗 -->
 		<el-dialog :modal="false" :modal-penetrable="true" v-model="dialogVisible"
-			:title="dialogEditMode ? '询价单处理' : '询价单详情'" width="80%" @close="closeDialog" :close-on-click-modal="false">
-			<el-form ref="formRef" :model="dialogForm" :rules="rules" label-position="right">
-				<el-row>
-					<el-col :span="6">
-						<el-form-item label="询价单号">
-							<el-input v-model="dialogForm.inquiry_number" disabled style="width: 290px" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="询价主题">
-							<el-input v-model="dialogForm.subject" disabled style="width: 290px" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="销售员">
-							<el-input v-model="dialogForm.salePerson" disabled style="width: 290px" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="状态">
-							<el-tag
-								:type="Number(dialogForm.isDraft) == 1 ? 'info' : (dialogForm.status === 0 ? 'warning' : 'success')">
-								{{ Number(dialogForm.isDraft) == 1 ? '草稿' : (dialogForm.status === 0 ? '待处理' :
-									'已处理')
-								}}
-							</el-tag>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<div style="margin-top: 30px;">
-					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;产品信息</span>
-				</div>
-				<el-divider></el-divider>
-				<el-table :data="productList" stripe>
-					<el-table-column prop="status" label="报价状态" width="100">
-						<template #default="scope">
-							<el-tag :type="scope.row.status === 0 ? 'warning' : 'success'">
-								{{ scope.row.status === 0 ? '待报价' : '已报价' }}
-							</el-tag>
-						</template>
-					</el-table-column>
-					<el-table-column prop="productName" label="产品名称" width="200" align="center">
-						<template #default="{ row }">
-							<span>{{ row.productName }}</span>
-						</template>
-					</el-table-column>
-					<el-table-column prop="productimage" label="询价产品图片" width="150" align="center">
-						<template #default="scope">
-							<div v-if="scope.row.productimage">
-								<el-image style="width: 37.8px; height: 37.8px" :src="scope.row.productimage"
-									:preview-src-list="[scope.row.productimage]" :zoom-rate="1.2" :max-scale="7"
-									:min-scale="0.2" fit="cover" preview-teleported="true" class="product-image-small"
-									@mouseenter="showHoverImage($event, scope.row.productimage)"
-									@mouseleave="hideHoverImage">
-									<template #error>
-										<span>加载失败</span>
-									</template>
-								</el-image>
-							</div>
-							<div v-else class="no-image">
-								<el-icon>
-									<Picture />
-								</el-icon>
-								<span>暂无图片</span>
-							</div>
-						</template>
-					</el-table-column>
-					<el-table-column prop="productCode" label="编号" width="150" align="center">
-						<template #default="{ row }">
-							<span>{{ row.productCode }}</span>
-						</template>
-					</el-table-column>
-					<el-table-column prop="productspecifications" label="规格" width="150" align="center">
-						<template #default="{ row }">
-							<span>{{ row.productspecifications }}</span>
-						</template>
-					</el-table-column>
-					<el-table-column prop="mainmaterials" label="主要材料" width="150" align="center">
-						<template #default="{ row }">
-							<span>{{ row.mainmaterials }}</span>
-						</template>
-					</el-table-column>
-					<el-table-column prop="smallpackagingmethod" label="小包装方式" width="150" align="center">
-						<template #default="{ row }">
-							<span>{{ row.smallpackagingmethod }}</span>
-						</template>
-					</el-table-column>
-					<!-- <el-table-column prop="IsNewProduct" label="是否新产品" width="120" align="center">
+			:title="dialogEditMode ? '询价单处理' : '询价单详情'" width="75%" @close="closeDialog" :close-on-click-modal="false">
+			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="基本信息" name="basicInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">基本信息</span>
+					</template>
+					<el-form ref="formRef" :model="dialogForm" :rules="rules" label-width="120px" :show-message="false">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="询价单号">
+									<el-input v-model="dialogForm.inquiry_number" disabled style="width: 300px"
+										size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="询价主题">
+									<el-input v-model="dialogForm.subject" disabled style="width: 300px"
+										size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="销售员">
+									<el-input v-model="dialogForm.salePerson" disabled style="width: 300px"
+										size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="状态">
+									<el-tag
+										:type="Number(dialogForm.isDraft) == 1 ? 'info' : (dialogForm.status === 0 ? 'warning' : 'success')">
+										{{ Number(dialogForm.isDraft) == 1 ? '草稿' : (dialogForm.status === 0 ? '待处理' :
+											'已处理')
+										}}
+									</el-tag>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+			<span style="font-size: 20px; font-weight: bold;">产品信息</span>
+			<el-divider></el-divider>
+			<el-table :data="productList" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="status" label="报价状态" width="100">
+					<template #default="scope">
+						<el-tag :type="scope.row.status === 0 ? 'warning' : 'success'">
+							{{ scope.row.status === 0 ? '待报价' : '已报价' }}
+						</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column prop="productName" label="产品名称" width="200" align="center">
+					<template #default="{ row }">
+						<span>{{ row.productName }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="productimage" label="询价产品图片" width="150" align="center">
+					<template #default="scope">
+						<div v-if="scope.row.productimage">
+							<el-image style="width: 37.8px; height: 37.8px" :src="scope.row.productimage"
+								:preview-src-list="[scope.row.productimage]" :zoom-rate="1.2" :max-scale="7"
+								:min-scale="0.2" fit="cover" preview-teleported="true" class="product-image-small"
+								@mouseenter="showHoverImage($event, scope.row.productimage)"
+								@mouseleave="hideHoverImage">
+								<template #error>
+									<span>加载失败</span>
+								</template>
+							</el-image>
+						</div>
+						<div v-else class="no-image">
+							<el-icon>
+								<Picture />
+							</el-icon>
+							<span>暂无图片</span>
+						</div>
+					</template>
+				</el-table-column>
+				<el-table-column prop="productCode" label="编号" width="150" align="center">
+					<template #default="{ row }">
+						<span>{{ row.productCode }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="productspecifications" label="规格" width="150" align="center">
+					<template #default="{ row }">
+						<span>{{ row.productspecifications }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="mainmaterials" label="主要材料" width="150" align="center">
+					<template #default="{ row }">
+						<span>{{ row.mainmaterials }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="smallpackagingmethod" label="小包装方式" width="150" align="center">
+					<template #default="{ row }">
+						<span>{{ row.smallpackagingmethod }}</span>
+					</template>
+				</el-table-column>
+				<!-- <el-table-column prop="IsNewProduct" label="是否新产品" width="120" align="center">
 						<template #default="{ row }">
 							<el-tag :type="row.IsNewProduct === 1 ? 'success' : 'info'">
 								{{ row.IsNewProduct === 1 ? '是' : '否' }}
 							</el-tag>
 						</template>
 					</el-table-column> -->
-					<el-table-column prop="supplierID" label="供应商" width="200" align="center">
+				<el-table-column prop="supplierID" label="供应商" width="200" align="center">
+					<template #default="{ row }">
+						<el-select v-if="dialogEditMode" v-model="row.supplierID" filterable clearable
+							placeholder="请选择供应商" style="width: 100%" size="default">
+							<el-option v-for="item in row.supplierOptions.filter(option => option.value !== 0)"
+								:key="item.value" :label="item.label" :value="item.value" />
+						</el-select>
+						<span v-else>{{ !row.supplierID ? '无供应商' : getSupplierLabelForProduct(row.supplierID,
+							row.supplierOptions) }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="quoteNotes" label="备注" width="200" align="center">
+					<template #default="{ row }">
+						<el-input v-if="dialogEditMode" v-model="row.quoteNotes" style="width: 100%" size="default" />
+						<span v-else>{{ row.quoteNotes }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="variousminimumorderquantities" label="各种起订量" width="120" align="center">
+					<el-table-column prop="moq" label="MOQ" width="120" align="center">
 						<template #default="{ row }">
-							<el-select v-if="dialogEditMode" v-model="row.supplierID" filterable clearable
-								placeholder="请选择供应商" style="width: 180px">
-								<el-option v-for="item in row.supplierOptions.filter(option => option.value !== 0)"
-									:key="item.value" :label="item.label" :value="item.value" />
-							</el-select>
-							<span v-else>{{ !row.supplierID ? '无供应商' : getSupplierLabelForProduct(row.supplierID,
-								row.supplierOptions) }}</span>
+							<el-input v-if="dialogEditMode" v-model="row.moq" size="default" />
+							<span v-else>{{ row.moq }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="quoteNotes" label="备注" width="200" align="center">
+					<el-table-column prop="negotiateprice" label="议价" width="120" align="center">
 						<template #default="{ row }">
-							<el-input v-if="dialogEditMode" v-model="row.quoteNotes" style="width: 180px" />
-							<span v-else>{{ row.quoteNotes }}</span>
+							<el-input v-if="dialogEditMode" v-model="row.negotiateprice" size="default" />
+							<span v-else>{{ row.negotiateprice }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="variousminimumorderquantities" label="各种起订量" width="120" align="center">
-						<el-table-column prop="moq" label="MOQ" width="120" align="center">
-							<template #default="{ row }">
-								<el-input v-if="dialogEditMode" v-model="row.moq" />
-								<span v-else>{{ row.moq }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="negotiateprice" label="议价" width="120" align="center">
-							<template #default="{ row }">
-								<el-input v-if="dialogEditMode" v-model="row.negotiateprice" />
-								<span v-else>{{ row.negotiateprice }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="custommade" label="定制" width="120" align="center">
-							<template #default="{ row }">
-								<el-input v-if="dialogEditMode" v-model="row.custommade" />
-								<span v-else>{{ row.custommade }}</span>
-							</template>
-						</el-table-column>
-					</el-table-column>
-					<el-table-column prop="priceTerms" label="价格条款" width="200" align="center">
+					<el-table-column prop="custommade" label="定制" width="120" align="center">
 						<template #default="{ row }">
-							<el-select v-if="dialogEditMode" v-model="row.priceTerms" filterable placeholder="请选择价格条款">
-								<el-option
-									v-for="dict in optionss.hr_purchase_pricing_term.filter(option => option.dictValue !== 0)"
-									:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-							<span v-else>{{ !row.priceTerms ? '无价格条款' : getPriceTermsLabel(row.priceTerms)
-							}}</span>
+							<el-input v-if="dialogEditMode" v-model="row.custommade" size="default" />
+							<span v-else>{{ row.custommade }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="taxincluded" label="含税+/-(%)" width="120" align="center">
+				</el-table-column>
+				<el-table-column prop="priceTerms" label="价格条款" width="200" align="center">
+					<template #default="{ row }">
+						<el-select v-if="dialogEditMode" v-model="row.priceTerms" filterable placeholder="请选择价格条款"
+							style="width: 100%" size="default">
+							<el-option
+								v-for="dict in optionss.hr_purchase_pricing_term.filter(option => option.dictValue !== 0)"
+								:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />
+						</el-select>
+						<span v-else>{{ !row.priceTerms ? '无价格条款' : getPriceTermsLabel(row.priceTerms)
+						}}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="taxincluded" label="含税+/-(%)" width="120" align="center">
+					<template #default="{ row }">
+						<el-input v-if="dialogEditMode" v-model="row.taxincluded" size="default" />
+						<span v-else>{{ row.taxincluded }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="quoteQuantity" label="报价数量" width="120" align="center">
+					<template #default="{ row }">
+						<el-input v-if="dialogEditMode" v-model="row.quoteQuantity" size="default" />
+						<span v-else>{{ row.quoteQuantity }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="price" label="价格" width="120" align="center">
+					<template #default="{ row }">
+						<el-input v-if="dialogEditMode" v-model="row.price" size="default" />
+						<span v-else>{{ row.price }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="singleproductsalessize" label="单个产品销售尺寸(CM)" width="120" align="center"
+					v-if="false">
+					<el-table-column prop="productlength" label="长" width="120" align="center" v-if="false">
 						<template #default="{ row }">
-							<el-input v-if="dialogEditMode" v-model="row.taxincluded" />
-							<span v-else>{{ row.taxincluded }}</span>
+							<span>{{ row.productlength }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="quoteQuantity" label="报价数量" width="120" align="center">
+					<el-table-column prop="productwidth" label="宽" width="120" align="center" v-if="false">
 						<template #default="{ row }">
-							<el-input v-if="dialogEditMode" v-model="row.quoteQuantity" />
-							<span v-else>{{ row.quoteQuantity }}</span>
+							<span>{{ row.productwidth }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="price" label="价格" width="120" align="center">
+					<el-table-column prop="productheight" label="高" width="120" align="center" v-if="false">
 						<template #default="{ row }">
-							<el-input v-if="dialogEditMode" v-model="row.price" />
-							<span v-else>{{ row.price }}</span>
+							<span>{{ row.productheight }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="singleproductsalessize" label="单个产品销售尺寸(CM)" width="120" align="center"
-						v-if="false">
-						<el-table-column prop="productlength" label="长" width="120" align="center" v-if="false">
-							<template #default="{ row }">
-								<span>{{ row.productlength }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="productwidth" label="宽" width="120" align="center" v-if="false">
-							<template #default="{ row }">
-								<span>{{ row.productwidth }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="productheight" label="高" width="120" align="center" v-if="false">
-							<template #default="{ row }">
-								<span>{{ row.productheight }}</span>
-							</template>
-						</el-table-column>
-						<!-- <el-table-column prop="productweight" label="克重" width="120" align="center">
+					<!-- <el-table-column prop="productweight" label="克重" width="120" align="center">
 							<template #default="{ row }">
 								<span>{{ row.productweight }}</span>
 							</template>
 						</el-table-column> -->
-					</el-table-column>
-					<el-table-column prop="productweight" label="克重" width="120" align="center">
+				</el-table-column>
+				<el-table-column prop="productweight" label="克重" width="120" align="center">
+					<template #default="{ row }">
+						<span>{{ row.productweight }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="boxing" label="装箱" width="120" align="center">
+					<el-table-column prop="mediumpackaging" label="中包装" width="120" align="center">
 						<template #default="{ row }">
-							<span>{{ row.productweight }}</span>
+							<el-input v-if="dialogEditMode" v-model="row.mediumpackaging" @input="calculateVolume(row)"
+								size="default" />
+							<span v-else>{{ row.mediumpackaging }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="boxing" label="装箱" width="120" align="center">
-						<el-table-column prop="mediumpackaging" label="中包装" width="120" align="center">
-							<template #default="{ row }">
-								<el-input v-if="dialogEditMode" v-model="row.mediumpackaging"
-									@input="calculateVolume(row)" />
-								<span v-else>{{ row.mediumpackaging }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="outerbox" label="外箱" width="120" align="center">
-							<template #default="{ row }">
-								<el-input v-if="dialogEditMode" v-model="row.outerbox" @input="calculateVolume(row)" />
-								<span v-else>{{ row.outerbox }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="middlebagorouterbox" label="中包/外箱" width="120" align="center"
-							v-if="false">
-							<template #default="{ row }">
-								<span>{{ row.middlebagorouterbox }}</span>
-							</template>
-						</el-table-column>
+					<el-table-column prop="outerbox" label="外箱" width="120" align="center">
+						<template #default="{ row }">
+							<el-input v-if="dialogEditMode" v-model="row.outerbox" @input="calculateVolume(row)"
+								size="default" />
+							<span v-else>{{ row.outerbox }}</span>
+						</template>
 					</el-table-column>
-					<el-table-column prop="outerboxdata" label="外箱数据(CM)" width="120" align="center">
-						<el-table-column prop="outerboxlength" label="长" width="120" align="center">
-							<template #default="{ row }">
-								<el-input v-if="dialogEditMode" v-model="row.outerboxlength"
-									@input="calculateVolume(row)" />
-								<span v-else>{{ row.outerboxlength }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="outerboxwidth" label="宽" width="120" align="center">
-							<template #default="{ row }">
-								<el-input v-if="dialogEditMode" v-model="row.outerboxwidth"
-									@input="calculateVolume(row)" />
-								<span v-else>{{ row.outerboxwidth }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="outerboxheight" label="高" width="120" align="center">
-							<template #default="{ row }">
-								<el-input v-if="dialogEditMode" v-model="row.outerboxheight"
-									@input="calculateVolume(row)" />
-								<span v-else>{{ row.outerboxheight }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="outerboxvolume" label="体积m³" width="120" align="center">
-							<template #default="{ row }">
-								<span>{{ row.outerboxvolume }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="outerboxgrossweight" label="毛重KGS" width="120" align="center">
-							<template #default="{ row }">
-								<el-input v-if="dialogEditMode" v-model="row.outerboxgrossweight" />
-								<span v-else>{{ row.outerboxgrossweight }}</span>
-							</template>
-						</el-table-column>
+					<el-table-column prop="middlebagorouterbox" label="中包/外箱" width="120" align="center" v-if="false">
+						<template #default="{ row }">
+							<span>{{ row.middlebagorouterbox }}</span>
+						</template>
 					</el-table-column>
-				</el-table>
-				<div style="margin-top: 30px;">
-					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;询价单附件</span>
-				</div>
-				<el-divider></el-divider>
-				<!-- 附件部分 -->
+				</el-table-column>
+				<el-table-column prop="outerboxdata" label="外箱数据(CM)" width="120" align="center">
+					<el-table-column prop="outerboxlength" label="长" width="120" align="center">
+						<template #default="{ row }">
+							<el-input v-if="dialogEditMode" v-model="row.outerboxlength" @input="calculateVolume(row)"
+								size="default" />
+							<span v-else>{{ row.outerboxlength }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column prop="outerboxwidth" label="宽" width="120" align="center">
+						<template #default="{ row }">
+							<el-input v-if="dialogEditMode" v-model="row.outerboxwidth" @input="calculateVolume(row)"
+								size="default" />
+							<span v-else>{{ row.outerboxwidth }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column prop="outerboxheight" label="高" width="120" align="center">
+						<template #default="{ row }">
+							<el-input v-if="dialogEditMode" v-model="row.outerboxheight" @input="calculateVolume(row)"
+								size="default" />
+							<span v-else>{{ row.outerboxheight }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column prop="outerboxvolume" label="体积m³" width="120" align="center">
+						<template #default="{ row }">
+							<span>{{ row.outerboxvolume }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column prop="outerboxgrossweight" label="毛重KGS" width="120" align="center">
+						<template #default="{ row }">
+							<el-input v-if="dialogEditMode" v-model="row.outerboxgrossweight" size="default" />
+							<span v-else>{{ row.outerboxgrossweight }}</span>
+						</template>
+					</el-table-column>
+				</el-table-column>
+			</el-table>
+			<span style="font-size: 20px; font-weight: bold;">询价单附件</span>
+			<el-divider></el-divider>
+			<!-- 附件部分 -->
+			<div>
+				<!-- 显示现有附件列表 -->
 				<div>
-					<!-- 显示现有附件列表 -->
-					<div>
-						<h3>附件列表:</h3>
-						<el-table :data="inquiryDocumentList" stripe>
-							<el-table-column prop="fileName" label="文件名"></el-table-column>
-							<el-table-column label="操作">
-								<template #default="scope">
-									<el-button link type="primary" size="small" @click="handleDownload(scope.row)"
-										:disabled="!dialogEditMode">
-										下载
-									</el-button>
-									<!-- <el-button link type="danger" size="small"
+					<h3>附件列表:</h3>
+					<el-table :data="inquiryDocumentList" style="width: 100%; table-layout: fixed;" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table-column prop="fileName" label="文件名"></el-table-column>
+						<el-table-column label="操作">
+							<template #default="scope">
+								<el-button link type="primary" size="small" @click="handleDownload(scope.row)"
+									:disabled="!dialogEditMode">
+									下载
+								</el-button>
+								<!-- <el-button link type="danger" size="small"
 										@click="deleteDocument(scope.row, scope.$index)" :disabled="!dialogEditMode">
 										删除
 									</el-button> -->
-								</template>
-							</el-table-column>
-						</el-table>
-					</div>
-
-					<!-- 上传新附件的组件 -->
-					<div v-if="dialogEditMode">
-						<h3>上传新附件:</h3>
-						<el-upload :auto-upload="false" :on-change="handleFileChange" :on-remove="handleFileRemove"
-							:file-list="uploadfileList" multiple>
-							<template #trigger>
-								<el-button type="primary">选取文件</el-button>
 							</template>
-						</el-upload>
-					</div>
+						</el-table-column>
+					</el-table>
+				</div>
 
-					<!-- 显示新上传的附件列表 -->
-					<div v-if="dialogEditMode && inquryProductDocumentTableData.length > 0">
-						<h3>新上传的附件:</h3>
-						<el-table :data="inquryProductDocumentTableData">
-							<el-table-column prop="FileName" label="文件名"></el-table-column>
-							<el-table-column label="操作">
-								<template #default="scope">
-									<el-button @click="handleDeleteNewFile(scope.$index)" type="text"
-										size="small">删除</el-button>
-								</template>
-							</el-table-column>
-						</el-table>
-					</div>
+				<!-- 上传新附件的组件 -->
+				<div v-if="dialogEditMode">
+					<h3>上传新附件:</h3>
+					<el-upload :auto-upload="false" :on-change="handleFileChange" :on-remove="handleFileRemove"
+						:file-list="uploadfileList" multiple>
+						<template #trigger>
+							<el-button type="primary">选取文件</el-button>
+						</template>
+					</el-upload>
 				</div>
-				<el-divider></el-divider>
-				<div style="margin-top: 30px;">
-					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;其他信息</span>
+
+				<!-- 显示新上传的附件列表 -->
+				<div v-if="dialogEditMode && inquryProductDocumentTableData.length > 0">
+					<h3>新上传的附件:</h3>
+					<el-table :data="inquryProductDocumentTableData" style="width: 100%; table-layout: fixed;"
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table-column prop="FileName" label="文件名"></el-table-column>
+						<el-table-column label="操作">
+							<template #default="scope">
+								<el-button @click="handleDeleteNewFile(scope.$index)" type="text"
+									size="small">删除</el-button>
+							</template>
+						</el-table-column>
+					</el-table>
 				</div>
-				<el-divider></el-divider>
+			</div>
+			<el-divider></el-divider>
+			<span style="font-size: 20px; font-weight: bold;">其他信息</span>
+			<el-divider></el-divider>
+			<el-form :model="dialogForm" label-width="120px">
 				<el-row>
-					<el-col :span="30" style="width: 100%;">
+					<el-col :span="24">
 						<el-form-item label="询价备注">
 							<el-input type="textarea" v-model="dialogForm.description" style="width: 100%" disabled
-								:autosize="{ minRows: 3, maxRows: 6 }" />
+								:autosize="{ minRows: 3, maxRows: 6 }" size="default" />
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -467,6 +492,7 @@ const dialogVisible = ref(false);
 const dialogEditMode = ref(false);
 const dialogForm = reactive<any>({});
 const productList = ref([]); // 产品列表
+const basicInfoCollapseActive = ref(['basicInfo']); // 折叠面板激活状态
 
 // 获取供应商标签
 const getSupplierLabel = (supplierId) => {

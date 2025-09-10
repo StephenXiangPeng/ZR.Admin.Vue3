@@ -1,406 +1,493 @@
 <template>
 	<div>
-		<div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click="OpenAddSupperDialog">添加供应商</el-button>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<div style="width: 100%; margin-top: 30px;">
-			<el-select v-model="Searchsupplierselect" filterable placeholder="选择供应商（可输入查询）" style="width: 15%">
-				<el-option v-for="item in supplierselectoptions" :key="item.value" :label="item.label"
-					:value="item.value" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="Searchsupplierselect" filterable placeholder="选择供应商等级" style="width: 15%">
-				<el-option v-for="item in supplierselectoptions" :key="item.value" :label="item.label"
-					:value="item.value" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="Searchproductselect" filterable placeholder="选择业务范围" style="width: 15%">
-				<el-option v-for="item in productselectoptions" :key="item.value" :label="item.label"
-					:value="item.value" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchinquiryDate" type="date" placeholder="请选择最近交易日期"
-				style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchquotationDate" type="date" placeholder="请选择最近交易日期" style="width: 15%" />
-		</div>
-		<div style="width: 100%; margin-top: 5px;">
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" plain>查询</el-button>
-				<el-button>重置</el-button>
-			</el-row>
-		</div>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;供应商信息表</span>
-		</div>
-		<el-divider> </el-divider>
-		<el-table :data="SupplierInfoTableData">
-			<el-table-column prop="Id" label="供应商ID" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="supplierId" label="供应商编号" width="150">
-				<template #default="scope">
-					<span>{{ scope.row.supplierId }}</span>
-					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-				</template>
-			</el-table-column>
-			<el-table-column prop="shortName" label="供应商简称" width="150"></el-table-column>
-			<el-table-column prop="fullName" label="供应商全称" width="150"></el-table-column>
-			<el-table-column prop="cooperationLevel" label="供应商等级" width="150"></el-table-column>
-			<el-table-column prop="businessScope" label="业务范围" width="150"></el-table-column>
-			<el-table-column prop="province" label="所在省份" width="150"></el-table-column>
-			<el-table-column prop="address" label="详细地址" width="150"></el-table-column>
-			<el-table-column prop="developmentDate" label="开发时间" width="150"></el-table-column>
-			<el-table-column prop="lastTransaction" label="最近交易" width="150"></el-table-column>
-			<el-table-column prop="quoteSuccessRate" label="报价成交率" width="150"></el-table-column>
-			<el-table-column fixed="right" label="详情" width="150px">
-				<template #default="scope">
-					<el-button type="text" size="small" @click="checkSupplierDetails(scope.row)">查看详情</el-button>
-					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
-						type="danger" size="small" @click="DeleteSupplier(scope.row)">删除</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<el-pagination @current-change="SupplierInfoTableDatahandlePageChange"
-			:current-page="SupplierInfoTableDatacurrentPage" :page-size="SupplierInfoTableDatapageSize"
-			:total="SupplierInfoTableDatatotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="AddSupperDialog" title="添加供应商"
-			:close-on-click-modal=false style="width: 70%;" @close="Closeaddsupperdialog">
-			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
-			<el-divider></el-divider>
-			<el-form :model="Addsupperinfoform" label-width="120px">
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="厂商编号">
-							<el-input v-model="Addsupperinfoform.supplierId" placeholder="请输入厂商编号" disabled
-								style="width: 300px" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="厂商简称">
-							<el-input v-model="Addsupperinfoform.shortName" placeholder="请输入厂商简称" :disabled="isEditable"
-								style="width: 300px" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="厂商名称">
-							<el-input v-model="Addsupperinfoform.fullName" placeholder="请输入厂商名称" :disabled="isEditable"
-								style="width: 300px" />
-						</el-form-item>
+		<!-- 供应商信息表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="OpenAddSupperDialog" size="default">添加供应商</el-button>
+						</div>
 					</el-col>
 				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="所在省份">
-							<el-select v-model="Addsupperinfoform.province" placeholder="请选择所在省份" style="width: 300px"
-								:disabled="isEditable">
-								<el-option v-for="dict in optionss.hr_china_provinces" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+			</div>
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-select v-model="Searchsupplierselect" filterable placeholder="选择供应商（可输入查询）"
+							style="width: 100%" size="default">
+							<el-option v-for="item in supplierselectoptions" :key="item.value" :label="item.label"
+								:value="item.value" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="Searchsupplierselect" filterable placeholder="选择供应商等级" style="width: 100%"
+							size="default">
+							<el-option v-for="item in supplierselectoptions" :key="item.value" :label="item.label"
+								:value="item.value" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="Searchproductselect" filterable placeholder="选择业务范围" style="width: 100%"
+							size="default">
+							<el-option v-for="item in productselectoptions" :key="item.value" :label="item.label"
+								:value="item.value" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchinquiryDate" type="date" placeholder="请选择最近交易日期"
+							style="width: 100%" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchquotationDate" type="date" placeholder="请选择最近交易日期"
+							style="width: 100%" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain size="default">查询</el-button>
+							<el-button size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
 
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="所在城市">
-							<el-input v-model="Addsupperinfoform.city" placeholder="请输入所在城市" style="width: 300px"
-								:disabled="isEditable" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="公司主页">
-							<el-input v-model="Addsupperinfoform.website" placeholder="请输入公司主页" style="width: 300px"
-								:disabled="isEditable" />
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="邮政编码">
-							<el-input v-model="Addsupperinfoform.postalCode" placeholder="请输入邮政编码"
-								:disabled="isEditable" style="width: 300px" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="详细地址">
-							<el-input v-model="Addsupperinfoform.address" placeholder="请输入详细地址" style="width: 300px"
-								:disabled="isEditable" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="业务范围">
-							<el-input v-model="Addsupperinfoform.businessScope" placeholder="请输入业务范围"
-								style="width: 300px" :disabled="isEditable" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="信用等级">
-							<el-select v-model="Addsupperinfoform.creditLevel" filterable placeholder="自动计算信用等级"
-								disabled style="width: 300px;">
-								<el-option v-for="dict in optionss.hr_supplier_level" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="合作等级">
-							<el-select v-model="Addsupperinfoform.cooperationLevel" filterable placeholder="自动计算合作等级"
-								disabled style="width: 300px;">
-								<el-option v-for="dict in optionss.hr_supplier_level" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="结算方式">
-							<el-select v-model="Addsupperinfoform.paymentMethod" placeholder="请选择结算方式"
-								:disabled="isEditable" style="width: 300px">
-								<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="公司税号">
-							<el-input v-model="Addsupperinfoform.taxNumber" placeholder="请输入公司税号" :disabled="isEditable"
-								style="width: 300px" />
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="开户银行">
-							<el-input v-model="Addsupperinfoform.bankName" placeholder="请输入开户银行" style="width: 300px"
-								:disabled="isEditable" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="银行账号">
-							<el-input v-model="Addsupperinfoform.bankAccount" placeholder="请输入银行账号"
-								:disabled="isEditable" style="width: 300px" />
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="开发时间">
-							<el-date-picker v-model="Addsupperinfoform.developmentDate" type="date"
-								:disabled="isEditable" placeholder="请选择开发时间" style="width: 300px" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="最近成交日期">
-							<el-date-picker v-model="Addsupperinfoform.lastTransaction" disabled type="date"
-								placeholder="自动获取" style="width: 300px" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="能否开票">
-							<el-checkbox v-model="Addsupperinfoform.canInvoice" :disabled="isEditable" />
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-form-item label="供应商图片">
-						<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList" limit="5"
-							:disabled="fileList.length >= 5" @change="handleChange" :action="UploadUrl"
-							:data="formData">
-							<el-icon>
-								<Plus />
-							</el-icon>
-							<template #file="{ file }">
-								<div>
-									<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
-									<span class="el-upload-list__item-actions">
-										<span class="el-upload-list__item-preview"
-											@click="handlePictureCardPreview(file)">
-											<el-icon><zoom-in /></el-icon>
-										</span>
-										<span v-if="!disabled" class="el-upload-list__item-delete"
-											@click="handleRemove(file)">
-											<el-icon>
-												<Delete />
-											</el-icon>
-										</span>
-									</span>
-								</div>
-							</template>
-						</el-upload>
-						<el-dialog v-model="dialogVisible">
-							<img style="max-width: 100%; max-height: 100%; width: auto; height: auto;" w-full
-								:src="dialogImageUrl" alt="Preview Image" />
-						</el-dialog>
-					</el-form-item>
-
-				</el-row>
-			</el-form>
-			<el-tabs v-model="activeTab" class="demo-tabs">
-				<el-tab-pane label="联系人" name="contacttabpane">
-					<el-button class="mt-4" type="primary" @click="handleAddContactRow" :disabled="isEditable"
-						style="margin-bottom: 10px;">添加联系人</el-button>
-					<el-table :data="supperinfoContactsTableData" style="width: 100%">
-						<el-table-column label="联系人姓名">
-							<template #default="{ row }">
-								<el-input v-model="row.name" placeholder="联系人姓名" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="联系人部门">
-							<template #default="{ row }">
-								<el-input v-model="row.department" placeholder="联系人部门" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="联系人性别">
-							<template #default="{ row }">
-								<el-select v-model="row.gender" placeholder="联系人性别" :disabled="isEditable">
-									<el-option v-for="dict in optionss.sys_user_sex" :key="dict.dictCode"
-										:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-								</el-select>
-							</template>
-						</el-table-column>
-						<el-table-column label="联系人职务">
-							<template #default="{ row }">
-								<el-input v-model="row.position" placeholder="联系人职务" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="联系人电话号码">
-							<template #default="{ row }">
-								<el-input v-model="row.phoneNumber" placeholder="电话号码" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="联系人手机号码">
-							<template #default="{ row }">
-								<el-input v-model="row.mobileNumber" placeholder="手机号码" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="联系人电子邮件">
-							<template #default="{ row }">
-								<el-input v-model="row.email" placeholder="电子邮件" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="联系人备注">
-							<template #default="{ row }">
-								<el-input v-model="row.remark" placeholder="备注" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="操作" width="100">
-							<template #default="scope">
-								<el-button type="text" size="small" :disabled="isEditable"
-									@click="handleDeleteContactRow(scope.$index)">删除</el-button>
-							</template>
-						</el-table-column>
-					</el-table>
-				</el-tab-pane>
-				<el-tab-pane label="银行账号" name="second">
-					<el-button class="mt-4" type="primary" @click="handleAddBankRow" :disabled="isEditable"
-						style="margin-bottom: 10px;">添加银行账号</el-button>
-					<el-table :data="supperinfoBankAccountInfoTableData" style="width: 100%">
-						<el-table-column label="开户名称">
-							<template #default="{ row }">
-								<el-input v-model="row.bank_account_name" placeholder="输入开户名称" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="开户银行">
-							<template #default="{ row }">
-								<el-input v-model="row.bank" placeholder="输入开户银行" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="银行账号">
-							<template #default="{ row }">
-								<el-input v-model="row.bank_account_number" placeholder="输入银行账号"
-									:disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="银行地址" v-if="false">
-							<template #default="{ row }">
-								<el-input v-model="row.bank_address" placeholder="输入银行地址" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="备注">
-							<template #default="{ row }">
-								<el-input v-model="row.remark" placeholder="输入备注" :disabled="isEditable" />
-							</template>
-						</el-table-column>
-						<el-table-column label="操作" width="100">
-							<template #default="scope">
-								<el-button type="text" size="small" :disabled="isEditable"
-									@click="handleDeleteBankAccountRow(scope.$index)">删除</el-button>
-							</template>
-						</el-table-column>
-					</el-table>
-				</el-tab-pane>
-				<el-tab-pane label="产品清单" name="ProductList">
-					<el-table :data="supperinfoProductTableData" style="width: 100%">
-						<el-table-column prop="ProductCode" label="产品编号" width="150"></el-table-column>
-						<el-table-column prop="ChineseName" label="中文品名" width="300"></el-table-column>
-						<el-table-column prop="ChineseSpecifications" label="中文规格" width="300"></el-table-column>
-						<el-table-column prop="Unit" label="计量单位" width="150"></el-table-column>
-						<el-table-column prop="lastTransaction" label="最近成交" width="200"></el-table-column>
-						<el-table-column prop="packagingMethod" label="包装方式" width="150" v-if="false"></el-table-column>
-					</el-table>
-				</el-tab-pane>
-				<el-tab-pane label="报价历史" name="quotationHistory">
-					<el-table :data="supperinfoQuotationHistoryData" style="width: 100%">
-						<el-table-column prop="inquiryDate" label="询价日期" width="120"></el-table-column>
-						<el-table-column prop="productCode" label="产品编号" width="120"></el-table-column>
-						<el-table-column prop="chineseName" label="中文品名" width="200"></el-table-column>
-						<el-table-column prop="chineseSpecifications" label="中文规格" width="300"></el-table-column>
-						<el-table-column prop="packagingMethod" label="包装方式" width="120"></el-table-column>
-						<el-table-column prop="purchasePrice" label="采购价格" width="100"></el-table-column>
-						<el-table-column prop="unit" label="计量单位" width="100"></el-table-column>
-						<el-table-column prop="quotationQuantity" label="报价数量" width="100"></el-table-column>
-					</el-table>
-				</el-tab-pane>
-				<el-tab-pane label="采购历史" name="purchaseHistory">
-					<el-table :data="supperinfoPurchaseHistoryData" style="width: 100%">
-						<el-table-column prop="purchaseContractNumber" label="采购合同号"></el-table-column>
-						<el-table-column prop="contractStatus" label="合同状态"></el-table-column>
-						<el-table-column prop="contractQuantity" label="合同数量"></el-table-column>
-						<el-table-column prop="purchasePrice" label="采购单价"></el-table-column>
-						<el-table-column prop="purchaseTotalPrice" label="采购总价"></el-table-column>
-						<el-table-column prop="create_time" label="创建日期"></el-table-column>
-					</el-table>
-				</el-tab-pane>
-				<el-tab-pane label="收寄样历史" name="SampleCollectionHistory">
-					<el-table :data="supperinfoSendSampleData" style="width: 100%">
-						<el-table-column prop="type" label="寄样/收样" width="100"></el-table-column>
-						<el-table-column prop="waybillNumber" label="运单号" width="150"></el-table-column>
-						<el-table-column prop="expressCompany" label="快递公司" width="120"></el-table-column>
-						<el-table-column prop="sampleDate" label="样品日期" width="120"></el-table-column>
-						<el-table-column prop="abbreviation" label="供应商简称" width="150"></el-table-column>
-						<el-table-column prop="companyName" label="我方公司" width="150"></el-table-column>
-						<el-table-column prop="paymentMethod" label="付费方式" width="120"></el-table-column>
-						<el-table-column prop="paidExpressFee" label="已付快递费" width="120">
-							<template #default="scope">
-								<span>￥{{ scope.row.paidExpressFee }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="remark" label="备注"></el-table-column>
-					</el-table></el-tab-pane>
-				<el-tab-pane label="往来邮件" name="emailHistory">
-					<el-table :data="EmailHistoryData" style="width: 100%; max-height: 300px; overflow-y: auto;">
-						<el-table-column prop="EmailDate" label="联系日期" />
-						<el-table-column prop="Contact" label="联系人" />
-						<el-table-column prop="OurPersonnel" label="我方人员" />
-						<el-table-column prop="ContactDetails" label="联系内容" show-overflow-tooltip />
-					</el-table>
-				</el-tab-pane>
-				<el-tab-pane label="客诉历史" name="complaintHistory">
-					<el-table :data="supperinfoComplaintHistoryData" style="width: 100%">
-						<el-table-column prop="purchaseContract" label="采购合同" width="120"></el-table-column>
-						<el-table-column prop="productCode" label="产品编号" width="120"></el-table-column>
-						<el-table-column prop="chineseName" label="中文品名" width="120"></el-table-column>
-						<el-table-column prop="chineseSpecifications" label="中文规格" width="120"></el-table-column>
-						<el-table-column prop="shippingQuantity" label="出货数量" width="100"></el-table-column>
-						<el-table-column prop="unit" label="计量单位" width="100"></el-table-column>
-						<el-table-column prop="claimAmount" label="索赔金额" width="100"></el-table-column>
-						<el-table-column prop="actualCompensation" label="实赔金额" width="100"></el-table-column>
-						<el-table-column prop="salesContract" label="销售合同" width="120"></el-table-column>
-						<el-table-column prop="shippingDate" label="出运日期" width="120"></el-table-column>
-						<el-table-column prop="customerShortName" label="客户简称" width="120"></el-table-column>
-					</el-table></el-tab-pane>
-			</el-tabs>
+			<!-- 表格区域 -->
+			<el-table :data="SupplierInfoTableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="Id" label="供应商ID" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="supplierId" label="供应商编号" width="110">
+					<template #default="scope">
+						<span>{{ scope.row.supplierId }}</span>
+						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column prop="shortName" label="供应商简称" width="110"></el-table-column>
+				<el-table-column prop="fullName" label="供应商全称" width="200"></el-table-column>
+				<el-table-column prop="cooperationLevel" label="供应商等级" width="110"></el-table-column>
+				<el-table-column prop="businessScope" label="业务范围" width="110"></el-table-column>
+				<el-table-column prop="province" label="所在省份" width="110"></el-table-column>
+				<el-table-column prop="address" label="详细地址" width="200"></el-table-column>
+				<el-table-column prop="developmentDate" label="开发时间" width="110">
+					<template #default="scope">
+						{{ formatDateTime(scope.row.developmentDate) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="lastTransaction" label="最近交易" width="110">
+					<template #default="scope">
+						{{ formatDateTime(scope.row.lastTransaction) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="quoteSuccessRate" label="报价成交率" width="110"></el-table-column>
+				<el-table-column fixed="right" label="操作" width="200">
+					<template #default="scope">
+						<el-button type="text" size="small" @click="checkSupplierDetails(scope.row)">查看详情</el-button>
+						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
+							link type="danger" size="small" @click="DeleteSupplier(scope.row)">删除</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="SupplierInfoTableDatahandlePageChange"
+				:current-page="SupplierInfoTableDatacurrentPage" :page-size="SupplierInfoTableDatapageSize"
+				:total="SupplierInfoTableDatatotalItems" background layout="prev, pager, next"
+				style="margin-top: 5px;" />
+		</div>
+		<el-dialog :modal="false" modal-penetrable v-model="AddSupperDialog" title="添加供应商" :close-on-click-modal=false
+			style="width: 75%;" @close="Closeaddsupperdialog">
+			<div style="padding: 10px 0;">
+				<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 15px;">
+					<el-collapse-item title="基本信息" name="basicInfo">
+						<template #title>
+							<span style="font-size: 20px; font-weight: bold;">基本信息</span>
+						</template>
+						<el-form :model="Addsupperinfoform" label-width="120px" :show-message="false">
+							<el-row>
+								<el-col :span="6">
+									<el-form-item label="厂商编号">
+										<el-input v-model="Addsupperinfoform.supplierId" placeholder="请输入厂商编号" disabled
+											style="width: 300px" size="default" />
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="厂商简称">
+										<el-input v-model="Addsupperinfoform.shortName" placeholder="请输入厂商简称"
+											:disabled="isEditable" style="width: 300px" size="default" />
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="厂商名称">
+										<el-input v-model="Addsupperinfoform.fullName" placeholder="请输入厂商名称"
+											:disabled="isEditable" style="width: 300px" size="default" />
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="所在省份">
+										<el-select v-model="Addsupperinfoform.province" placeholder="请选择所在省份"
+											style="width: 300px" :disabled="isEditable" size="default">
+											<el-option v-for="dict in optionss.hr_china_provinces" :key="dict.dictCode"
+												:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+										</el-select>
+									</el-form-item>
+								</el-col>
+							</el-row>
+							<el-row>
+								<el-col :span="6">
+									<el-form-item label="所在城市">
+										<el-input v-model="Addsupperinfoform.city" placeholder="请输入所在城市"
+											style="width: 300px" :disabled="isEditable" size="default" />
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="公司主页">
+										<el-input v-model="Addsupperinfoform.website" placeholder="请输入公司主页"
+											style="width: 300px" :disabled="isEditable" size="default" />
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="详细地址">
+										<el-input v-model="Addsupperinfoform.address" placeholder="请输入详细地址"
+											style="width: 300px" :disabled="isEditable" size="default" />
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="业务范围">
+										<el-input v-model="Addsupperinfoform.businessScope" placeholder="请输入业务范围"
+											style="width: 300px" :disabled="isEditable" size="default" />
+									</el-form-item>
+								</el-col>
+							</el-row>
+							<el-row>
+								<el-col :span="6">
+									<el-form-item label="信用等级">
+										<el-select v-model="Addsupperinfoform.creditLevel" filterable
+											placeholder="自动计算信用等级" disabled style="width: 300px;" size="default">
+											<el-option v-for="dict in optionss.hr_supplier_level" :key="dict.dictCode"
+												:label="dict.dictLabel" :value="dict.dictValue" />
+										</el-select>
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="合作等级">
+										<el-select v-model="Addsupperinfoform.cooperationLevel" filterable
+											placeholder="自动计算合作等级" disabled style="width: 300px;" size="default">
+											<el-option v-for="dict in optionss.hr_supplier_level" :key="dict.dictCode"
+												:label="dict.dictLabel" :value="dict.dictValue" />
+										</el-select>
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="结算方式">
+										<el-select v-model="Addsupperinfoform.paymentMethod" placeholder="请选择结算方式"
+											:disabled="isEditable" style="width: 300px" size="default">
+											<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
+												:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+										</el-select>
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="公司税号">
+										<el-input v-model="Addsupperinfoform.taxNumber" placeholder="请输入公司税号"
+											:disabled="isEditable" style="width: 300px" size="default" />
+									</el-form-item>
+								</el-col>
+							</el-row>
+							<el-row>
+								<el-col :span="6">
+									<el-form-item label="开发时间">
+										<el-date-picker v-model="Addsupperinfoform.developmentDate" type="date"
+											:disabled="isEditable" placeholder="请选择开发时间" style="width: 300px"
+											size="default" />
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="最近成交日期">
+										<el-date-picker v-model="Addsupperinfoform.lastTransaction" disabled type="date"
+											placeholder="自动获取" style="width: 300px" size="default" />
+									</el-form-item>
+								</el-col>
+								<el-col :span="6">
+									<el-form-item label="能否开票">
+										<el-checkbox v-model="Addsupperinfoform.canInvoice" :disabled="isEditable" />
+									</el-form-item>
+								</el-col>
+							</el-row>
+							<el-row>
+								<el-form-item label="供应商图片">
+									<el-upload list-type="picture-card" :auto-upload="false"
+										v-model:file-list="fileList" limit="5" :disabled="fileList.length >= 5"
+										@change="handleChange" :action="UploadUrl" :data="formData">
+										<el-icon>
+											<Plus />
+										</el-icon>
+										<template #file="{ file }">
+											<div>
+												<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
+												<span class="el-upload-list__item-actions">
+													<span class="el-upload-list__item-preview"
+														@click="handlePictureCardPreview(file)">
+														<el-icon><zoom-in /></el-icon>
+													</span>
+													<span v-if="!disabled" class="el-upload-list__item-delete"
+														@click="handleRemove(file)">
+														<el-icon>
+															<Delete />
+														</el-icon>
+													</span>
+												</span>
+											</div>
+										</template>
+									</el-upload>
+									<el-dialog v-model="dialogVisible">
+										<img style="max-width: 100%; max-height: 100%; width: auto; height: auto;"
+											w-full :src="dialogImageUrl" alt="Preview Image" />
+									</el-dialog>
+								</el-form-item>
+							</el-row>
+						</el-form>
+					</el-collapse-item>
+				</el-collapse>
+				<el-tabs v-model="activeTab" class="demo-tabs" style="margin-top: 10px;">
+					<el-tab-pane label="联系人" name="contacttabpane">
+						<div style="padding: 15px 0;">
+							<el-button class="mt-4" type="primary" @click="handleAddContactRow" :disabled="isEditable"
+								style="margin-bottom: 15px;" size="default">添加联系人</el-button>
+							<el-table :data="supperinfoContactsTableData" style="width: 100%; table-layout: fixed;"
+								stripe :header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column label="联系人姓名" width="120">
+									<template #default="{ row }">
+										<el-input v-model="row.name" placeholder="联系人姓名" :disabled="isEditable"
+											size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="联系人部门" width="120">
+									<template #default="{ row }">
+										<el-input v-model="row.department" placeholder="联系人部门" :disabled="isEditable"
+											size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="联系人性别" width="120">
+									<template #default="{ row }">
+										<el-select v-model="row.gender" placeholder="联系人性别" :disabled="isEditable"
+											size="default">
+											<el-option v-for="dict in optionss.sys_user_sex" :key="dict.dictCode"
+												:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+										</el-select>
+									</template>
+								</el-table-column>
+								<el-table-column label="联系人职务" width="120">
+									<template #default="{ row }">
+										<el-input v-model="row.position" placeholder="联系人职务" :disabled="isEditable"
+											size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="联系人电话号码" width="140">
+									<template #default="{ row }">
+										<el-input v-model="row.phoneNumber" placeholder="电话号码" :disabled="isEditable"
+											size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="联系人手机号码" width="140">
+									<template #default="{ row }">
+										<el-input v-model="row.mobileNumber" placeholder="手机号码" :disabled="isEditable"
+											size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="联系人电子邮件" width="180">
+									<template #default="{ row }">
+										<el-input v-model="row.email" placeholder="电子邮件" :disabled="isEditable"
+											size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="联系人备注" width="120">
+									<template #default="{ row }">
+										<el-input v-model="row.remark" placeholder="备注" :disabled="isEditable"
+											size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="操作" width="100">
+									<template #default="scope">
+										<el-button type="text" size="small" :disabled="isEditable"
+											@click="handleDeleteContactRow(scope.$index)">删除</el-button>
+									</template>
+								</el-table-column>
+							</el-table>
+						</div>
+					</el-tab-pane>
+					<el-tab-pane label="银行账号" name="second">
+						<div style="padding: 15px 0;">
+							<el-button class="mt-4" type="primary" @click="handleAddBankRow" :disabled="isEditable"
+								style="margin-bottom: 15px;" size="default">添加银行账号</el-button>
+							<el-table :data="supperinfoBankAccountInfoTableData"
+								style="width: 100%; table-layout: fixed;" stripe
+								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column label="开户名称" width="150">
+									<template #default="{ row }">
+										<el-input v-model="row.bank_account_name" placeholder="输入开户名称"
+											:disabled="isEditable" size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="开户银行" width="150">
+									<template #default="{ row }">
+										<el-input v-model="row.bank" placeholder="输入开户银行" :disabled="isEditable"
+											size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="银行账号" width="200">
+									<template #default="{ row }">
+										<el-input v-model="row.bank_account_number" placeholder="输入银行账号"
+											:disabled="isEditable" size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="银行地址" v-if="false">
+									<template #default="{ row }">
+										<el-input v-model="row.bank_address" placeholder="输入银行地址"
+											:disabled="isEditable" />
+									</template>
+								</el-table-column>
+								<el-table-column label="备注" width="150">
+									<template #default="{ row }">
+										<el-input v-model="row.remark" placeholder="输入备注" :disabled="isEditable"
+											size="default" />
+									</template>
+								</el-table-column>
+								<el-table-column label="操作" width="100">
+									<template #default="scope">
+										<el-button type="text" size="small" :disabled="isEditable"
+											@click="handleDeleteBankAccountRow(scope.$index)">删除</el-button>
+									</template>
+								</el-table-column>
+							</el-table>
+						</div>
+					</el-tab-pane>
+					<el-tab-pane label="产品清单" name="ProductList">
+						<div style="padding: 15px 0;">
+							<el-table :data="supperinfoProductTableData" style="width: 100%; table-layout: fixed;"
+								stripe :header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="ProductCode" label="产品编号" width="150"></el-table-column>
+								<el-table-column prop="ChineseName" label="中文品名" width="300"></el-table-column>
+								<el-table-column prop="ChineseSpecifications" label="中文规格"
+									width="300"></el-table-column>
+								<el-table-column prop="Unit" label="计量单位" width="150"></el-table-column>
+								<el-table-column prop="lastTransaction" label="最近成交" width="200"></el-table-column>
+								<el-table-column prop="packagingMethod" label="包装方式" width="150"
+									v-if="false"></el-table-column>
+							</el-table>
+						</div>
+					</el-tab-pane>
+					<el-tab-pane label="报价历史" name="quotationHistory">
+						<div style="padding: 15px 0;">
+							<el-table :data="supperinfoQuotationHistoryData" style="width: 100%; table-layout: fixed;"
+								stripe :header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="inquiryDate" label="询价日期" width="120">
+									<template #default="scope">
+										{{ scope.row.inquiryDate }}
+									</template>
+								</el-table-column>
+								<el-table-column prop="productCode" label="产品编号" width="120"></el-table-column>
+								<el-table-column prop="chineseName" label="中文品名" width="200"></el-table-column>
+								<el-table-column prop="chineseSpecifications" label="中文规格"
+									width="300"></el-table-column>
+								<el-table-column prop="packagingMethod" label="包装方式" width="120"></el-table-column>
+								<el-table-column prop="purchasePrice" label="采购价格" width="100"></el-table-column>
+								<el-table-column prop="unit" label="计量单位" width="100"></el-table-column>
+								<el-table-column prop="quotationQuantity" label="报价数量" width="100"></el-table-column>
+							</el-table>
+						</div>
+					</el-tab-pane>
+					<el-tab-pane label="采购历史" name="purchaseHistory">
+						<div style="padding: 15px 0;">
+							<el-table :data="supperinfoPurchaseHistoryData" style="width: 100%; table-layout: fixed;"
+								stripe :header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="purchaseContractNumber" label="采购合同号"
+									width="150"></el-table-column>
+								<el-table-column prop="contractStatus" label="合同状态" width="120"></el-table-column>
+								<el-table-column prop="contractQuantity" label="合同数量" width="120"></el-table-column>
+								<el-table-column prop="purchasePrice" label="采购单价" width="120"></el-table-column>
+								<el-table-column prop="purchaseTotalPrice" label="采购总价" width="120"></el-table-column>
+								<el-table-column prop="create_time" label="创建日期" width="120">
+									<template #default="scope">
+										{{ formatDateTime(scope.row.create_time) }}
+									</template>
+								</el-table-column>
+							</el-table>
+						</div>
+					</el-tab-pane>
+					<el-tab-pane label="收寄样历史" name="SampleCollectionHistory">
+						<div style="padding: 15px 0;">
+							<el-table :data="supperinfoSendSampleData" style="width: 100%; table-layout: fixed;" stripe
+								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="type" label="寄样/收样" width="100"></el-table-column>
+								<el-table-column prop="waybillNumber" label="运单号" width="150"></el-table-column>
+								<el-table-column prop="expressCompany" label="快递公司" width="120"></el-table-column>
+								<el-table-column prop="sampleDate" label="样品日期" width="120">
+									<template #default="scope">
+										{{ scope.row.sampleDate }}
+									</template>
+								</el-table-column>
+								<el-table-column prop="abbreviation" label="供应商简称" width="150"></el-table-column>
+								<el-table-column prop="companyName" label="我方公司" width="150"></el-table-column>
+								<el-table-column prop="paymentMethod" label="付费方式" width="120"></el-table-column>
+								<el-table-column prop="paidExpressFee" label="已付快递费" width="120">
+									<template #default="scope">
+										<span>￥{{ scope.row.paidExpressFee }}</span>
+									</template>
+								</el-table-column>
+								<el-table-column prop="remark" label="备注" width="150"></el-table-column>
+							</el-table>
+						</div>
+					</el-tab-pane>
+					<el-tab-pane label="往来邮件" name="emailHistory">
+						<div style="padding: 15px 0;">
+							<el-table :data="EmailHistoryData"
+								style="width: 100%; max-height: 300px; overflow-y: auto; table-layout: fixed;" stripe
+								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="EmailDate" label="联系日期" width="110">
+									<template #default="scope">
+										{{ scope.row.EmailDate }}
+									</template>
+								</el-table-column>
+								<el-table-column prop="Contact" label="联系人" width="180" />
+								<el-table-column prop="OurPersonnel" label="我方人员" width="200" />
+								<el-table-column prop="ContactDetails" label="联系内容" show-overflow-tooltip width="500" />
+							</el-table>
+						</div>
+					</el-tab-pane>
+					<el-tab-pane label="客诉历史" name="complaintHistory">
+						<div style="padding: 15px 0;">
+							<el-table :data="supperinfoComplaintHistoryData" style="width: 100%; table-layout: fixed;"
+								stripe :header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="purchaseContract" label="采购合同" width="120"></el-table-column>
+								<el-table-column prop="productCode" label="产品编号" width="120"></el-table-column>
+								<el-table-column prop="chineseName" label="中文品名" width="120"></el-table-column>
+								<el-table-column prop="chineseSpecifications" label="中文规格"
+									width="120"></el-table-column>
+								<el-table-column prop="shippingQuantity" label="出货数量" width="100"></el-table-column>
+								<el-table-column prop="unit" label="计量单位" width="100"></el-table-column>
+								<el-table-column prop="claimAmount" label="索赔金额" width="100"></el-table-column>
+								<el-table-column prop="actualCompensation" label="实赔金额" width="100"></el-table-column>
+								<el-table-column prop="salesContract" label="销售合同" width="120"></el-table-column>
+								<el-table-column prop="shippingDate" label="出运日期" width="120">
+									<template #default="scope">
+										{{ formatDateTime(scope.row.shippingDate) }}
+									</template>
+								</el-table-column>
+								<el-table-column prop="customerShortName" label="客户简称" width="120"></el-table-column>
+							</el-table>
+						</div>
+					</el-tab-pane>
+				</el-tabs>
+			</div>
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button v-show="isEditBtnVisible" type="primary" @click="IsEditBtnClick">
@@ -652,6 +739,7 @@ const loadBankAccountList = () => {
 
 
 const activeTab = ref('contacttabpane')
+const basicInfoCollapseActive = ref(['basicInfo'])
 const isEditBtnVisible = ref(false)
 const isEditSaveBtnVisible = ref(false)
 const isSavebtnVisible = ref(true)
@@ -1350,17 +1438,14 @@ const getEmailHistoryList = (emailAddress) => {
 		EmailHistoryData.value = [];
 	});
 }
-//日期格式化函数
+//日期格式化函数 - 只显示年月日
 const formatDateTime = (dateTimeStr) => {
 	if (!dateTimeStr) return '';
 	const date = new Date(dateTimeStr);
 	const year = date.getFullYear();
 	const month = String(date.getMonth() + 1).padStart(2, '0');
 	const day = String(date.getDate()).padStart(2, '0');
-	const hours = String(date.getHours()).padStart(2, '0');
-	const minutes = String(date.getMinutes()).padStart(2, '0');
-	const seconds = String(date.getSeconds()).padStart(2, '0');
-	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+	return `${year}-${month}-${day}`;
 }
 
 const isDraft = ref(0)
@@ -1432,3 +1517,14 @@ const DeleteSupplier = (row) => {
 	});
 };
 </script>
+
+<style scoped>
+/* 创建合同和查看合同详情dialog中的表单组件间距减少一半 */
+.el-dialog .el-form-item {
+	margin-bottom: 5px !important;
+}
+
+.el-dialog .el-row {
+	margin-bottom: 2.5px !important;
+}
+</style>

@@ -1,261 +1,354 @@
 <template>
 	<div>
-		<div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click=openCustomerProfileDialog()>客户建档</el-button>
-		<el-button type="primary" @click="CustomerDuplicationCheckDialog = true">客户查重</el-button>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<el-divider></el-divider>
-		<div style="width: 100%; margin-top: 30px;">
-			<!-- <el-input v-model="Search_CustomerNo_input" clearable style="width: 15%"
-				placeholder="输入客户编号" size="default" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
-			<el-input v-model="Search_CustomerEmail_input" clearable style="width: 15%" placeholder="输入邮箱地址"
-				size="default" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="Search_CustomerName_input" placeholder="选择客户名称" style="width: 15%;" filterable
-				size="default">
-				<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-input v-model="Search_CustomerContactPerson_input" clearable style="width: 15%" placeholder="输入联系人"
-				size="default" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="Search_BusinessScope_Select" placeholder="选择业务范围" style="width: 15%;" filterable
-				size="default">
-				<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-		</div>
-		<div style="width: 100%; margin-top: 5px;">
-			<el-select v-model="Search_TradingCountry_Select" class="m-2" placeholder="选择国家" size="default"
-				style="width: 15%;" filterable>
-				<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue" size="default"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="Search_CustomerLevel_Select" class="m-2" placeholder="选择客户等级" size="default"
-				style="width: 15%;">
-				<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue" size="default"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="Search_CustomerSource_Select" class="m-2" placeholder="选择客户来源" size="default"
-				style="width: 15%;">
-				<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue" size="default"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="Search_StartDate_Select" type="date" placeholder="起始日期" size="default"
-				style="width: 15%;" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="Search_EndDate_Select" type="date" placeholder="结束日期" size="default"
-				style="width: 15%;" />
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" @click="SearchSunmit" plain>查询</el-button>
-				<el-button @click="resetSearch">重置</el-button>
-			</el-row>
-		</div>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;客户信息表</span>
-		</div>
-		<el-divider></el-divider>
-		<el-table :data="CunstomeinfotableData" @row-dblclick="CunstomeinfotableDatahandleRowDblClick">
-			<el-table-column prop="customerNo" label="客户编号" style="width: 8%;">
-				<template #default="scope">
-					<span>{{ scope.row.customerNo }}</span>
-					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-				</template>
-			</el-table-column>
-			<el-table-column prop="customerStatus" label="客户状态" style="width: 8%;" />
-			<el-table-column prop="customerLevel" label="客户等级" style="width: 8%;" />
-			<el-table-column prop="customerAbbreviation" label="客户简称" style="width: 8%;" />
-			<el-table-column prop="tradingCountry" label="贸易国别" style="width: 8%;" />
-			<el-table-column prop="Lastcontactdate" label="最近联系时间" style="width: 8%;" />
-			<el-table-column prop="create_time" label="建档时间" style="width: 8%;" />
-			<el-table-column prop="salesPerson" label="所属销售员" style="width: 8%;" />
-			<el-table-column prop="Originalfollower" label="原跟进人" style="width: 8%;" />
-			<el-table-column prop="create_by" label="创建人" style="width: 8%;" />
-			<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
-				<template v-slot:default="scope">
-					<el-button link type="primary" size="small"
-						@click=OpenCustomerProfileDetailDialog(scope.row)>查看详情</el-button>
-					<el-button v-if="scope.row.create_by === useUserStore().userName && scope.row.isDraft" link
-						type="danger" size="small" @click="DeleteCustomerProfile(scope.row)">删除</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="CustomerProfileDialog" title="客户建档"
-			:close-on-click-modal=false style="width: 70%;" @close="resetCustomerProfileDialog()">
-			<span style="font-size: 20px; font-weight: bold;">客户基本信息</span>
-			<el-divider></el-divider>
-			<el-button type="primary" :icon="Plus" size="default" @click="OpenLeadImportDialog"
-				style="margin-bottom: 1.5%;">从线索导入</el-button>
-			<el-form ref="CustomerProfileformRef" :rules="rules" :model="CustomerProfileform" :inline="true"
-				label-width="auto">
-				<el-form-item label="客户状态：">
-					<el-select filterable v-model="CustomerProfileform.customerStatus" placeholder="选择客户状态"
-						style="width: 300px;" disabled>
-						<el-option v-for="dict in optionss.hr_customer_status" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="客户等级：">
-					<el-select filterable v-model="CustomerProfileform.customerLevel" placeholder="自动评级" disabled
-						style="width: 300px;">
-						<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="客户编号：">
-					<el-input v-model="CustomerProfileform.customerNo" disabled placeholder="自动编码"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="客户简称：" prop="customerAbbreviation">
-					<el-input v-model="CustomerProfileform.customerAbbreviation" placeholder="输入客户简称"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="客户名称：" prop="customerName">
-					<el-input v-model="CustomerProfileform.customerName" placeholder="输入客户名称" style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="贸易国别：" prop="tradingCountry">
-					<el-select filterable v-model="CustomerProfileform.tradingCountry" placeholder="选择贸易国别"
-						style="width: 300px;">
-						<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
-							:value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="公司主页：">
-					<el-input v-model="CustomerProfileform.compantWebsite" placeholder="输入公司主页地址"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="客户来源：" prop="customerSource">
-					<el-select filterable v-model="CustomerProfileform.customerSource" placeholder="选择客户来源"
-						style="width: 300px;">
-						<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="业务范围：" prop="businessScope">
-					<el-select filterable v-model="CustomerProfileform.businessScope" placeholder="选择业务范围"
-						style="width: 300px;">
-						<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="价格条款：">
-					<el-select filterable v-model="CustomerProfileform.pricingTerm" placeholder="选择价格条款"
-						style="width: 300px;">
-						<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode" :label="dict.dictLabel"
-							:value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="结汇方式：">
-					<el-select filterable v-model="CustomerProfileform.settlementWay" placeholder="选择结汇方式"
-						style="width: 300px;">
-						<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="收汇期限：">
-					<el-input v-model="CustomerProfileform.collectionPeriod" placeholder="输入收汇期限"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="客户税号：">
-					<el-input v-model="CustomerProfileform.customerTaxNumber" placeholder="输入客户税号"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="销售人员：" prop="salesPerson">
-					<el-select filterable v-model="CustomerProfileform.salesPerson" placeholder="选择销售员"
-						style="width: 300px;">
-						<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode" :label="dict.dictLabel"
-							:value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item><br>
-				<el-form-item style=" width: 93.5%;" label="详细地址：" prop="address1">
-					<el-input type="textarea" v-model="CustomerProfileform.address1" placeholder="输入详细地址" rows="5"
-						style="width: 100%;" />
-				</el-form-item>
-				<el-form-item label="客户照片：">
-					<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList" limit="3"
-						:disabled="fileList.length >= 3" @change="handleChange" :action="UploadUrl" :data="formData">
-						<el-icon>
-							<Plus />
-						</el-icon>
+		<!-- 客户信息表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click=openCustomerProfileDialog() size="default">客户建档</el-button>
+							<el-button type="primary" @click="CustomerDuplicationCheckDialog = true"
+								size="default">客户查重</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
 
-						<template #file="{ file }">
-							<div>
-								<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
-								<span class="el-upload-list__item-actions">
-									<span class="el-upload-list__item-preview" @click="handlePictureCardPreview(file)">
-										<el-icon><zoom-in /></el-icon>
-									</span>
-									<span v-if="!disabled" class="el-upload-list__item-delete"
-										@click="handleRemove(file)">
-										<el-icon>
-											<Delete />
-										</el-icon>
-									</span>
-								</span>
-							</div>
-						</template>
-					</el-upload>
-					<el-dialog v-model="dialogVisible">
-						<img style="max-width: 100%; max-height: 80vh; object-fit: contain; display: block; margin: 0 auto;"
-							:src="dialogImageUrl" alt="Preview Image" />
-					</el-dialog>
-				</el-form-item>
-			</el-form>
-			<span style="font-size: 20px; font-weight: bold;">联系人信息</span>
-			<el-divider></el-divider>
-			<el-button type="primary" :icon="Plus" size="default" @click="AddContactPersonTableRow">新增联系人</el-button>
-			<el-table :data="CustomerContactPersonTableData" style="width: 100%; ">
-				<el-table-column prop="name" label="联系人姓名" width="180" align="left">
-					<template #default="{ row }">
-						<el-input v-model="row.name" placeholder="输入联系人姓名" size="default"></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop="sex" label="性别" width="150" align="left">
-					<template #default="{ row }">
-						<el-select filterable v-model="row.sex" placeholder="请选择性别" size="default">
-							<el-option v-for="dict in optionss.sys_user_sex" :key="dict.dictCode"
-								:label="dict.dictLabel" :value="dict.dictValue" />
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-input v-model="Search_CustomerEmail_input" clearable placeholder="请输入邮箱地址" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="Search_CustomerName_input" placeholder="请选择客户名称" style="width: 100%;"
+							filterable size="default">
+							<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 						</el-select>
-					</template>
-				</el-table-column>
-				<el-table-column prop="position" label="职务" width="180" align="left">
-					<template #default="{ row }">
-						<el-input v-model="row.position" placeholder="输入职务" size="default"></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop="telePhone" label="电话" width="180" align="left">
-					<template #default="{ row }">
-						<el-input v-model="row.telePhone" placeholder="输入电话号码" size="default"></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop="cellPhone" label="手机" width="180" align="left">
-					<template #default="{ row }">
-						<el-input v-model="row.cellPhone" placeholder="输入手机号码" size="default"></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop="fax" label="传真" width="180" align="left">
-					<template #default="{ row }">
-						<el-input v-model="row.fax" placeholder="输入传真" size="default"></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop="email" label="电子邮件" width="180" align="left">
-					<template #default="{ row }">
-						<el-input v-model="row.email" type="email" placeholder="输入电子邮件" size="default"></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column label="操作" width="180" align="center" fixed="right">
+					</el-col>
+					<el-col :span="4">
+						<el-input v-model="Search_CustomerContactPerson_input" clearable placeholder="请输入联系人"
+							size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="Search_BusinessScope_Select" placeholder="请选择业务范围" style="width: 100%;"
+							filterable size="default">
+							<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="Search_TradingCountry_Select" placeholder="请选择国家" size="default"
+							style="width: 100%;" filterable>
+							<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
+								:value="dict.dictValue" size="default"></el-option>
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select filterable v-model="Search_CustomerLevel_Select" placeholder="请选择客户等级" size="default"
+							style="width: 100%;">
+							<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
+						</el-select>
+					</el-col>
+				</el-row>
+				<el-row :gutter="15">
+					<el-col :span="4">
+						<el-select filterable v-model="Search_CustomerSource_Select" placeholder="请选择客户来源"
+							size="default" style="width: 100%;">
+							<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="Search_StartDate_Select" type="date" placeholder="请选择起始日期"
+							size="default" style="width: 100%;" />
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="Search_EndDate_Select" type="date" placeholder="请选择结束日期" size="default"
+							style="width: 100%;" />
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="SearchSunmit" size="default">查询</el-button>
+							<el-button @click="resetSearch" size="default">重置</el-button>
+						</div>
+					</el-col>
+					<el-col :span="8">
+						<!-- 空白区域 -->
+					</el-col>
+				</el-row>
+			</div>
+
+			<!-- 表格区域 -->
+			<el-table :data="CunstomeinfotableData" @row-dblclick="CunstomeinfotableDatahandleRowDblClick"
+				style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="customerNo" label="客户编号" width="90">
 					<template #default="scope">
-						<el-button type="text" size="default"
-							@click="RemoveContactPersonTableRow(scope.$index)">删除</el-button>
+						<span>{{ scope.row.customerNo }}</span>
+						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column prop="customerStatus" label="客户状态" width="90" />
+				<el-table-column prop="customerLevel" label="客户等级" width="90" />
+				<el-table-column prop="customerAbbreviation" label="客户简称" width="150" />
+				<el-table-column prop="tradingCountry" label="贸易国别" width="90" />
+				<el-table-column prop="Lastcontactdate" label="最近联系时间" width="140" />
+				<el-table-column prop="create_time" label="建档时间" width="110">
+					<template #default="scope">
+						{{ formatDate(scope.row.create_time) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="salesPerson" label="所属销售员" width="130" />
+				<el-table-column prop="Originalfollower" label="原跟进人" width="130" />
+				<el-table-column prop="create_by" label="创建人" width="130" />
+				<el-table-column fixed="right" prop="operate" label="操作" width="200">
+					<template v-slot:default="scope">
+						<el-button link type="primary" size="small"
+							@click=OpenCustomerProfileDetailDialog(scope.row)>查看详情</el-button>
+						<el-button v-if="scope.row.create_by === useUserStore().userName && scope.row.isDraft" link
+							type="danger" size="small" @click="DeleteCustomerProfile(scope.row)">删除</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
+			<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
+				:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+		</div>
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="CustomerProfileDialog" title="客户建档"
+			:close-on-click-modal=false style="width: 75%;" @close="resetCustomerProfileDialog()">
+			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="客户基本信息" name="basicInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">客户基本信息</span>
+					</template>
+					<el-button type="primary" :icon="Plus" size="default" @click="OpenLeadImportDialog"
+						style="margin-bottom: 15px;">从线索导入</el-button>
+					<el-form ref="CustomerProfileformRef" :rules="rules" :model="CustomerProfileform"
+						label-width="120px" :show-message="false">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="客户状态">
+									<el-select filterable v-model="CustomerProfileform.customerStatus"
+										placeholder="选择客户状态" style="width: 100%;" disabled>
+										<el-option v-for="dict in optionss.hr_customer_status" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户等级">
+									<el-select filterable v-model="CustomerProfileform.customerLevel" placeholder="自动评级"
+										disabled style="width: 100%;">
+										<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户编号">
+									<el-input v-model="CustomerProfileform.customerNo" disabled placeholder="自动编码"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户简称" prop="customerAbbreviation">
+									<el-input v-model="CustomerProfileform.customerAbbreviation" placeholder="输入客户简称"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="客户名称" prop="customerName">
+									<el-input v-model="CustomerProfileform.customerName" placeholder="输入客户名称"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="贸易国别" prop="tradingCountry">
+									<el-select filterable v-model="CustomerProfileform.tradingCountry"
+										placeholder="选择贸易国别" style="width: 100%;">
+										<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="公司主页">
+									<el-input v-model="CustomerProfileform.compantWebsite" placeholder="输入公司主页地址"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户来源" prop="customerSource">
+									<el-select filterable v-model="CustomerProfileform.customerSource"
+										placeholder="选择客户来源" style="width: 100%;">
+										<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="业务范围" prop="businessScope">
+									<el-select filterable v-model="CustomerProfileform.businessScope"
+										placeholder="选择业务范围" style="width: 100%;">
+										<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="价格条款">
+									<el-select filterable v-model="CustomerProfileform.pricingTerm" placeholder="选择价格条款"
+										style="width: 100%;">
+										<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="结汇方式">
+									<el-select filterable v-model="CustomerProfileform.settlementWay"
+										placeholder="选择结汇方式" style="width: 100%;">
+										<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="收汇期限">
+									<el-input v-model="CustomerProfileform.collectionPeriod" placeholder="输入收汇期限"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="客户税号">
+									<el-input v-model="CustomerProfileform.customerTaxNumber" placeholder="输入客户税号"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="销售人员" prop="salesPerson">
+									<el-select filterable v-model="CustomerProfileform.salesPerson" placeholder="选择销售员"
+										style="width: 100%;">
+										<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="详细地址" prop="address1">
+									<el-input type="textarea" v-model="CustomerProfileform.address1"
+										placeholder="输入详细地址" rows="3" style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="24">
+								<el-form-item label="客户照片">
+									<el-upload list-type="picture-card" :auto-upload="false"
+										v-model:file-list="fileList" limit="3" :disabled="fileList.length >= 3"
+										@change="handleChange" :action="UploadUrl" :data="formData">
+										<el-icon>
+											<Plus />
+										</el-icon>
+
+										<template #file="{ file }">
+											<div>
+												<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
+												<span class="el-upload-list__item-actions">
+													<span class="el-upload-list__item-preview"
+														@click="handlePictureCardPreview(file)">
+														<el-icon><zoom-in /></el-icon>
+													</span>
+													<span v-if="!disabled" class="el-upload-list__item-delete"
+														@click="handleRemove(file)">
+														<el-icon>
+															<Delete />
+														</el-icon>
+													</span>
+												</span>
+											</div>
+										</template>
+									</el-upload>
+									<el-dialog v-model="dialogVisible">
+										<img style="max-width: 100%; max-height: 80vh; object-fit: contain; display: block; margin: 0 auto;"
+											:src="dialogImageUrl" alt="Preview Image" />
+									</el-dialog>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+
+			<el-collapse v-model="contactInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="联系人信息" name="contactInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">联系人信息</span>
+					</template>
+					<el-button type="primary" :icon="Plus" size="default" @click="AddContactPersonTableRow"
+						style="margin-bottom: 15px;">新增联系人</el-button>
+					<el-table :data="CustomerContactPersonTableData" style="width: 100%; table-layout: fixed;"
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table-column prop="name" label="联系人姓名" width="150" align="left">
+							<template #default="{ row }">
+								<el-input v-model="row.name" placeholder="输入联系人姓名" size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="sex" label="性别" width="120" align="left">
+							<template #default="{ row }">
+								<el-select filterable v-model="row.sex" placeholder="请选择性别" size="default">
+									<el-option v-for="dict in optionss.sys_user_sex" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="position" label="职务" width="150" align="left">
+							<template #default="{ row }">
+								<el-input v-model="row.position" placeholder="输入职务" size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="telePhone" label="电话" width="150" align="left">
+							<template #default="{ row }">
+								<el-input v-model="row.telePhone" placeholder="输入电话号码" size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="cellPhone" label="手机" width="150" align="left">
+							<template #default="{ row }">
+								<el-input v-model="row.cellPhone" placeholder="输入手机号码" size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="fax" label="传真" width="150" align="left">
+							<template #default="{ row }">
+								<el-input v-model="row.fax" placeholder="输入传真" size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="email" label="电子邮件" width="200" align="left">
+							<template #default="{ row }">
+								<el-input v-model="row.email" type="email" placeholder="输入电子邮件"
+									size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column label="操作" width="100" align="center" fixed="right">
+							<template #default="scope">
+								<el-button type="text" size="default"
+									@click="RemoveContactPersonTableRow(scope.$index)">删除</el-button>
+							</template>
+						</el-table-column>
+					</el-table>
+				</el-collapse-item>
+			</el-collapse>
 
 			<template #footer>
 				<span class="dialog-footer">
@@ -268,312 +361,430 @@
 				</span>
 			</template>
 		</el-dialog>
-		<el-dialog v-model="LeadImportDialog" title="线索导入" :close-on-click-modal=false style="width: 50%;">
-			<el-table :data="CustomerLeadsTableData" @row-dblclick="handleRowDblClick" align="center">
-				<el-table-column fixed prop="id" label="线索编号" style="width: 12%;" />
-				<el-table-column prop="contactEmail" label="邮箱" style="width: 12%;" />
-				<el-table-column prop="customerName" label="客户名称" style="width: 12%;" />
-				<el-table-column prop="customerLevel" label="客户等级" style="width: 12%;" />
-				<el-table-column prop="customerNation" label="国家" style="width: 12%;" />
-				<el-table-column prop="contactName" label="联系人" style="width: 12%;" />
-				<el-table-column prop="customerSource" label="来源" style="width: 12%;" />
-				<el-table-column prop="involvingBusiness" label="涉及业务" style="width: 12%;" />
-				<el-table-column prop="create_by" label="创建人" style="width: 12%;" />
+		<el-dialog v-model="LeadImportDialog" title="线索导入" :close-on-click-modal=false style="width: 70%;">
+			<el-table :data="CustomerLeadsTableData" @row-dblclick="handleRowDblClick" align="center"
+				style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column fixed prop="id" label="线索编号" width="120" />
+				<el-table-column prop="contactEmail" label="邮箱" width="200" />
+				<el-table-column prop="customerName" label="客户名称" width="150" />
+				<el-table-column prop="customerLevel" label="客户等级" width="120" />
+				<el-table-column prop="customerNation" label="国家" width="120" />
+				<el-table-column prop="contactName" label="联系人" width="120" />
+				<el-table-column prop="customerSource" label="来源" width="120" />
+				<el-table-column prop="involvingBusiness" label="涉及业务" width="150" />
+				<el-table-column prop="create_by" label="创建人" width="120" />
 			</el-table>
 			<el-pagination @current-change="CustomerLeadsTableDatahandlePageChange"
 				:current-page="CustomerLeadsTableDatacurrentPage" :page-size="CustomerLeadsTableDatapageSize"
 				:total="CustomerLeadsTableDatatotalItems" background layout="prev, pager, next"
 				style="margin-top: 5px;" />
 		</el-dialog>
-		<el-dialog v-model="CustomerDuplicationCheckDialog" title="客户查重" :close-on-click-modal=false
-			style="width: 70%;">
-			<span style="font-size: 20px; font-weight: bold;">查重字段</span>
-			<el-divider></el-divider>
-			<el-form :model="CustomerDuplicationCheckform" inline=true label-position="left" size="default"
-				style="margin-top: 15px;">
-				<el-form-item label="客户简称：" prop="Cabbreviation">
-					<el-input v-model="CustomerDuplicationCheckform.Cabbreviation" placeholder="输入客户简称"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="客户名称：" prop="Cname">
-					<el-input v-model="CustomerDuplicationCheckform.Cname" placeholder="输入客户名称" style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="客户地址：" prop="Caddress">
-					<el-input v-model="CustomerDuplicationCheckform.Caddress" placeholder="输入客户地址"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="客户邮箱：" prop="Cemail">
-					<el-input v-model="CustomerDuplicationCheckform.Cemail" placeholder="输入客户邮箱"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="电话号码：" prop="Ctellphone">
-					<el-input v-model="CustomerDuplicationCheckform.Ctellphone" placeholder="输入电话号码"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-row class="mb-4">
-					<el-button type="primary" plain @click="DuplicationCheckSearch">查询</el-button>
-					<el-button @click="DuplicationCheckReset">重置</el-button>
-				</el-row>
-			</el-form>
-			<div style="margin-top: 15px;">
-				<span style="font-size: 20px; font-weight: bold; ">查重结果</span>
-			</div>
-			<el-divider></el-divider>
-			<el-table :data="CustomerDuplicationCheckData">
-				<el-table-column prop="customerNo" label="客户编号" style="width: 8%;" />
-				<el-table-column prop="customerStatus" label="客户状态" style="width: 8%;" />
-				<el-table-column prop="customerLevel" label="客户等级" style="width: 8%;" />
-				<el-table-column prop="customerAbbreviation" label="客户简称" style="width: 8%;" />
-				<el-table-column prop="tradingCountry" label="贸易国别" style="width: 8%;" />
-				<el-table-column prop="Lastcontactdate" label="最近联系时间" style="width: 8%;" />
-				<el-table-column prop="create_time" label="建档时间" style="width: 8%;" />
-				<el-table-column prop="salesName" label="所属销售员" style="width: 8%;" />
-				<el-table-column prop="Originalfollower" label="原跟进人" style="width: 8%;" />
-				<el-table-column prop="create_by" label="创建人" style="width: 8%;" />
-			</el-table>
+		<el-dialog :modal="false" modal-penetrable v-model="CustomerDuplicationCheckDialog" title="客户查重"
+			:close-on-click-modal=false style="width: 75%;">
+			<el-collapse v-model="duplicationCheckCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="查重字段" name="duplicationCheck">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">查重字段</span>
+					</template>
+					<el-form :model="CustomerDuplicationCheckform" label-width="120px" size="default"
+						:show-message="false">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="客户简称" prop="Cabbreviation">
+									<el-input v-model="CustomerDuplicationCheckform.Cabbreviation" placeholder="输入客户简称"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户名称" prop="Cname">
+									<el-input v-model="CustomerDuplicationCheckform.Cname" placeholder="输入客户名称"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户地址" prop="Caddress">
+									<el-input v-model="CustomerDuplicationCheckform.Caddress" placeholder="输入客户地址"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户邮箱" prop="Cemail">
+									<el-input v-model="CustomerDuplicationCheckform.Cemail" placeholder="输入客户邮箱"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="电话号码" prop="Ctellphone">
+									<el-input v-model="CustomerDuplicationCheckform.Ctellphone" placeholder="输入电话号码"
+										style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<!-- <div style="text-align: left;">
+									<el-button type="primary" plain @click="DuplicationCheckSearch"
+										size="default">查询</el-button>
+									<el-button @click="DuplicationCheckReset" size="default">重置</el-button>
+								</div> -->
+								<el-form-item>
+									<el-button type="primary" plain @click="DuplicationCheckSearch"
+										size="default">查询</el-button>
+									<el-button @click="DuplicationCheckReset" size="default">重置</el-button>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<!-- 空白区域 -->
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+
+			<el-collapse v-model="duplicationResultCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="查重结果" name="duplicationResult">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">查重结果</span>
+					</template>
+					<el-table :data="CustomerDuplicationCheckData" style="width: 100%; table-layout: fixed;" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table-column prop="customerNo" label="客户编号" width="120" />
+						<el-table-column prop="customerStatus" label="客户状态" width="100" />
+						<el-table-column prop="customerLevel" label="客户等级" width="100" />
+						<el-table-column prop="customerAbbreviation" label="客户简称" width="150" />
+						<el-table-column prop="tradingCountry" label="贸易国别" width="120" />
+						<el-table-column prop="Lastcontactdate" label="最近联系时间" width="140" />
+						<el-table-column prop="create_time" label="建档时间" width="140">
+							<template #default="scope">
+								{{ formatDate(scope.row.create_time) }}
+							</template>
+						</el-table-column>
+						<el-table-column prop="salesName" label="所属销售员" width="120" />
+						<el-table-column prop="Originalfollower" label="原跟进人" width="120" />
+						<el-table-column prop="create_by" label="创建人" width="100" />
+					</el-table>
+				</el-collapse-item>
+			</el-collapse>
 		</el-dialog>
 		<el-dialog :modal="false" :modal-penetrable="true" v-model="CustomerProfileDetailDialog" title="客户详情"
-			:close-on-click-modal=false style="width: 70%;">
-			<span style="font-size: 20px; font-weight: bold;">客户基本信息</span>
-			<el-divider></el-divider>
-			<el-form :model="CustomerProfileDetailDialogform" inline=true label-position="left" size="default">
-				<el-form-item label="客户状态：">
-					<el-select filterable v-model="CustomerProfileDetailDialogform.customerStatus" placeholder="选择客户状态"
-						style="width: 300px;" disabled>
-						<el-option v-for="dict in optionss.hr_customer_status" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="客户等级：">
-					<el-select filterable v-model="CustomerProfileDetailDialogform.customerLevel" placeholder="选择客户等级"
-						style="width: 300px;" disabled>
-						<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="客户编号：">
-					<el-input v-model="CustomerProfileDetailDialogform.customerNo" disabled placeholder="自动编码"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="客户简称：">
-					<el-input v-model="CustomerProfileDetailDialogform.customerAbbreviation" placeholder="输入客户简称"
-						style="width: 300px;" disabled />
-				</el-form-item>
-				<el-form-item label="客户名称：">
-					<el-input v-model="CustomerProfileDetailDialogform.customerName" placeholder="输入客户名称"
-						style="width: 300px;" disabled />
-				</el-form-item>
-				<el-form-item label="贸易国别：">
-					<el-select filterable v-model="CustomerProfileDetailDialogform.tradingCountry" placeholder="选择贸易国别"
-						style="width: 300px;" disabled>
-						<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
-							:value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="公司主页：">
-					<el-input v-model="CustomerProfileDetailDialogform.compantWebsite" placeholder="输入公司主页地址"
-						style="width: 300px;" disabled />
-				</el-form-item>
-				<el-form-item label="客户来源：">
-					<el-select filterable v-model="CustomerProfileDetailDialogform.customerSource" disabled class="m-2"
-						placeholder="选择客户来源" size="default" style="width: 300px;">
-						<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="业务范围：">
-					<el-select filterable v-model="CustomerProfileDetailDialogform.businessScope" disabled
-						placeholder="选择业务范围" style="width: 300px;">
-						<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="价格条款：">
-					<el-select filterable v-model="CustomerProfileDetailDialogform.pricingTerm" placeholder="选择价格条款"
-						style="width: 300px;" disabled>
-						<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode" :label="dict.dictLabel"
-							:value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="结汇方式：">
-					<el-select filterable v-model="CustomerProfileDetailDialogform.settlementWay" placeholder="选择结汇方式"
-						style="width: 300px;" disabled>
-						<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="收汇期限：">
-					<el-input v-model="CustomerProfileDetailDialogform.collectionPeriod" placeholder="输入收汇期限"
-						style="width: 300px;" disabled />
-				</el-form-item>
-				<el-form-item label="客户税号：">
-					<el-input v-model="CustomerProfileDetailDialogform.customerTaxNumber" placeholder="输入客户税号"
-						style="width: 300px;" disabled />
-				</el-form-item>
-				<el-form-item label="销售人员：">
-					<el-select filterable v-model="CustomerProfileDetailDialogform.salesPerson" placeholder="选择销售员"
-						style="width: 300px;" disabled>
-						<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode" :label="dict.dictLabel"
-							:value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item><br>
-				<el-form-item label="详细地址：" style="width: 93.5%;">
-					<el-input type="textarea" v-model="CustomerProfileDetailDialogform.address1" placeholder="输入详细地址"
-						rows="5" style="width: 100%;" disabled />
-				</el-form-item>
-				<el-form-item label="客户照片：">
-					<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList" limit="3"
-						:disabled="fileList.length >= 3" @change="handleChange" :action="UploadUrl" :data="formData">
-						<el-icon>
-							<Plus />
-						</el-icon>
-						<template #file="{ file }">
-							<div>
-								<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
-								<span class="el-upload-list__item-actions">
-									<span class="el-upload-list__item-preview" @click="handlePictureCardPreview(file)">
-										<el-icon><zoom-in /></el-icon>
-									</span>
-									<span v-if="!disabled" class="el-upload-list__item-delete"
-										@click="handleRemove(file)">
+			:close-on-click-modal=false style="width: 75%;">
+			<el-collapse v-model="detailBasicInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="客户基本信息" name="detailBasicInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">客户基本信息</span>
+					</template>
+					<el-form :model="CustomerProfileDetailDialogform" label-width="120px" size="default">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="客户状态">
+									<el-select filterable v-model="CustomerProfileDetailDialogform.customerStatus"
+										placeholder="选择客户状态" style="width: 100%;" disabled>
+										<el-option v-for="dict in optionss.hr_customer_status" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户等级">
+									<el-select filterable v-model="CustomerProfileDetailDialogform.customerLevel"
+										placeholder="选择客户等级" style="width: 100%;" disabled>
+										<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户编号">
+									<el-input v-model="CustomerProfileDetailDialogform.customerNo" disabled
+										placeholder="自动编码" style="width: 100%;" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户简称">
+									<el-input v-model="CustomerProfileDetailDialogform.customerAbbreviation"
+										placeholder="输入客户简称" style="width: 100%;" disabled />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="客户名称">
+									<el-input v-model="CustomerProfileDetailDialogform.customerName"
+										placeholder="输入客户名称" style="width: 100%;" disabled />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="贸易国别">
+									<el-select filterable v-model="CustomerProfileDetailDialogform.tradingCountry"
+										placeholder="选择贸易国别" style="width: 100%;" disabled>
+										<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="公司主页">
+									<el-input v-model="CustomerProfileDetailDialogform.compantWebsite"
+										placeholder="输入公司主页地址" style="width: 100%;" disabled />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户来源">
+									<el-select filterable v-model="CustomerProfileDetailDialogform.customerSource"
+										disabled placeholder="选择客户来源" size="default" style="width: 100%;">
+										<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="业务范围">
+									<el-select filterable v-model="CustomerProfileDetailDialogform.businessScope"
+										disabled placeholder="选择业务范围" style="width: 100%;">
+										<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="价格条款">
+									<el-select filterable v-model="CustomerProfileDetailDialogform.pricingTerm"
+										placeholder="选择价格条款" style="width: 100%;" disabled>
+										<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="结汇方式">
+									<el-select filterable v-model="CustomerProfileDetailDialogform.settlementWay"
+										placeholder="选择结汇方式" style="width: 100%;" disabled>
+										<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="收汇期限">
+									<el-input v-model="CustomerProfileDetailDialogform.collectionPeriod"
+										placeholder="输入收汇期限" style="width: 100%;" disabled />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="客户税号">
+									<el-input v-model="CustomerProfileDetailDialogform.customerTaxNumber"
+										placeholder="输入客户税号" style="width: 100%;" disabled />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="销售人员">
+									<el-select filterable v-model="CustomerProfileDetailDialogform.salesPerson"
+										placeholder="选择销售员" style="width: 100%;" disabled>
+										<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="详细地址">
+									<el-input type="textarea" v-model="CustomerProfileDetailDialogform.address1"
+										placeholder="输入详细地址" rows="3" style="width: 100%;" disabled />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="24">
+								<el-form-item label="客户照片">
+									<el-upload list-type="picture-card" :auto-upload="false"
+										v-model:file-list="fileList" limit="3" :disabled="fileList.length >= 3"
+										@change="handleChange" :action="UploadUrl" :data="formData">
 										<el-icon>
-											<Delete />
+											<Plus />
 										</el-icon>
-									</span>
-								</span>
-							</div>
-						</template>
-					</el-upload>
-					<el-dialog v-model="dialogVisible" append-to-body>
-						<img style="max-width: 100%; max-height: 80vh; object-fit: contain; display: block; margin: 0 auto;"
-							:src="dialogImageUrl" alt="Preview Image" />
-					</el-dialog>
-				</el-form-item>
-			</el-form>
-			<el-tabs v-model="activeTab" tab-position="top" style="height: 350px; " class="demo-tabs">
-				<el-tab-pane label="联系人信息" name="ContactInfoTable">
-					<el-table :data="ContactPersonData">
-						<el-table-column prop="name" label="姓名" style="width: 8%;" />
-						<el-table-column prop="sexText" label="性别" style="width: 8%;" />
-						<el-table-column prop="position" label="职务" style="width: 8%;" />
-						<el-table-column prop="telePhone" label="电话" style="width: 8%;" />
-						<el-table-column prop="cellPhone" label="手机" style="width: 8%;" />
-						<el-table-column prop="fax" label="传真" style="width: 8%;" />
-						<el-table-column prop="email" label="邮件" style="width: 8%;" />
-					</el-table>
-				</el-tab-pane>
-				<el-tab-pane label="联系日志" name="ContactLogTable">
-					<el-button type="primary" @click="AddContactLog">添加联系日志</el-button>
-					<el-table :data="ContactLogData" height="200" style="width: 100%"
-						@row-dblclick="handleContactLogRowDblClick">
-						<el-table-column prop="conactTag" label="日志标签" width="130" />
-						<el-table-column prop="emailDate" label="联系日期" width="130" />
-						<el-table-column prop="logSouce" label="来源" width="150" />
-						<el-table-column prop="contact" label="联系人" width="180" />
-						<el-table-column prop="ourPersonnel" label="我方人员" width="180" />
-						<el-table-column prop="relatedDocumentType" label="关联单据类型" width="180">
-							<template #default="{ row }">
-								{{ row.relatedDocumentType === 1 ? '销售合同' : row.relatedDocumentType === 2 ? '出运合同' : '无'
-								}}
-							</template>
-						</el-table-column>
-						<el-table-column prop="contactDetails" label="联系内容" show-overflow-tooltip />
-						<el-table-column label="图片" width="100">
-							<template #default="{ row }">
-								<el-image v-if="row.images && row.images.length > 0" style="width: 50px; height: 50px;"
-									:src="row.images.split(',')[0]" :preview-src-list="row.images.split(',')"
-									fit="cover" :preview-teleported="true" :initial-index="0" />
-								<span v-else>无图片</span>
-							</template>
-						</el-table-column>
-						<el-table-column label="附件" width="100">
-							<template #default="{ row }">
-								<el-button v-if="row.attachments && row.attachments.length > 0" type="primary" link
-									@click="downloadAttachment(row.attachments)">
-									下载附件
-								</el-button>
-								<span v-else>无附件</span>
-							</template>
-						</el-table-column>
-					</el-table>
-					<el-pagination @current-change="ContactLogTablehandlePageChange"
-						:current-page="ContactLogTablecurrentPage" :page-size="ContactLogTablepageSize"
-						:total="ContactLogTabletotalItems" background layout="prev, pager, next"
-						style="margin-top: 5px;" />
-				</el-tab-pane>
-				<el-tab-pane label="报价记录" name="QuoteRecordTable">
-					<el-table :data="QuotationRecordData" @row-dblclick="handleQuoteRowDblClick">
-						<el-table-column prop="id" label="ID" width="100" v-if="false"></el-table-column>
-						<el-table-column prop="quotationNum" label="报价单号" :width="200">
-							<template #default="scope">
-								<span>{{ scope.row.quotationNum }}</span>
-								<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
-									size="small">草稿</el-tag>
-								<el-tag v-if="scope.row.version > 1" type="success" style="margin-left: 5px;"
-									size="small">
-									{{ getVersionText(scope.row.version) }}
-								</el-tag>
-							</template>
-						</el-table-column>
-						<el-table-column prop="realQuotationDate" label="报价日期" style="width: 8%;" />
-						<el-table-column prop="validityPeriod" label="有效期" style="width: 8%;" />
-					</el-table>
-					<el-pagination @current-change="QuotationRecordHandlePageChange"
-						:current-page="QuotationRecordCurrentPage" :page-size="QuotationRecordPageSize"
-						:total="QuotationRecordTotalItems" background layout="prev, pager, next, total"
-						style="margin-top: 5px;" :pager-count="5" :hide-on-single-page="false" />
-				</el-tab-pane>
-				<el-tab-pane label="销售记录" name="saleRecordTable">
-					<el-table :data="SalesContractRecordData" @row-dblclick="handleSalesContractRowDblClick">
-						<el-table-column prop="contractNumber" label="销售合同" style="width: 8%;" />
-						<el-table-column prop="contractDate" label="合同日期" style="width: 8%;" />
-						<el-table-column prop="effectiveDate" label="生效日期" style="width: 8%;" />
-						<el-table-column prop="deliveryDate" label="交货日期" style="width: 8%;" />
-						<el-table-column prop="goodsValue" label="货值合计" style="width: 8%;" />``
-					</el-table>
-					<el-pagination @current-change="SalesContractRecordHandlePageChange"
-						:current-page="SalesContractRecordCurrentPage" :page-size="SalesContractRecordPageSize"
-						:total="SalesContractRecordTotalItems" background layout="prev, pager, next"
-						style="margin-top: 5px;" />
-				</el-tab-pane>
-				<el-tab-pane label="收寄样历史" name="SampleCollectionHistory">
-					<el-table :data="CustomerSendSampleData" style="width: 100%"
-						@row-dblclick="handleSampleRowDblClick">
-						<el-table-column prop="id" label="ID" width="100" v-if="false"></el-table-column>
-						<el-table-column prop="type" label="寄样/收样" width="100"></el-table-column>
-						<el-table-column prop="waybillNumber" label="运单号" width="150"></el-table-column>
-						<el-table-column prop="expressCompany" label="快递公司" width="120"></el-table-column>
-						<el-table-column prop="sampleDate" label="样品日期" width="120"></el-table-column>
-						<el-table-column prop="abbreviation" label="供应商简称" width="150"></el-table-column>
-						<el-table-column prop="companyName" label="我方公司" width="150"></el-table-column>
-						<el-table-column prop="paymentMethod" label="付费方式" width="120"></el-table-column>
-						<el-table-column prop="paidExpressFee" label="已付快递费" width="120">
-							<template #default="scope">
-								<span>￥{{ scope.row.paidExpressFee }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="remark" label="备注"></el-table-column>
-					</el-table>
-					<el-pagination @current-change="CustomerSendSampleHandlePageChange"
-						:current-page="CustomerSendSampleCurrentPage" :page-size="CustomerSendSamplePageSize"
-						:total="CustomerSendSampleTotalItems" background layout="prev, pager, next"
-						style="margin-top: 5px;" />
-				</el-tab-pane>
-				<el-tab-pane label="出货记录" name="ShippingRecordTable">
-					<el-table :data="ShipRecoreData">
-						<el-table-column prop="Cnum" label="发票号码" style="width: 8%;" />
-						<el-table-column prop="Cstate" label="出运日期" style="width: 8%;" />
-						<el-table-column prop="Cgrade" label="销售合同" style="width: 8%;" />
-						<el-table-column prop="Cabbreviation" label="产品编号" style="width: 8%;" />
-						<el-table-column prop="Ctradingcountry" label="客户货号" style="width: 8%;" />
-						<el-table-column prop="Lastcontactdate" label="中文品名" style="width: 8%;" />
-						<el-table-column prop="Archivecreationdate" label="出货数量" style="width: 8%;" />
-						<el-table-column prop="CSeller" label="计量单位" style="width: 8%;" />
-						<el-table-column prop="Originalfollower" label="外销单价" style="width: 8%;" />
-						<el-table-column prop="Founder" label="外销总价" style="width: 8%;" />
-					</el-table>
-				</el-tab-pane>
-			</el-tabs>
+										<template #file="{ file }">
+											<div>
+												<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
+												<span class="el-upload-list__item-actions">
+													<span class="el-upload-list__item-preview"
+														@click="handlePictureCardPreview(file)">
+														<el-icon><zoom-in /></el-icon>
+													</span>
+													<span v-if="!disabled" class="el-upload-list__item-delete"
+														@click="handleRemove(file)">
+														<el-icon>
+															<Delete />
+														</el-icon>
+													</span>
+												</span>
+											</div>
+										</template>
+									</el-upload>
+									<el-dialog v-model="dialogVisible" append-to-body>
+										<img style="max-width: 100%; max-height: 80vh; object-fit: contain; display: block; margin: 0 auto;"
+											:src="dialogImageUrl" alt="Preview Image" />
+									</el-dialog>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+
+			<el-collapse v-model="detailTabsCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="详细信息" name="detailTabs">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">详细信息</span>
+					</template>
+					<el-tabs v-model="activeTab" tab-position="top" style="height: 350px;" class="demo-tabs">
+						<el-tab-pane label="联系人信息" name="ContactInfoTable">
+							<el-table :data="ContactPersonData" style="width: 100%; table-layout: fixed;"
+								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="name" label="姓名" width="120" />
+								<el-table-column prop="sexText" label="性别" width="100" />
+								<el-table-column prop="position" label="职务" width="150" />
+								<el-table-column prop="telePhone" label="电话" width="150" />
+								<el-table-column prop="cellPhone" label="手机" width="150" />
+								<el-table-column prop="fax" label="传真" width="150" />
+								<el-table-column prop="email" label="邮件" width="200" />
+							</el-table>
+						</el-tab-pane>
+						<el-tab-pane label="联系日志" name="ContactLogTable">
+							<el-button type="primary" @click="AddContactLog"
+								style="margin-bottom: 15px;">添加联系日志</el-button>
+							<el-table :data="ContactLogData" height="200" style="width: 100%; table-layout: fixed;"
+								@row-dblclick="handleContactLogRowDblClick"
+								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="conactTag" label="日志标签" width="130" />
+								<el-table-column prop="emailDate" label="联系日期" width="130" />
+								<el-table-column prop="logSouce" label="来源" width="150" />
+								<el-table-column prop="contact" label="联系人" width="180" />
+								<el-table-column prop="ourPersonnel" label="我方人员" width="180" />
+								<el-table-column prop="relatedDocumentType" label="关联单据类型" width="180">
+									<template #default="{ row }">
+										{{ row.relatedDocumentType === 1 ? '销售合同' : row.relatedDocumentType === 2 ?
+											'出运合同' : '无'
+										}}
+									</template>
+								</el-table-column>
+								<el-table-column prop="contactDetails" label="联系内容" show-overflow-tooltip />
+								<el-table-column label="图片" width="100">
+									<template #default="{ row }">
+										<el-image v-if="row.images && row.images.length > 0"
+											style="width: 50px; height: 50px;" :src="row.images.split(',')[0]"
+											:preview-src-list="row.images.split(',')" fit="cover"
+											:preview-teleported="true" :initial-index="0" />
+										<span v-else>无图片</span>
+									</template>
+								</el-table-column>
+								<el-table-column label="附件" width="100">
+									<template #default="{ row }">
+										<el-button v-if="row.attachments && row.attachments.length > 0" type="primary"
+											link @click="downloadAttachment(row.attachments)">
+											下载附件
+										</el-button>
+										<span v-else>无附件</span>
+									</template>
+								</el-table-column>
+							</el-table>
+							<el-pagination @current-change="ContactLogTablehandlePageChange"
+								:current-page="ContactLogTablecurrentPage" :page-size="ContactLogTablepageSize"
+								:total="ContactLogTabletotalItems" background layout="prev, pager, next"
+								style="margin-top: 5px;" />
+						</el-tab-pane>
+						<el-tab-pane label="报价记录" name="QuoteRecordTable">
+							<el-table :data="QuotationRecordData" @row-dblclick="handleQuoteRowDblClick"
+								style="width: 100%; table-layout: fixed;"
+								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="id" label="ID" width="100" v-if="false"></el-table-column>
+								<el-table-column prop="quotationNum" label="报价单号" width="200">
+									<template #default="scope">
+										<span>{{ scope.row.quotationNum }}</span>
+										<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+											size="small">草稿</el-tag>
+										<el-tag v-if="scope.row.version > 1" type="success" style="margin-left: 5px;"
+											size="small">
+											{{ getVersionText(scope.row.version) }}
+										</el-tag>
+									</template>
+								</el-table-column>
+								<el-table-column prop="realQuotationDate" label="报价日期" width="150" />
+								<el-table-column prop="validityPeriod" label="有效期" width="150" />
+							</el-table>
+							<el-pagination @current-change="QuotationRecordHandlePageChange"
+								:current-page="QuotationRecordCurrentPage" :page-size="QuotationRecordPageSize"
+								:total="QuotationRecordTotalItems" background layout="prev, pager, next, total"
+								style="margin-top: 5px;" :pager-count="5" :hide-on-single-page="false" />
+						</el-tab-pane>
+						<el-tab-pane label="销售记录" name="saleRecordTable">
+							<el-table :data="SalesContractRecordData" @row-dblclick="handleSalesContractRowDblClick"
+								style="width: 100%; table-layout: fixed;"
+								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="contractNumber" label="销售合同" width="150" />
+								<el-table-column prop="contractDate" label="合同日期" width="150" />
+								<el-table-column prop="effectiveDate" label="生效日期" width="150" />
+								<el-table-column prop="deliveryDate" label="交货日期" width="150" />
+								<el-table-column prop="goodsValue" label="货值合计" width="150" />
+							</el-table>
+							<el-pagination @current-change="SalesContractRecordHandlePageChange"
+								:current-page="SalesContractRecordCurrentPage" :page-size="SalesContractRecordPageSize"
+								:total="SalesContractRecordTotalItems" background layout="prev, pager, next"
+								style="margin-top: 5px;" />
+						</el-tab-pane>
+						<el-tab-pane label="收寄样历史" name="SampleCollectionHistory">
+							<el-table :data="CustomerSendSampleData" style="width: 100%; table-layout: fixed;"
+								@row-dblclick="handleSampleRowDblClick"
+								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="id" label="ID" width="100" v-if="false"></el-table-column>
+								<el-table-column prop="type" label="寄样/收样" width="100"></el-table-column>
+								<el-table-column prop="waybillNumber" label="运单号" width="150"></el-table-column>
+								<el-table-column prop="expressCompany" label="快递公司" width="120"></el-table-column>
+								<el-table-column prop="sampleDate" label="样品日期" width="120"></el-table-column>
+								<el-table-column prop="abbreviation" label="供应商简称" width="150"></el-table-column>
+								<el-table-column prop="companyName" label="我方公司" width="150"></el-table-column>
+								<el-table-column prop="paymentMethod" label="付费方式" width="120"></el-table-column>
+								<el-table-column prop="paidExpressFee" label="已付快递费" width="120">
+									<template #default="scope">
+										<span>￥{{ scope.row.paidExpressFee }}</span>
+									</template>
+								</el-table-column>
+								<el-table-column prop="remark" label="备注"></el-table-column>
+							</el-table>
+							<el-pagination @current-change="CustomerSendSampleHandlePageChange"
+								:current-page="CustomerSendSampleCurrentPage" :page-size="CustomerSendSamplePageSize"
+								:total="CustomerSendSampleTotalItems" background layout="prev, pager, next"
+								style="margin-top: 5px;" />
+						</el-tab-pane>
+						<el-tab-pane label="出货记录" name="ShippingRecordTable">
+							<el-table :data="ShipRecoreData" style="width: 100%; table-layout: fixed;"
+								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="Cnum" label="发票号码" width="120" />
+								<el-table-column prop="Cstate" label="出运日期" width="120" />
+								<el-table-column prop="Cgrade" label="销售合同" width="120" />
+								<el-table-column prop="Cabbreviation" label="产品编号" width="120" />
+								<el-table-column prop="Ctradingcountry" label="客户货号" width="120" />
+								<el-table-column prop="Lastcontactdate" label="中文品名" width="150" />
+								<el-table-column prop="Archivecreationdate" label="出货数量" width="120" />
+								<el-table-column prop="CSeller" label="计量单位" width="120" />
+								<el-table-column prop="Originalfollower" label="外销单价" width="120" />
+								<el-table-column prop="Founder" label="外销总价" width="120" />
+							</el-table>
+						</el-tab-pane>
+					</el-tabs>
+				</el-collapse-item>
+			</el-collapse>
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="warning" @click="EditCustomerInfoClick">编辑</el-button>
@@ -582,19 +793,25 @@
 			</template>
 		</el-dialog>
 		<!-- 添加联系日志对话框 -->
-		<el-dialog v-model="contactLogDialogVisible" title="添加联系日志" width="600px" :close-on-click-modal="false">
-			<el-form ref="contactLogFormRef" :model="contactLogForm" :rules="contactLogRules" label-width="100px">
-				<el-form-item label="联系日期" prop="contactDate">
-					<el-date-picker v-model="contactLogForm.contactDate" type="date" placeholder="选择联系日期"
-						style="width: 100%;" />
-				</el-form-item>
-				<el-form-item label="日志标签" prop="ContactLogTag">
-					<el-select v-model="contactLogForm.ContactLogTag" filterable clearable placeholder="选择日志标签"
-						style="width: 100%;" @change="handleContactLogTagChange">
-						<el-option v-for="item in ContactLogTagData" :key="item.id" :label="item.emailTagName"
-							:value="item.id" />
-					</el-select>
-				</el-form-item>
+		<el-dialog v-model="contactLogDialogVisible" title="添加联系日志" width="70%" :close-on-click-modal="false">
+			<el-form ref="contactLogFormRef" :model="contactLogForm" :rules="contactLogRules" label-width="120px">
+				<el-row>
+					<el-col :span="12">
+						<el-form-item label="联系日期" prop="contactDate">
+							<el-date-picker v-model="contactLogForm.contactDate" type="date" placeholder="选择联系日期"
+								style="width: 100%;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="12">
+						<el-form-item label="日志标签" prop="ContactLogTag">
+							<el-select v-model="contactLogForm.ContactLogTag" filterable clearable placeholder="选择日志标签"
+								style="width: 100%;" @change="handleContactLogTagChange">
+								<el-option v-for="item in ContactLogTagData" :key="item.id" :label="item.emailTagName"
+									:value="item.id" />
+							</el-select>
+						</el-form-item>
+					</el-col>
+				</el-row>
 				<!-- 商机名称字段 - 根据日志标签显示 -->
 				<el-form-item v-if="showBusinessOpportunityField" label="商机名称"
 					:required="contactLogForm.ContactLogTag && ContactLogTagData.find(tag => tag.id === contactLogForm.ContactLogTag)?.emailTagName === '询盘'"
@@ -610,22 +827,26 @@
 							:label="item.dictLabel" :value="item.dictValue" />
 					</el-select>
 				</el-form-item>
-				<el-form-item label="联系人" prop="contactPerson">
-					<el-select v-model="contactLogForm.contactPerson" filterable allow-create placeholder="选择联系人"
-						style="width: 100%;">
-						<el-option v-for="item in ContactPersonData" :key="item.id" :label="item.name"
-							:value="item.id" />
-					</el-select>
-				</el-form-item>
-				<el-form-item label="我方人员" prop="ourStaff">
-					<el-select v-model="contactLogForm.ourStaff" filterable placeholder="选择我方人员" style="width: 100%;">
-						<el-option v-for="item in state.optionss.sql_hr_sale" :key="item.dictValue"
-							:label="item.dictLabel" :value="item.dictValue" />
-					</el-select>
-				</el-form-item>
-
-
-
+				<el-row>
+					<el-col :span="12">
+						<el-form-item label="联系人" prop="contactPerson">
+							<el-select v-model="contactLogForm.contactPerson" filterable allow-create
+								placeholder="选择联系人" style="width: 100%;">
+								<el-option v-for="item in ContactPersonData" :key="item.id" :label="item.name"
+									:value="item.id" />
+							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="12">
+						<el-form-item label="我方人员" prop="ourStaff">
+							<el-select v-model="contactLogForm.ourStaff" filterable placeholder="选择我方人员"
+								style="width: 100%;">
+								<el-option v-for="item in state.optionss.sql_hr_sale" :key="item.dictValue"
+									:label="item.dictLabel" :value="item.dictValue" />
+							</el-select>
+						</el-form-item>
+					</el-col>
+				</el-row>
 				<el-form-item label="关联单据">
 					<el-radio-group v-model="contactLogForm.relatedDocumentType" @change="RelatedDocumentsChange"
 						:disabled="isRelatedDocumentLocked">
@@ -675,7 +896,7 @@
 			</template>
 		</el-dialog>
 		<!-- 添加联系日志详情对话框 -->
-		<el-dialog v-model="contactLogDetailDialogVisible" title="联系日志详情" width="600px" :close-on-click-modal="false">
+		<el-dialog v-model="contactLogDetailDialogVisible" title="联系日志详情" width="70%" :close-on-click-modal="false">
 			<el-descriptions :column="1" border>
 				<el-descriptions-item label="联系日期">{{ selectedContactLog.emailDate }}</el-descriptions-item>
 				<el-descriptions-item label="日志标签">{{ selectedContactLog.conactTag }}</el-descriptions-item>
@@ -766,6 +987,12 @@ interface CustomUploadFile extends UploadFile {
 
 const activeTab = ref('ContactInfoTable');
 const isEditCustomerInfo = ref(false);
+const basicInfoCollapseActive = ref(['basicInfo']);
+const contactInfoCollapseActive = ref(['contactInfo']);
+const detailBasicInfoCollapseActive = ref(['detailBasicInfo']);
+const detailTabsCollapseActive = ref(['detailTabs']);
+const duplicationCheckCollapseActive = ref(['duplicationCheck']);
+const duplicationResultCollapseActive = ref(['duplicationResult']);
 const proxy = getCurrentInstance().proxy as any
 const state = reactive({
 	optionss: {
@@ -1938,6 +2165,16 @@ const formatDateTime = (dateTimeStr) => {
 	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+//日期格式化函数（只显示年月日）
+const formatDate = (dateTimeStr) => {
+	if (!dateTimeStr) return '';
+	const date = new Date(dateTimeStr);
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+}
+
 // 获取联系日志数据的方法
 const getContactLogList = (emailAddress) => {
 	ContactLogData.value = [];
@@ -3070,3 +3307,14 @@ const CustomerSendSampleHandlePageChange = async (newPage) => {
 	await loadCustomerSendSampleHistory(selectCustomerID.value, newPage, CustomerSendSamplePageSize.value)
 }
 </script>
+
+<style scoped>
+/* 客户信息页面dialog中的表单组件间距减少一半，与销售合同页面保持一致 */
+.el-dialog .el-form-item {
+	margin-bottom: 5px !important;
+}
+
+.el-dialog .el-row {
+	margin-bottom: 2.5px !important;
+}
+</style>

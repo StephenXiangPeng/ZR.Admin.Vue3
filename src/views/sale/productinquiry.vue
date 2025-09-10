@@ -1,42 +1,59 @@
 <template>
 	<div>
-		<div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click="OpenCreateInquiryDialog" :close-on-click-modal=false>创建询价单</el-button>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<el-divider></el-divider>
-		<div style="width: 100%; margin-top: 30px;">
-			<el-input v-model="inquirynumber" clearable style="width: 15%"
-				placeholder="输入询价单号" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="inquiryStartDate" type="date" placeholder="请选择起始日期" size="Default"
-				style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="inquiryEndDate" type="date" placeholder="请选择结束日期" size="Default"
-				style="width: 15%" />
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" plain @click="SearchInquiry">查询</el-button>
-				<el-button @click="ResetSearch">重置</el-button>
-			</el-row>
-		</div>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;询价表</span>
-			<el-divider></el-divider>
-			<el-table :data="InquityTableData" style="width: 100%" stripe :size="small">
-				<el-table-column prop="inquiry_number" label="询价单号">
+		<!-- 产品询价表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="OpenCreateInquiryDialog" :close-on-click-modal=false
+								size="default">创建询价单</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-input v-model="inquirynumber" clearable placeholder="输入询价单号" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="inquiryStartDate" type="date" placeholder="请选择起始日期" size="default"
+							style="width: 100%" clearable :disabled-date="(time) => time.getTime() > Date.now()" />
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="inquiryEndDate" type="date" placeholder="请选择结束日期" size="default"
+							style="width: 100%" clearable :disabled-date="(time) => time.getTime() > Date.now()" />
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="SearchInquiry" size="default">查询</el-button>
+							<el-button @click="ResetSearch" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+
+			<!-- 表格区域 -->
+			<el-table :data="InquityTableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="inquiry_number" label="询价单号" :width="120">
 					<template #default="scope">
 						<span>{{ scope.row.inquiry_number }}</span>
 						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
 							size="small">草稿</el-tag>
 					</template>
 				</el-table-column>
-				<el-table-column prop="date" label="询价日期"></el-table-column>
-				<el-table-column prop="subject" label="询价主题"></el-table-column>
-				<el-table-column prop="inquirer" label="询价人"></el-table-column>
+				<el-table-column prop="date" label="询价日期" :width="110">
+					<template #default="scope">
+						{{ scope.row.date ? dayjs(scope.row.date).format('YYYY-MM-DD') : '' }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="subject" label="询价主题" :width="200"></el-table-column>
+				<el-table-column prop="inquirer" label="询价人" :width="130"></el-table-column>
 				<el-table-column prop="shippingDestination" label="送货目的地" v-if="false"></el-table-column>
 				<el-table-column fixed="right" prop="operate" label="操作" :width="200">
 					<template v-slot:default="scope">
@@ -46,39 +63,37 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<!-- <el-pagination @current-change="SearchInquiryhandlePageChange" :current-page="SearchInquirycurrentPage"
-				:page-size="SearchInquirypageSize" :total="SearchInquirytotalItems" :background="true"
-				layout="total, prev, pager, next" style="margin-top: 5px;" /> -->
 			<el-pagination @current-change="SearchInquiryhandlePageChange" :current-page="SearchInquirycurrentPage"
 				:page-size="SearchInquirypageSize" :total="SearchInquirytotalItems" background
 				layout="prev, pager, next" style="margin-top: 5px;" />
 		</div>
 		<el-dialog :modal="false" :modal-penetrable="true" v-model="CreateInquiryDialog" title="创建询价单"
-			:close-on-click-modal=false style="width: 80%;" @close="CloseInquiryDialog">
-			<el-form label-position="right">
+			:close-on-click-modal=false style="width: 75%;" @close="CloseInquiryDialog">
+			<el-form label-position="right" label-width="120px" :show-message="false">
 				<el-row>
 					<el-col :span="6">
 						<el-form-item label="询价单号">
-							<el-input v-model="NewprudctInquityDetailsform.inquiry_number" disabled
-								style="width: 290px"></el-input>
+							<el-input v-model="NewprudctInquityDetailsform.inquiry_number" disabled style="width: 300px"
+								size="default"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="6">
 						<el-form-item label="询价主题">
-							<el-input v-model="NewprudctInquityDetailsform.Subject" style="width: 290px"
-								:disabled="isEditable"></el-input>
+							<el-input v-model="NewprudctInquityDetailsform.Subject" style="width: 300px"
+								:disabled="isEditable" size="default"></el-input>
 						</el-form-item>
 					</el-col>
 					<el-col :span="6">
 						<el-form-item label="询价日期">
-							<el-date-picker v-model="NewprudctInquityDetailsform.Date" type="date" style="width: 290px"
-								:disabled="isEditable"></el-date-picker>
+							<el-date-picker v-model="NewprudctInquityDetailsform.Date" type="date" style="width: 300px"
+								:disabled="isEditable" size="default" format="YYYY-MM-DD" value-format="YYYY-MM-DD"
+								:default-time="null"></el-date-picker>
 						</el-form-item>
 					</el-col>
 					<el-col :span="6">
 						<el-form-item label="询价人员">
 							<el-select filterable v-model="NewprudctInquityDetailsform.Inquirer" placeholder="请选择询价人员"
-								:disabled="true" style="width: 290px">
+								:disabled="true" style="width: 300px" size="default">
 								<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -93,7 +108,9 @@
 					:disabled="isEditable">导入产品</el-button>
 				<el-button class="mt-4" type="primary" @click="onAddInquiryProductItem" style="margin-bottom: 10px;"
 					:disabled="isEditable">添加新产品</el-button>
-				<el-table :data="inquryProductTableData" stripe>
+				<el-table :data="inquryProductTableData" style="width: 100%; table-layout: fixed;" stripe
+					:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+					:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 					<el-table-column prop="productId" label="产品ID" width="150" align="center" v-if="false">
 						<template #default="{ row }">
 							<el-input v-model="row.productId" :disabled="isEditable" />
@@ -108,7 +125,9 @@
 					</el-table-column>
 					<el-table-column prop="date" label="日期" width="150" align="center">
 						<template #default="{ row }">
-							<el-input v-if="!isEditable" v-model="row.date" />
+							<el-date-picker v-if="!isEditable" v-model="row.date" type="date" size="small"
+								format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%"
+								:default-time="null" />
 							<span v-else>{{ row.date }}</span>
 						</template>
 					</el-table-column>
@@ -341,7 +360,9 @@
 					<!-- 显示现有附件列表 -->
 					<div>
 						<h3>附件列表:</h3>
-						<el-table :data="inquiryDocumentList" stripe>
+						<el-table :data="inquiryDocumentList" style="width: 100%; table-layout: fixed;" stripe
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 							<el-table-column prop="fileName" label="文件名"></el-table-column>
 							<el-table-column label="操作">
 								<template #default="scope">
@@ -373,7 +394,9 @@
 					<!-- 显示新上传的附件列表 -->
 					<div v-if="!isEditable && inquryProductDocumentTableData.length > 0">
 						<h3>新上传的附件:</h3>
-						<el-table :data="inquryProductDocumentTableData">
+						<el-table :data="inquryProductDocumentTableData" style="width: 100%; table-layout: fixed;"
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 							<el-table-column prop="FileName" label="文件名"></el-table-column>
 							<el-table-column label="操作">
 								<template #default="scope">
@@ -415,8 +438,10 @@
 		<el-dialog v-model="SearchProcutDialog" title="选择产品" :close-on-click-modal=false :width="'50%'">
 			<el-input v-model="searchProductNameText" placeholder="请输入产品关键字进行搜索" style="margin-bottom: 10px;"
 				@input="searchProductNameTextChange" />
-			<el-table :data="productDatatwo" style="width: 100%"
-				:default-sort="{ prop: 'productCode', order: 'descending' }" @row-dblclick="handleRowDblClick" stripe>
+			<el-table :data="productDatatwo" style="width: 100%; table-layout: fixed;"
+				:default-sort="{ prop: 'productCode', order: 'descending' }" @row-dblclick="handleRowDblClick" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="productCode" label="产品编号" sortable width="120" />
 				<el-table-column prop="chineseProductName" label="中文品名" width="150" />
 				<el-table-column prop="englishProductName" label="英文品名" width="180" />
@@ -991,6 +1016,10 @@ function GetInquiryList(start, end) {
 				if (InquityTableData.value.length > 0) {
 					InquityTableData.value.forEach(item => {
 						item.inquirer = state.optionss.sql_hr_sale.find(option => option.dictValue === item.inquirer.toString()).dictLabel;
+						// 格式化日期，只显示年月日
+						if (item.date) {
+							item.date = dayjs(item.date).format('YYYY-MM-DD');
+						}
 					});
 				}
 			} else {
@@ -1043,7 +1072,7 @@ const ChcekDetails = (row) => {
 			if (response.data.products && response.data.products.length > 0) {
 				inquryProductTableData.value = response.data.products.map(item => ({
 					id: item.id,
-					date: item.date,
+					date: item.date ? dayjs(item.date).format('YYYY-MM-DD') : '',
 					productId: item.productID,
 					productimage: item.productImage,
 					productnumber: item.productNumber,
@@ -1490,7 +1519,7 @@ const loadProductList = async (inquiryId) => {
 			if (response.data.products && response.data.products.length > 0) {
 				inquryProductTableData.value = response.data.products.map(item => ({
 					id: item.id,
-					date: item.date,
+					date: item.date ? dayjs(item.date).format('YYYY-MM-DD') : '',
 					productid: item.productID,
 					productimage: item.productImage,
 					productnumber: item.productNumber,

@@ -1,209 +1,231 @@
 <template>
 	<div>
-		<div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click="OpenCreateshippingdeliveryDialog()">创建出运单</el-button>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<el-divider></el-divider>
-		<div style="width: 100%; margin-top: 30px;">
-			<el-select filterable v-model="SearchSaleContractID" placeholder="选择销售合同（可输入查询）" style="width: 15%">
-				<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="SearchCustomerID" placeholder="选择客户（可输入查询）" style="width: 15%">
-				<el-option v-for="dict in optionss.customer_data" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchShippingDateStart" type="date" placeholder="请选择出运日期"
-				style="width: 15%" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchShippingDateEnd" type="date" placeholder="请选择出运日期" style="width: 15%" />
-		</div>
+		<!-- 出运发货单表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="OpenCreateshippingdeliveryDialog()"
+								size="default">创建出运单</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-select filterable v-model="SearchSaleContractID" placeholder="选择销售合同（可输入查询）"
+							style="width: 100%" size="default">
+							<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select filterable v-model="SearchCustomerID" placeholder="选择客户（可输入查询）" style="width: 100%"
+							size="default">
+							<el-option v-for="dict in optionss.customer_data" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchShippingDateStart" type="date" placeholder="请选择出运日期起"
+							style="width: 100%" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchShippingDateEnd" type="date" placeholder="请选择出运日期止"
+							style="width: 100%" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="SearchClick()" size="default">查询</el-button>
+							<el-button @click="ResetClick()" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+				<!-- <el-row :gutter="15">
+					<el-col :span="6">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="SearchClick()" size="default">查询</el-button>
+							<el-button @click="ResetClick()" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row> -->
+			</div>
 
-		<div style="width: 100%; margin-top: 5px;">
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" plain @click="SearchClick()">查询</el-button>
-				<el-button @click="ResetClick()">重置</el-button>
-			</el-row>
-		</div>
-
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;出运发货信息表</span>
-		</div>
-		<el-divider> </el-divider>
-		<el-table :data="shippingDeliveryTableData">
-			<el-table-column prop="id" label="出运发货单ID" width="150px" v-if="false"></el-table-column>
-			<el-table-column prop="invoiceNumber" label="出运单号" width="150px">
-				<template #default="scope">
-					<span>{{ scope.row.invoiceNumber }}</span>
-					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-				</template>
-			</el-table-column>
-			<el-table-column prop="salesContractNumber" label="销售合同号" width="150px"></el-table-column>
-			<el-table-column prop="createTime" label="制单日期" width="150px"></el-table-column>
-			<el-table-column prop="shippingStatus" label="出运状态" width="150px"></el-table-column>
-			<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="reviewStatusStr" label="审核状态" width="150" align="center">
-				<template #default="{ row }">
-					<template v-if="row.id"> <!-- 有ID才显示popover -->
-						<el-popover placement="right" :width="400" trigger="click">
-							<template #reference>
-								<el-tag :type="getStatusType(row.reviewStatusStr)" @click="getApprovalFlow(row.id)"
-									style="cursor: pointer">
-									{{ row.reviewStatusStr }}
-								</el-tag>
-							</template>
-							<!-- 有审批步骤才显示步骤条 -->
-							<template #default>
-								<div v-if="approvalSteps.length > 0" class="status-popover">
-									<el-steps :active="approvalSteps.length" size="small">
-										<el-step v-for="step in approvalSteps" :key="step.stageID"
-											:title="step.approverUserName" :description="getStatusText(step.status)"
-											:status="getStatus(step.status)" />
-									</el-steps>
-								</div>
-								<div v-else>暂无审批流程</div>
-							</template>
-						</el-popover>
+			<!-- 表格区域 -->
+			<el-table :data="shippingDeliveryTableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="id" label="出运发货单ID" width="150px" v-if="false"></el-table-column>
+				<el-table-column prop="invoiceNumber" label="出运单号" width="100">
+					<template #default="scope">
+						<span>{{ scope.row.invoiceNumber }}</span>
+						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
 					</template>
+				</el-table-column>
+				<el-table-column prop="salesContractNumber" label="销售合同号" width="110"></el-table-column>
+				<el-table-column prop="createTime" label="制单日期" width="110"></el-table-column>
+				<el-table-column prop="shippingStatus" label="出运状态" width="90"></el-table-column>
+				<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="reviewStatusStr" label="审核状态" width="100" align="center">
+					<template #default="{ row }">
+						<template v-if="row.id"> <!-- 有ID才显示popover -->
+							<el-popover placement="right" :width="400" trigger="click">
+								<template #reference>
+									<el-tag :type="getStatusType(row.reviewStatusStr)" @click="getApprovalFlow(row.id)"
+										style="cursor: pointer">
+										{{ row.reviewStatusStr }}
+									</el-tag>
+								</template>
+								<!-- 有审批步骤才显示步骤条 -->
+								<template #default>
+									<div v-if="approvalSteps.length > 0" class="status-popover">
+										<el-steps :active="approvalSteps.length" size="small">
+											<el-step v-for="step in approvalSteps" :key="step.stageID"
+												:title="step.approverUserName" :description="getStatusText(step.status)"
+												:status="getStatus(step.status)" />
+										</el-steps>
+									</div>
+									<div v-else>暂无审批流程</div>
+								</template>
+							</el-popover>
+						</template>
 
-					<!-- 没有ID时只显示tag -->
-					<template v-else>
-						<el-tag :type="getStatusType(row.contractReviewStatusStr)">
-							{{ row.contractReviewStatusStr }}
-						</el-tag>
+						<!-- 没有ID时只显示tag -->
+						<template v-else>
+							<el-tag :type="getStatusType(row.contractReviewStatusStr)">
+								{{ row.contractReviewStatusStr }}
+							</el-tag>
+						</template>
 					</template>
-				</template>
-			</el-table-column>
-			<el-table-column prop="shippingDate" label="出运日期" width="150px"></el-table-column>
-			<el-table-column prop="invoiceDate" label="发票日期" width="150px"></el-table-column>
-			<el-table-column prop="customerNumber" label="客户编号" width="150px"></el-table-column>
-			<el-table-column prop="customerAbbreviation" label="客户简称" width="150px"></el-table-column>
-			<el-table-column prop="customerContractNumber" label="客户合同号" width="150px"></el-table-column>
-			<el-table-column prop="ourCompany" label="我方公司" width="150px"></el-table-column>
-			<el-table-column prop="bankOfReceipt" label="收汇银行" width="150px"></el-table-column>
-			<el-table-column prop="exportCurrency" label="外销币种" width="150px"></el-table-column>
-			<el-table-column prop="exchangeRate" label="汇率" width="150px"></el-table-column>
-			<el-table-column prop="priceTerms" label="价格条款" width="150px"></el-table-column>
-			<el-table-column prop="departurePort" label="出运口岸" width="150px"></el-table-column>
-			<el-table-column prop="destinationPort" label="目的口岸" width="150px"></el-table-column>
-			<el-table-column prop="tradeCountry" label="贸易国别" width="150px"></el-table-column>
-			<el-table-column prop="settlementMethod" label="结汇方式" width="150px"></el-table-column>
-			<el-table-column prop="transportationMethod" label="运输方式" width="150px"></el-table-column>
-			<el-table-column prop="receivableDate" label="应收汇日" width="150px"></el-table-column>
-			<el-table-column fixed="right" label="操作" width="150px">
-				<template #default="scope">
-					<el-button type="text" size="small" @click="CheckShipingDelivery(scope.row)">查看/编辑</el-button>
-					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
-						type="danger" size="small" @click="DeleteShipingDelivery(scope.row)">删除</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<el-pagination @current-change="paymentrequesttableDataHandlePageChange"
-			:current-page="ShippingDeliveriesTableDataCurrentPage" :page-size="ShippingDeliveriesTableDataPageSize"
-			:total="ShippingDeliveriesTableDataTotalItems" background layout="prev, pager, next"
-			style="margin-top: 5px;" />
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="CreateshippingdeliveryDialog" title="创建出运发货单"
-			:close-on-click-modal=false style="width: 70%;" @close="CreateshippingdeliveryDialogClose()">
+				</el-table-column>
+				<el-table-column prop="shippingDate" label="出运日期" width="110"></el-table-column>
+				<el-table-column prop="invoiceDate" label="发票日期" width="110"></el-table-column>
+				<el-table-column prop="customerNumber" label="客户编号" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="customerAbbreviation" label="客户简称" width="150"></el-table-column>
+				<el-table-column prop="customerContractNumber" label="客户合同号" width="150"></el-table-column>
+				<el-table-column prop="ourCompany" label="我方公司" width="90"></el-table-column>
+				<el-table-column prop="bankOfReceipt" label="收汇银行" width="90"></el-table-column>
+				<el-table-column prop="exportCurrency" label="外销币种" width="90"></el-table-column>
+				<el-table-column prop="exchangeRate" label="汇率" width="70"></el-table-column>
+				<el-table-column prop="priceTerms" label="价格条款" width="90"></el-table-column>
+				<el-table-column prop="departurePort" label="出运口岸" width="90"></el-table-column>
+				<el-table-column prop="destinationPort" label="目的口岸" width="150px"></el-table-column>
+				<el-table-column prop="tradeCountry" label="贸易国别" width="90"></el-table-column>
+				<el-table-column prop="settlementMethod" label="结汇方式" width="90"></el-table-column>
+				<el-table-column prop="transportationMethod" label="运输方式" width="90"></el-table-column>
+				<el-table-column prop="receivableDate" label="应收汇日" width="150"></el-table-column>
+				<el-table-column fixed="right" label="操作" width="150px">
+					<template #default="scope">
+						<el-button type="text" size="small" @click="CheckShipingDelivery(scope.row)">查看/编辑</el-button>
+						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
+							link type="danger" size="small" @click="DeleteShipingDelivery(scope.row)">删除</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="paymentrequesttableDataHandlePageChange"
+				:current-page="ShippingDeliveriesTableDataCurrentPage" :page-size="ShippingDeliveriesTableDataPageSize"
+				:total="ShippingDeliveriesTableDataTotalItems" background layout="prev, pager, next"
+				style="margin-top: 5px;" />
+		</div>
+		<el-dialog :modal="false" modal-penetrable v-model="CreateshippingdeliveryDialog" title="创建出运发货单"
+			:close-on-click-modal=false style="width: 75%;" @close="CreateshippingdeliveryDialogClose()">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
 			<el-form :model="AddShippingDeliveryform" label-width="120px">
 				<el-row>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="发票号码">
-							<el-input v-model="AddShippingDeliveryform.invoiceNumber" style="width: 300px"
-								disabled></el-input>
+							<el-input v-model="AddShippingDeliveryform.invoiceNumber" style="width: 300px" disabled
+								size="default"></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="制单日期">
 							<el-date-picker v-model="AddShippingDeliveryform.OrderMakingDate" type="date"
-								style="width: 300px" :disabled="IsEditable"></el-date-picker>
+								style="width: 300px" :disabled="IsEditable" size="default"></el-date-picker>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="出运状态">
 							<el-select filterable v-model="AddShippingDeliveryform.shippingStatus" style="width: 300px"
-								:disabled="IsEditable">
+								:disabled="IsEditable" size="default">
 								<el-option v-for="dict in optionss.hr_shipping_status" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="出运日期">
 							<el-date-picker v-model="AddShippingDeliveryform.shippingDate" type="date"
-								style="width: 300px" :disabled="IsEditable"></el-date-picker>
+								style="width: 300px" :disabled="IsEditable" size="default"></el-date-picker>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+				</el-row>
+				<el-row>
+					<el-col :span="6">
 						<el-form-item label="发票日期">
 							<el-date-picker v-model="AddShippingDeliveryform.invoiceDate" type="date"
-								style="width: 300px" :disabled="IsEditable"></el-date-picker>
+								style="width: 300px" :disabled="IsEditable" size="default"></el-date-picker>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="客户编号">
 							<el-select filterable v-model="AddShippingDeliveryform.customerNumber"
 								placeholder="选择客户（可输入查询）" style="width: 300px" @change="customerNumberChange()"
-								clearable :disabled="IsEditable">
+								clearable :disabled="IsEditable" size="default">
 								<el-option v-for="dict in optionss.customer_data" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="客户简称">
 							<el-input v-model="AddShippingDeliveryform.customerAbbreviation" disabled
-								style="width: 300px"></el-input>
+								style="width: 300px" size="default"></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="参考合同">
 							<el-select filterable v-model="AddShippingDeliveryform.referenceContractNumber"
 								placeholder="选择销售合同（可输入查询）" style="width: 300px" clearable
-								@change="referenceContractNumberChange()" :disabled="IsEditable">
+								@change="referenceContractNumberChange()" :disabled="IsEditable" size="default">
 								<el-option v-for="dict in optionss.customer_contract_data" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
-						<el-form-item label="销售合同">
-							<el-input v-model="AddShippingDeliveryform.salesContractNumber" disabled
-								style="width: 300px"></el-input>
-						</el-form-item>
-					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="8">
-						<el-form-item label="客户合同">
-							<el-input v-model="AddShippingDeliveryform.customerContractNumber" disabled
-								style="width: 300px"></el-input>
+					<el-col :span="6">
+						<el-form-item label="销售合同">
+							<el-input v-model="AddShippingDeliveryform.salesContractNumber" disabled
+								style="width: 300px" size="default"></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
+						<el-form-item label="客户合同">
+							<el-input v-model="AddShippingDeliveryform.customerContractNumber" disabled
+								style="width: 300px" size="default"></el-input>
+						</el-form-item>
+					</el-col>
+					<el-col :span="6">
 						<el-form-item label="我方公司">
 							<el-select filterable v-model="AddShippingDeliveryform.ourCompany" style="width: 300px"
-								disabled>
+								disabled size="default">
 								<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="收汇银行">
 							<el-select filterable v-model="AddShippingDeliveryform.bankOfReceipt" style="width: 300px"
-								:disabled="IsEditable">
+								:disabled="IsEditable" size="default">
 								<el-option v-for="dict in optionss.hr_bank" :key="dict.dictCode" :label="dict.dictLabel"
 									:value="dict.dictValue" />
 							</el-select>
@@ -211,99 +233,116 @@
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="外销币种">
 							<el-select filterable v-model="AddShippingDeliveryform.exportCurrency" placeholder="选择外销币种"
-								disabled style="width: 300px">
+								disabled style="width: 300px" size="default">
 								<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="汇率">
 							<el-input v-model="AddShippingDeliveryform.exchangeRate" :disabled="true"
-								style="width: 300px"></el-input>
+								style="width: 300px" size="default"></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="价格条款">
 							<el-select filterable v-model="AddShippingDeliveryform.priceTerms" placeholder="选择价格条款"
-								disabled style="width: 300px">
+								disabled style="width: 300px" size="default">
 								<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="出运口岸">
 							<el-select filterable v-model="AddShippingDeliveryform.departurePort" placeholder="选择出运口岸"
-								disabled style="width: 300px">
+								disabled style="width: 300px" size="default">
 								<el-option v-for="dict in optionss.hr_transport_port" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+				</el-row>
+				<el-row>
+					<el-col :span="6">
 						<el-form-item label="目的口岸">
-							<el-input v-model="AddShippingDeliveryform.destinationPort" style="width: 300px"
-								disabled></el-input>
+							<el-input v-model="AddShippingDeliveryform.destinationPort" style="width: 300px" disabled
+								size="default"></el-input>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="贸易国别">
 							<el-select filterable v-model="AddShippingDeliveryform.tradeCountry" placeholder="选择贸易国别"
-								disabled style="width: 300px">
+								disabled style="width: 300px" size="default">
 								<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="结汇方式">
 							<el-select filterable v-model="AddShippingDeliveryform.settlementMethod" disabled
-								placeholder="选择结汇方式" style="width: 300px">
+								placeholder="选择结汇方式" style="width: 300px" size="default">
 								<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="运输方式">
 							<el-select filterable v-model="AddShippingDeliveryform.transportationMethod" disabled
-								placeholder="选择运输方式" style="width: 300px">
+								placeholder="选择运输方式" style="width: 300px" size="default">
 								<el-option v-for="dict in optionss.hr_transportation_method" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
-						<el-form-item label="应收汇日">
-							<el-date-picker v-model="AddShippingDeliveryform.receivableDate" type="date"
-								style="width: 300px" :disabled="IsEditable"></el-date-picker>
-						</el-form-item>
-					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="8">
+					<el-col :span="6">
+						<el-form-item label="应收汇日">
+							<el-date-picker v-model="AddShippingDeliveryform.receivableDate" type="date"
+								style="width: 300px" :disabled="IsEditable" size="default"></el-date-picker>
+						</el-form-item>
+					</el-col>
+					<el-col :span="6">
 						<el-form-item label="单证员">
 							<el-select filterable v-model="AddShippingDeliveryform.documentClerk" placeholder="选择单证员"
-								style="width: 300px" :disabled="IsEditable">
+								style="width: 300px" :disabled="IsEditable" size="default">
 								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="有无定金">
-							<el-checkbox v-model="AddShippingDeliveryform.isDeposit"
-								:disabled="IsEditable"></el-checkbox>
+							<el-checkbox v-model="AddShippingDeliveryform.isDeposit" :disabled="IsEditable"
+								size="default"></el-checkbox>
 						</el-form-item>
-
+					</el-col>
+					<el-col :span="6" v-if="false">
+						<el-form-item label="前程运输">
+							<el-select filterable v-model="AddShippingDeliveryform.preCarriageTransport"
+								style="width: 300px" :disabled="IsEditable" clearable size="default">
+								<el-option v-for="dict in optionss.hr_domestic_transport" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue" />
+							</el-select>
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<el-row>
+					<el-col :span="6" v-if="false">
+						<el-form-item label="船代公司">
+							<el-select filterable v-model="AddShippingDeliveryform.shippingAgent" style="width: 300px"
+								:disabled="IsEditable" clearable size="default">
+								<el-option v-for="dict in optionss.hr_freight_forwarding_company" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue" />
+							</el-select>
+						</el-form-item>
 					</el-col>
 				</el-row>
 			</el-form>
@@ -311,19 +350,19 @@
 			<el-divider></el-divider>
 			<el-form label-width="120px">
 				<el-row>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="前程运输">
 							<el-select filterable v-model="AddShippingDeliveryform.preCarriageTransport"
-								style="width: 300px" :disabled="IsEditable" clearable>
+								style="width: 300px" :disabled="IsEditable" clearable size="default">
 								<el-option v-for="dict in optionss.hr_domestic_transport" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="8">
+					<el-col :span="6">
 						<el-form-item label="船代公司">
 							<el-select filterable v-model="AddShippingDeliveryform.shippingAgent" style="width: 300px"
-								:disabled="IsEditable" clearable>
+								:disabled="IsEditable" clearable size="default">
 								<el-option v-for="dict in optionss.hr_freight_forwarding_company" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -333,7 +372,10 @@
 			</el-form>
 			<br><span style="font-size: 20px; font-weight: bold;">销售合同</span>
 			<el-divider></el-divider>
-			<el-table :data="shippingDeliveryContrctProductTableData">
+			<el-table :data="shippingDeliveryContrctProductTableData"
+				style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="contractId" label="销售合同" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="contractProductId" label="销售合同明细ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="contractNumber" label="销售合同" width="150"></el-table-column>
@@ -346,7 +388,7 @@
 				<el-table-column prop="shipmentQuantity" label="出货数量" width="150">
 					<template #default="scope">
 						<el-input v-model="scope.row.shipmentQuantity" :disabled="IsEditable" style="width: 100%"
-							@change="shipmentQuantityChange(scope.row)"></el-input>
+							@change="shipmentQuantityChange(scope.row)" size="small"></el-input>
 					</template>
 				</el-table-column>
 				<el-table-column prop="unit" label="计量单位" width="150"></el-table-column>
@@ -384,7 +426,10 @@
 			</el-table>
 			<br><span style="font-size: 20px; font-weight: bold;">采购合同</span>
 			<el-divider></el-divider>
-			<el-table :data="shippingDeliveryPurchaseDetailsTableData">
+			<el-table :data="shippingDeliveryPurchaseDetailsTableData"
+				style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="purchaseContractID" label="采购合同ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="purchaseContractProductID" label="采购合同明细ID" width="150"
 					vif="false"></el-table-column>
@@ -395,7 +440,8 @@
 				<el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
 				<el-table-column prop="shipmentQuantity" label="出货数量" width="150">
 					<template #default="scope">
-						<el-input v-model="scope.row.shipmentQuantity" disabled style="width: 100%"></el-input>
+						<el-input v-model="scope.row.shipmentQuantity" disabled style="width: 100%"
+							size="small"></el-input>
 					</template>
 				</el-table-column>
 				<el-table-column prop="purchaseCurrency" label="采购币种" width="150"></el-table-column>
@@ -424,16 +470,21 @@
 			<br><span style="font-size: 20px; font-weight: bold;">其它费用</span>
 			<el-divider></el-divider>
 			<el-button class="mt-4" type="primary" @click="handleAddRow" style="margin-bottom: 10px;"
-				:disabled="IsEditable">添加其它费用</el-button>
-			<el-table :data="shippingDeliveryOtherexpensesTableData" style="width: 100%; ">
+				:disabled="IsEditable" size="default">添加其它费用</el-button>
+			<el-table :data="shippingDeliveryOtherexpensesTableData"
+				style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop=" expenseName" label="费用名称" width="150">
 					<template #default="{ row }">
-						<el-input v-model="row.expenseName" :disabled="IsEditable" placeholder="输入费用名称"></el-input>
+						<el-input v-model="row.expenseName" :disabled="IsEditable" placeholder="输入费用名称"
+							size="small"></el-input>
 					</template>
 				</el-table-column>
 				<el-table-column prop="currency" label="币种" width="150">
 					<template #default="{ row }">
-						<el-select filterable v-model="row.currency" :disabled="IsEditable" placeholder="选择币种">
+						<el-select filterable v-model="row.currency" :disabled="IsEditable" placeholder="选择币种"
+							size="small">
 							<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue" />
 						</el-select>
@@ -442,23 +493,24 @@
 				<el-table-column prop="exchangeRate" label="汇率" width="150">
 					<template #default="{ row }">
 						<el-input v-model="row.exchangeRate" :disabled="IsEditable" placeholder="输入汇率"
-							@change="handleExpenseChange(row)"></el-input>
+							@change="handleExpenseChange(row)" size="small"></el-input>
 					</template>
 				</el-table-column>
 				<el-table-column prop="expense" label="费用" width="150">
 					<template #default="{ row }">
 						<el-input v-model="row.expense" :disabled="IsEditable" placeholder="输入费用"
-							@change="handleExpenseChange(row)"></el-input>
+							@change="handleExpenseChange(row)" size="small"></el-input>
 					</template>
 				</el-table-column>
 				<el-table-column prop="amount" label="金额" width="150">
 					<template #default="{ row }">
-						<el-input v-model="row.amount" disabled placeholder="自动计算" />
+						<el-input v-model="row.amount" disabled placeholder="自动计算" size="small" />
 					</template>
 				</el-table-column>
 				<el-table-column prop="remark" label="备注" :disabled="IsEditable" width="150">
 					<template #default="{ row }">
-						<el-input v-model="row.remark" :disabled="IsEditable" placeholder="输入备注"></el-input>
+						<el-input v-model="row.remark" :disabled="IsEditable" placeholder="输入备注"
+							size="small"></el-input>
 					</template>
 				</el-table-column>
 				<el-table-column label="操作" width="100" fixed="right">
@@ -472,36 +524,36 @@
 			<el-divider></el-divider>
 			<el-form-item label="备注：" style="width: 100%;">
 				<el-input v-model="AddShippingDeliveryform.remark" :autosize="{ minRows: 5, maxRows: 10 }"
-					type="textarea" placeholder="输入备注内容" :disabled="IsEditable" />
+					type="textarea" placeholder="输入备注内容" :disabled="IsEditable" size="default" />
 			</el-form-item>
 			<template #footer>
 				<el-text class="mx-1" size="large" type="success">出运单总金额：{{ AddShippingDeliveryform.shipmentTotalAmount
 				}}</el-text>&nbsp;&nbsp;&nbsp;&nbsp;
 				<span class="dialog-footer">
 					<el-button v-show="isSaveBtnShow && userId.toString() === CreateByUser" type="warning"
-						@click="SaveClick(true)">
+						@click="SaveClick(true)" size="default">
 						保存草稿
 					</el-button>
 					<el-button v-show="isSaveBtnShow && userId.toString() === CreateByUser" type="success"
-						@click="SaveClick(false)">
+						@click="SaveClick(false)" size="default">
 						提交
 					</el-button>
 					<el-button type="primary" v-show="isEditBtnShow && userId.toString() === CreateByUser"
-						@click="EditClick()">
+						@click="EditClick()" size="default">
 						编辑
 					</el-button>
 					<el-button type="warning" v-show="isEditSaveBtnShow && userId.toString() === CreateByUser"
-						@click="EditSaveClick(true)">
+						@click="EditSaveClick(true)" size="default">
 						保存草稿
 					</el-button>
 					<el-button type="success" v-show="isEditSaveBtnShow && userId.toString() === CreateByUser"
-						@click="EditSaveClick(false)">
+						@click="EditSaveClick(false)" size="default">
 						提交
 					</el-button>
-					<el-button type="danger" v-show="showApproveRejectBtn" @click="ApproveReject">
+					<el-button type="danger" v-show="showApproveRejectBtn" @click="ApproveReject" size="default">
 						驳回
 					</el-button>
-					<el-button type="success" v-show="showApprovePassBtn" @click="Approvepass">
+					<el-button type="success" v-show="showApprovePassBtn" @click="Approvepass" size="default">
 						通过
 					</el-button>
 				</span>

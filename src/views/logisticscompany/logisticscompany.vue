@@ -1,148 +1,161 @@
 <template>
 	<div>
-		<el-form :model="queryParams" ref="queryForm" :inline="true" v-show="showSearch" label-width="68px">
-			<el-form-item label="公司简称" prop="simpleCompanyName">
-				<el-input v-model="queryParams.simpleCompanyName" placeholder="请输入公司简称" clearable style="width: 240px"
-					@keyup.enter="handleQuery" />
-			</el-form-item>
-			<el-form-item label="公司类型" prop="companyType">
-				<el-select v-model="queryParams.companyType" placeholder="请选择公司类型" clearable style="width: 240px">
-					<el-option v-for="dict in state.optionss.hr_logisticscompany_type" :key="dict.dictValue"
-						:label="dict.dictLabel" :value="dict.dictValue" />
-				</el-select>
-			</el-form-item>
-			<el-form-item>
-				<el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-				<el-button icon="Refresh" @click="resetQuery">重置</el-button>
-			</el-form-item>
-		</el-form>
+		<!-- 物流公司表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="handleAdd" size="default"
+								v-hasPermi="['huirong:logisticscompany:add']">新增物流公司</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-input v-model="queryParams.simpleCompanyName" clearable placeholder="请输入公司简称"
+							size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="queryParams.companyType" placeholder="请选择公司类型" clearable style="width: 100%"
+							size="default">
+							<el-option v-for="dict in state.optionss.hr_logisticscompany_type" :key="dict.dictValue"
+								:label="dict.dictLabel" :value="dict.dictValue" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="handleQuery" size="default">查询</el-button>
+							<el-button @click="resetQuery" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
 
-		<el-row :gutter="10" class="mb8">
-			<el-col :span="1.5">
-				<el-button type="primary" plain icon="Plus" @click="handleAdd"
-					v-hasPermi="['huirong:logisticscompany:add']">新增</el-button>
-			</el-col>
-			<!-- <el-col :span="1.5">
-				<el-button type="success" plain icon="Edit" :disabled="single" @click="handleUpdate"
-					v-hasPermi="['huirong:logisticscompany:edit']">修改</el-button>
-			</el-col>
-			<el-col :span="1.5">
-				<el-button type="danger" plain icon="Delete" :disabled="multiple" @click="handleDelete"
-					v-hasPermi="['huirong:logisticscompany:remove']">删除</el-button>
-			</el-col> -->
-			<right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
-		</el-row>
-
-		<el-table v-loading="loading" :data="logisticsCompanyList" @selection-change="handleSelectionChange">
-			<!-- <el-table-column type="selection" width="55" align="center" /> -->
-			<el-table-column label="ID" align="center" prop="id" v-if="false" />
-			<el-table-column label="公司简称" align="center" prop="simpleCompanyName" />
-			<el-table-column label="公司全称" align="center" prop="companyName" />
-			<el-table-column label="公司类型" align="center" prop="companyType">
-				<template #default="scope">
-					<dict-tag :options="state.optionss.hr_logisticscompany_type" :value="scope.row.companyType" />
-				</template>
-			</el-table-column>
-			<el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="400">
-				<template #default="scope">
-					<el-button type="text" icon="View" @click="handleDetail(scope.row)">详情</el-button>
-					<el-button type="text" icon="Edit" @click="handleUpdate(scope.row)"
-						v-hasPermi="['huirong:logisticscompany:edit']">修改</el-button>
-					<el-button type="text" icon="Delete" @click="handleDelete(scope.row)"
-						v-hasPermi="['huirong:logisticscompany:remove']">删除</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-
-		<pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum"
-			v-model:limit="queryParams.pageSize" @pagination="getList" />
+			<!-- 表格区域 -->
+			<el-table v-loading="loading" :data="logisticsCompanyList" @selection-change="handleSelectionChange"
+				style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column label="ID" align="center" prop="id" v-if="false" />
+				<el-table-column label="公司简称" align="center" prop="simpleCompanyName" />
+				<el-table-column label="公司全称" align="center" prop="companyName" />
+				<el-table-column label="公司类型" align="center" prop="companyType">
+					<template #default="scope">
+						<dict-tag :options="state.optionss.hr_logisticscompany_type" :value="scope.row.companyType" />
+					</template>
+				</el-table-column>
+				<el-table-column fixed="right" label="操作" width="200">
+					<template #default="scope">
+						<el-button type="text" size="small" icon="View" @click="handleDetail(scope.row)">详情</el-button>
+						<el-button type="text" size="small" icon="Edit" @click="handleUpdate(scope.row)"
+							v-hasPermi="['huirong:logisticscompany:edit']">修改</el-button>
+						<el-button type="text" size="small" icon="Delete" @click="handleDelete(scope.row)"
+							v-hasPermi="['huirong:logisticscompany:remove']">删除</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="handlePageChange" :current-page="queryParams.pageNum"
+				:page-size="queryParams.pageSize" :total="total" background layout="prev, pager, next"
+				style="margin-top: 5px;" />
+		</div>
 
 		<!-- 添加或修改物流公司对话框 -->
-		<el-dialog :modal="false" :modal-penetrable="true" :title="title" v-model="open" width="800px"
+		<el-dialog :modal="false" :modal-penetrable="true" :title="title" v-model="open" width="75%"
 			:close-on-click-modal=false>
 			<el-form ref="logisticsCompanyRef" :model="form" :rules="rules" label-width="120px">
 				<el-tabs v-model="activeTab">
 					<el-tab-pane label="基本信息" name="basic">
 						<el-row>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item label="公司简称" prop="simpleCompanyName">
-									<el-input v-model="form.simpleCompanyName" placeholder="请输入公司简称" />
+									<el-input v-model="form.simpleCompanyName" placeholder="请输入公司简称"
+										style="width: 300px" size="default" />
 								</el-form-item>
 							</el-col>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item label="公司全称" prop="companyName">
-									<el-input v-model="form.companyName" placeholder="请输入公司全称" />
+									<el-input v-model="form.companyName" placeholder="请输入公司全称" style="width: 300px"
+										size="default" />
 								</el-form-item>
 							</el-col>
-						</el-row>
-						<el-row>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item label="公司类型" prop="companyType">
-									<el-select v-model="form.companyType" placeholder="请选择公司类型">
+									<el-select v-model="form.companyType" placeholder="请选择公司类型" style="width: 300px"
+										size="default">
 										<el-option v-for="dict in state.optionss.hr_logisticscompany_type"
 											:key="dict.dictValue" :label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
 								</el-form-item>
 							</el-col>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item label="详细地址" prop="address">
-									<el-input v-model="form.address" placeholder="请输入详细地址" />
+									<el-input v-model="form.address" placeholder="请输入详细地址" style="width: 300px"
+										size="default" />
 								</el-form-item>
 							</el-col>
 						</el-row>
 						<el-row>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item label="开户银行" prop="openAccountBank">
-									<el-input v-model="form.openAccountBank" placeholder="请输入开户银行" />
+									<el-input v-model="form.openAccountBank" placeholder="请输入开户银行" style="width: 300px"
+										size="default" />
 								</el-form-item>
 							</el-col>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item label="银行账号" prop="bankAccount">
-									<el-input v-model="form.bankAccount" placeholder="请输入银行账号" />
+									<el-input v-model="form.bankAccount" placeholder="请输入银行账号" style="width: 300px"
+										size="default" />
 								</el-form-item>
 							</el-col>
-						</el-row>
-						<el-row>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item label="公司税号" prop="companyTaxNumber">
-									<el-input v-model="form.companyTaxNumber" placeholder="请输入公司税号" />
+									<el-input v-model="form.companyTaxNumber" placeholder="请输入公司税号" style="width: 300px"
+										size="default" />
 								</el-form-item>
 							</el-col>
-							<el-col :span="12">
+							<el-col :span="6">
 								<el-form-item label="备注" prop="remark">
-									<el-input v-model="form.remark" type="textarea" placeholder="请输入备注" />
+									<el-input v-model="form.remark" type="textarea" placeholder="请输入备注"
+										style="width: 300px" size="default" />
 								</el-form-item>
 							</el-col>
 						</el-row>
 					</el-tab-pane>
 					<el-tab-pane label="联系人信息" name="contact">
 						<div class="mb10">
-							<el-button type="primary" icon="Plus" @click="addContact">添加联系人</el-button>
+							<el-button type="primary" icon="Plus" @click="addContact" size="default">添加联系人</el-button>
 						</div>
-						<el-table :data="contactsTableData" style="width: 100%">
+						<el-table :data="contactsTableData" style="width: 100%; table-layout: fixed;" stripe
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 							<el-table-column label="联系人姓名" prop="name">
 								<template #default="scope">
-									<el-input v-model="scope.row.name" placeholder="请输入联系人姓名" />
+									<el-input v-model="scope.row.name" placeholder="请输入联系人姓名" size="default" />
 								</template>
 							</el-table-column>
 							<el-table-column label="电话号码" prop="phone">
 								<template #default="scope">
-									<el-input v-model="scope.row.phone" placeholder="请输入电话号码" />
+									<el-input v-model="scope.row.phone" placeholder="请输入电话号码" size="default" />
 								</template>
 							</el-table-column>
 							<el-table-column label="电子邮件" prop="email">
 								<template #default="scope">
-									<el-input v-model="scope.row.email" placeholder="请输入电子邮件" />
+									<el-input v-model="scope.row.email" placeholder="请输入电子邮件" size="default" />
 								</template>
 							</el-table-column>
 							<el-table-column label="备注" prop="remark">
 								<template #default="scope">
-									<el-input v-model="scope.row.remark" placeholder="请输入备注" />
+									<el-input v-model="scope.row.remark" placeholder="请输入备注" size="default" />
 								</template>
 							</el-table-column>
 							<el-table-column label="操作" width="100">
 								<template #default="scope">
-									<el-button type="danger" icon="Delete" circle
+									<el-button type="danger" icon="Delete" circle size="small"
 										@click="removeContact(scope.$index)" />
 								</template>
 							</el-table-column>
@@ -159,7 +172,7 @@
 		</el-dialog>
 
 		<!-- 查看物流公司详情对话框 -->
-		<el-dialog title="物流公司详情" v-model="detailOpen" width="800px" append-to-body>
+		<el-dialog title="物流公司详情" v-model="detailOpen" width="75%" append-to-body>
 			<el-descriptions :column="2" border>
 				<el-descriptions-item label="公司简称">{{ detailForm.simpleCompanyName }}</el-descriptions-item>
 				<el-descriptions-item label="公司全称">{{ detailForm.companyName }}</el-descriptions-item>
@@ -175,7 +188,9 @@
 
 			<div style="margin-top: 20px;">
 				<div style="font-weight: bold; margin-bottom: 10px;">联系人信息</div>
-				<el-table :data="detailContacts" style="width: 100%">
+				<el-table :data="detailContacts" style="width: 100%; table-layout: fixed;" stripe
+					:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+					:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 					<el-table-column label="联系人姓名" prop="name" />
 					<el-table-column label="电话号码" prop="phoneNumber" />
 					<el-table-column label="电子邮件" prop="email" />
@@ -185,7 +200,7 @@
 
 			<template #footer>
 				<div class="dialog-footer">
-					<el-button @click="detailOpen = false">关 闭</el-button>
+					<el-button @click="detailOpen = false" size="default">关 闭</el-button>
 				</div>
 			</template>
 		</el-dialog>
@@ -351,6 +366,12 @@ function resetQuery() {
 		companyType: undefined
 	}
 	handleQuery()
+}
+
+/** 分页处理 */
+function handlePageChange(page) {
+	queryParams.value.pageNum = page
+	getList()
 }
 
 /** 多选框选中数据 */
@@ -545,5 +566,26 @@ onMounted(() => {
 <style scoped>
 .mb10 {
 	margin-bottom: 10px;
+}
+
+/* 创建合同和查看合同详情dialog中的表单组件间距减少一半 */
+.el-dialog .el-form-item {
+	margin-bottom: 5px !important;
+}
+
+.el-dialog .el-row {
+	margin-bottom: 2.5px !important;
+}
+
+/* 确保表单项标签宽度一致 */
+.el-dialog .el-form-item__label {
+	width: 120px !important;
+	text-align: right;
+	padding-right: 12px;
+}
+
+/* 表单项内容区域 */
+.el-dialog .el-form-item__content {
+	margin-left: 120px !important;
 }
 </style>

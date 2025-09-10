@@ -1,130 +1,80 @@
 <template>
 	<div>
-		<!-- 产品信息表 -->
-		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
-			<!-- 功能区区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15">
-					<el-col :span="12">
-						<div style="text-align: left;">
-							<el-button type="primary" @click="openAddProductDialog()" size="default"
-								v-if="userId.toString() === '1' || userDepartment === 210">添加产品</el-button>
-						</div>
-					</el-col>
-					<el-col :span="12">
-						<div style="text-align: right;">
-							<!-- 分类管理按钮已移至产品分类区域底部 -->
-						</div>
-					</el-col>
-				</el-row>
-			</div>
-
-			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15">
-					<el-col :span="8">
-						<el-input v-model="Search_Keyword" clearable placeholder="请输入产品编号或产品名称关键词进行搜索" size="default"
-							@keyup.enter="Search_ProductInfo" @clear="Search_Reset" />
-					</el-col>
-					<el-col :span="4">
-						<div style="text-align: left;">
-							<el-button type="primary" plain @click="Search_ProductInfo" size="default">查询</el-button>
-						</div>
-					</el-col>
-				</el-row>
-			</div>
-
-			<!-- 产品分类侧边栏 -->
-			<div style="display: flex;">
-				<div
-					style="width: 400px; border-right: 1px solid #e5e7eb; background: #fafafa; padding: 15px; position: relative; height: 600px; overflow: hidden;">
-					<span style="font-size: 16px; font-weight: bold; color: #333;">产品分类</span>
-					<el-divider style="margin: 10px 0;"></el-divider>
-					<el-tree ref="treeRef" :props="{ label: 'label', children: 'children' }" node-key="id"
-						:default-expanded-keys="[0]" :expand-on-click-node="false" :data="ProductCategoriesTreeData"
-						style="font-size: 14px;" :height="500" @node-click="handleNodeClick"
-						@node-collapse="handleCollapse" @node-contextmenu="handleRightClick" draggable
-						:allow-drop="allowDrop" @node-drag-start="handleDragStart" @node-drag-enter="handleDragEnter"
-						@node-drag-leave="handleDragLeave" @node-drag-end="handleDragEnd" @node-drop="handleDrop">
-						<template #default="{ node }">
-							<span class="prefix" :class="{ 'is-leaf': node.isLeaf }">
-								<el-icon>
-									<Folder />
-								</el-icon>
-							</span>
-							<span>{{ node.label }}</span>
-						</template>
-					</el-tree>
-
-					<!-- 右键菜单 -->
-					<ul v-show="contextMenuVisible"
-						:style="{ left: contextMenuLeft + 'px', top: contextMenuTop + 'px' }" class="context-menu">
-						<li @click="renameProductCategory" v-if="userId.toString() === '1'">
+		<el-container class="layout-container-demo">
+			<el-aside width="300px">
+				<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;产品分类</span>
+				<el-divider></el-divider>
+				<el-button size="small" plain @click="openAddproductCategoriesMessageBox()"
+					v-if="userId.toString() === '1'">添加分类</el-button>
+				<el-button size="small" plain @click="DelproductCategoriesMessageBox()"
+					v-if="userId.toString() === '1'">删除分类</el-button>
+				<el-button size="small" plain @click="moveToTopLevel()"
+					v-if="userId.toString() === '1' && SelectNodeId.value !== 0">移至顶级</el-button>
+				<el-tree ref="treeRef" :props="{ label: 'label', children: 'children' }" node-key="id"
+					:default-expanded-keys="[0]" :expand-on-click-node="false" :data="ProductCategoriesTreeData"
+					style="font-size: 15px;" :height="700" @node-click="handleNodeClick" @node-collapse="handleCollapse"
+					@node-contextmenu="handleRightClick" draggable :allow-drop="allowDrop"
+					@node-drag-start="handleDragStart" @node-drag-enter="handleDragEnter"
+					@node-drag-leave="handleDragLeave" @node-drag-end="handleDragEnd" @node-drop="handleDrop">
+					<template #default="{ node }">
+						<span class="prefix" :class="{ 'is-leaf': node.isLeaf }">
 							<el-icon>
-								<Edit />
+								<Folder />
 							</el-icon>
-							重命名
-						</li>
-						<li @click="openAddproductCategoriesMessageBox" v-if="userId.toString() === '1'">
-							<el-icon>
-								<Plus />
-							</el-icon>
-							添加子分类
-						</li>
-						<li @click="DelproductCategoriesMessageBox" v-if="userId.toString() === '1'">
-							<el-icon>
-								<Delete />
-							</el-icon>
-							删除分类
-						</li>
-						<li @click="moveToTopLevel" v-if="userId.toString() === '1'">
-							<el-icon>
-								<TopRight />
-							</el-icon>
-							移至顶级
-						</li>
-					</ul>
+						</span>
+						<span>{{ node.label }}</span>
+					</template>
+				</el-tree>
 
-					<!-- 分类管理按钮区域 - 固定在底部 -->
-					<div
-						style="position: absolute; bottom: 15px; left: 15px; right: 15px; background: #fafafa; padding: 10px; border-top: 1px solid #e5e7eb; border-radius: 4px;">
-						<div class="category-buttons-container">
-							<el-button type="success" size="small" @click="openAddproductCategoriesMessageBox()"
-								v-if="userId.toString() === '1'" class="category-btn">
-								<el-icon>
-									<Plus />
-								</el-icon>
-								<span class="button-text">添加分类</span>
-								<span class="button-text-short">添加</span>
-							</el-button>
-							<el-button type="danger" size="small" @click="DelproductCategoriesMessageBox()"
-								v-if="userId.toString() === '1'" class="category-btn">
-								<el-icon>
-									<Delete />
-								</el-icon>
-								<span class="button-text">删除分类</span>
-								<span class="button-text-short">删除</span>
-							</el-button>
-							<el-button type="warning" size="small" @click="moveToTopLevel()"
-								v-if="userId.toString() === '1' && SelectNodeId.value !== 0" class="category-btn">
-								<el-icon>
-									<TopRight />
-								</el-icon>
-								<span class="button-text">移至顶级</span>
-								<span class="button-text-short">移顶</span>
-							</el-button>
-						</div>
+				<!-- 右键菜单 -->
+				<ul v-show="contextMenuVisible" :style="{ left: contextMenuLeft + 'px', top: contextMenuTop + 'px' }"
+					class="context-menu">
+					<li @click="renameProductCategory" v-if="userId.toString() === '1'">
+						<el-icon>
+							<Edit />
+						</el-icon>
+						重命名
+					</li>
+					<li @click="openAddproductCategoriesMessageBox" v-if="userId.toString() === '1'">
+						<el-icon>
+							<Plus />
+						</el-icon>
+						添加子分类
+					</li>
+					<li @click="DelproductCategoriesMessageBox" v-if="userId.toString() === '1'">
+						<el-icon>
+							<Delete />
+						</el-icon>
+						删除分类
+					</li>
+					<li @click="moveToTopLevel" v-if="userId.toString() === '1'">
+						<el-icon>
+							<TopRight />
+						</el-icon>
+						移至顶级
+					</li>
+				</ul>
+			</el-aside>
+			<el-container>
+				<el-main>
+					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
+					<el-divider></el-divider>
+					<div style="width: 100%; margin-top: 30px;">
+						<el-input v-model="Search_Keyword" clearable style="width: 60%" size="large"
+							placeholder="输入产品编号或产品名称关键词进行搜索" @keyup.enter="Search_ProductInfo" @clear="Search_Reset" />
+						<el-button type="primary" @click="Search_ProductInfo()" plain
+							style="margin-left: 10px;">查询</el-button>
 					</div>
-				</div>
-
-				<!-- 表格区域 -->
-				<div style="flex: 1; padding: 15px;">
+					<div style="margin-top: 30px;"></div>
+					<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;产品列表</span>
+					<el-divider></el-divider>
+					<el-button type="primary" @click="openAddProductDialog()"
+						v-if="userId.toString() === '1' || userDepartment === 210">添加产品</el-button>
 					<div class="table-wrapper">
 						<el-table :data="ProductInfoTableData" row-key="id"
 							:tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
-							@sort-change="handleSortChange" style="width: 100%; table-layout: fixed;" stripe
-							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
-							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+							@sort-change="handleSortChange"
+							style="width: 100%; overflow-x: scroll; overflow-y: hidden;">
 							<el-table-column prop="productCode" label="产品编号" width="200" sortable="custom">
 								<template #default="scope">
 									<span>{{ scope.row.productCode }}</span>
@@ -132,11 +82,11 @@
 										size="small">草稿</el-tag>
 								</template>
 							</el-table-column>
-							<el-table-column prop="chineseProductName" label="中文品名" width="200"></el-table-column>
+							<el-table-column prop="chineseProductName" label="中文品名" width="150"></el-table-column>
 							<el-table-column prop="englishProductName" label="英文品名" width="200"></el-table-column>
 							<el-table-column prop="chineseSpecification" label="中文规格" width="200"></el-table-column>
-							<el-table-column prop="unitOfMeasurement" label="计量单位" width="90"></el-table-column>
-							<el-table-column label="产品图片" width="90">
+							<el-table-column prop="unitOfMeasurement" label="计量单位" width="100"></el-table-column>
+							<el-table-column label="产品图片" width="200">
 								<template #default="scope">
 									<el-image v-if="scope.row.productPhotoPath"
 										:src="getFirstImageUrl(scope.row.productPhotoPath)"
@@ -146,7 +96,7 @@
 									</el-image>
 								</template>
 							</el-table-column>
-							<el-table-column label="最近成交" width="110">
+							<el-table-column label="最近成交" width="200">
 								<template #default="scope">
 									{{ formatDate(scope.row.recentTransactionDate) }}
 								</template>
@@ -163,96 +113,97 @@
 						</el-table>
 					</div>
 					<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-						:total="totalItems" background layout="prev, pager, next" style="margin-top: 15px;" />
-				</div>
-			</div>
-		</div>
+						:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+				</el-main>
+			</el-container>
+		</el-container>
 		<el-dialog :modal="false" :modal-penetrable="true" v-model="AddProductDialog" title="添加产品"
 			:close-on-click-modal=false style="width: 70%;" @close="closeAddProductDialog()">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
 			<el-divider></el-divider>
-			<el-form ref="ProductformRef" :rules="ProductformRules" :model="Productform" label-width="120px"
-				:show-message="false">
+			<el-form ref="ProductformRef" :rules="ProductformRules" :model="Productform" label-width="120px">
 				<el-row>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="产品编号" prop="productCode" data-field="productCode">
 							<el-input v-model="Productform.productCode" :disabled="isDisabled" placeholder="请输入产品编号"
-								style="width: 300px;" ref="productCodeInput" size="default" />
+								style="width: 300px;" ref="productCodeInput" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="客户货号" prop="customerGoodsNumber" data-field="customerGoodsNumber">
 							<el-input v-model="Productform.customerGoodsNumber" :disabled="isDisabled"
-								placeholder="请输入客户货号" style="width: 300px;" size="default" />
+								placeholder="请输入客户货号" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="产品条码" data-field="productBarcode">
 							<el-input v-model="Productform.productBarcode" :disabled="isDisabled" placeholder="请输入产品条码"
-								style="width: 300px;" size="default" />
+								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
-						<el-form-item label="计量单位" prop="unitOfMeasurement" data-field="unitOfMeasurement">
-							<el-select v-model="Productform.unitOfMeasurement" :disabled="isDisabled"
-								placeholder="请选择计量单位" style="width: 300px;" size="default">
+				</el-row>
+				<el-row>
+					<el-col :span="8">
+						<el-form-item label="中文品名" prop="chineseProductName" data-field="chineseProductName">
+							<el-input v-model="Productform.chineseProductName" :disabled="isDisabled"
+								placeholder="请输入中文品名" style="width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="英文品名" prop="englishProductName" data-field="englishProductName">
+							<el-input v-model="Productform.englishProductName" :disabled="isDisabled"
+								placeholder="请输入英文品名" style="width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="中文规格" prop="chineseSpecification" data-field="chineseSpecification">
+							<el-input v-model="Productform.chineseSpecification" :disabled="isDisabled"
+								placeholder="请输入中文规格" style="width: 300px;" />
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<el-row>
+					<el-col :span="8">
+						<el-form-item label="英文规格" data-field="englishSpecification">
+							<el-input v-model="Productform.englishSpecification" :disabled="isDisabled"
+								placeholder="请输入英文规格" style="width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="计量单位" prop="unit" data-field="unit">
+							<el-select v-model="Productform.unit" :disabled="isDisabled" placeholder="选择计量单位"
+								style="width: 300px;">
 								<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
+									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="6">
-						<el-form-item label="中文品名" prop="chineseProductName" data-field="chineseProductName">
-							<el-input v-model="Productform.chineseProductName" :disabled="isDisabled"
-								placeholder="请输入中文品名" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="英文品名" prop="englishProductName" data-field="englishProductName">
-							<el-input v-model="Productform.englishProductName" :disabled="isDisabled"
-								placeholder="请输入英文品名" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="中文规格" prop="chineseSpecification" data-field="chineseSpecification">
-							<el-input v-model="Productform.chineseSpecification" :disabled="isDisabled"
-								placeholder="请输入中文规格" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="英文规格" data-field="englishSpecification">
-							<el-input v-model="Productform.englishSpecification" :disabled="isDisabled"
-								placeholder="请输入英文规格" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="海关编码" prop="customsCode" data-field="customsCode">
 							<el-input v-model="Productform.customsCode" :disabled="isDisabled" placeholder="请输入海关编码"
-								style="width: 300px;" size="default" />
+								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+				</el-row>
+				<el-row>
+					<el-col :span="8">
 						<el-form-item label="报关中文品名" prop="chineseDeclarationProductName"
 							data-field="chineseDeclarationProductName">
 							<el-input v-model="Productform.chineseDeclarationProductName" :disabled="isDisabled"
-								placeholder="请输入报关中文品名" style="width: 300px;" size="default" />
+								placeholder="请输入报关中文品名" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="报关英文品名" prop="englishDeclarationProductName"
 							data-field="englishDeclarationProductName">
 							<el-input v-model="Productform.englishDeclarationProductName" :disabled="isDisabled"
-								placeholder="请输入报关英文品名" style="width: 300px;" size="default" />
+								placeholder="请输入报关英文品名" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="商检标志" prop="inspectionMark" data-field="inspectionMark">
 							<el-select v-model="Productform.inspectionMark" :disabled="isDisabled" placeholder="选择商检标志"
-								style="width: 300px;" size="default">
+								style="width: 300px;">
 								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -260,48 +211,69 @@
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="包装方式" prop="PackingMethod">
 							<el-select v-model="Productform.PackingMethod" :disabled="isDisabled" placeholder="选择包装方式"
-								style="width: 300px;" size="default">
+								style="width: 300px;">
 								<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="所属供应商" prop="Supplier">
 							<el-select v-model="Productform.Supplier" multiple clearable filterable
-								:disabled="isDisabled" placeholder="选择供应商" style="width: 300px;" size="default">
+								:disabled="isDisabled" placeholder="选择供应商" style="width: 300px;">
 								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="库存数量">
-							<el-input v-model="Productform.stockQuantity" disabled placeholder="" style="width: 300px;"
-								size="default" />
+							<el-input v-model="Productform.stockQuantity" disabled placeholder=""
+								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+				</el-row>
+				<el-row>
+					<el-col :span="8" v-if="false">
+						<el-form-item label="开发时间日期">
+							<el-date-picker v-model="Productform.developmentEventDate" type="date" disabled
+								style=" width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
 						<el-form-item label="开发人员">
 							<el-select v-model="Productform.developmentPersonnel" placeholder="" :disabled="isDisabled"
-								style="width: 300px;" size="default">
+								style="width: 300px;">
 								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</el-form-item>
 					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="6">
+					<el-col :span="8" v-if="false">
+						<el-form-item label="最近报价">
+							<el-select v-model="Productform.recentQuotation" placeholder="" disabled
+								style="width: 300px;">
+							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8" v-if="false">
+						<el-form-item label="最近成交日期">
+							<el-date-picker v-model="Productform.recentTransactionDate" type="date" disabled
+								placeholder="" style="width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
 						<el-form-item label="所属分类" prop="ProductCategories">
 							<el-cascader v-model="Productform.ProductCategories" :disabled="isDisabled"
-								:options="Productoptions" :props="props1" clearable style="width: 300px;" size="default"
+								:options="Productoptions" :props="props1" clearable style="width: 300px;"
 								@change="handleCategoryChange" />
 						</el-form-item>
 					</el-col>
+				</el-row>
+				<el-row>
 					<el-col :span="16">
 						<el-form-item label="产品照片">
 							<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList"
@@ -335,101 +307,91 @@
 						</el-form-item>
 					</el-col>
 				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="开发时间日期">
-							<el-date-picker v-model="Productform.developmentEventDate" type="date" disabled
-								style=" width: 300px;" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="最近报价">
-							<el-select v-model="Productform.recentQuotation" placeholder="" disabled
-								style="width: 300px;">
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="最近成交日期">
-							<el-date-picker v-model="Productform.recentTransactionDate" type="date" disabled
-								placeholder="" style="width: 300px;" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<!-- <el-form-item label="所属分类" prop="ProductCategories">
-							<el-cascader v-model="Productform.ProductCategories" :disabled="isDisabled"
-								:options="Productoptions" :props="props1" clearable style="width: 300px;"
-								@change="handleCategoryChange" />
-						</el-form-item> -->
-					</el-col>
-				</el-row>
 				<span style="font-size: 20px; font-weight: bold;">产品规格</span>
 				<el-divider></el-divider>
 				<el-row>
 					<el-col :span="24">
 						<el-form-item label="产品描述">
 							<el-input v-model="Productform.productDescription" :disabled="isDisabled"
-								style="width: 1200px;" size="default" />
+								style="width: 1200px;" />
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<el-row v-if="false">
+					<el-col :span="8">
+						<el-form-item label="产品长度">
+							<el-input v-model="Productform.productLength" :disabled="isDisabled"
+								style="width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="产品宽度">
+							<el-input v-model="Productform.productwidth" :disabled="isDisabled" style="width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="产品高度">
+							<el-input v-model="Productform.productheight" :disabled="isDisabled" placeholder="请输入中文品名"
+								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="产品克重">
-							<el-input v-model="Productform.productweight" :disabled="isDisabled" style="width: 300px;"
-								size="default" />
+							<el-input v-model="Productform.productweight" :disabled="isDisabled"
+								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="中包装量">
 							<el-input v-model="Productform.mediumpackagingvolume" :disabled="isDisabled"
-								style="width: 300px;" size="default" />
+								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="外箱装量">
 							<el-input v-model="Productform.outerboxpackingquantity" :disabled="isDisabled"
-								placeholder="请输入外箱装量" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="外箱体积(m³)">
-							<el-input v-model="Productform.outerboxvolume" disabled style="width: 300px;"
-								size="default" />
+								placeholder="请输入中文品名" style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="外箱长度(CM)">
 							<el-input v-model="Productform.outerboxlength" :disabled="isDisabled" style="width: 300px;"
-								@change="mainProductCalculatingOutBoxVolume()" size="default" />
+								@change="mainProductCalculatingOutBoxVolume()" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="外箱宽度(CM)">
 							<el-input v-model="Productform.outerboxwidth" :disabled="isDisabled" style="width: 300px;"
-								@change="mainProductCalculatingOutBoxVolume()" size="default" />
+								@change="mainProductCalculatingOutBoxVolume()" />
 						</el-form-item>
 					</el-col>
-					<el-col :span="6">
+					<el-col :span="8">
 						<el-form-item label="外箱高度(CM)">
 							<el-input v-model="Productform.outerboxheight" :disabled="isDisabled" style="width: 300px;"
-								@change="mainProductCalculatingOutBoxVolume()" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="外箱净重(KG)">
-							<el-input v-model="Productform.outerboxnetweight" :disabled="isDisabled"
-								style="width: 300px;" size="default" />
+								@change="mainProductCalculatingOutBoxVolume()" />
 						</el-form-item>
 					</el-col>
 				</el-row>
 				<el-row>
-					<el-col :span="6">
+					<el-col :span="8">
+						<el-form-item label="外箱体积(m³)">
+							<el-input v-model="Productform.outerboxvolume" disabled style="width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="外箱净重(KG)">
+							<el-input v-model="Productform.outerboxnetweight" :disabled="isDisabled"
+								style="width: 300px;" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
 						<el-form-item label="外箱毛重(KG)">
 							<el-input v-model="Productform.outerboxgrossweight" :disabled="isDisabled"
-								style="width: 300px;" size="default" />
+								style="width: 300px;" />
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -437,10 +399,8 @@
 				<el-divider></el-divider>
 				<el-button type="primary" @click="AddSubProduct()"
 					v-if="showAddSubProductButton && (userId.toString() === '1' || userDepartment === 210)"
-					:disabled="isDisabled" size="default">添加子产品</el-button>
-				<el-table :data="SubProductTableData" style="width: 100%; max-height: 550px; table-layout: fixed;"
-					stripe :header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
-					:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+					:disabled="isDisabled">添加子产品</el-button>
+				<el-table :data="SubProductTableData" style="width: 100%; height: 550px;">
 					<el-table-column prop="mainProductCode" label="主产品编号" width="150" align="center" v-if="false">
 						<template #default="scope">
 							<span>{{ scope.row.mainProductCode }}</span>
@@ -759,9 +719,7 @@
 				<el-divider></el-divider>
 				<el-tabs v-model="activeTab" class="demo-tabs">
 					<el-tab-pane label="工厂报价" name="FactoryQuotationTab">
-						<el-table :data="FactoryQuotationTableData" style="width: 100%; table-layout: fixed;" stripe
-							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
-							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table :data="FactoryQuotationTableData" style="width: 100%">
 							<el-table-column prop="update_time" label="报价日期" width="150">
 								<template #default="scope">
 									{{ formatDate(scope.row.update_time) }}
@@ -818,9 +776,7 @@
 						</el-table>
 					</el-tab-pane>
 					<el-tab-pane label="销售历史" name="SaleHistoryTab">
-						<el-table :data="SaleHistoryTableData" style="width: 100%; table-layout: fixed;" stripe
-							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
-							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table :data="SaleHistoryTableData" style="width: 100%">
 							<el-table-column prop="" label="交货日期" width="150"></el-table-column>
 							<el-table-column prop="" label="客户简称" width="150"></el-table-column>
 							<el-table-column prop="" label="客户货号" width="150"></el-table-column>
@@ -835,9 +791,7 @@
 						</el-table>
 					</el-tab-pane>
 					<el-tab-pane label="采购历史" name="PurchaseHistoryTab">
-						<el-table :data="PurchaseHistoryTableData" style="width: 100%; table-layout: fixed;" stripe
-							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
-							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table :data="PurchaseHistoryTableData" style="width: 100%">
 							<el-table-column prop="" label="采购时间" width="150"></el-table-column>
 							<el-table-column prop="" label="采购合同" width="150"></el-table-column>
 							<el-table-column prop="" label="供应商编号" width="150"></el-table-column>
@@ -2150,7 +2104,6 @@ const Search_EndTransactionDate = ref('');	// 查询最近成交日期
 const Search_ProductName = ref('');	// 查询产品名称
 const Search_Keyword = ref('');	// 统一搜索关键词
 
-
 const Search_ProductInfo = () => {
 	// 将搜索关键词同时设置到产品编号和产品名称字段
 	Search_ProductCode.value = Search_Keyword.value;
@@ -3353,191 +3306,7 @@ const EditSaveDraft = async () => {
 
 
 </script>
-<style scoped>
-/* 基础红色文本 */
-.red-text {
-	color: red !important;
-}
-
-/* el-input 组件的输入框 */
-.red-text .el-input__inner {
-	color: red !important;
-}
-
-/* 禁用状态的 el-input */
-.red-text.el-input.is-disabled .el-input__inner {
-	color: red !important;
-}
-
-/* span 元素 */
-.red-text span {
-	color: red !important;
-}
-
-/* 确保禁用状态下也显示红色 */
-.el-input.is-disabled.red-text .el-input__inner {
-	-webkit-text-fill-color: red !important;
-	color: red !important;
-}
-
-/* 错误高亮样式 */
-.el-form-item.highlight-error {
-	animation: error-shake 0.5s ease-in-out;
-	position: relative;
-}
-
-.el-form-item.highlight-error::after {
-	content: '';
-	position: absolute;
-	top: -4px;
-	left: -4px;
-	right: -4px;
-	bottom: -4px;
-	border: 2px solid var(--el-color-danger);
-	border-radius: 4px;
-	pointer-events: none;
-	z-index: 1;
-}
-
-/* 抖动动画 */
-@keyframes error-shake {
-
-	0%,
-	100% {
-		transform: translateX(0);
-	}
-
-	25% {
-		transform: translateX(-5px);
-	}
-
-	50% {
-		transform: translateX(5px);
-	}
-
-	75% {
-		transform: translateX(-5px);
-	}
-}
-
-/* 确保错误状态下的表单项突出显示 */
-.el-form-item.is-error.highlight-error .el-form-item__content {
-	box-shadow: 0 0 8px var(--el-color-danger);
-}
-
-/* 错误行样式 */
-.error-row {
-	--el-table-tr-bg-color: var(--el-color-danger-light-9);
-	animation: error-flash 1s ease-in-out;
-}
-
-@keyframes error-flash {
-
-	0%,
-	100% {
-		background-color: var(--el-table-tr-bg-color);
-	}
-
-	50% {
-		background-color: var(--el-color-danger-light-8);
-	}
-}
-
-/* 多行错误消息样式 */
-.el-message--error {
-	white-space: pre-line;
-	max-height: 300px;
-	overflow-y: auto;
-}
-
-/* 创建合同和查看合同详情dialog中的表单组件间距减少一半 */
-.el-dialog .el-form-item {
-	margin-bottom: 5px !important;
-}
-
-.el-dialog .el-row {
-	margin-bottom: 2.5px !important;
-}
-
-/* 错误placeholder样式 */
-.error-placeholder .el-input__inner::placeholder,
-.error-placeholder .el-select__input::placeholder,
-.error-placeholder .el-date-editor__input::placeholder {
-	color: var(--el-color-danger) !important;
-}
-
-.error-placeholder .el-input__inner,
-.error-placeholder .el-select__input,
-.error-placeholder .el-date-editor__input {
-	border-color: var(--el-color-danger) !important;
-}
-
-/* 表格行高度调整 */
-.el-table .el-table__row,
-.el-table .el-table__body tr,
-.el-table .el-table__body .el-table__row {
-	height: 20px !important;
-}
-
-/* 表格列间距调整 */
-.el-table {
-	border-spacing: 0 !important;
-	border-collapse: collapse !important;
-	table-layout: fixed !important;
-}
-
-.el-table td {
-	border-spacing: 0 !important;
-	margin: 0 !important;
-	padding-left: 1px !important;
-	padding-right: 1px !important;
-	overflow: hidden !important;
-	text-overflow: ellipsis !important;
-	white-space: nowrap !important;
-}
-
-.el-table th {
-	padding-left: 1px !important;
-	padding-right: 1px !important;
-	overflow: hidden !important;
-	text-overflow: ellipsis !important;
-	white-space: nowrap !important;
-}
-
-.el-table .el-table__row td,
-.el-table .el-table__body tr td,
-.el-table .el-table__body .el-table__row td {
-	padding: 2px 1px !important;
-	line-height: 12px !important;
-	overflow: hidden !important;
-	text-overflow: ellipsis !important;
-	white-space: nowrap !important;
-}
-
-/* 更具体的表格行高度控制 */
-.el-table tbody tr {
-	height: 20px !important;
-}
-
-.el-table tbody tr td {
-	padding: 2px 1px !important;
-	line-height: 12px !important;
-	overflow: hidden !important;
-	text-overflow: ellipsis !important;
-	white-space: nowrap !important;
-}
-
-/* 隐藏组件外部的验证信息显示 */
-.el-dialog .el-form-item__error,
-.el-dialog .el-form-item .el-form-item__error,
-.el-dialog .el-form-item.is-error .el-form-item__error {
-	display: none !important;
-	visibility: hidden !important;
-	height: 0 !important;
-	overflow: hidden !important;
-}
-
-/* 产品信息页面特有样式 */
+<style lang="scss" scoped>
 .image-preview-container {
 	display: flex;
 	align-items: center;
@@ -3690,80 +3459,17 @@ const EditSaveDraft = async () => {
 }
 
 /* 拖拽相关样式 */
+// :deep(.is-dragging) {
+// 	opacity: 0.5;
+// }
+
+// :deep(.is-drop-inner) {
+// 	background-color: #f0f9eb;
+// 	border: 1px dashed #67c23a;
+// }
+
 :deep(.el-tree-node__content.is-drop-inner) {
 	background-color: transparent !important;
 	border: none !important;
-}
-
-/* 分类管理按钮响应式样式 */
-.category-buttons-container {
-	display: flex;
-	gap: 6px;
-	justify-content: center;
-	width: 100%;
-}
-
-.category-btn {
-	flex: 1;
-	min-width: 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-/* 按钮文字显示控制 */
-.button-text {
-	display: inline;
-	margin-left: 4px;
-}
-
-.button-text-short {
-	display: none;
-	margin-left: 4px;
-}
-
-/* 当分类区域宽度小于350px时，显示简化文字 */
-@media (max-width: 350px) {
-	.button-text {
-		display: none;
-	}
-
-	.button-text-short {
-		display: inline;
-	}
-
-	.category-buttons-container {
-		gap: 4px;
-	}
-}
-
-/* 当分类区域宽度在350px-450px之间时，显示简化文字 */
-@media (min-width: 350px) and (max-width: 450px) {
-	.button-text {
-		display: none;
-	}
-
-	.button-text-short {
-		display: inline;
-	}
-
-	.category-buttons-container {
-		gap: 6px;
-	}
-}
-
-/* 当分类区域宽度大于450px时，显示完整文字 */
-@media (min-width: 450px) {
-	.button-text {
-		display: inline;
-	}
-
-	.button-text-short {
-		display: none;
-	}
-
-	.category-buttons-container {
-		gap: 8px;
-	}
 }
 </style>

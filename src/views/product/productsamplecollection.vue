@@ -1,266 +1,291 @@
 <template>
 	<div>
-		<div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click="handleCreate">创建收样/寄样</el-button>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<div style="width: 100%; margin-top: 30px;">
-			<el-select v-model="SearchwaybillNumber" filterable clearable placeholder="选择运单号" style="width: 15%">
-				<el-option v-for="item in optionss.sql_waybill_number" :key="item.dictCode" :label="item.dictLabel"
-					:value="item.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="SearchCustomer" filterable clearable placeholder="选择客户（可输入查询）" style="width: 15%">
-				<el-option v-for="item in optionss.sql_hr_customer_abbreviation" :key="item.dictCode"
-					:label="item.dictLabel" :value="item.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="SearchSalesperson" filterable clearable placeholder="选择业务员" style="width: 15%">
-				<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode" :label="item.dictLabel"
-					:value="item.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchStartDate" type="date" placeholder="请选择开始日期"
-				style="width: 15%" />&nbsp;至&nbsp;
-			<el-date-picker v-model="SearchEndDate" type="date" placeholder="请选择结束日期" style="width: 15%" />
-		</div>
-		<div style="width: 100%; margin-top: 5px;">
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" plain @click="SearchHandleSearch">查询</el-button>
-				<el-button @click="SearchHandleReset">重置</el-button>
-			</el-row>
-		</div>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;收样/寄样信息表</span>
-		</div>
-		<el-divider> </el-divider>
-		<el-table :data="ProductSampleTableData">
+		<!-- 收样/寄样信息表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="handleCreate" size="default">创建收样/寄样</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-select v-model="SearchwaybillNumber" filterable clearable placeholder="选择运单号"
+							size="default">
+							<el-option v-for="item in optionss.sql_waybill_number" :key="item.dictCode"
+								:label="item.dictLabel" :value="item.dictValue" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="SearchCustomer" filterable clearable placeholder="选择客户（可输入查询）"
+							size="default">
+							<el-option v-for="item in optionss.sql_hr_customer_abbreviation" :key="item.dictCode"
+								:label="item.dictLabel" :value="item.dictValue" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="SearchSalesperson" filterable clearable placeholder="选择业务员" size="default">
+							<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode"
+								:label="item.dictLabel" :value="item.dictValue" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchStartDate" type="date" placeholder="请选择开始日期" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchEndDate" type="date" placeholder="请选择结束日期" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="SearchHandleSearch" size="default">查询</el-button>
+							<el-button @click="SearchHandleReset" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
 
-			<el-table-column prop="type" label="寄样/收样" width="150">
-				<template #default="scope">
-					<span>{{ scope.row.type }}</span>
-					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-				</template>
-			</el-table-column>
-			<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="150"></el-table-column>
-			<el-table-column prop="customer_ID" label="寄样对象" width="150"></el-table-column>
-			<el-table-column prop="waybill_Number" label="运单号" width="150"></el-table-column>
-			<el-table-column prop="express_Company" label="快件公司" width="150"></el-table-column>
-			<el-table-column prop="sample_Date" label="登记日期" width="150"></el-table-column>
-			<el-table-column prop="payment_Method" label="付费方式" width="150"></el-table-column>
-			<el-table-column prop="company_ID" label="我方公司" width="150"></el-table-column>
-			<el-table-column prop="paid_Express_Fee" label="已付快件费" width="150"></el-table-column>
-			<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
-				<template v-slot:default="scope">
-					<el-button link type="primary" size="small" @click="handleView(scope.row.id)">查看/编辑</el-button>
-					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
-						type="danger" size="small" @click="DeleteProductSample(scope.row)">删除</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+			<!-- 表格区域 -->
+			<el-table :data="ProductSampleTableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="type" label="寄样/收样" width="100">
+					<template #default="scope">
+						<span>{{ scope.row.type }}</span>
+						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="110"></el-table-column>
+				<el-table-column prop="customer_ID" label="寄样对象" width="150"></el-table-column>
+				<el-table-column prop="waybill_Number" label="运单号" width="130"></el-table-column>
+				<el-table-column prop="express_Company" label="快件公司" width="100"></el-table-column>
+				<el-table-column prop="sample_Date" label="登记日期" width="110"></el-table-column>
+				<el-table-column prop="payment_Method" label="付费方式" width="90"></el-table-column>
+				<el-table-column prop="company_ID" label="我方公司" width="90"></el-table-column>
+				<el-table-column prop="paid_Express_Fee" label="已付快件费" width="110"></el-table-column>
+				<el-table-column fixed="right" prop="operate" label="操作" width="200">
+					<template v-slot:default="scope">
+						<el-button type="text" size="small" @click="handleView(scope.row.id)">查看/编辑</el-button>
+						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
+							link type="danger" size="small" @click="DeleteProductSample(scope.row)">删除</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
+				:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+		</div>
 
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="dialogVisible"
-			:title="isCreateMode ? '创建收样/寄样' : '查看/编辑收样/寄样'" :close-on-click-modal="false" style="width: 70%;"
+		<el-dialog :modal="false" modal-penetrable v-model="dialogVisible"
+			:title="isCreateMode ? '创建收样/寄样' : '查看/编辑收样/寄样'" :close-on-click-modal="false" style="width: 75%;"
 			@closed="handleDialogClosed">
-			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
-			<el-divider></el-divider>
-			<el-form :model="CreateDialogform" label-width="120px">
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="请选择">
-							<el-radio-group v-model="radioValue" :disabled="!isEditable">
-								<el-radio label="1" size="large" border>寄样</el-radio>
-								<el-radio label="2" size="large" border>收样</el-radio>
-							</el-radio-group>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="客户/供应商">
-							<el-select v-model="CreateDialogform.recipienttypeexamples" placeholder="请选择供应商或客户"
-								style="width: 300px;" @change="handleRecipientTypeChange" :disabled="!isEditable">
-								<el-option v-for="item in optionss.hr_recipient_type_examples" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="运单号">
-							<el-input v-model="CreateDialogform.waybillNumber" style="width: 300px;"
-								:disabled="!isEditable"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="快递公司">
-							<el-select v-model="CreateDialogform.expressCompany" placeholder="请选择快递公司"
-								style="width: 300px;" :disabled="!isEditable">
-								<el-option v-for="item in optionss.hr_express_delivery_company" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item v-if="radioValue === '1'" label="寄样日期">
-							<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
-								style="width: 300px;" :disabled="!isEditable"></el-date-picker>
-						</el-form-item>
-						<el-form-item v-else-if="radioValue === '2'" label="收样日期">
-							<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
-								style="width: 300px;" :disabled="!isEditable"></el-date-picker>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item :label="sampleObjectLabel">
-							<el-select v-model="CreateDialogform.sampleObject" filterable placeholder="请选择"
-								style="width: 300px;" :disabled="!isEditable">
-								<el-option v-for="item in getObjectOptions" :key="item.dictCode" :label="item.dictLabel"
-									:value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="对方简称">
-							<el-input v-model="CreateDialogform.partnerAbbreviation" style="width: 300px;"
-								:disabled="!isEditable"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="我方公司">
-							<el-select v-model="CreateDialogform.ourCompany" placeholder="请选择" style="width: 300px;"
-								:disabled="!isEditable">
-								<el-option v-for="item in optionss.hr_ourcompany" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="业务员">
-							<el-select v-model="CreateDialogform.salesperson" placeholder="请选择" style="width: 300px;"
-								:disabled="!isEditable">
-								<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="付费方式">
-							<el-select v-model="CreateDialogform.paymentMethod" placeholder="请选择快递付费方式"
-								style="width: 300px;" :disabled="!isEditable">
-								<el-option v-for="item in optionss.hr_express_payment_method" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="已付快递费">
-							<el-input v-model="CreateDialogform.paidExpressCost" style="width: 300px;"
-								:disabled="!isExpressFeeRequired || !isEditable"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<span style="font-size: 20px; font-weight: bold;">样品信息</span>
-				<el-divider></el-divider>
-				<el-button class="mt-4" type="primary" style="margin-bottom: 10px;" @click="addSampleRow"
-					:disabled="!isEditable">添加样品</el-button>
-				<el-table :data="SampleProductData" style="width: 100%;margin-bottom: 15px;" max-height="550">
-					<el-table-column prop="productNumber" label="样品编号" width="250">
-						<template #default="{ row, $index }">
-							<el-select v-model="row.productNumber" filterable clearable allow-create
-								:default-first-option="true" placeholder="请选择或输入样品编号" style="width: 100%"
-								:disabled="!isEditable"
-								@change="(value) => handleProductNumberChange(value, $index, $event)"
-								@clear="handleClearProductNumber($index)">
-								<el-option v-for="item in optionss.sql_product_name" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</template>
-					</el-table-column>
-					<el-table-column prop="productChineseName" label="中文品名" width="170">
-						<template #default="{ row }">
-							<el-input v-model="row.productChineseName" :disabled="!isEditable"></el-input>
-						</template>
-					</el-table-column>
-					<el-table-column prop="SampleQuantity" label="寄样数量" width="100">
-						<template #default="{ row }">
-							<el-input v-model="row.SampleQuantity" :disabled="!isEditable"></el-input>
-						</template>
-					</el-table-column>
-					<el-table-column prop="PricingAmount" label="计价金额" width="100">
-						<template #default="{ row }">
-							<el-input v-model="row.PricingAmount" :disabled="!isEditable"></el-input>
-						</template>
-					</el-table-column>
-					<el-table-column prop="subproductImage" label="产品图片" width="200" align="center">
-						<template #default="scope">
-							<el-upload :id="`upload-${scope.$index}`" ref="uploadRefs" :auto-upload="false"
-								:show-file-list="true" :on-change="(file) => handleImageSelect(file, scope.$index)"
-								:on-remove="(file) => handleImageRemove(file, scope.$index)" :limit="3" accept="image/*"
-								multiple list-type="text" :file-list="scope.row.subproductImages || []">
-								<el-button
-									v-if="!isCreateMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3)"
-									type="primary" icon="Plus" size="small" :disabled="!isEditable">
-									选择图片
-								</el-button>
-								<template #tip>
-									<div v-if="scope.row.subproductImages && scope.row.subproductImages.length >= 3"
-										class="el-upload__tip">
-										已达到最大图片数量
-									</div>
-								</template>
-							</el-upload>
-						</template>
-					</el-table-column>
-					<el-table-column prop="previewImages" label="图片预览" width="300" align="center">
-						<template #default="scope">
-							<div class="image-preview-container"
-								v-if="scope.row.subproductImages && scope.row.subproductImages.length">
-								<el-button type="text" :icon="ArrowLeft" @click="prevImage(scope.$index)"
-									:disabled="scope.row.currentImageIndex === 0" />
-								<el-image style="width: 150px; height: 150px;"
-									:src="scope.row.subproductImages[scope.row.currentImageIndex || 0].url"
-									:preview-src-list="scope.row.subproductImages.map(img => img.url)"
-									:initial-index="scope.row.currentImageIndex || 0" fit="cover" preview-teleported
-									@click="openPreview(scope.$index)" />
-								<el-button type="text" :icon="ArrowRight" @click="nextImage(scope.$index)"
-									:disabled="scope.row.currentImageIndex === scope.row.subproductImages.length - 1" />
-								<el-button v-if="!isCreateMode" type="danger" icon="Delete"
-									@click="deleteCurrentImage(scope.$index)" size="small"
+			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="基本信息" name="basicInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">基本信息</span>
+					</template>
+					<el-form :model="CreateDialogform" label-width="120px" :show-message="false">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="请选择">
+									<el-radio-group v-model="radioValue" :disabled="!isEditable" size="default">
+										<el-radio label="1" size="large" border>寄样</el-radio>
+										<el-radio label="2" size="large" border>收样</el-radio>
+									</el-radio-group>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户/供应商">
+									<el-select v-model="CreateDialogform.recipienttypeexamples" placeholder="请选择供应商或客户"
+										style="width: 300px;" @change="handleRecipientTypeChange"
+										:disabled="!isEditable" size="default">
+										<el-option v-for="item in optionss.hr_recipient_type_examples"
+											:key="item.dictCode" :label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="运单号">
+									<el-input v-model="CreateDialogform.waybillNumber" style="width: 300px;"
+										:disabled="!isEditable" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="快递公司">
+									<el-select v-model="CreateDialogform.expressCompany" placeholder="请选择快递公司"
+										style="width: 300px;" :disabled="!isEditable" size="default">
+										<el-option v-for="item in optionss.hr_express_delivery_company"
+											:key="item.dictCode" :label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item v-if="radioValue === '1'" label="寄样日期">
+									<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
+										style="width: 300px;" :disabled="!isEditable" size="default"></el-date-picker>
+								</el-form-item>
+								<el-form-item v-else-if="radioValue === '2'" label="收样日期">
+									<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
+										style="width: 300px;" :disabled="!isEditable" size="default"></el-date-picker>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item :label="sampleObjectLabel">
+									<el-select v-model="CreateDialogform.sampleObject" filterable placeholder="请选择"
+										style="width: 300px;" :disabled="!isEditable" size="default">
+										<el-option v-for="item in getObjectOptions" :key="item.dictCode"
+											:label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="我方公司">
+									<el-select v-model="CreateDialogform.ourCompany" placeholder="请选择"
+										style="width: 300px;" :disabled="!isEditable" size="default">
+										<el-option v-for="item in optionss.hr_ourcompany" :key="item.dictCode"
+											:label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="业务员">
+									<el-select v-model="CreateDialogform.salesperson" placeholder="请选择"
+										style="width: 300px;" :disabled="!isEditable" size="default">
+										<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode"
+											:label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="付费方式">
+									<el-select v-model="CreateDialogform.paymentMethod" placeholder="请选择快递付费方式"
+										style="width: 300px;" :disabled="!isEditable" size="default">
+										<el-option v-for="item in optionss.hr_express_payment_method"
+											:key="item.dictCode" :label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="已付快递费">
+									<el-input v-model="CreateDialogform.paidExpressCost" style="width: 300px;"
+										:disabled="!isExpressFeeRequired || !isEditable" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+			<el-collapse v-model="sampleInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="样品信息" name="sampleInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">样品信息</span>
+					</template>
+					<el-button class="mt-4" type="primary" style="margin-bottom: 10px;" @click="addSampleRow"
+						:disabled="!isEditable" size="default">添加样品</el-button>
+					<el-table :data="SampleProductData" style="width: 100%;margin-bottom: 15px;" max-height="550" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table-column prop="productNumber" label="样品编号" width="250">
+							<template #default="{ row, $index }">
+								<el-select v-model="row.productNumber" filterable clearable allow-create
+									:default-first-option="true" placeholder="请选择或输入样品编号" style="width: 100%"
+									:disabled="!isEditable" size="default"
+									@change="(value) => handleProductNumberChange(value, $index)"
+									@clear="handleClearProductNumber($index)">
+									<el-option v-for="item in optionss.sql_product_name" :key="item.dictCode"
+										:label="item.dictLabel" :value="item.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="productChineseName" label="中文品名" width="170">
+							<template #default="{ row }">
+								<el-input v-model="row.productChineseName" :disabled="!isEditable"
+									size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="SampleQuantity" label="寄样数量" width="100">
+							<template #default="{ row }">
+								<el-input v-model="row.SampleQuantity" :disabled="!isEditable"
+									size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="PricingAmount" label="计价金额" width="100">
+							<template #default="{ row }">
+								<el-input v-model="row.PricingAmount" :disabled="!isEditable" size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="subproductImage" label="产品图片" width="200" align="center">
+							<template #default="scope">
+								<el-upload :id="`upload-${scope.$index}`" ref="uploadRefs" :auto-upload="false"
+									:show-file-list="true" :on-change="(file) => handleImageSelect(file, scope.$index)"
+									:on-remove="(file) => handleImageRemove(file, scope.$index)" :limit="3"
+									accept="image/*" multiple list-type="text"
+									:file-list="scope.row.subproductImages || []">
+									<el-button
+										v-if="!isCreateMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3)"
+										type="primary" icon="Plus" size="default" :disabled="!isEditable">
+										选择图片
+									</el-button>
+									<template #tip>
+										<div v-if="scope.row.subproductImages && scope.row.subproductImages.length >= 3"
+											class="el-upload__tip">
+											已达到最大图片数量
+										</div>
+									</template>
+								</el-upload>
+							</template>
+						</el-table-column>
+						<el-table-column prop="previewImages" label="图片预览" width="300" align="center">
+							<template #default="scope">
+								<div class="image-preview-container"
+									v-if="scope.row.subproductImages && scope.row.subproductImages.length">
+									<el-button type="text" :icon="ArrowLeft" @click="prevImage(scope.$index)"
+										:disabled="scope.row.currentImageIndex === 0" />
+									<el-image style="width: 150px; height: 150px;"
+										:src="scope.row.subproductImages[scope.row.currentImageIndex || 0].url"
+										:preview-src-list="scope.row.subproductImages.map(img => img.url)"
+										:initial-index="scope.row.currentImageIndex || 0" fit="cover" preview-teleported
+										@click="openPreview(scope.$index)" />
+									<el-button type="text" :icon="ArrowRight" @click="nextImage(scope.$index)"
+										:disabled="scope.row.currentImageIndex === scope.row.subproductImages.length - 1" />
+									<el-button v-if="!isCreateMode" type="danger" icon="Delete"
+										@click="deleteCurrentImage(scope.$index)" size="default"
+										:disabled="!isEditable">删除</el-button>
+								</div>
+								<span v-else>暂无图片</span>
+							</template>
+						</el-table-column>
+						<el-table-column label="操作" width="100" fixed="right">
+							<template #default="{ $index }">
+								<el-button type="danger" size="default" @click="removeSampleRow($index)"
 									:disabled="!isEditable">删除</el-button>
-							</div>
-							<span v-else>暂无图片</span>
-						</template>
-					</el-table-column>
-					<el-table-column label="操作" width="100" fixed="right">
-						<template #default="{ $index }">
-							<el-button type="danger" size="small" @click="removeSampleRow($index)"
-								:disabled="!isEditable">删除</el-button>
-						</template>
-					</el-table-column>
-				</el-table>
-			</el-form>
+							</template>
+						</el-table-column>
+					</el-table>
+				</el-collapse-item>
+			</el-collapse>
 			<template #footer>
 				<span class="dialog-footer">
 					<!-- 查看模式：显示编辑按钮 -->
-					<el-button v-if="isEditBtnShow" type="primary" @click="handleEdit">编辑</el-button>
+					<el-button v-if="isEditBtnShow" type="primary" @click="handleEdit" size="default">编辑</el-button>
 					<!-- 新建模式：显示保存按钮 -->
-					<el-button v-if="isSaveDraftBtnShow" type="warning" :loading="loading"
-						@click="handleSaveDraft">保存草稿</el-button>
+					<el-button v-if="isSaveDraftBtnShow" type="warning" :loading="loading" @click="handleSaveDraft"
+						size="default">保存草稿</el-button>
 					<!-- 编辑模式：显示保存按钮 -->
-					<el-button v-if="isEditSubmitBtnShow" type="success" :loading="loading"
-						@click="handleEditSave">提交</el-button>
+					<el-button v-if="isEditSubmitBtnShow" type="success" :loading="loading" @click="handleEditSave"
+						size="default">提交</el-button>
 					<!-- 编辑模式：显示提交按钮 -->
-					<el-button v-if="isSubmitBtnShow" type="success" :loading="loading"
-						@click="handleSave">提交</el-button>
+					<el-button v-if="isSubmitBtnShow" type="success" :loading="loading" @click="handleSave"
+						size="default">提交</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -285,6 +310,10 @@ const isEditBtnShow = ref(false);//编辑按钮
 const isSaveDraftBtnShow = ref(false);//保存草稿按钮
 const isEditSubmitBtnShow = ref(false);//编辑提交按钮
 const isSubmitBtnShow = ref(false);//提交按钮
+
+// collapse组件状态
+const basicInfoCollapseActive = ref(['basicInfo']);
+const sampleInfoCollapseActive = ref(['sampleInfo']);
 
 //查询条件
 const SearchwaybillNumber = ref('');
@@ -1148,4 +1177,75 @@ const DeleteProductSample = (row) => {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+/* 创建收样/寄样和查看详情dialog中的表单组件间距减少一半 */
+.el-dialog .el-form-item {
+	margin-bottom: 5px !important;
+}
+
+.el-dialog .el-row {
+	margin-bottom: 2.5px !important;
+}
+
+/* 错误placeholder样式 */
+.error-placeholder .el-input__inner::placeholder,
+.error-placeholder .el-select__input::placeholder,
+.error-placeholder .el-date-editor__input::placeholder {
+	color: var(--el-color-danger) !important;
+}
+
+.error-placeholder .el-input__inner,
+.error-placeholder .el-select__input,
+.error-placeholder .el-date-editor__input {
+	border-color: var(--el-color-danger) !important;
+}
+
+/* 表格行高度调整 */
+.el-table .el-table__row,
+.el-table .el-table__body tr,
+.el-table .el-table__body .el-table__row {
+	height: 20px !important;
+}
+
+/* 表格列间距调整 */
+.el-table {
+	border-spacing: 0 !important;
+	border-collapse: collapse !important;
+	table-layout: fixed !important;
+}
+
+.el-table td {
+	border-spacing: 0 !important;
+	margin: 0 !important;
+	padding-left: 1px !important;
+	padding-right: 1px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+.el-table th {
+	padding-left: 1px !important;
+	padding-right: 1px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+.el-table .el-table__body tr td,
+.el-table .el-table__body .el-table__row td {
+	padding: 2px 1px !important;
+	line-height: 12px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+.el-table tbody tr td {
+	padding: 2px 1px !important;
+	line-height: 12px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+</style>

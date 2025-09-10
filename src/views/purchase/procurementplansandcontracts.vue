@@ -1,283 +1,270 @@
 <template>
 	<div>
-		<!-- <div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click="OpenAddcontractofpurchasedialog">新增采购合同</el-button> -->
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;采购需求</span>
-		</div>
-		<el-divider> </el-divider>
-		<el-table :data="shoppinglisttableData" style="width: 100%" :span-method="mergeCells">
-			<el-table-column prop="procurementId" label="ID" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="contractNumber" label="销售合同号" width="150"></el-table-column>
-			<el-table-column prop="contractId" label="销售合同ID" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="productId" label="产品ID" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="productName" label="产品名称" width="150"></el-table-column>
-			<el-table-column prop="quantity" label="数量" width="150"></el-table-column>
-			<el-table-column prop="unitPrice" label="采购单价" width="150"></el-table-column>
-			<el-table-column prop="totalPrice" label="采购总价" width="150"></el-table-column>
-			<el-table-column prop="salesperson" label="销售员" width="150"></el-table-column>
-			<!-- 操作 -->
-			<el-table-column label="操作" width="150">
-				<template #default="scope">
-					<!-- 合并的"生成采购合同"按钮 -->
-					<div v-if="isFirstRow(scope.row)">
-						<el-button type="primary" size="small" @click="ViewDetails(scope.row)">
-							需求详情
-						</el-button>
-					</div>
-				</template>
-			</el-table-column>
-		</el-table>
-		<el-pagination @current-change="contractsTableDatahandlePageChange"
-			:current-page="contractsTableDatacurrentPage" :page-size="contractsTableDatapageSize"
-			:total="contractsTableDatatotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;采购合同</span>
-		</div>
-		<el-divider> </el-divider>
-		<el-table :data="contractofpurchasetableData" style="width: 100%">
-			<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="purchaseContractNumber" label="采购合同号" width="180">
-				<template #default="scope">
-					<span>{{ scope.row.purchaseContractNumber }}</span>
-					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-				</template>
-			</el-table-column>
-			<el-table-column prop="contractStatus" label="合同状态" width="100"></el-table-column>
-			<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="reviewStatusStr" label="审核状态" width="150" align="center">
-				<template #default="{ row }">
-					<template v-if="row.id"> <!-- 有ID才显示popover -->
-						<el-popover placement="right" :width="400" trigger="click">
-							<template #reference>
-								<el-tag :type="getStatusType(row.reviewStatusStr)" @click="getApprovalFlow(row.id)"
-									style="cursor: pointer">
-									{{ row.reviewStatusStr }}
-								</el-tag>
-							</template>
-
-							<!-- 有审批步骤才显示步骤条 -->
-							<template #default>
-								<div v-if="approvalSteps.length > 0" class="status-popover">
-									<el-steps :active="approvalSteps.length" size="small">
-										<el-step v-for="step in approvalSteps" :key="step.stageID"
-											:title="step.approverUserName" :description="getStatusText(step.status)"
-											:status="getStatus(step.status)" />
-									</el-steps>
-								</div>
-								<div v-else>暂无审批流程</div>
-							</template>
-						</el-popover>
+		<!-- 采购需求表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 20px;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<span style="font-size: 20px; font-weight: bold;">采购需求</span>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 表格区域 -->
+			<el-table :data="shoppinglisttableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }" :span-method="mergeCells">
+				<el-table-column prop="procurementId" label="ID" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="contractNumber" label="销售合同号" width="110"></el-table-column>
+				<el-table-column prop="contractId" label="销售合同ID" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="productId" label="产品ID" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="productName" label="产品名称" width="150"></el-table-column>
+				<el-table-column prop="quantity" label="数量" width="90"></el-table-column>
+				<el-table-column prop="unitPrice" label="采购单价" width="90"></el-table-column>
+				<el-table-column prop="totalPrice" label="采购总价" width="90"></el-table-column>
+				<el-table-column prop="salesperson" label="销售员" width="150"></el-table-column>
+				<!-- 操作 -->
+				<el-table-column label="操作" width="150">
+					<template #default="scope">
+						<!-- 合并的"生成采购合同"按钮 -->
+						<div v-if="isFirstRow(scope.row)">
+							<el-button type="primary" size="small" @click="ViewDetails(scope.row)">
+								需求详情
+							</el-button>
+						</div>
 					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="contractsTableDatahandlePageChange"
+				:current-page="contractsTableDatacurrentPage" :page-size="contractsTableDatapageSize"
+				:total="contractsTableDatatotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+		</div>
 
-					<!-- 没有ID时只显示tag -->
-					<template v-else>
-						<el-tag :type="getStatusType(row.contractReviewStatusStr)">
-							{{ row.contractReviewStatusStr }}
-						</el-tag>
+		<!-- 采购合同表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<span style="font-size: 20px; font-weight: bold;">采购合同</span>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 表格区域 -->
+			<el-table :data="contractofpurchasetableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="purchaseContractNumber" label="采购合同号" width="110">
+					<template #default="scope">
+						<span>{{ scope.row.purchaseContractNumber }}</span>
+						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
 					</template>
-				</template>
-			</el-table-column>
-			<el-table-column prop="salesContract" label="销售合同" width="150"></el-table-column>
-			<el-table-column prop="customerContract" label="客户订单号" width="150"></el-table-column>
-			<el-table-column prop="deliveryDate" label="交货日期" width="150"></el-table-column>
-			<el-table-column prop="purchaseCurrency" label="采购货币" width="150"></el-table-column>
-			<el-table-column prop="salesperson" label="销售员" width="150"></el-table-column>
-			<el-table-column prop="purchaser" label="采购员" width="150"></el-table-column>
-			<el-table-column prop="createTime" label="创建日期" width="150"></el-table-column>
-			<el-table-column prop="deliveryLocation" label="交货地点" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="paymentDays" label="付款天数" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="deposit" label="定金金额" width="150" v-if="false"></el-table-column>
-			<el-table-column prop="hasDeposit" label="有无定金" width="150" v-if="false"></el-table-column>
-			<el-table-column fixed="right" label="操作" width="280">
-				<template #default="scope">
-					<el-button type="text" size="small" @click="CheckDetails(scope.row)">查看详情</el-button>
-					<el-button type="text" size="small"
-						@click="GeneratePurchaseContract(scope.row)">生成采购合同PDF</el-button>
-					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
-						type="danger" size="small" @click="DeletePurchaseContract(scope.row)">删除</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<el-pagination @current-change="purchasecontractsTableDatahandlePageChange"
-			:current-page="purchasecontractsTableDatacurrentPage" :page-size="purchasecontractsTableDatapageSize"
-			:total="purchasecontractsTableDatatotalItems" background layout="prev, pager, next"
-			style="margin-top: 5px;" />
+				</el-table-column>
+				<el-table-column prop="contractStatus" label="合同状态" width="90"></el-table-column>
+				<el-table-column prop="reviewStatus" label="审核状态编号" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="reviewStatusStr" label="审核状态" width="110" align="center">
+					<template #default="{ row }">
+						<template v-if="row.id"> <!-- 有ID才显示popover -->
+							<el-popover placement="right" :width="400" trigger="click">
+								<template #reference>
+									<el-tag :type="getStatusType(row.reviewStatusStr)" @click="getApprovalFlow(row.id)"
+										style="cursor: pointer">
+										{{ row.reviewStatusStr }}
+									</el-tag>
+								</template>
 
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="Addcontractofpurchasedialog" title="新增采购合同"
-			:close-on-click-modal=false style="width: 70%;" @close="handleAddcontractofpurchasedialogclose">
-			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
-			<el-divider></el-divider>
-			<el-form :model="Addcontractofpurchaseform" label-width="120px">
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="供应商">
-							<el-select v-model="Addcontractofpurchaseform.vendorCode" placeholder="请选择供应商"
-								style="width: 300px" :disabled="isFormDisabled">
-								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="采购合同">
-							<el-input ref="AddcontractofpurchaseformRef" :rules="rules"
-								v-model="Addcontractofpurchaseform.purchaseContract" disabled placeholder="请输入采购合同"
-								style="width: 300px"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="合同状态">
-							<el-select v-model="Addcontractofpurchaseform.contractStatus" placeholder="请选择合同状态"
-								style="width: 300px" disabled>
-								<el-option v-for="dict in optionss.hr_contract_status" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="交货日期">
-							<el-date-picker v-model="Addcontractofpurchaseform.deliveryDate" type="date" disabled
-								style="width: 300px"></el-date-picker>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="采购币种">
-							<el-select v-model="Addcontractofpurchaseform.purchaseCurrency" style="width: 300px"
-								:disabled="isFormDisabled">
-								<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="价格条款">
-							<el-select v-model="Addcontractofpurchaseform.priceTerms" style="width: 300px"
-								:disabled="isFormDisabled">
-								<el-option v-for="dict in optionss.hr_purchase_pricing_term" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
+								<!-- 有审批步骤才显示步骤条 -->
+								<template #default>
+									<div v-if="approvalSteps.length > 0" class="status-popover">
+										<el-steps :active="approvalSteps.length" size="small">
+											<el-step v-for="step in approvalSteps" :key="step.stageID"
+												:title="step.approverUserName" :description="getStatusText(step.status)"
+												:status="getStatus(step.status)" />
+										</el-steps>
+									</div>
+									<div v-else>暂无审批流程</div>
+								</template>
+							</el-popover>
+						</template>
 
-					<el-col :span="8">
-						<el-form-item label="付款天数" prop="paymentDays">
-							<el-select v-model="Addcontractofpurchaseform.paymentDays" style="width: 300px"
-								:disabled="isFormDisabled">
-								<el-option v-for="dict in optionss.hr_purchase_payment_days" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="销售合同">
-							<el-select v-model="Addcontractofpurchaseform.salesContract" placeholder="请选择销售合同"
-								style="width: 300px" :disabled="isFormDisabled">
-								<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="销售员">
-							<el-select v-model="Addcontractofpurchaseform.salesperson" disabled style="width: 300px">
-								<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="采购员">
-							<el-select disabled v-model="Addcontractofpurchaseform.purchaser" placeholder="请选择采购员"
-								style="width: 300px">
-								<el-option v-for="dict in optionss.sql_hr_purchase" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="交货地点">
-							<el-input v-model="Addcontractofpurchaseform.deliveryLocation" style="width: 300px"
-								:disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="定金金额">
-							<el-input v-model="Addcontractofpurchaseform.deposit"
-								:disabled="!Addcontractofpurchaseform.hasDeposit || isFormDisabled" style="width: 300px"
-								placeholder="请输入定金金额"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="有无定金" prop="hasDeposit">
-							<el-checkbox v-model="Addcontractofpurchaseform.hasDeposit" @change="handleDepositChange"
-								:disabled="isFormDisabled"></el-checkbox>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row v-if="false">
-					<el-col :span="8">
-						<el-form-item label="厂商简称" prop="vendorCode">
-							<el-select v-model="Addcontractofpurchaseform.vendorCode" placeholder="请选择供应商" filterable
-								style="width: 300px" @change="GetSupplierInfo">
-								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue">
-								</el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="客户简称">
-							<el-input v-model="Addcontractofpurchaseform.customerAbbreviation" disabled
-								style="width: 300px"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="厂商编号">
-							<el-select v-model="Addcontractofpurchaseform.vendorCode" placeholder="请选择厂商编号"
-								style="width: 300px" @change="GetSupplierInfo">
-								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="销售合同">
-							<el-select v-model="Addcontractofpurchaseform.salesContract" placeholder="请选择销售合同"
-								style="width: 300px">
-								<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="客户合同">
-							<el-input v-model="Addcontractofpurchaseform.customerContract" disabled
-								style="width: 300px"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-			</el-form>
+						<!-- 没有ID时只显示tag -->
+						<template v-else>
+							<el-tag :type="getStatusType(row.contractReviewStatusStr)">
+								{{ row.contractReviewStatusStr }}
+							</el-tag>
+						</template>
+					</template>
+				</el-table-column>
+				<el-table-column prop="salesContract" label="销售合同" width="100"></el-table-column>
+				<el-table-column prop="customerContract" label="客户订单号" width="110"></el-table-column>
+				<el-table-column prop="deliveryDate" label="交货日期" width="110"></el-table-column>
+				<el-table-column prop="purchaseCurrency" label="采购货币" width="100"></el-table-column>
+				<el-table-column prop="salesperson" label="销售员" width="150"></el-table-column>
+				<el-table-column prop="purchaser" label="采购员" width="150"></el-table-column>
+				<el-table-column prop="createTime" label="创建日期" width="110"></el-table-column>
+				<el-table-column prop="deliveryLocation" label="交货地点" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="paymentDays" label="付款天数" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="deposit" label="定金金额" width="150" v-if="false"></el-table-column>
+				<el-table-column prop="hasDeposit" label="有无定金" width="150" v-if="false"></el-table-column>
+				<el-table-column fixed="right" label="操作" width="280">
+					<template #default="scope">
+						<el-button type="text" size="small" @click="CheckDetails(scope.row)">查看详情</el-button>
+						<el-button type="text" size="small"
+							@click="GeneratePurchaseContract(scope.row)">生成采购合同PDF</el-button>
+						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
+							link type="danger" size="small" @click="DeletePurchaseContract(scope.row)">删除</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="purchasecontractsTableDatahandlePageChange"
+				:current-page="purchasecontractsTableDatacurrentPage" :page-size="purchasecontractsTableDatapageSize"
+				:total="purchasecontractsTableDatatotalItems" background layout="prev, pager, next"
+				style="margin-top: 5px;" />
+		</div>
+
+		<el-dialog :modal="false" modal-penetrable v-model="Addcontractofpurchasedialog" title="新增采购合同"
+			:close-on-click-modal=false style="width: 75%;" @close="handleAddcontractofpurchasedialogclose">
+			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="基本信息" name="basicInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">基本信息</span>
+					</template>
+					<el-form ref="AddcontractofpurchaseformRef" :rules="rules" :model="Addcontractofpurchaseform"
+						label-width="120px" :show-message="false">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="供应商">
+									<el-select v-model="Addcontractofpurchaseform.vendorCode" placeholder="请选择供应商"
+										style="width: 300px" :disabled="isFormDisabled" size="default">
+										<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="采购合同">
+									<el-input ref="AddcontractofpurchaseformRef" :rules="rules"
+										v-model="Addcontractofpurchaseform.purchaseContract" disabled
+										placeholder="请输入采购合同" style="width: 300px" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="合同状态">
+									<el-select v-model="Addcontractofpurchaseform.contractStatus" placeholder="请选择合同状态"
+										style="width: 300px" disabled size="default">
+										<el-option v-for="dict in optionss.hr_contract_status" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="交货日期">
+									<el-date-picker v-model="Addcontractofpurchaseform.deliveryDate" type="date"
+										disabled style="width: 300px" size="default"></el-date-picker>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="采购币种">
+									<el-select v-model="Addcontractofpurchaseform.purchaseCurrency" style="width: 300px"
+										:disabled="isFormDisabled" size="default">
+										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="价格条款">
+									<el-select v-model="Addcontractofpurchaseform.priceTerms" style="width: 300px"
+										:disabled="isFormDisabled" size="default">
+										<el-option v-for="dict in optionss.hr_purchase_pricing_term"
+											:key="dict.dictCode" :label="dict.dictLabel"
+											:value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="付款天数" prop="paymentDays">
+									<el-select v-model="Addcontractofpurchaseform.paymentDays" style="width: 300px"
+										:disabled="isFormDisabled" size="default">
+										<el-option v-for="dict in optionss.hr_purchase_payment_days"
+											:key="dict.dictCode" :label="dict.dictLabel"
+											:value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="销售合同">
+									<el-select v-model="Addcontractofpurchaseform.salesContract" placeholder="请选择销售合同"
+										style="width: 300px" :disabled="isFormDisabled" size="default">
+										<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="销售员">
+									<el-select v-model="Addcontractofpurchaseform.salesperson" disabled
+										style="width: 300px" size="default">
+										<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="采购员">
+									<el-select disabled v-model="Addcontractofpurchaseform.purchaser"
+										placeholder="请选择采购员" style="width: 300px" size="default">
+										<el-option v-for="dict in optionss.sql_hr_purchase" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="交货地点">
+									<el-input v-model="Addcontractofpurchaseform.deliveryLocation" style="width: 300px"
+										:disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="定金金额">
+									<el-input v-model="Addcontractofpurchaseform.deposit"
+										:disabled="!Addcontractofpurchaseform.hasDeposit || isFormDisabled"
+										style="width: 300px" placeholder="请输入定金金额" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="有无定金" prop="hasDeposit">
+									<el-checkbox v-model="Addcontractofpurchaseform.hasDeposit"
+										@change="handleDepositChange" :disabled="isFormDisabled"></el-checkbox>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
 			<el-tabs v-model="activeName" class="demo-tabs" @tab-click="handleClick">
 				<el-tab-pane label="产品资料" name="productinfo">
-					<el-table :data="productinfotableData">
-						<el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
+					<el-table :data="productinfotableData" style="width: 100%; table-layout: fixed;" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table-column prop="productCode" label="产品编号" width="110"></el-table-column>
 						<el-table-column prop="customerCode" label="客户货号" width="150"></el-table-column>
 						<el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
 						<el-table-column prop="englishName" label="英文品名" width="150"></el-table-column>
 						<el-table-column prop="chineseSpecification" label="中文规格" width="150"></el-table-column>
-						<el-table-column prop="unit" label="计量单位" width="150"></el-table-column>
+						<el-table-column prop="unit" label="计量单位" width="90"></el-table-column>
 						<!-- 其他列保持不变 -->
 						<el-table-column prop="contractQuantity" label="合同数量" width="150">
 							<template #default="scope">
@@ -294,7 +281,7 @@
 								</el-input>
 							</template>
 						</el-table-column>
-						<el-table-column prop="purchaseTotalPrice" label="采购总价" width="150">
+						<el-table-column prop="purchaseTotalPrice" label="采购总价" width="90">
 							<template #default="scope">
 								<span>{{ scope.row.purchaseTotalPrice }}</span>
 							</template>
@@ -312,11 +299,11 @@
 									:disabled="isFormDisabled" style="width: 180px"></el-date-picker>
 							</template>
 						</el-table-column>
-						<el-table-column prop="packaging" label="包装方式" width="150"></el-table-column>
-						<el-table-column prop="specialRequirements" label="特殊要求" width="150"></el-table-column>
-						<el-table-column prop="invoice" label="是否开票" width="150"></el-table-column>
-						<el-table-column prop="innerBoxQuantity" label="内盒装量" width="150"></el-table-column>
-						<el-table-column prop="outerBoxQuantity" label="外箱装量" width="150"></el-table-column>
+						<el-table-column prop="packaging" label="包装方式" width="90"></el-table-column>
+						<el-table-column prop="specialRequirements" label="特殊要求" width="90"></el-table-column>
+						<el-table-column prop="invoice" label="是否开票" width="90"></el-table-column>
+						<el-table-column prop="innerBoxQuantity" label="内盒装量" width="90"></el-table-column>
+						<el-table-column prop="outerBoxQuantity" label="外箱装量" width="90"></el-table-column>
 						<el-table-column prop="remark" label="备注" width="200">
 							<template #default="scope">
 								<el-input v-model="scope.row.remark" placeholder="请输入备注" :disabled="isFormDisabled"
@@ -326,7 +313,9 @@
 					</el-table>
 				</el-tab-pane>
 				<el-tab-pane label="厂家相关费用" name="relatedcosts">
-					<el-table :data="CustomerRelaterExoensesTableData" style="width: 100%; " height="280">
+					<el-table :data="CustomerRelaterExoensesTableData" style="width: 100%; table-layout: fixed;" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }" height="280">
 						<el-table-column prop=" expenseName" label="费用名称" width="150">
 							<template #default="{ row }">
 								<el-input v-model="row.expenseName" placeholder="输入费用名称" size="small"></el-input>
@@ -370,79 +359,81 @@
 					</el-table>
 				</el-tab-pane>
 			</el-tabs>
-			<div style="margin-top: 30px;"></div>
-			<span style="font-size: 20px; font-weight: bold; ">合计信息</span>
-			<el-divider></el-divider>
-			<el-form :model="Totalvalueofgoodsform" label-width="120px">
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="货值合计">
-							<el-input v-model="Totalvalueofgoodsform.totalValue" placeholder="请输入货值合计"
-								style="width: 300px" :disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="数量合计">
-							<el-input v-model="Totalvalueofgoodsform.totalQuantity" placeholder="请输入数量合计"
-								style="width: 300px" :disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="箱数合计">
-							<el-input v-model="Totalvalueofgoodsform.totalBoxCount" placeholder="请输入箱数合计"
-								style="width: 300px" :disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="毛重合计">
-							<el-input v-model="Totalvalueofgoodsform.totalGrossWeight" placeholder="请输入毛重合计"
-								style="width: 300px" :disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="净重合计">
-							<el-input v-model="Totalvalueofgoodsform.totalNetWeight" placeholder="请输入净重合计"
-								style="width: 300px" :disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="体积合计">
-							<el-input v-model="Totalvalueofgoodsform.totalVolume" placeholder="请输入体积合计"
-								style="width: 300px" :disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="已申请付款">
-							<el-input v-model="Totalvalueofgoodsform.appliedPayment" placeholder="请输入已申请付款"
-								style="width: 300px" :disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="可申请付款">
-							<el-input v-model="Totalvalueofgoodsform.availablePayment" placeholder="请输入可申请付款"
-								style="width: 300px" :disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="已付货款">
-							<el-input v-model="Totalvalueofgoodsform.paidAmount" placeholder="请输入已付货款"
-								style="width: 300px" :disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="未付货款">
-							<el-input v-model="Totalvalueofgoodsform.unpaidAmount" placeholder="请输入未付货款"
-								style="width: 300px" :disabled="isFormDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-			</el-form>
+			<el-collapse v-model="totalInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="合计信息" name="totalInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">合计信息</span>
+					</template>
+					<el-form :model="Totalvalueofgoodsform" label-width="120px" :show-message="false">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="货值合计">
+									<el-input v-model="Totalvalueofgoodsform.totalValue" placeholder="请输入货值合计"
+										style="width: 300px" :disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="数量合计">
+									<el-input v-model="Totalvalueofgoodsform.totalQuantity" placeholder="请输入数量合计"
+										style="width: 300px" :disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="箱数合计">
+									<el-input v-model="Totalvalueofgoodsform.totalBoxCount" placeholder="请输入箱数合计"
+										style="width: 300px" :disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="毛重合计">
+									<el-input v-model="Totalvalueofgoodsform.totalGrossWeight" placeholder="请输入毛重合计"
+										style="width: 300px" :disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="净重合计">
+									<el-input v-model="Totalvalueofgoodsform.totalNetWeight" placeholder="请输入净重合计"
+										style="width: 300px" :disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="体积合计">
+									<el-input v-model="Totalvalueofgoodsform.totalVolume" placeholder="请输入体积合计"
+										style="width: 300px" :disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="已申请付款">
+									<el-input v-model="Totalvalueofgoodsform.appliedPayment" placeholder="请输入已申请付款"
+										style="width: 300px" :disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="可申请付款">
+									<el-input v-model="Totalvalueofgoodsform.availablePayment" placeholder="请输入可申请付款"
+										style="width: 300px" :disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="已付货款">
+									<el-input v-model="Totalvalueofgoodsform.paidAmount" placeholder="请输入已付货款"
+										style="width: 300px" :disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="未付货款">
+									<el-input v-model="Totalvalueofgoodsform.unpaidAmount" placeholder="请输入未付货款"
+										style="width: 300px" :disabled="isFormDisabled" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
 			<template #footer>
 				<span class="dialog-footer">
 					<!-- 新增时的保存按钮 -->
@@ -474,8 +465,10 @@
 			</template>
 		</el-dialog>
 		<!-- 添加新的查看详情对话框 -->
-		<el-dialog v-model="viewDetailsDialog" title="采购需求详情" :close-on-click-modal=false style="width: 70%;">
-			<el-table :data="detailsTableData">
+		<el-dialog v-model="viewDetailsDialog" title="采购需求详情" :close-on-click-modal=false style="width: 75%;">
+			<el-table :data="detailsTableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="SaleContractID" label="采购合同ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="id" label="id" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="productId" label="产品ID" width="150" v-if="false"></el-table-column>
@@ -969,6 +962,8 @@ fetchDataAndExecute();
 /*动态下拉框end*/
 
 const activeName = ref('productinfo')
+const basicInfoCollapseActive = ref(['basicInfo'])
+const totalInfoCollapseActive = ref(['totalInfo'])
 const CustomerRelaterExoensesTableData = ref([]);
 
 const Addcontractofpurchasedialog = ref(false)
@@ -1724,6 +1719,10 @@ function GetpurchaseContractList(start, end) {
 					element.purchaser = optionss.value.sql_hr_purchase.find(item =>
 						item.dictValue == element.purchaser.toString())?.dictLabel || '未知采购员';
 
+					// 格式化日期字段
+					element.deliveryDate = formatDate(element.deliveryDate);
+					element.createTime = formatDate(element.createTime);
+
 					element.reviewStatus = element.reviewStatus.toString();
 					element.reviewStatusStr = reviewStatusMap[element.reviewStatus.toString()] || '未知状态';
 				});
@@ -2175,3 +2174,14 @@ const handleAddNewProduct = (row) => {
 
 }
 </script>
+
+<style scoped>
+/* 创建合同和查看合同详情dialog中的表单组件间距减少一半 */
+.el-dialog .el-form-item {
+	margin-bottom: 5px !important;
+}
+
+.el-dialog .el-row {
+	margin-bottom: 2.5px !important;
+}
+</style>

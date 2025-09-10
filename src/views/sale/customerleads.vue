@@ -1,193 +1,285 @@
 <template>
 	<div>
-		<div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click="createNewLead">新建线索</el-button>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<el-divider></el-divider>
-		<div style="width: 100%; margin-top: 30px;">
-			<el-input v-model="clueNoInput" clearable style="width: 15%"
-				placeholder="输入线索编号" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-input v-model="clueEmailInput" clearable style="width: 15%"
-				placeholder="输入邮箱地址" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-input v-model="clueCustomerNameInput" clearable style="width: 15%"
-				placeholder="输入客户名称" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-input v-model="contactNameInput" clearable style="width: 15%"
-				placeholder="输入联系人" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="businessSelect" class="m-2" placeholder="选择涉及业务" style="width: 15%;">
-				<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-		</div>
-		<div style="width: 100%; margin-top: 5px;">
-			<el-select filterable v-model="nationSelect" class="m-2" placeholder="选择国家" style="width: 15%;">
-				<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="customerLevelSelect" class="m-2" placeholder="选择客户等级" style="width: 15%;">
-				<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select filterable v-model="customerSourceSelect" class="m-2" placeholder="选择客户来源" style="width: 15%;">
-				<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode" :label="dict.dictLabel"
-					:value="dict.dictValue"></el-option>
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="startDate" type="date" placeholder="起始日期"
-				style="width: 15%;" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;------&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="endDate" type="date" placeholder="结束日期" style="width: 15%;" />
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" plain @click="search">查询</el-button>
-				<el-button @click="reset">重置</el-button>
-			</el-row>
-		</div>
-		<el-divider></el-divider>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;线索信息表</span>
-		</div>
-		<el-divider></el-divider>
-		<el-table :data="CustomerLeadsTableData" align="center">
-			<el-table-column prop="id" label="线索编号" style="width: 12%;">
-				<template #default="scope">
-					<span>{{ scope.row.id }}</span>
-					<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;" size="small">草稿</el-tag>
-				</template>
-			</el-table-column>
-			<el-table-column prop="contactEmail" label="邮箱" style="width: 12%;" />
-			<el-table-column prop="customerName" label="客户名称" style="width: 12%;" />
-			<el-table-column prop="customerLevel" label="客户等级" style="width: 12%;" />
-			<el-table-column prop="customerNation" label="国家" style="width: 12%;" />
-			<el-table-column prop="contactName" label="联系人" style="width: 12%;" />
-			<el-table-column prop="customerSource" label="来源" style="width: 12%;" />
-			<el-table-column prop="involvingBusiness" label="涉及业务" style="width: 12%;" />
-			<el-table-column prop="state" label="最近联系" style="width: 12%;" />
-			<el-table-column prop="state" label="原跟进人" style="width: 12%;" />
-			<el-table-column prop="create_by" label="创建人" style="width: 12%;" />
-			<el-table-column fixed="right" label="操作" style="width: 12%;">
-				<template v-slot:default="scope">
-					<el-button link type="primary" size="small" @click="viewDetails(scope.row)">详情</el-button>
-					<el-button link type="danger" size="small" @click="DelCustomerleads(scope.row)">删除</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+		<!-- 客户线索表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="createNewLead" size="default">新建线索</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-input v-model="clueNoInput" clearable placeholder="请输入线索编号" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-input v-model="clueEmailInput" clearable placeholder="请输入邮箱地址" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-input v-model="clueCustomerNameInput" clearable placeholder="请输入客户名称" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-input v-model="contactNameInput" clearable placeholder="请输入联系人" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-select filterable v-model="businessSelect" placeholder="请选择涉及业务" style="width: 100%"
+							size="default">
+							<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select filterable v-model="nationSelect" placeholder="请选择国家" style="width: 100%"
+							size="default">
+							<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
+								:value="dict.dictValue"></el-option>
+						</el-select>
+					</el-col>
+				</el-row>
+				<el-row :gutter="15">
+					<el-col :span="4">
+						<el-select filterable v-model="customerLevelSelect" placeholder="请选择客户等级" style="width: 100%"
+							size="default">
+							<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select filterable v-model="customerSourceSelect" placeholder="请选择客户来源" style="width: 100%"
+							size="default">
+							<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
+								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="startDate" type="date" placeholder="请选择起始日期" style="width: 100%"
+							size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="endDate" type="date" placeholder="请选择结束日期" style="width: 100%"
+							size="default" />
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="search" size="default">查询</el-button>
+							<el-button @click="reset" size="default">重置</el-button>
+						</div>
+					</el-col>
+					<!-- <el-col :span="4">
+						<div style="text-align: right;">
+							<el-button type="primary" @click="createNewLead" size="default">新建线索</el-button>
+						</div>
+					</el-col> -->
+				</el-row>
+			</div>
 
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="dialogFormVisible" title="新建线索"
-			:close-on-click-modal=false :inline="true">
-			<span style="font-size: 20px; font-weight: bold;">公司信息</span>
-			<el-divider></el-divider>
-			<el-form ref="NewCustomerleadsformRef" :rules="rules" :model="NewCustomerleadsform" label-width="auto"
-				:inline="true">
-				<el-form-item label="线索名称：" prop="clueName">
-					<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.clueName" placeholder="输入线索名称"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="客户名称：" prop="customerName">
-					<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.customerName" placeholder="输入客户名称"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="客户来源：" prop="customerSource">
-					<el-select filterable :disabled="!isEditable" v-model="NewCustomerleadsform.customerSource"
-						placeholder="请选择客户来源" style="width: 300px;">
-						<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="客户等级：">
-					<el-select filterable disabled v-model="NewCustomerleadsform.customerLevel" placeholder="请选择客户等级"
-						style="width: 300px;">
-						<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="所属国家：" prop="customerNation">
-					<el-select filterable :disabled="!isEditable" v-model="NewCustomerleadsform.customerNation"
-						placeholder="请选择客户所属国家" style="width: 300px;">
-						<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
-							:value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="涉及业务：" prop="involvingBusiness">
-					<el-select filterable :disabled="!isEditable" v-model="NewCustomerleadsform.involvingBusiness"
-						placeholder="请选择客户所涉及的业务" style="width: 300px;">
-						<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
-							:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-					</el-select>
-				</el-form-item>
-				<el-form-item label="公司网址：">
-					<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.compantWebsite" placeholder="输入公司网址"
-						style="width: 738px;" />
-				</el-form-item>
-				<el-form-item label="线索备注：" prop="clueRemark">
-					<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.clueRemark"
-						:autosize="{ minRows: 5, maxRows: 10 }" type="textarea" placeholder="输入线索备注内容"
-						style="width: 738px;" />
-				</el-form-item>
-				<el-form-item label="公司照片：">
-					<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList" :limit="3"
-						:disabled="fileList.length >= 3" @change="handleChange" :action="UploadUrl" :data="formData">
-						<el-icon>
-							<Plus />
-						</el-icon>
-						<template #file="{ file }">
-							<div>
-								<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
-								<span class="el-upload-list__item-actions">
-									<span class="el-upload-list__item-preview" @click="handlePictureCardPreview(file)">
-										<el-icon><zoom-in /></el-icon>
-									</span>
-									<span v-if="!disabled" class="el-upload-list__item-delete"
-										@click="handleRemove(file)">
+			<!-- 表格区域 -->
+			<el-table :data="CustomerLeadsTableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="id" label="线索编号" width="100">
+					<template #default="scope">
+						<span>{{ scope.row.id }}</span>
+						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column prop="contactEmail" label="邮箱" width="180" />
+				<el-table-column prop="customerName" label="客户名称" width="150" />
+				<el-table-column prop="customerLevel" label="客户等级" width="100" />
+				<el-table-column prop="customerNation" label="国家" width="100" />
+				<el-table-column prop="contactName" label="联系人" width="130" />
+				<el-table-column prop="customerSource" label="来源" width="100" />
+				<el-table-column prop="involvingBusiness" label="涉及业务" width="120" />
+				<el-table-column prop="state" label="最近联系" width="100" />
+				<el-table-column prop="state" label="原跟进人" width="100" />
+				<el-table-column prop="create_by" label="创建人" width="100" />
+				<el-table-column fixed="right" label="操作" width="200">
+					<template #default="scope">
+						<el-button type="text" size="small" @click="viewDetails(scope.row)">查看详情</el-button>
+						<el-button type="text" size="small" @click="DelCustomerleads(scope.row)">删除</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
+				:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+		</div>
+
+		<el-dialog :modal="false" modal-penetrable v-model="dialogFormVisible" title="新建线索" :close-on-click-modal=false
+			style="width: 75%;" @close="handleDialogClose">
+			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="公司信息" name="companyInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">公司信息</span>
+					</template>
+					<el-form ref="NewCustomerleadsformRef" :rules="rules" :model="NewCustomerleadsform"
+						label-width="120px" :show-message="false">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="线索名称" prop="clueName">
+									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.clueName"
+										placeholder="请输入线索名称" style="width: 300px;" size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户名称" prop="customerName">
+									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.customerName"
+										placeholder="请输入客户名称" style="width: 300px;" size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户来源" prop="customerSource">
+									<el-select filterable :disabled="!isEditable"
+										v-model="NewCustomerleadsform.customerSource" placeholder="请选择客户来源"
+										style="width: 300px;" size="default">
+										<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户等级">
+									<el-select filterable disabled v-model="NewCustomerleadsform.customerLevel"
+										placeholder="请选择客户等级" style="width: 300px;" size="default">
+										<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="所属国家" prop="customerNation">
+									<el-select filterable :disabled="!isEditable"
+										v-model="NewCustomerleadsform.customerNation" placeholder="请选择客户所属国家"
+										style="width: 300px;" size="default">
+										<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="涉及业务" prop="involvingBusiness">
+									<el-select filterable :disabled="!isEditable"
+										v-model="NewCustomerleadsform.involvingBusiness" placeholder="请选择客户所涉及的业务"
+										style="width: 300px;" size="default">
+										<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="12">
+								<el-form-item label="公司网址">
+									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.compantWebsite"
+										placeholder="请输入公司网址" style="width: 100%;" size="default" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="24">
+								<el-form-item label="线索备注" prop="clueRemark">
+									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.clueRemark"
+										:autosize="{ minRows: 5, maxRows: 10 }" type="textarea" placeholder="请输入线索备注内容"
+										style="width: 100%;" size="default" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="24">
+								<el-form-item label="公司照片">
+									<el-upload list-type="picture-card" :auto-upload="false"
+										v-model:file-list="fileList" :limit="3" :disabled="fileList.length >= 3"
+										@change="handleChange" :action="UploadUrl" :data="formData">
 										<el-icon>
-											<Delete />
+											<Plus />
 										</el-icon>
-									</span>
-								</span>
-							</div>
-						</template>
-					</el-upload>
-					<el-dialog v-model="dialogVisible">
-						<img style="max-width: 100%; max-height: 100%; width: auto; height: auto;" w-full
-							:src="dialogImageUrl" alt="Preview Image" />
-					</el-dialog>
-				</el-form-item>
-				<br><span style="font-size: 20px; font-weight: bold;">联系人信息</span>
-				<el-divider></el-divider>
-				<el-form-item label="联系人名称：" prop="contactName">
-					<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactName" placeholder="输入联系人名称"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="联系人邮箱：" prop="contactEmail">
-					<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactEmail" placeholder="输入联系人邮箱"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="联系人电话：">
-					<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactPhone" placeholder="输入联系人电话"
-						style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="联系人职位：">
-					<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactPosition"
-						placeholder="输入联系人职位" style="width: 300px;" />
-				</el-form-item>
-				<el-form-item label="联系人备注：">
-					<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactRemark"
-						:autosize="{ minRows: 5, maxRows: 10 }" type="textarea" placeholder="输入联系人备注内容"
-						style="width: 750px;" />
-				</el-form-item>
-			</el-form>
+										<template #file="{ file }">
+											<div>
+												<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
+												<span class="el-upload-list__item-actions">
+													<span class="el-upload-list__item-preview"
+														@click="handlePictureCardPreview(file)">
+														<el-icon><zoom-in /></el-icon>
+													</span>
+													<span v-if="!disabled" class="el-upload-list__item-delete"
+														@click="handleRemove(file)">
+														<el-icon>
+															<Delete />
+														</el-icon>
+													</span>
+												</span>
+											</div>
+										</template>
+									</el-upload>
+									<el-dialog v-model="dialogVisible">
+										<img style="max-width: 100%; max-height: 100%; width: auto; height: auto;"
+											w-full :src="dialogImageUrl" alt="Preview Image" />
+									</el-dialog>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+
+			<el-collapse v-model="contactInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="联系人信息" name="contactInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">联系人信息</span>
+					</template>
+					<el-form ref="NewCustomerleadsformRef" :rules="rules" :model="NewCustomerleadsform"
+						label-width="120px" :show-message="false">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="联系人名称" prop="contactName">
+									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactName"
+										placeholder="请输入联系人名称" style="width: 300px;" size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="联系人邮箱" prop="contactEmail">
+									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactEmail"
+										placeholder="请输入联系人邮箱" style="width: 300px;" size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="联系人电话">
+									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactPhone"
+										placeholder="请输入联系人电话" style="width: 300px;" size="default" />
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="联系人职位">
+									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactPosition"
+										placeholder="请输入联系人职位" style="width: 300px;" size="default" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="24">
+								<el-form-item label="联系人备注">
+									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactRemark"
+										:autosize="{ minRows: 5, maxRows: 10 }" type="textarea" placeholder="请输入联系人备注内容"
+										style="width: 100%;" size="default" />
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button v-show="isEditBtnVisible" type="warning" @click="IsEditBtnClick">
 						编辑
 					</el-button>
 					<el-button
-						v-show="(!isEditBtnVisible && !EditCustomerLeadsID.value) || (EditCustomerLeadsID.value && NewCustomerleadsform.IsDraft === 1)"
+						v-show="(!isEditBtnVisible && !EditCustomerLeadsID) || (EditCustomerLeadsID && NewCustomerleadsform.IsDraft === 1)"
 						type="primary" @click="SaveCustomerleadsDraft(NewCustomerleadsformRef)">
 						保存草稿
 					</el-button>
@@ -261,6 +353,8 @@ const handlePageChange = async (newPage) => {
 };
 
 const dialogFormVisible = ref(false)
+const basicInfoCollapseActive = ref(['companyInfo'])
+const contactInfoCollapseActive = ref(['contactInfo'])
 
 
 // 上传文件
@@ -392,6 +486,12 @@ const createNewLead = () => {
 	isSavebtnVisible.value = true;
 	isEditBtnVisible.value = false;
 	isEditSaveBtnVisible.value = false;
+}
+
+const handleDialogClose = () => {
+	// 重置折叠面板状态
+	basicInfoCollapseActive.value = ['companyInfo']
+	contactInfoCollapseActive.value = ['contactInfo']
 }
 
 // 定义表单数据
@@ -686,8 +786,7 @@ const viewDetails = (row) => {
 				let name = url.split('/').pop();
 				fileList.value.push({
 					name: name,
-					url: url,
-					isChanged: false
+					url: url
 				});
 			}
 		});
@@ -921,5 +1020,44 @@ const uploadFiles = async () => {
 	/* 固定高度 */
 	object-fit: cover;
 	/* 调整图片大小以覆盖容器 */
+}
+
+/* 表格样式优化 */
+.el-table .el-table__row td,
+.el-table .el-table__body tr td,
+.el-table .el-table__body .el-table__row td {
+	padding: 2px 1px !important;
+	line-height: 12px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+/* 更具体的表格行高度控制 */
+.el-table tbody tr {
+	height: 20px !important;
+}
+
+.el-table tbody tr td {
+	padding: 2px 1px !important;
+	line-height: 12px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+/* 创建合同和查看合同详情dialog中的表单组件间距减少一半 */
+.el-dialog .el-form-item {
+	margin-bottom: 5px !important;
+}
+
+/* 隐藏组件外部的验证信息显示 */
+.el-dialog .el-form-item__error,
+.el-dialog .el-form-item .el-form-item__error,
+.el-dialog .el-form-item.is-error .el-form-item__error {
+	display: none !important;
+	visibility: hidden !important;
+	height: 0 !important;
+	overflow: hidden !important;
 }
 </style>
