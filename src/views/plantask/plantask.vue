@@ -8,6 +8,8 @@
 					<el-col :span="12">
 						<div style="text-align: left;">
 							<el-button type="primary" @click="OpenPlanTaskDialog" size="default">新建计划/任务</el-button>
+							<el-button type="success" @click="OpenExchangeRateTaskDialog"
+								size="default">汇率更新任务</el-button>
 						</div>
 					</el-col>
 				</el-row>
@@ -563,6 +565,83 @@
 		<!-- 添加任务图片预览对话框 -->
 		<el-dialog v-model="taskImagePreviewVisible" title="图片预览" width="50%">
 			<img :src="previewImageUrl" style="max-width: 100%; max-height: 100%; width: auto; height: auto;" />
+		</el-dialog>
+
+		<!-- 汇率更新任务设置对话框 -->
+		<el-dialog v-model="exchangeRateTaskDialogVisible" title="汇率更新任务设置" width="500px">
+			<el-form ref="exchangeRateTaskFormRef" :model="exchangeRateTaskForm" :rules="exchangeRateTaskRules"
+				label-width="100px">
+				<el-form-item label="任务名称" prop="taskName">
+					<el-input v-model="exchangeRateTaskForm.taskName" placeholder="请输入任务名称" />
+				</el-form-item>
+				<el-form-item label="执行人员" prop="executors">
+					<el-select v-model="exchangeRateTaskForm.executors" filterable placeholder="选择执行人员" multiple
+						clearable style="width: 100%">
+						<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode" :label="dict.dictLabel"
+							:value="dict.dictValue"></el-option>
+					</el-select>
+				</el-form-item>
+				<el-row :gutter="20">
+					<el-col :span="12">
+						<el-form-item label="通知间隔(分钟)" prop="notificationInterval">
+							<el-input-number v-model="exchangeRateTaskForm.notificationInterval" :min="1" :max="60"
+								style="width: 100%" />
+						</el-form-item>
+					</el-col>
+					<el-col :span="12">
+						<el-form-item label="任务状态" prop="status">
+							<el-select v-model="exchangeRateTaskForm.status" placeholder="选择任务状态" style="width: 100%">
+								<el-option label="启用" value="1"></el-option>
+								<el-option label="禁用" value="0"></el-option>
+							</el-select>
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<el-form-item label="任务描述" prop="description">
+					<el-input v-model="exchangeRateTaskForm.description" type="textarea" :rows="2"
+						placeholder="请输入任务描述" />
+				</el-form-item>
+			</el-form>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button @click="exchangeRateTaskDialogVisible = false">取消</el-button>
+					<el-button type="info" @click="showExchangeRateRecords">查看填写记录</el-button>
+					<el-button type="primary" @click="saveExchangeRateTask">保存</el-button>
+				</span>
+			</template>
+		</el-dialog>
+
+		<!-- 汇率填写记录查看对话框 -->
+		<el-dialog v-model="exchangeRateRecordsDialogVisible" title="汇率填写记录" width="900px">
+			<el-table :data="exchangeRateRecords" style="width: 100%" border>
+				<el-table-column prop="date" label="填写日期" width="120">
+					<template #default="{ row }">
+						{{ formatDate(row.date) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="currency" label="币种" width="100">
+					<template #default="{ row }">
+						{{ getCurrencyName(row.currency) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="exchangeRate" label="汇率" width="120" />
+				<el-table-column prop="executor" label="填写人" width="120">
+					<template #default="{ row }">
+						{{ getUserName(row.executor) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="createTime" label="填写时间" width="150">
+					<template #default="{ row }">
+						{{ formatDateTime(row.createTime) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="remark" label="备注" />
+			</el-table>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button @click="exchangeRateRecordsDialogVisible = false">关闭</el-button>
+				</span>
+			</template>
 		</el-dialog>
 	</div>
 </template>
@@ -1738,11 +1817,12 @@ const state = reactive({
 		// 选项列表(动态字典将会从后台获取数据)
 		sql_all_user: [],
 		salePersonCustomer: [],
-		sql_hr_customer: []
+		sql_hr_customer: [],
+		hr_export_currency: []
 	}
 })
 const { optionss } = toRefs(state)
-var dictParams = [{ dictType: 'sql_all_user' }, { dictType: 'sql_hr_customer' }]
+var dictParams = [{ dictType: 'sql_all_user' }, { dictType: 'sql_hr_customer' }, { dictType: 'hr_export_currency' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -1754,6 +1834,45 @@ proxy.getDicts(dictParams).then((response) => {
 // 在 script setup 部分添加新的响应式变量和函数
 const taskImagePreviewVisible = ref(false)
 const previewImageUrl = ref('')
+
+// 汇率更新任务相关变量
+const exchangeRateTaskDialogVisible = ref(false)
+const exchangeRateRecordsDialogVisible = ref(false)
+const exchangeRateTaskFormRef = ref<FormInstance>()
+const exchangeRateRecords = ref([])
+
+// 汇率更新任务表单
+interface ExchangeRateTaskForm {
+	taskName: string
+	executors: string[]
+	notificationInterval: number
+	status: string
+	description: string
+}
+
+const exchangeRateTaskForm = reactive<ExchangeRateTaskForm>({
+	taskName: '每日汇率更新任务',
+	executors: [],
+	notificationInterval: 5,
+	status: '1',
+	description: '每日提醒指定人员填写当天汇率，如未填写则每隔指定时间弹窗提醒'
+})
+
+// 汇率更新任务表单验证规则
+const exchangeRateTaskRules = reactive<FormRules<ExchangeRateTaskForm>>({
+	taskName: [
+		{ required: true, message: '请输入任务名称', trigger: 'change,blur' }
+	],
+	executors: [
+		{ required: true, message: '请选择执行人员', trigger: 'change,blur' }
+	],
+	notificationInterval: [
+		{ required: true, message: '请输入通知间隔', trigger: 'change,blur' }
+	],
+	status: [
+		{ required: true, message: '请选择任务状态', trigger: 'change,blur' }
+	]
+})
 
 // 添加任务图片预览处理函数
 const handleTaskImagePreview = (url) => {
@@ -1798,6 +1917,100 @@ watch(PlanTaskStatusRadio, (newValue) => {
 });
 
 const route = useRoute()
+
+// 汇率更新任务相关函数
+const OpenExchangeRateTaskDialog = () => {
+	exchangeRateTaskDialogVisible.value = true
+	// 加载现有的汇率更新任务配置
+	loadExchangeRateTaskConfig()
+}
+
+const loadExchangeRateTaskConfig = async () => {
+	try {
+		const res = await request.get('ExchangeRateTask/GetConfig/GetConfig') as unknown as { data: ApiResponse }
+		if (res.code === 200 && res.data) {
+			exchangeRateTaskForm.taskName = res.data.taskName || '每日汇率更新任务'
+			// 处理executors数据，可能是字符串或数组
+			if (typeof res.data.executors === 'string') {
+				exchangeRateTaskForm.executors = res.data.executors ? res.data.executors.split(',') : []
+			} else if (Array.isArray(res.data.executors)) {
+				exchangeRateTaskForm.executors = res.data.executors.map(id => id.toString())
+			} else {
+				exchangeRateTaskForm.executors = []
+			}
+			exchangeRateTaskForm.notificationInterval = res.data.notificationInterval || 5
+			exchangeRateTaskForm.status = res.data.status || '1'
+			exchangeRateTaskForm.description = res.data.description || '每日提醒指定人员填写当天汇率，如未填写则每隔指定时间弹窗提醒'
+		}
+	} catch (error) {
+		console.error('加载汇率更新任务配置失败:', error)
+	}
+}
+
+const saveExchangeRateTask = async () => {
+	if (!exchangeRateTaskFormRef.value) return
+	await exchangeRateTaskFormRef.value.validate(async (valid) => {
+		if (!valid) {
+			ElMessage.warning('请填写完整的表单信息')
+			return
+		}
+
+		try {
+			const requestData = {
+				taskName: exchangeRateTaskForm.taskName,
+				executors: exchangeRateTaskForm.executors.map(id => parseInt(id)), // 确保是整数数组
+				notificationInterval: exchangeRateTaskForm.notificationInterval,
+				status: parseInt(exchangeRateTaskForm.status), // 确保是整数
+				description: exchangeRateTaskForm.description
+			}
+
+			const res = await request.post('ExchangeRateTask/SaveConfig/SaveConfig', requestData) as unknown as { data: ApiResponse }
+			if (res.code === 200) {
+				ElMessage.success('汇率更新任务配置保存成功')
+				exchangeRateTaskDialogVisible.value = false
+			} else {
+				ElMessage.error(res.msg || '保存失败')
+			}
+		} catch (error) {
+			console.error('保存汇率更新任务配置失败:', error)
+			ElMessage.error('保存失败，请稍后重试')
+		}
+	})
+}
+
+const showExchangeRateRecords = async () => {
+	exchangeRateRecordsDialogVisible.value = true
+	await loadExchangeRateRecords()
+}
+
+const loadExchangeRateRecords = async () => {
+	try {
+		const res = await request.get('ExchangeRateTask/GetRecords/GetRecords') as unknown as { data: ApiResponse }
+		if (res.code === 200) {
+			exchangeRateRecords.value = res.data || []
+		}
+	} catch (error) {
+		console.error('加载汇率填写记录失败:', error)
+		ElMessage.error('加载记录失败')
+	}
+}
+
+const getCurrencyName = (currencyId: string) => {
+	const currency = optionss.value.hr_export_currency?.find(c => c.dictValue === currencyId)
+	return currency ? currency.dictLabel : currencyId
+}
+
+const formatDateTime = (dateStr: string) => {
+	if (!dateStr) return ''
+	const date = new Date(dateStr)
+	const year = date.getFullYear()
+	const month = (date.getMonth() + 1).toString().padStart(2, '0')
+	const day = date.getDate().toString().padStart(2, '0')
+	const hours = date.getHours().toString().padStart(2, '0')
+	const minutes = date.getMinutes().toString().padStart(2, '0')
+	const seconds = date.getSeconds().toString().padStart(2, '0')
+	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
 
 // 在组件挂载时检查是否有taskId参数
 onMounted(async () => {

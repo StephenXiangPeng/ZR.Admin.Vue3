@@ -2169,12 +2169,73 @@
       </el-tabs>
 
     </el-dialog>
+
+    <!-- 汇率填写通知对话框 -->
+    <el-dialog v-model="exchangeRateNotificationVisible" title="汇率填写提醒" width="600px" :close-on-click-modal="false"
+      :close-on-press-escape="false">
+      <div class="exchange-rate-notification">
+        <div class="notification-header">
+          <el-icon class="notification-icon" size="24">
+            <Warning />
+          </el-icon>
+          <span class="notification-title">请填写今日汇率</span>
+        </div>
+        <div class="notification-content">
+          <p>您需要填写今日所有币种的汇率信息，请为每个币种输入对应的汇率值。</p>
+        </div>
+
+        <!-- 多币种汇率填写表单 -->
+        <el-form ref="exchangeRateFormRef" :model="multiCurrencyExchangeRateForm" label-width="120px">
+          <!-- 调试信息 -->
+
+          <div class="currency-rates-container">
+            <div v-if="multiCurrencyExchangeRateForm.exchangeRates.length === 0"
+              style="text-align: center; padding: 20px; color: #999;">
+              暂无币种数据，请检查字典配置
+            </div>
+            <div v-for="(rate, index) in multiCurrencyExchangeRateForm.exchangeRates" :key="rate.currency"
+              class="currency-rate-item">
+              <el-row :gutter="15">
+                <el-col :span="11">
+                  <el-form-item :label="`${rate.currency}汇率`" :prop="`exchangeRates.${index}.exchangeRate`" :rules="[
+                    { required: true, message: '请输入汇率', trigger: 'blur' },
+                    { pattern: /^\d+(\.\d+)?$/, message: '请输入有效的数字', trigger: 'blur' }
+                  ]">
+                    <el-input v-model="rate.exchangeRate" placeholder="请输入汇率" style="width: 100%" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="13">
+                  <el-form-item label="备注" :prop="`exchangeRates.${index}.remark`">
+                    <el-input v-model="rate.remark" placeholder="请输入备注（选填）" style="width: 100%" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </div>
+          </div>
+
+          <el-row>
+            <el-col :span="24">
+              <el-form-item label="全局备注">
+                <el-input v-model="multiCurrencyExchangeRateForm.globalRemark" type="textarea" :rows="2"
+                  placeholder="请输入全局备注（选填）" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </el-form>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="skipExchangeRateNotification">稍后提醒</el-button>
+          <el-button type="primary" @click="submitMultiCurrencyExchangeRate">提交所有汇率</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 
 </template>
 
 <script lang="ts" setup>
-import { getCurrentInstance, reactive, toRefs, ref, onMounted, h, watch, computed } from 'vue'
+import { getCurrentInstance, reactive, toRefs, ref, onMounted, onUnmounted, h, watch, computed, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, ElDatePicker, ElLoading, ElNotification } from "element-plus";
 import request from '@/utils/request';
 import dayjs from 'dayjs';
@@ -2196,6 +2257,50 @@ const tasksActiveTab = ref('reminders');
 const currentMonthYear = ref('');
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 const calendarDays = ref([]);
+
+// 汇率填写通知相关变量
+const exchangeRateNotificationVisible = ref(false);
+const exchangeRateFormRef = ref();
+const exchangeRateNotificationTimer = ref(null);
+const exchangeRateCheckTimer = ref(null);
+
+// 汇率填写表单
+interface ExchangeRateForm {
+  currency: string;
+  exchangeRate: number;
+  remark: string;
+}
+
+// 多币种汇率填写表单
+interface MultiCurrencyExchangeRateForm {
+  exchangeRates: Array<{
+    currency: string;
+    exchangeRate: string;
+    remark: string;
+  }>;
+  globalRemark: string;
+}
+
+const exchangeRateForm = reactive<ExchangeRateForm>({
+  currency: '',
+  exchangeRate: null,
+  remark: ''
+});
+
+const multiCurrencyExchangeRateForm = reactive<MultiCurrencyExchangeRateForm>({
+  exchangeRates: [],
+  globalRemark: ''
+});
+
+// 汇率填写表单验证规则
+const exchangeRateRules = reactive({
+  currency: [
+    { required: true, message: '请选择币种', trigger: 'change' }
+  ],
+  exchangeRate: [
+    { required: true, message: '请输入汇率', trigger: 'blur' }
+  ]
+});
 
 // 确保calendarDays有初始值
 // 移除重复的onMounted，保留原有的
@@ -4470,14 +4575,7 @@ var dictParams = [
   { dictType: 'hr_receiving_bank' },
   { dictType: 'hr_rf_receiving_bank' }
 ]
-proxy.getDicts(dictParams).then((response) => {
-  response.data.forEach((element) => {
-    state.optionss[element.dictType] = element.list
-  })
-  getPendingCount();
-  getFinancialTasksList(1, 10);
-  getUserCustomerData();
-})
+// 字典数据加载将在 onMounted 中处理
 
 // 获取用户相关的客户数据
 const getUserCustomerData = async () => {
@@ -5419,6 +5517,13 @@ onMounted(async () => {
     getPlanTaskItems(startDate, endDate);
   });
   try {
+    // 首先加载字典数据
+    const dictResponse = await proxy.getDicts(dictParams);
+    dictResponse.data.forEach((element) => {
+      state.optionss[element.dictType] = element.list
+    })
+    console.log('字典数据加载完成:', state.optionss.hr_export_currency)
+
     const dataPromises = [
       GetPlantTaskItemList(),
       getWithin24hoursEmailCount(),
@@ -5426,7 +5531,10 @@ onMounted(async () => {
       getOverduePendingTaskPlanItemList(),
       fetchTaskReminderData(),
       getUnreadMessages(),
-      getAssociatedDocumentOptionsData() // 获取关联单号选项数据
+      getAssociatedDocumentOptionsData(), // 获取关联单号选项数据
+      getPendingCount(),
+      getFinancialTasksList(1, 10),
+      getUserCustomerData()
     ];
 
     // 只有非采购角色才获取商机看板数据
@@ -5435,6 +5543,9 @@ onMounted(async () => {
     }
 
     await Promise.all(dataPromises);
+
+    // 字典数据加载完成后，初始化汇率填写通知
+    initExchangeRateNotification();
   } catch (error) {
     console.error('数据加载失败:', error)
     ElMessage.error('数据加载失败，请刷新页面重试')
@@ -5706,10 +5817,327 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
   }
 });
 
+// 汇率填写通知相关函数
+const initExchangeRateNotification = async () => {
+  try {
+    // 检查当前用户是否需要填写汇率
+    const res = await request.get('ExchangeRateTask/CheckUserNeedFill/CheckUserNeedFill') as unknown as { data: ApiResponse }
+    if (res.code === 200 && res.data.needFill) {
+      // 显示汇率填写通知
+      showExchangeRateNotification()
+    }
+  } catch (error) {
+    console.error('检查汇率填写需求失败:', error)
+  }
+}
+
+const showExchangeRateNotification = () => {
+  exchangeRateNotificationVisible.value = true
+
+  // 使用 nextTick 确保DOM更新后再初始化
+  nextTick(() => {
+    // 初始化多币种汇率表单
+    initMultiCurrencyExchangeRateForm()
+
+    // 如果字典数据还没加载，延迟重试
+    if (!optionss.hr_export_currency || optionss.hr_export_currency.length === 0) {
+      setTimeout(() => {
+        initMultiCurrencyExchangeRateForm()
+      }, 1000)
+    }
+  })
+
+  // 设置定时器，每隔指定时间检查一次
+  startExchangeRateNotificationTimer()
+}
+
+
+// 强制初始化表单
+const forceInitForm = () => {
+  // 清空现有数据
+  multiCurrencyExchangeRateForm.exchangeRates = []
+  multiCurrencyExchangeRateForm.globalRemark = ''
+
+  // 直接从调试信息中看到的数据进行初始化
+  const testCurrencies = [
+    { dictValue: '1', dictLabel: '美元' },
+    { dictValue: '2', dictLabel: '欧元' },
+    { dictValue: '3', dictLabel: '人民币' }
+  ]
+
+  testCurrencies.forEach(currency => {
+    multiCurrencyExchangeRateForm.exchangeRates.push({
+      currency: currency.dictLabel,
+      exchangeRate: '',
+      remark: ''
+    })
+  })
+}
+
+// 初始化多币种汇率表单
+const initMultiCurrencyExchangeRateForm = () => {
+  multiCurrencyExchangeRateForm.exchangeRates = []
+  multiCurrencyExchangeRateForm.globalRemark = ''
+
+  // 尝试从多个地方获取币种数据
+  let currencyData = null
+
+  // 方法1：从 optionss 获取
+  if (optionss.hr_export_currency && optionss.hr_export_currency.length > 0) {
+    currencyData = optionss.hr_export_currency
+  }
+  // 方法2：从 state.optionss 获取
+  else if (state.optionss.hr_export_currency && state.optionss.hr_export_currency.length > 0) {
+    currencyData = state.optionss.hr_export_currency
+  }
+  // 方法3：从全局 state 获取
+  else if (state.optionss && state.optionss.hr_export_currency && state.optionss.hr_export_currency.length > 0) {
+    currencyData = state.optionss.hr_export_currency
+  }
+
+  if (currencyData && currencyData.length > 0) {
+    currencyData.forEach(currency => {
+      multiCurrencyExchangeRateForm.exchangeRates.push({
+        currency: currency.dictLabel,
+        exchangeRate: '',
+        remark: ''
+      })
+    })
+  }
+}
+
+const startExchangeRateNotificationTimer = () => {
+  // 清除之前的定时器
+  if (exchangeRateNotificationTimer.value) {
+    clearInterval(exchangeRateNotificationTimer.value)
+  }
+
+  // 获取通知间隔配置
+  getNotificationInterval().then(interval => {
+    exchangeRateNotificationTimer.value = setInterval(() => {
+      checkExchangeRateStatus()
+    }, interval * 60 * 1000) // 转换为毫秒
+  })
+}
+
+const getNotificationInterval = async () => {
+  try {
+    const res = await request.get('ExchangeRateTask/GetConfig/GetConfig') as unknown as { data: ApiResponse }
+    if (res.code === 200 && res.data) {
+      return res.data.notificationInterval || 5
+    }
+  } catch (error) {
+    console.error('获取通知间隔配置失败:', error)
+  }
+  return 5 // 默认5分钟
+}
+
+const checkExchangeRateStatus = async () => {
+  try {
+    const res = await request.get('ExchangeRateTask/CheckUserNeedFill/CheckUserNeedFill') as unknown as { data: ApiResponse }
+    if (res.code === 200 && res.data.needFill) {
+      // 如果用户还没有填写，继续显示通知
+      if (!exchangeRateNotificationVisible.value) {
+        showExchangeRateNotification()
+      }
+    } else {
+      // 用户已经填写，清除定时器
+      if (exchangeRateNotificationTimer.value) {
+        clearInterval(exchangeRateNotificationTimer.value)
+        exchangeRateNotificationTimer.value = null
+      }
+    }
+  } catch (error) {
+    console.error('检查汇率填写状态失败:', error)
+  }
+}
+
+const submitExchangeRate = async () => {
+  if (!exchangeRateFormRef.value) return
+
+  await exchangeRateFormRef.value.validate(async (valid) => {
+    if (!valid) {
+      ElMessage.warning('请填写完整的汇率信息')
+      return
+    }
+
+    try {
+      const requestData = {
+        currency: exchangeRateForm.currency,
+        exchangeRate: exchangeRateForm.exchangeRate,
+        remark: exchangeRateForm.remark,
+        date: new Date().toISOString().split('T')[0] // 今天的日期
+      }
+
+      const res = await request.post('ExchangeRateTask/SubmitExchangeRate/SubmitExchangeRate', requestData) as unknown as { data: ApiResponse }
+      if (res.code === 200) {
+        ElMessage.success('汇率填写成功')
+        exchangeRateNotificationVisible.value = false
+
+        // 清除定时器
+        if (exchangeRateNotificationTimer.value) {
+          clearInterval(exchangeRateNotificationTimer.value)
+          exchangeRateNotificationTimer.value = null
+        }
+
+        // 重置表单
+        resetExchangeRateForm()
+      } else {
+        ElMessage.error(res.msg || '提交失败')
+      }
+    } catch (error) {
+      console.error('提交汇率失败:', error)
+      ElMessage.error('提交失败，请稍后重试')
+    }
+  })
+}
+
+const skipExchangeRateNotification = () => {
+  exchangeRateNotificationVisible.value = false
+  // 5分钟后再次提醒
+  setTimeout(() => {
+    checkExchangeRateStatus()
+  }, 5 * 60 * 1000)
+}
+
+const resetExchangeRateForm = () => {
+  exchangeRateForm.currency = ''
+  exchangeRateForm.exchangeRate = null
+  exchangeRateForm.remark = ''
+}
+
+// 重置多币种汇率表单
+const resetMultiCurrencyExchangeRateForm = () => {
+  multiCurrencyExchangeRateForm.exchangeRates = []
+  multiCurrencyExchangeRateForm.globalRemark = ''
+}
+
+// 提交多币种汇率
+const submitMultiCurrencyExchangeRate = async () => {
+  if (!exchangeRateFormRef.value) return
+
+  await exchangeRateFormRef.value.validate(async (valid) => {
+    if (!valid) {
+      ElMessage.warning('请填写完整的汇率信息')
+      return
+    }
+
+    // 检查是否所有币种都已填写汇率
+    const unfilledCurrencies = multiCurrencyExchangeRateForm.exchangeRates.filter(rate => !rate.exchangeRate || rate.exchangeRate.trim() === '')
+    if (unfilledCurrencies.length > 0) {
+      ElMessage.warning('请为所有币种填写汇率')
+      return
+    }
+
+    try {
+      const requestData = {
+        exchangeRates: multiCurrencyExchangeRateForm.exchangeRates.map(rate => {
+          // 将 dictLabel 转换回 dictValue
+          const currencyData = optionss.hr_export_currency?.find(item => item.dictLabel === rate.currency) ||
+            state.optionss.hr_export_currency?.find(item => item.dictLabel === rate.currency)
+          return {
+            currency: currencyData ? currencyData.dictValue : rate.currency,
+            exchangeRate: parseFloat(rate.exchangeRate) || 0,
+            remark: rate.remark || multiCurrencyExchangeRateForm.globalRemark
+          }
+        }),
+        date: new Date().toISOString().split('T')[0] // 今天的日期
+      }
+
+      const res = await request.post('ExchangeRateTask/SubmitMultiCurrencyExchangeRate/SubmitMultiCurrencyExchangeRate', requestData) as unknown as { data: ApiResponse }
+      if (res.code === 200) {
+        ElMessage.success('所有汇率填写成功')
+        exchangeRateNotificationVisible.value = false
+        // 清除定时器
+        if (exchangeRateNotificationTimer.value) {
+          clearInterval(exchangeRateNotificationTimer.value)
+          exchangeRateNotificationTimer.value = null
+        }
+        // 重置表单
+        resetMultiCurrencyExchangeRateForm()
+      } else {
+        ElMessage.error(res.msg || '汇率填写失败')
+      }
+    } catch (error) {
+      console.error('提交汇率失败:', error)
+      ElMessage.error('汇率填写失败，请重试')
+    }
+  })
+}
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (exchangeRateNotificationTimer.value) {
+    clearInterval(exchangeRateNotificationTimer.value)
+  }
+  if (exchangeRateCheckTimer.value) {
+    clearInterval(exchangeRateCheckTimer.value)
+  }
+})
+
 </script>
 
 
 <style lang="scss" scoped>
+// 汇率填写通知样式
+.exchange-rate-notification {
+  .notification-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #fff7e6;
+    border: 1px solid #ffd591;
+    border-radius: 6px;
+
+    .notification-icon {
+      color: #fa8c16;
+      margin-right: 10px;
+    }
+
+    .notification-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #d46b08;
+    }
+  }
+
+  .notification-content {
+    margin-bottom: 20px;
+
+    p {
+      margin: 0;
+      color: #666;
+      line-height: 1.6;
+    }
+  }
+
+  .currency-rates-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e4e7ed;
+    border-radius: 6px;
+    padding: 15px;
+    background-color: #fafafa;
+
+    .currency-rate-item {
+      margin-bottom: 10px;
+      padding: 8px;
+      background-color: #fff;
+      border-radius: 4px;
+      border: 1px solid #e4e7ed;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .el-form-item {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
 .work-wrap span {
   cursor: pointer;
 }

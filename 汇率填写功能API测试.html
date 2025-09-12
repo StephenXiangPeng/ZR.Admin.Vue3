@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>汇率填写功能API测试</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			max-width: 800px;
+			margin: 0 auto;
+			padding: 20px;
+		}
+
+		.test-section {
+			margin: 20px 0;
+			padding: 15px;
+			border: 1px solid #ddd;
+			border-radius: 5px;
+		}
+
+		button {
+			background-color: #007bff;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			border-radius: 3px;
+			cursor: pointer;
+			margin: 5px;
+		}
+
+		button:hover {
+			background-color: #0056b3;
+		}
+
+		.result {
+			margin-top: 10px;
+			padding: 10px;
+			background-color: #f8f9fa;
+			border-radius: 3px;
+			white-space: pre-wrap;
+			font-family: monospace;
+		}
+
+		.error {
+			background-color: #f8d7da;
+			color: #721c24;
+		}
+
+		.success {
+			background-color: #d4edda;
+			color: #155724;
+		}
+
+		input,
+		select,
+		textarea {
+			width: 100%;
+			padding: 8px;
+			margin: 5px 0;
+			border: 1px solid #ddd;
+			border-radius: 3px;
+		}
+	</style>
+</head>
+
+<body>
+	<h1>汇率填写功能API测试</h1>
+
+	<div class="test-section">
+		<h3>1. 获取汇率任务配置</h3>
+		<button onclick="getConfig()">获取配置</button>
+		<div id="getConfigResult" class="result"></div>
+	</div>
+
+	<div class="test-section">
+		<h3>2. 保存汇率任务配置</h3>
+		<form id="saveConfigForm">
+			<label>任务名称:</label>
+			<input type="text" id="taskName" value="每日汇率更新任务">
+
+			<label>执行人员ID (用逗号分隔):</label>
+			<input type="text" id="executors" value="1,2,3" placeholder="例如: 1,2,3">
+
+			<label>通知间隔(分钟):</label>
+			<input type="number" id="notificationInterval" value="5" min="1" max="60">
+
+			<label>任务状态:</label>
+			<select id="status">
+				<option value="1">启用</option>
+				<option value="0">禁用</option>
+			</select>
+
+			<label>任务描述:</label>
+			<textarea id="description" rows="3">每日提醒指定人员填写当天汇率，如未填写则每隔指定时间弹窗提醒</textarea>
+
+			<button type="button" onclick="saveConfig()">保存配置</button>
+		</form>
+		<div id="saveConfigResult" class="result"></div>
+	</div>
+
+	<div class="test-section">
+		<h3>3. 检查用户是否需要填写汇率</h3>
+		<label>用户ID:</label>
+		<input type="number" id="userId" value="1">
+		<button onclick="checkUserNeedFill()">检查用户需求</button>
+		<div id="checkUserResult" class="result"></div>
+	</div>
+
+	<div class="test-section">
+		<h3>4. 提交汇率信息</h3>
+		<form id="submitRateForm">
+			<label>币种ID:</label>
+			<input type="text" id="currency" value="1">
+
+			<label>汇率:</label>
+			<input type="number" id="exchangeRate" value="7.2345" step="0.0001">
+
+			<label>备注:</label>
+			<textarea id="remark" rows="2">测试汇率</textarea>
+
+			<label>日期:</label>
+			<input type="date" id="date" value="">
+
+			<button type="button" onclick="submitExchangeRate()">提交汇率</button>
+		</form>
+		<div id="submitRateResult" class="result"></div>
+	</div>
+
+	<script>
+		// 设置今天的日期
+		document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+		// 基础API调用函数
+		async function apiCall(url, method = 'GET', data = null) {
+			try {
+				const options = {
+					method: method,
+					headers: {
+						'Content-Type': 'application/json',
+					}
+				};
+
+				if (data) {
+					options.body = JSON.stringify(data);
+				}
+
+				const response = await fetch(url, options);
+				const result = await response.json();
+				return result;
+			} catch (error) {
+				return { error: error.message };
+			}
+		}
+
+		// 显示结果
+		function showResult(elementId, result, isError = false) {
+			const element = document.getElementById(elementId);
+			element.textContent = JSON.stringify(result, null, 2);
+			element.className = `result ${isError ? 'error' : 'success'}`;
+		}
+
+		// 1. 获取配置
+		async function getConfig() {
+			const result = await apiCall('/api/ExchangeRateTask/GetConfig');
+			showResult('getConfigResult', result, result.error || result.code !== 200);
+		}
+
+		// 2. 保存配置
+		async function saveConfig() {
+			const formData = {
+				taskName: document.getElementById('taskName').value,
+				executors: document.getElementById('executors').value.split(',').map(id => parseInt(id.trim())),
+				notificationInterval: parseInt(document.getElementById('notificationInterval').value),
+				status: parseInt(document.getElementById('status').value),
+				description: document.getElementById('description').value
+			};
+
+			console.log('发送的数据:', formData);
+
+			const result = await apiCall('/api/ExchangeRateTask/SaveConfig', 'POST', formData);
+			showResult('saveConfigResult', result, result.error || result.code !== 200);
+		}
+
+		// 3. 检查用户需求
+		async function checkUserNeedFill() {
+			const userId = document.getElementById('userId').value;
+			const result = await apiCall(`/api/ExchangeRateTask/CheckUserNeedFill?userId=${userId}`);
+			showResult('checkUserResult', result, result.error || result.code !== 200);
+		}
+
+		// 4. 提交汇率
+		async function submitExchangeRate() {
+			const formData = {
+				currency: document.getElementById('currency').value,
+				exchangeRate: parseFloat(document.getElementById('exchangeRate').value),
+				remark: document.getElementById('remark').value,
+				date: document.getElementById('date').value
+			};
+
+			console.log('发送的数据:', formData);
+
+			const result = await apiCall('/api/ExchangeRateTask/SubmitExchangeRate', 'POST', formData);
+			showResult('submitRateResult', result, result.error || result.code !== 200);
+		}
+	</script>
+</body>
+
+</html>
