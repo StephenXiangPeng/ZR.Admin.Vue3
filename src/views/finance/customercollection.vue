@@ -337,6 +337,7 @@ import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from
 import request from '@/utils/request';
 import { getDicts } from '@/api/system/dict/data';
 import { get } from 'sortablejs';
+import exchangeRateService from '@/utils/exchangeRateService';
 
 // 添加格式化日期函数
 const formatDate = (dateString) => {
@@ -554,12 +555,29 @@ const displayAmount = computed(() => {
 });
 
 // 处理外销币种变化事件
-const handleForeignCurrencyChange = (value) => {
+const handleForeignCurrencyChange = async (value) => {
 	// 如果选择的是人民币（字典值为3），自动设置汇率为1.000
 	if (value === '3') {
 		addcustomercollectionform.value.exchangeRate = '1.000';
 	} else {
-		addcustomercollectionform.value.exchangeRate = '';
+		// 获取最新汇率
+		try {
+			const latestRate = await exchangeRateService.getLatestExchangeRate(value);
+			if (latestRate !== null) {
+				addcustomercollectionform.value.exchangeRate = exchangeRateService.formatExchangeRate(latestRate);
+			} else {
+				// 如果获取不到最新汇率，使用默认汇率
+				const defaultRate = exchangeRateService.getDefaultExchangeRate(value);
+				addcustomercollectionform.value.exchangeRate = exchangeRateService.formatExchangeRate(defaultRate);
+				ElMessage.warning(`未找到${exchangeRateService.getCurrencyName(value, optionss.hr_export_currency)}的最新汇率，已使用默认汇率`);
+			}
+		} catch (error) {
+			console.error('获取汇率失败:', error);
+			// 使用默认汇率
+			const defaultRate = exchangeRateService.getDefaultExchangeRate(value);
+			addcustomercollectionform.value.exchangeRate = exchangeRateService.formatExchangeRate(defaultRate);
+			ElMessage.warning(`获取汇率失败，已使用默认汇率`);
+		}
 	}
 
 	// 重新计算结汇金额

@@ -79,6 +79,21 @@ namespace ZR.Admin.Vue3.Services.ExchangeRate
 		/// <param name="notificationType"></param>
 		/// <returns></returns>
 		Task<bool> LogNotificationAsync(int userId, string notificationType = "popup");
+
+		/// <summary>
+		/// 获取指定币种的最新汇率
+		/// </summary>
+		/// <param name="currency">币种ID</param>
+		/// <param name="date">指定日期</param>
+		/// <returns>最新汇率，如果找不到则返回null</returns>
+		Task<decimal?> GetLatestExchangeRateAsync(string currency, DateTime date);
+
+		/// <summary>
+		/// 获取所有币种的最新汇率
+		/// </summary>
+		/// <param name="date">指定日期</param>
+		/// <returns>所有币种的最新汇率字典</returns>
+		Task<Dictionary<string, decimal>> GetAllLatestExchangeRatesAsync(DateTime date);
 	}
 
 	/// <summary>
@@ -497,6 +512,95 @@ namespace ZR.Admin.Vue3.Services.ExchangeRate
 			{
 				Console.WriteLine($"记录通知日志失败: {ex.Message}");
 				return false;
+			}
+		}
+
+		/// <summary>
+		/// 获取指定币种的最新汇率
+		/// </summary>
+		/// <param name="currency">币种ID</param>
+		/// <param name="date">指定日期</param>
+		/// <returns>最新汇率，如果找不到则返回null</returns>
+		public async Task<decimal?> GetLatestExchangeRateAsync(string currency, DateTime date)
+		{
+			try
+			{
+				// 首先查找指定日期的汇率
+				var todayRate = await _db.Queryable<ExchangeRateRecord>()
+					.Where(x => x.Currency == currency && x.Date.Date == date.Date)
+					.OrderByDescending(x => x.CreateTime)
+					.FirstAsync();
+
+				if (todayRate != null)
+				{
+					return todayRate.ExchangeRate;
+				}
+
+				// 如果当天没有汇率，查找前一天的汇率
+				var yesterday = date.AddDays(-1);
+				var yesterdayRate = await _db.Queryable<ExchangeRateRecord>()
+					.Where(x => x.Currency == currency && x.Date.Date == yesterday.Date)
+					.OrderByDescending(x => x.CreateTime)
+					.FirstAsync();
+
+				if (yesterdayRate != null)
+				{
+					return yesterdayRate.ExchangeRate;
+				}
+
+				// 如果前一天也没有，继续往前查找，最多查找7天
+				for (int i = 2; i <= 7; i++)
+				{
+					var previousDate = date.AddDays(-i);
+					var previousRate = await _db.Queryable<ExchangeRateRecord>()
+						.Where(x => x.Currency == currency && x.Date.Date == previousDate.Date)
+						.OrderByDescending(x => x.CreateTime)
+						.FirstAsync();
+
+					if (previousRate != null)
+					{
+						return previousRate.ExchangeRate;
+					}
+				}
+
+				return null;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"获取最新汇率失败: {ex.Message}");
+				return null;
+			}
+		}
+
+		/// <summary>
+		/// 获取所有币种的最新汇率
+		/// </summary>
+		/// <param name="date">指定日期</param>
+		/// <returns>所有币种的最新汇率字典</returns>
+		public async Task<Dictionary<string, decimal>> GetAllLatestExchangeRatesAsync(DateTime date)
+		{
+			try
+			{
+				var result = new Dictionary<string, decimal>();
+
+				// 获取所有币种
+				var currencies = new[] { "1", "2", "3" }; // 美元、欧元、人民币
+
+				foreach (var currency in currencies)
+				{
+					var rate = await GetLatestExchangeRateAsync(currency, date);
+					if (rate.HasValue)
+					{
+						result[currency] = rate.Value;
+					}
+				}
+
+				return result;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"获取所有最新汇率失败: {ex.Message}");
+				return new Dictionary<string, decimal>();
 			}
 		}
 	}

@@ -1030,6 +1030,7 @@ import useUserStore from "@/store/modules/user";
 import { number } from 'echarts';
 import { onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router';
+import exchangeRateService from '@/utils/exchangeRateService';
 
 const route = useRoute();
 
@@ -1654,14 +1655,42 @@ function formatNumber2(row, key) {
 /// 外销币种Change事件
 ///如果为人民币，汇率默认为1
 const currencySymbol = ref('$'); // 默認貨幣符號
-const exportcurrencyChange = (value) => {
+const exportcurrencyChange = async (value) => {
 	if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 3) {
 		quotationDialogform.exchangerate = 1;
 		currencySymbol.value = '￥';
 	} else if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 2) {
 		currencySymbol.value = '€';
+		// 获取欧元最新汇率
+		try {
+			const latestRate = await exchangeRateService.getLatestExchangeRate(value);
+			if (latestRate !== null) {
+				quotationDialogform.exchangerate = latestRate;
+			} else {
+				quotationDialogform.exchangerate = exchangeRateService.getDefaultExchangeRate(value);
+				ElMessage.warning(`未找到欧元的最新汇率，已使用默认汇率`);
+			}
+		} catch (error) {
+			console.error('获取汇率失败:', error);
+			quotationDialogform.exchangerate = exchangeRateService.getDefaultExchangeRate(value);
+			ElMessage.warning(`获取汇率失败，已使用默认汇率`);
+		}
 	} else if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 1) {
 		currencySymbol.value = '＄';
+		// 获取美元最新汇率
+		try {
+			const latestRate = await exchangeRateService.getLatestExchangeRate(value);
+			if (latestRate !== null) {
+				quotationDialogform.exchangerate = latestRate;
+			} else {
+				quotationDialogform.exchangerate = exchangeRateService.getDefaultExchangeRate(value);
+				ElMessage.warning(`未找到美元的最新汇率，已使用默认汇率`);
+			}
+		} catch (error) {
+			console.error('获取汇率失败:', error);
+			quotationDialogform.exchangerate = exchangeRateService.getDefaultExchangeRate(value);
+			ElMessage.warning(`获取汇率失败，已使用默认汇率`);
+		}
 	} else {
 		quotationDialogform.exchangerate = null;
 	}

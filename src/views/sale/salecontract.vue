@@ -1175,6 +1175,7 @@ import { get } from 'sortablejs';
 import useUserStore from "@/store/modules/user";
 import { Row } from 'element-plus/es/components/table-v2/src/components';
 import { useRoute } from 'vue-router'
+import exchangeRateService from '@/utils/exchangeRateService';
 
 const activeSearchProductTab = ref('productInfoTab');
 const selectedCustomerId = ref(null);
@@ -1801,11 +1802,28 @@ const shippingcurrencyChange = (value) => {
 	}
 }
 
-const foreignCurrencyChange = (value) => {
+const foreignCurrencyChange = async (value) => {
 	if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 3) {
 		Newcontractform.exchangeRate = Number(1).toFixed(3);
 	} else {
-		Newcontractform.exchangeRate = null;
+		// 获取最新汇率
+		try {
+			const latestRate = await exchangeRateService.getLatestExchangeRate(value);
+			if (latestRate !== null) {
+				Newcontractform.exchangeRate = Number(latestRate).toFixed(3);
+			} else {
+				// 如果获取不到最新汇率，使用默认汇率
+				const defaultRate = exchangeRateService.getDefaultExchangeRate(value);
+				Newcontractform.exchangeRate = Number(defaultRate).toFixed(3);
+				ElMessage.warning(`未找到${exchangeRateService.getCurrencyName(value, state.optionss.hr_export_currency)}的最新汇率，已使用默认汇率`);
+			}
+		} catch (error) {
+			console.error('获取汇率失败:', error);
+			// 使用默认汇率
+			const defaultRate = exchangeRateService.getDefaultExchangeRate(value);
+			Newcontractform.exchangeRate = Number(defaultRate).toFixed(3);
+			ElMessage.warning(`获取汇率失败，已使用默认汇率`);
+		}
 	}
 }
 

@@ -574,6 +574,56 @@ namespace ZR.Admin.Vue3.Controllers.ExchangeRate
 		}
 
 		/// <summary>
+		/// 获取指定币种的最新汇率
+		/// </summary>
+		/// <param name="currency">币种ID</param>
+		/// <param name="date">指定日期，不传则使用今天</param>
+		/// <returns>最新汇率</returns>
+		[HttpGet("GetLatestExchangeRate")]
+		public async Task<IActionResult> GetLatestExchangeRate(string currency, DateTime? date = null)
+		{
+			try
+			{
+				if (string.IsNullOrEmpty(currency))
+				{
+					return BadRequest(new { code = 400, message = "币种不能为空" });
+				}
+
+				var targetDate = date ?? DateTime.Today;
+				var exchangeRate = await _exchangeRateService.GetLatestExchangeRateAsync(currency, targetDate);
+
+				return Ok(new { code = 200, message = "获取汇率成功", data = exchangeRate });
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "获取最新汇率失败，币种：{Currency}", currency);
+				return StatusCode(500, new { code = 500, message = "服务器内部错误", data = ex.Message });
+			}
+		}
+
+		/// <summary>
+		/// 获取所有币种的最新汇率
+		/// </summary>
+		/// <param name="date">指定日期，不传则使用今天</param>
+		/// <returns>所有币种的最新汇率</returns>
+		[HttpGet("GetAllLatestExchangeRates")]
+		public async Task<IActionResult> GetAllLatestExchangeRates(DateTime? date = null)
+		{
+			try
+			{
+				var targetDate = date ?? DateTime.Today;
+				var exchangeRates = await _exchangeRateService.GetAllLatestExchangeRatesAsync(targetDate);
+
+				return Ok(new { code = 200, message = "获取所有汇率成功", data = exchangeRates });
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "获取所有最新汇率失败");
+				return StatusCode(500, new { code = 500, message = "服务器内部错误", data = ex.Message });
+			}
+		}
+
+		/// <summary>
 		/// 获取当前登录用户ID
 		/// </summary>
 		/// <returns></returns>
