@@ -250,7 +250,7 @@
 							<el-col :span="6">
 								<el-form-item :label="'时间节点'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.deadline'">
-									<el-date-picker v-model="item.deadline" type="date" placeholder="选择时间节点"
+									<el-date-picker v-model="item.deadline" type="datetime" placeholder="选择时间节点"
 										style="width: 300px" size="default" @change="(value) => {
 											if (!value) return;
 											if (!PlanTaskForm.starttime || !PlanTaskForm.endtime) {
@@ -387,9 +387,9 @@
 									{{ getCustomerName(row.relatedCustomers) }}
 								</template>
 							</el-table-column>
-							<el-table-column prop="timePoint" label="计划完成时间" min-width="150">
+							<el-table-column prop="timePoint" label="计划完成时间节点" min-width="150">
 								<template #default="{ row }">
-									{{ formatDate(row.timePoint) }}
+									{{ formatDateTime(row.timePoint) }}
 								</template>
 							</el-table-column>
 							<el-table-column prop="realTimePoint" label="实际完成时间" min-width="150">
