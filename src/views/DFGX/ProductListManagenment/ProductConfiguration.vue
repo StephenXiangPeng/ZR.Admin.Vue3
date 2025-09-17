@@ -1,0 +1,627 @@
+<template>
+  <div class="app-container">
+    <!-- 搜索区域 -->
+    <el-form :model="queryParams" ref="queryForm" :inline="true" v-show="showSearch">
+      <el-form-item label="选项类型" prop="optionType">
+        <el-select v-model="queryParams.optionType" placeholder="请选择选项类型" clearable>
+          <el-option 
+            v-for="dict in optionTypeOptions" 
+            :key="dict.dictValue" 
+            :label="dict.dictLabel" 
+            :value="parseInt(dict.dictValue)" 
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="选项名称" prop="optionName">
+        <el-input
+          v-model="queryParams.optionName"
+          placeholder="请输入选项名称"
+          clearable
+          @keyup.enter="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="状态" prop="status">
+        <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
+          <el-option label="正常" value="0" />
+          <el-option label="停用" value="1" />
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+      </el-form-item>
+    </el-form>
+
+    <!-- 操作按钮区域 -->
+    <el-row :gutter="10" class="mb8">
+      <el-col :span="1.5">
+        <el-button
+          type="primary"
+          plain
+          icon="Plus"
+          @click="handleAdd"
+          v-hasPermi="['DFGX:lensOptions:add']"
+        >新增</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button
+          type="success"
+          plain
+          icon="Edit"
+          :disabled="single"
+          @click="handleUpdate"
+          v-hasPermi="['DFGX:lensOptions:edit']"
+        >修改</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button
+          type="danger"
+          plain
+          icon="Delete"
+          :disabled="multiple"
+          @click="handleBatchDelete"
+          v-hasPermi="['DFGX:lensOptions:remove']"
+        >删除</el-button>
+      </el-col>
+      <!-- <el-col :span="1.5">
+        <el-button
+          type="warning"
+          plain
+          icon="Download"
+          @click="handleExport"
+          v-hasPermi="['DFGX:lensOptions:export']"
+        >导出</el-button>
+      </el-col> -->
+      <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
+    </el-row>
+
+    <!-- 数据表格 -->
+    <el-table v-loading="loading" :data="lensOptionsList" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" align="center" />
+      <el-table-column label="序号" type="index" width="60" align="center" />
+      <el-table-column label="选项类型" align="center" prop="optionType" width="110">
+        <template #default="scope">
+          <el-tag :type="getTagType(scope.row.optionType)">
+            {{ getOptionTypeLabel(scope.row.optionType) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="选项名称" align="center" prop="optionName" width="200" :show-overflow-tooltip="true" />
+      <el-table-column label="状态" align="center" prop="status" width="120">
+        <template #default="scope">
+          <el-switch
+            v-model="scope.row.status"
+            active-value="0"
+            inactive-value="1"
+            @change="handleStatusChange(scope.row)"
+          />
+        </template>
+      </el-table-column>
+      <el-table-column label="备注" align="center" prop="remark" :show-overflow-tooltip="true" width="500" />
+      <el-table-column label="创建时间" align="center" prop="createTime" width="180">
+        <template #default="scope">
+          <span>{{ scope.row.createTime }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="200">
+        <template #default="scope">
+          <el-button
+            link
+            type="primary"
+            icon="Edit"
+            @click="handleUpdate(scope.row)"
+            v-hasPermi="['DFGX:lensOptions:edit']"
+          >修改</el-button>
+          <el-button
+            link
+            type="danger"
+            icon="Delete"
+            @click="handleDelete(scope.row)"
+            v-hasPermi="['DFGX:lensOptions:remove']"
+          >删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- 分页 -->
+    <pagination
+      v-show="total > 0"
+      :total="total"
+      v-model:page="queryParams.pageNum"
+      v-model:limit="queryParams.pageSize"
+      @pagination="getList"
+    />
+
+    <!-- 添加或修改镜片选项对话框 -->
+    <el-dialog 
+      :title="title" 
+      v-model="open" 
+      width="480px" 
+      append-to-body
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      @close="cancel"
+    >
+      <el-form 
+        ref="lensOptionRef" 
+        :model="form" 
+        :rules="rules" 
+        label-width="80px"
+        class="lens-option-form"
+      >
+        <el-form-item label="选项类型" prop="optionType">
+          <el-select 
+            v-model="form.optionType" 
+            placeholder="请选择选项类型"
+            style="width: 100%"
+            clearable
+            @change="handleOptionTypeChange"
+          >
+            <el-option 
+              v-for="dict in optionTypeOptions" 
+              :key="dict.dictValue" 
+              :label="dict.dictLabel" 
+              :value="parseInt(dict.dictValue)"
+            />
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item label="选项名称" prop="optionName">
+          <el-input 
+            v-model="form.optionName" 
+            placeholder="请输入选项名称"
+            maxlength="50"
+            show-word-limit
+            clearable
+          />
+        </el-form-item>
+        
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item label="选项值" prop="optionValue">
+              <el-input-number 
+                v-model="form.optionValue" 
+                placeholder="自动" 
+                :min="1" 
+                :max="999" 
+                :disabled="!form.id"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="状态" prop="status">
+              <el-radio-group v-model="form.status">
+                <el-radio label="0">正常</el-radio>
+                <el-radio label="1">停用</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-form-item label="备注" prop="remark">
+          <el-input 
+            v-model="form.remark" 
+            type="textarea" 
+            placeholder="请输入备注信息（可选）"
+            :rows="2"
+            maxlength="200"
+            show-word-limit
+            resize="none"
+          />
+        </el-form-item>
+        
+        <!-- 预览区域 -->
+        <el-form-item label="预览" v-if="form.optionType && form.optionName">
+          <div class="option-preview">
+            <el-tag :type="getTagType(form.optionType)" size="small">
+              {{ getOptionTypeLabel(form.optionType) }}
+            </el-tag>
+            <span class="preview-separator">-</span>
+            <span class="preview-name">{{ form.optionName }}</span>
+            <span class="preview-value" v-if="form.optionValue">(值: {{ form.optionValue }})</span>
+          </div>
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="cancel">
+            取 消
+          </el-button>
+          <el-button 
+            type="primary" 
+            @click="submitForm" 
+            :loading="submitLoading"
+          >
+            {{ form.id ? '保存修改' : '添加选项' }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup name="LensOptions">
+import { listLensOptions, getLensOption, delLensOption, delLensOptions, addLensOption, updateLensOption, changeLensOptionStatus, getNextOptionValue } from '@/api/DFGX/lensOptions'
+import { parseTime } from '@/utils/ruoyi'
+
+const { proxy } = getCurrentInstance()
+
+const lensOptionsList = ref([])
+const open = ref(false)
+const loading = ref(true)
+const showSearch = ref(true)
+const ids = ref([])
+const single = ref(true)
+const multiple = ref(true)
+const total = ref(0)
+const title = ref('')
+const optionTypeOptions = ref([])
+const submitLoading = ref(false)
+
+const data = reactive({
+  form: {},
+  queryParams: {
+    pageNum: 1,
+    pageSize: 10,
+    optionType: null,
+    optionName: null,
+    status: null
+  },
+  rules: {
+    optionType: [
+      { required: true, message: '请选择选项类型', trigger: 'change' }
+    ],
+    optionName: [
+      { required: true, message: '请输入选项名称', trigger: 'blur' },
+      { min: 1, max: 50, message: '选项名称长度在 1 到 50 个字符', trigger: 'blur' }
+    ],
+    optionValue: [
+      { required: true, message: '选项值不能为空', trigger: 'blur' },
+      { type: 'number', min: 1, max: 999, message: '选项值必须在 1 到 999 之间', trigger: 'blur' }
+    ],
+    status: [
+      { required: true, message: '请选择状态', trigger: 'change' }
+    ]
+  }
+})
+
+const { queryParams, form, rules } = toRefs(data)
+
+/** 查询镜片选项列表 */
+function getList() {
+  loading.value = true
+  listLensOptions(queryParams.value).then(response => {
+    lensOptionsList.value = response.data.result
+    total.value = response.data.totalNum
+    loading.value = false
+  })
+}
+
+// 取消按钮
+function cancel() {
+  open.value = false
+  reset()
+}
+
+// 表单重置
+function reset() {
+  form.value = {
+    id: null,
+    optionType: null,
+    optionName: null,
+    optionValue: null,
+    status: '0',
+    remark: null
+  }
+  proxy.resetForm('lensOptionRef')
+}
+
+/** 搜索按钮操作 */
+function handleQuery() {
+  queryParams.value.pageNum = 1
+  getList()
+}
+
+/** 重置按钮操作 */
+function resetQuery() {
+  proxy.resetForm('queryForm')
+  handleQuery()
+}
+
+// 多选框选中数据
+function handleSelectionChange(selection) {
+  ids.value = selection.map(item => item.id)
+  single.value = selection.length !== 1
+  multiple.value = !selection.length
+}
+
+/** 新增按钮操作 */
+function handleAdd() {
+  reset()
+  open.value = true
+  title.value = '添加镜片选项'
+  // 新增时不需要获取选项值，由服务端自动生成
+}
+
+/** 修改按钮操作 */
+function handleUpdate(row) {
+  reset()
+  const id = row.id || ids.value[0] // 如果是批量选择，取第一个ID
+  if (!id) {
+    proxy.$modal.msgWarning('请选择要修改的数据')
+    return
+  }
+  getLensOption(id).then(response => {
+    console.log('获取到的数据:', response.data) // 调试信息
+    // 确保数据格式正确
+    form.value = {
+      id: response.data.id || response.data.ID,
+      optionType: response.data.optionType || response.data.OptionType,
+      optionName: response.data.optionName || response.data.OptionName,
+      optionValue: response.data.optionValue || response.data.OptionValue,
+      status: response.data.status || response.data.Status || '0',
+      remark: response.data.remark || response.data.Remarks || ''
+    }
+    console.log('格式化后的表单数据:', form.value) // 调试信息
+    open.value = true
+    title.value = '修改镜片选项'
+  }).catch(error => {
+    console.error('获取数据失败:', error)
+    proxy.$modal.msgError('获取数据失败')
+  })
+}
+
+/** 提交按钮 */
+function submitForm() {
+  proxy.$refs['lensOptionRef'].validate(valid => {
+    if (valid) {
+      submitLoading.value = true
+      
+      if (form.value.id != null) {
+        // 编辑时构建符合后端接口的数据格式
+        const requestData = {
+          ID: form.value.id,
+          OptionType: form.value.optionType,
+          OptionName: form.value.optionName,
+          OptionValue: form.value.optionValue,
+          Status: form.value.status,
+          Remarks: form.value.remark
+        }
+        console.log('修改请求数据:', requestData) // 调试信息
+        updateLensOption(requestData).then(response => {
+          console.log('修改响应:', response) // 调试信息
+          proxy.$modal.msgSuccess('修改成功')
+          open.value = false
+          getList()
+        }).catch(error => {
+          console.error('修改失败:', error) // 调试信息
+          proxy.$modal.msgError('修改失败: ' + (error.message || '未知错误'))
+        }).finally(() => {
+          submitLoading.value = false
+        })
+      } else {
+        // 新增时构建符合后端接口的数据格式
+        const requestData = {
+          OptionType: form.value.optionType,
+          OptionName: form.value.optionName,
+          OptionValue: form.value.optionValue,
+          Status: form.value.status,
+          Remarks: form.value.remark
+        }
+        console.log('新增请求数据:', requestData) // 调试信息
+        addLensOption(requestData).then(response => {
+          console.log('新增响应:', response) // 调试信息
+          proxy.$modal.msgSuccess('新增成功')
+          open.value = false
+          getList()
+        }).catch(error => {
+          console.error('新增失败:', error) // 调试信息
+          proxy.$modal.msgError('新增失败: ' + (error.message || '未知错误'))
+        }).finally(() => {
+          submitLoading.value = false
+        })
+      }
+    } else {
+      console.log('表单验证失败')
+      proxy.$modal.msgError('请检查表单填写是否正确')
+    }
+  })
+}
+
+/** 删除按钮操作 */
+function handleDelete(row) {
+  const _ids = row.id || ids.value
+  proxy.$modal.confirm('是否确认删除镜片选项编号为"' + _ids + '"的数据项？').then(function() {
+    // 单个删除直接传递ID数组
+    const idsArray = Array.isArray(_ids) ? _ids : [_ids]
+    return delLensOption(idsArray)
+  }).then(() => {
+    getList()
+    proxy.$modal.msgSuccess('删除成功')
+  }).catch(() => {})
+}
+
+/** 批量删除按钮操作 */
+function handleBatchDelete() {
+  if (ids.value.length === 0) {
+    proxy.$modal.msgWarning('请选择要删除的数据')
+    return
+  }
+  console.log('批量删除的IDs:', ids.value) // 调试信息
+  proxy.$modal.confirm('是否确认删除选中的"' + ids.value.length + '"条数据项？').then(function() {
+    // ids.value 已经是数组，直接传递
+    return delLensOptions(ids.value)
+  }).then(() => {
+    getList()
+    proxy.$modal.msgSuccess('删除成功')
+  }).catch((error) => {
+    console.error('删除失败:', error) // 错误信息
+    proxy.$modal.msgError('删除失败')
+  })
+}
+
+/** 状态修改 */
+function handleStatusChange(row) {
+  // 保存原始状态
+  const originalStatus = row.status
+  const text = originalStatus === '0' ? '启用' : '停用'
+  
+  proxy.$modal.confirm('确认要"' + text + '""' + row.optionName + '"选项吗？').then(function() {
+    // 传递新的状态值给后端
+    return changeLensOptionStatus(row.id, originalStatus)
+  }).then(() => {
+    // 更新前端显示状态
+    row.status = originalStatus
+    proxy.$modal.msgSuccess('状态修改成功')
+  }).catch(function(error) {
+    // 检查是否是用户取消操作
+    if (error === 'cancel') {
+      // 用户取消操作，恢复原状态
+      row.status = originalStatus
+      return
+    }
+    // 其他错误，恢复原状态并显示错误信息
+    row.status = originalStatus
+    proxy.$modal.msgError('状态修改失败')
+  })
+}
+
+/** 导出按钮操作 */
+function handleExport() {
+  proxy.download('DFGX/lensOptions/export', {
+    ...queryParams.value
+  }, `镜片选项_${new Date().getTime()}.xlsx`)
+}
+
+// 获取选项类型字典数据
+function getOptionTypeOptions() {
+  proxy.getDicts('dfgx_product_configuration').then(response => {
+    optionTypeOptions.value = response.data
+  })
+}
+
+// 获取标签类型
+function getTagType(optionType) {
+  const typeMap = {
+    1: 'primary',    // 镜片类型
+    2: 'success',    // 膜层
+    3: 'warning',    // 材质
+    4: 'info'        // 设计名称
+  }
+  return typeMap[optionType] || 'default'
+}
+
+// 获取选项类型标签
+function getOptionTypeLabel(optionType) {
+  const dict = optionTypeOptions.value.find(item => parseInt(item.dictValue) === optionType)
+  return dict ? dict.dictLabel : optionType
+}
+
+// 获取选项类型描述
+function getOptionTypeDescription(optionType) {
+  const descriptions = {
+    1: '镜片类型选项',
+    2: '膜层选项',
+    3: '材质选项',
+    4: '设计名称选项'
+  }
+  return descriptions[optionType] || '未知类型'
+}
+
+// 处理选项类型变化
+function handleOptionTypeChange(value) {
+  if (value && !form.value.id) { // 只在新增时获取
+    getNextOptionValue(value).then(response => {
+      form.value.optionValue = response.data
+    }).catch(() => {
+      // 如果获取失败，设置为1
+      form.value.optionValue = 1
+    })
+  }
+}
+
+
+onMounted(() => {
+  getList()
+  getOptionTypeOptions()
+  
+})
+</script>
+
+<style scoped>
+.app-container {
+  padding: 20px;
+}
+
+/* 对话框表单样式 */
+.lens-option-form {
+  padding: 10px 0;
+}
+
+.lens-option-form .el-form-item {
+  margin-bottom: 16px;
+}
+
+.lens-option-form .el-form-item__label {
+  font-weight: 500;
+  color: #303133;
+  font-size: 14px;
+}
+
+/* 预览区域样式 */
+.option-preview {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+  font-size: 13px;
+}
+
+.preview-separator {
+  margin: 0 6px;
+  color: #909399;
+  font-weight: 500;
+}
+
+.preview-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.preview-value {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #909399;
+}
+
+/* 对话框底部按钮样式 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 0 0 0;
+  border-top: 1px solid #e4e7ed;
+}
+
+.dialog-footer .el-button {
+  min-width: 80px;
+}
+
+/* 单选框样式优化 */
+.el-radio {
+  margin-right: 16px;
+}
+
+/* 紧凑布局 */
+.el-row {
+  margin-bottom: 0;
+}
+
+.el-col {
+  padding: 0 6px;
+}
+</style>

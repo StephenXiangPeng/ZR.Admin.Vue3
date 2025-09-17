@@ -107,5 +107,5 @@ export default {
   /**
    * 前往通知地址
    */
-  noticeUrl: 'https://gitee.com/izory/ZrAdminNetCore'
+  noticeUrl: ''
 }
