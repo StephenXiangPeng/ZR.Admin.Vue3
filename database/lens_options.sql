@@ -10,26 +10,28 @@ CREATE TABLE `dfgx_lens_options` (
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(64) DEFAULT NULL COMMENT '更新者',
   `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` int(11) NOT NULL DEFAULT '0' COMMENT '是否删除（0正常 1删除）',
   PRIMARY KEY (`id`),
   KEY `idx_option_type` (`option_type`),
   KEY `idx_status` (`status`),
-  KEY `idx_create_time` (`create_time`)
+  KEY `idx_create_time` (`create_time`),
+  KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='镜片选项管理表';
 
 -- 插入示例数据
-INSERT INTO `dfgx_lens_options` (`option_type`, `option_name`, `option_value`, `status`, `remark`, `create_by`, `create_time`) VALUES
-(1, '单焦点镜片', 1, '0', '单焦点镜片类型', 'admin', NOW()),
-(1, '多焦点镜片', 2, '0', '多焦点镜片类型', 'admin', NOW()),
-(1, '渐进镜片', 3, '0', '渐进镜片类型', 'admin', NOW()),
-(2, '防蓝光膜', 1, '0', '防蓝光保护膜层', 'admin', NOW()),
-(2, '防紫外线膜', 2, '0', '防紫外线保护膜层', 'admin', NOW()),
-(2, '防反射膜', 3, '0', '防反射膜层', 'admin', NOW()),
-(3, '树脂材质', 1, '0', '树脂镜片材质', 'admin', NOW()),
-(3, '玻璃材质', 2, '0', '玻璃镜片材质', 'admin', NOW()),
-(3, 'PC材质', 3, '0', '聚碳酸酯镜片材质', 'admin', NOW()),
-(4, '经典设计', 1, '0', '经典镜片设计', 'admin', NOW()),
-(4, '时尚设计', 2, '0', '时尚镜片设计', 'admin', NOW()),
-(4, '运动设计', 3, '0', '运动镜片设计', 'admin', NOW());
+INSERT INTO `dfgx_lens_options` (`option_type`, `option_name`, `option_value`, `status`, `remark`, `create_by`, `create_time`, `is_deleted`) VALUES
+(1, '单焦点镜片', 1, '0', '单焦点镜片类型', 'admin', NOW(), 0),
+(1, '多焦点镜片', 2, '0', '多焦点镜片类型', 'admin', NOW(), 0),
+(1, '渐进镜片', 3, '0', '渐进镜片类型', 'admin', NOW(), 0),
+(2, '防蓝光膜', 1, '0', '防蓝光保护膜层', 'admin', NOW(), 0),
+(2, '防紫外线膜', 2, '0', '防紫外线保护膜层', 'admin', NOW(), 0),
+(2, '防反射膜', 3, '0', '防反射膜层', 'admin', NOW(), 0),
+(3, '树脂材质', 1, '0', '树脂镜片材质', 'admin', NOW(), 0),
+(3, '玻璃材质', 2, '0', '玻璃镜片材质', 'admin', NOW(), 0),
+(3, 'PC材质', 3, '0', '聚碳酸酯镜片材质', 'admin', NOW(), 0),
+(4, '经典设计', 1, '0', '经典镜片设计', 'admin', NOW(), 0),
+(4, '时尚设计', 2, '0', '时尚镜片设计', 'admin', NOW(), 0),
+(4, '运动设计', 3, '0', '运动镜片设计', 'admin', NOW(), 0);
 
 -- 创建索引优化查询性能
 CREATE INDEX `idx_option_name` ON `dfgx_lens_options` (`option_name`);

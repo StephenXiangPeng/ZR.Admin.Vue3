@@ -40,7 +40,6 @@
           plain
           icon="Plus"
           @click="handleAdd"
-          v-hasPermi="['DFGX:lensOptions:add']"
         >新增</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -50,7 +49,6 @@
           icon="Edit"
           :disabled="single"
           @click="handleUpdate"
-          v-hasPermi="['DFGX:lensOptions:edit']"
         >修改</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -60,7 +58,6 @@
           icon="Delete"
           :disabled="multiple"
           @click="handleBatchDelete"
-          v-hasPermi="['DFGX:lensOptions:remove']"
         >删除</el-button>
       </el-col>
       <!-- <el-col :span="1.5">
@@ -110,14 +107,12 @@
             type="primary"
             icon="Edit"
             @click="handleUpdate(scope.row)"
-            v-hasPermi="['DFGX:lensOptions:edit']"
           >修改</el-button>
           <el-button
             link
             type="danger"
             icon="Delete"
             @click="handleDelete(scope.row)"
-            v-hasPermi="['DFGX:lensOptions:remove']"
           >删除</el-button>
         </template>
       </el-table-column>
