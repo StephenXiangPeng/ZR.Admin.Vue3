@@ -1753,7 +1753,7 @@ const handleRowDblClick = (row) => {
 		const invoiceOption = state.optionss.hr_pricing_term.find(x => x.dictValue === invoiceValue);
 
 		productData.value.push({
-			productID: row.id,
+			productID: row.productID,
 			productNum: row.productCode,
 			customerNum: row.customerGoodsNumber,
 			cproductname: row.chineseProductName,
@@ -1995,6 +1995,7 @@ const onAddquotationProductItem = () => {
 	activeTab.value = 'productMaterialtab';
 	isImportProduct.value = false;
 	productData.value.push({
+		productID: '',
 		productNum: '',
 		customerNum: '',
 		cproductname: '',
@@ -4328,7 +4329,7 @@ const handleHistoricalProductRowDblClick = (row) => {
 			Invoice = 1;
 		}
 		productData.value.push({
-			productID: row.id,
+			productID: row.productID,
 			productNum: row.productCode,
 			customerNum: row.customerCode,
 			cproductname: row.chineseProductName,
@@ -4630,7 +4631,7 @@ const GetQutaionProductListByID = (quotationId) => {
 
 				// 添加到产品列表
 				productData.value.push({
-					productID: item.id,
+					productID: item.productID,
 					productNum: item.productNum,
 					customerNum: item.customerNum,
 					cproductname: item.cProductName,

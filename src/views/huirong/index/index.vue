@@ -1070,7 +1070,7 @@
       <span style="font-size: 20px; font-weight: bold;">基本信息</span>
       <el-divider></el-divider>
       <el-descriptions :column="3" :border="true" label-width="120px">
-        <el-descriptions-item label="供应商">
+        <el-descriptions-item label="供应商" v-if="false">
           {{ PurchaseContractDialogData.vendorCode }}
         </el-descriptions-item>
         <el-descriptions-item label="采购合同">
@@ -1080,7 +1080,7 @@
           {{ PurchaseContractDialogData.contractStatus }}
         </el-descriptions-item>
         <el-descriptions-item label="交货日期">
-          {{ PurchaseContractDialogData.deliveryDate }}
+          {{ formatDate(PurchaseContractDialogData.deliveryDate) }}
         </el-descriptions-item>
         <el-descriptions-item label="采购币种">
           {{ PurchaseContractDialogData.purchaseCurrency }}
@@ -1103,10 +1103,10 @@
         <el-descriptions-item label="交货地点">
           {{ PurchaseContractDialogData.deliveryLocation }}
         </el-descriptions-item>
-        <el-descriptions-item label="定金金额">
+        <el-descriptions-item label="定金金额" v-if="false">
           {{ PurchaseContractDialogData.deposit }}
         </el-descriptions-item>
-        <el-descriptions-item label="有无定金">
+        <el-descriptions-item label="有无定金" v-if="false">
           {{ PurchaseContractDialogData.hasDeposit ? '是' : '否' }}
         </el-descriptions-item>
       </el-descriptions>
@@ -1114,28 +1114,43 @@
       <el-tabs v-model="PurchaseContractDialogData.activeName" class="demo-tabs">
         <el-tab-pane label="产品资料" name="productinfo">
           <el-table :data="PurchaseContractDialogData.productinfotableData">
-            <el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
-            <el-table-column prop="customerCode" label="客户货号" width="150"></el-table-column>
+            <el-table-column prop="productCode" label="产品编号" width="120"></el-table-column>
+            <el-table-column prop="supplier" label="供应商" width="200"></el-table-column>
+            <el-table-column prop="hasDeposit" label="有无定金" width="90">
+              <template #default="scope">
+                <el-checkbox v-model="scope.row.hasDeposit" disabled>
+                </el-checkbox>
+              </template>
+            </el-table-column>
+            <el-table-column prop="depositAmount" label="定金金额" width="120"></el-table-column>
+            <el-table-column prop="customerCode" label="客户货号" width="120"></el-table-column>
             <el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
-            <el-table-column prop="englishName" label="英文品名" width="150"></el-table-column>
+            <el-table-column prop="englishName" label="英文品名" width="150" v-if="false"></el-table-column>
             <el-table-column prop="chineseSpecification" label="中文规格" width="150"></el-table-column>
-            <el-table-column prop="unit" label="计量单位" width="150"></el-table-column>
-            <el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
-            <el-table-column prop="purchaseUnitPrice" label="采购单价" width="150"></el-table-column>
-            <el-table-column prop="purchaseTotalPrice" label="采购总价" width="150"></el-table-column>
-            <el-table-column prop="deliveryDate" label="交货日期" width="150"></el-table-column>
-            <el-table-column prop="productionLeadTime" label="生产交期" width="150"></el-table-column>
-            <el-table-column prop="packaging" label="包装方式" width="150"></el-table-column>
-            <el-table-column prop="specialRequirements" label="特殊要求" width="150"></el-table-column>
-            <el-table-column prop="invoice" label="是否开票" width="150"></el-table-column>
-            <el-table-column prop="innerBoxQuantity" label="内盒装量" width="150"></el-table-column>
-            <el-table-column prop="outerBoxQuantity" label="外箱装量" width="150"></el-table-column>
+            <el-table-column prop="unit" label="计量单位" width="90"></el-table-column>
+            <el-table-column prop="contractQuantity" label="合同数量" width="120"></el-table-column>
+            <el-table-column prop="purchaseUnitPrice" label="采购单价" width="120"></el-table-column>
+            <el-table-column prop="purchaseTotalPrice" label="采购总价" width="120"></el-table-column>
+            <el-table-column prop="deliveryDate" label="交货日期" width="120">
+              <template #default="scope">
+                {{ formatDate(scope.row.deliveryDate) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="productionLeadTime" label="生产交期" width="120">
+              <template #default="scope">
+                {{ formatDate(scope.row.productionLeadTime) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="packaging" label="包装方式" width="120"></el-table-column>
+            <el-table-column prop="specialRequirements" label="特殊要求" width="120"></el-table-column>
+            <el-table-column prop="invoice" label="是否开票" width="90"></el-table-column>
+            <el-table-column prop="innerBoxQuantity" label="内盒装量" width="120"></el-table-column>
+            <el-table-column prop="outerBoxQuantity" label="外箱装量" width="120"></el-table-column>
             <el-table-column prop="remark" label="备注" width="150"></el-table-column>
           </el-table>
         </el-tab-pane>
         <el-tab-pane label="厂家相关费用" name="relatedcosts">
-          <el-table :data="PurchaseContractDialogData.CustomerRelaterExoensesTableData" style="width: 100%; "
-            height="280">
+          <el-table :data="PurchaseContractDialogData.CustomerRelaterExoensesTableData" style="width: 100%; ">
             <el-table-column prop="expenseName" label="费用名称" width="150"></el-table-column>
             <el-table-column prop="currency" label="币种" width="150"></el-table-column>
             <el-table-column prop="exchangeRate" label="汇率" width="150"></el-table-column>
@@ -1150,7 +1165,7 @@
       <span style="font-size: 20px; font-weight: bold;">合计信息</span>
       <el-divider></el-divider>
       <el-descriptions :column="3" :border="true" label-width="120px">
-        <el-descriptions-item label="货值合计">
+        <el-descriptions-item label="采购费用合计">
           {{ PurchaseContractDialogData.totalValue }}
         </el-descriptions-item>
         <el-descriptions-item label="数量合计">
@@ -3877,9 +3892,12 @@ const openSaleContractDialog = (row) => {
           productData.unit = state.optionss['hr_calculate_unit'].find(item => item.dictValue === productData.unit.toString())?.dictLabel || '无';
           productData.packaging = state.optionss['hr_packing'].find(item => item.dictValue === productData.packaging.toString())?.dictLabel || '无';
           productData.invoice = productData.invoice == 0 ? "否" : "是";
+          productData.supplier = state.optionss['sql_supplier_info'].find(item => item.dictValue === productData.supplierID.toString()).dictLabel;
+          productData.hasDeposit = productData.hasdeposit == 1 || productData.hasdeposit === true;
+          productData.customerCode = productData.customerNumber;
           // 确保字段名与表格显示一致
           if (productData.chineseSpec) {
-            productData.chineseSpecification = productData.chineseSpec;
+            productData.chineseSpecification = productData.chineseSpecification;
           }
           if (productData.purchasePrice) {
             productData.purchaseUnitPrice = productData.purchasePrice;
@@ -3887,6 +3905,10 @@ const openSaleContractDialog = (row) => {
         });
         PurchaseContractDialogData.value.productinfotableData = response.data.purchaseContractProducts;
         PurchaseContractDialogData.value.CustomerRelaterExoensesTableData = response.data.purchaseContractVendorExpenses;
+        PurchaseContractDialogData.value.CustomerRelaterExoensesTableData.forEach(item => {
+          item.amount = item.expense * item.exchangeRate;
+          item.currency = state.optionss['hr_export_currency'].find(currency => currency.dictValue == item.currency.toString()).dictLabel || '无';
+        });
         PurchaseContractDialog.value = true;
       }
     }).catch(error => {

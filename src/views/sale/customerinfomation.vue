@@ -2671,8 +2671,35 @@ const submitContactLog = async (formEl: FormInstance | undefined) => {
 						if (selectedTag && selectedTag.emailTagName === '询盘') {
 							return 0
 						}
-						return contactLogForm.businessOpportunityName
-					})()
+						// 确保返回整数类型
+						const businessOpportunityID = contactLogForm.businessOpportunityName
+						return businessOpportunityID ? parseInt(businessOpportunityID) : 0
+					})(),
+					// 添加必需的customerContactLog字段
+					customerContactLog: {
+						CustomerID: selectCustomerID.value,
+						ContactDate: contactLogForm.contactDate instanceof Date
+							? contactLogForm.contactDate.toISOString().split('T')[0]
+							: contactLogForm.contactDate,
+						ContactTag: contactLogForm.ContactLogTag,
+						ContactPerson: contactLogForm.contactPerson,
+						ContactContent: contactLogForm.contactContent,
+						OurStaff: contactLogForm.ourStaff,
+						AttachmentURLs: attachmentUrlStr,
+						ImageURLs: imageUrlStr,
+						Remark: contactLogForm.remark,
+						relatedDocumentType: contactLogForm.relatedDocumentType,
+						relatedDocumentID: contactLogForm.relatedDocumentID,
+						businessOpportunityName: contactLogForm.businessOpportunityName,
+						businessOpportunityID: (() => {
+							const selectedTag = ContactLogTagData.value.find(tag => tag.id === contactLogForm.ContactLogTag)
+							if (selectedTag && selectedTag.emailTagName === '询盘') {
+								return 0
+							}
+							const businessOpportunityID = contactLogForm.businessOpportunityName
+							return businessOpportunityID ? parseInt(businessOpportunityID) : 0
+						})()
+					}
 				}
 
 				// 发送请求保存联系日志
@@ -3148,6 +3175,15 @@ const handleContactLogTagChange = (tagId) => {
 			loadBusinessOpportunityOptions()
 			// 关联单据锁定销售合同
 			contactLogForm.relatedDocumentType = 1 // 1代表销售合同
+			break
+		case '默认标签':
+		case '开发信':
+			// 默认标签和开发信不显示商机字段
+			showBusinessOpportunityField.value = false
+			break
+		default:
+			// 其他标签类型默认不显示商机字段
+			showBusinessOpportunityField.value = false
 			break
 	}
 }

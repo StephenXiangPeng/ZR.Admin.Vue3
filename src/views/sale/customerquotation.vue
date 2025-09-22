@@ -829,6 +829,7 @@
 				:default-sort="{ prop: 'productCode', order: 'descending' }" @row-dblclick="handleRowDblClick" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="productId" label="产品ID" width="120" v-if="false" />
 				<el-table-column prop="productCode" label="产品编号" sortable width="120" />
 				<el-table-column prop="customerGoodsNumber" label="客户货号" width="120" />
 				<el-table-column prop="chineseProductName" label="中文品名" width="150" />
@@ -1544,6 +1545,7 @@ const handleRowDblClick = (row) => {
 		return;
 	} else {
 		productData.value.push({
+			productId: row.id,
 			productNum: row.productCode,
 			customerNum: row.customerGoodsNumber,
 			cproductname: row.chineseProductName,
@@ -1598,6 +1600,7 @@ const OpenSearchProcutDialog = () => {
 const onAddquotationProductItem = () => {
 	isImportProduct.value = false;
 	productData.value.push({
+		productId: '',
 		productNum: '',
 		customerNum: '',
 		cproductname: '',
@@ -2040,6 +2043,7 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 			addQuotationRequest.isLatestVersion = quotationDialogform.isLatestVersion !== false;
 			productData.value.forEach(item => {
 				addQuotationRequest.quotationProductDetailsList.push({
+					productId: item.productId,
 					productNum: item.productNum,
 					customerNum: item.customerNum,
 					cproductname: item.cproductname,
@@ -2231,6 +2235,7 @@ const SaveDraft = async () => {
 	productData.value.forEach((item) => {
 		addQuotationRequest.quotationProductDetailsList.push({
 			id: item.id || 0,
+			productId: item.productId || '',
 			productNum: item.productNum || '',
 			customerNum: item.customerNum || '',
 			cproductname: item.cproductname || '',
@@ -2482,6 +2487,7 @@ const GetQuotationDetailsList = (ID) => {
 				productData.value.push
 					({
 						id: element.id,
+						productId: element.productId,
 						productNum: element.productNum,
 						customerNum: element.customerNum,
 						cproductname: element.cProductName,
@@ -2636,6 +2642,7 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 			productData.value.forEach((item) => {
 				addQuotationRequest.quotationProductDetailsList.push({
 					id: item.id,
+					productId: item.productId,
 					productNum: item.productNum,
 					customerNum: item.customerNum,
 					cproductname: item.cproductname,
@@ -2898,6 +2905,7 @@ const CreateRevision = () => {
 							productData.value = [];
 							resp.data.forEach(element => {
 								productData.value.push({
+									productId: element.productId,
 									productNum: element.productNum,
 									customerNum: element.customerNum,
 									cproductname: element.cProductName,

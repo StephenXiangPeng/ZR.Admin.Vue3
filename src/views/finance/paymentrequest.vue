@@ -144,7 +144,7 @@
 								<el-form-item label="付款类别">
 									<el-select v-model="addpaymentrequestform.paymentCategory" style="width: 300px"
 										placeholder="请选择付款类别" @change="paymentCategoryChange" :disabled="IsDisabled"
-										size="default">
+										size="default" clearable>
 										<el-option v-for="dict in optionss.hr_payment_category" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -153,7 +153,7 @@
 							<el-col :span="6">
 								<el-form-item label="款项名称">
 									<el-select v-model="addpaymentrequestform.paymentName" style="width: 300px"
-										placeholder="请选择款项名称" :disabled="IsDisabled" size="default">
+										placeholder="请选择款项名称" :disabled="IsDisabled" size="default" clearable>
 										<el-option v-for="dict in PaymentTypeOptions" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -164,7 +164,8 @@
 							<el-col :span="6">
 								<el-form-item label="收款单位" placeholder="请选择收款单位">
 									<el-select v-model="addpaymentrequestform.payeeCode" style="width: 300px"
-										@change="payeeCodeChange()" :disabled="IsDisabled" filterable size="default">
+										@change="payeeCodeChange()" :disabled="IsDisabled" filterable size="default"
+										clearable>
 										<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -196,7 +197,7 @@
 							<el-col :span="6">
 								<el-form-item label="我方公司">
 									<el-select v-model="addpaymentrequestform.ourCompany" style="width: 300px"
-										:disabled="IsDisabled" size="default">
+										:disabled="IsDisabled" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -207,7 +208,7 @@
 							<el-col :span="6">
 								<el-form-item label="币种">
 									<el-select v-model="addpaymentrequestform.currencyCode" style="width: 300px"
-										:disabled="IsDisabled" size="default">
+										:disabled="IsDisabled" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_currency_code" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -216,19 +217,19 @@
 							<el-col :span="6">
 								<el-form-item label="申请金额">
 									<el-input v-model="addpaymentrequestform.totalAmount" style="width: 300px"
-										:disabled="IsDisabled" size="default"></el-input>
+										:disabled="IsDisabled" size="default" clearable></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6" v-if="false">
 								<el-form-item label="已付金额">
 									<el-input v-model="addpaymentrequestform.paidAmount" style="width: 300px"
-										:disabled="IsDisabled" size="default"></el-input>
+										:disabled="IsDisabled" size="default" clearable></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="申请人">
 									<el-select v-model="addpaymentrequestform.applicant" style="width: 300px"
-										:disabled="IsDisabled" size="default">
+										:disabled="IsDisabled" size="default" clearable>
 										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" :disabled="IsDisabled" />
 									</el-select>
@@ -240,7 +241,7 @@
 								<el-form-item label="备注说明">
 									<el-input type="textarea" v-model="addpaymentrequestform.remarks"
 										:autosize="{ minRows: 5, maxRows: 10 }" placeholder="输入备注内容" style="width: 100%"
-										:disabled="IsDisabled" size="default"></el-input>
+										:disabled="IsDisabled" size="default" clearable></el-input>
 								</el-form-item>
 							</el-col>
 						</el-row>
