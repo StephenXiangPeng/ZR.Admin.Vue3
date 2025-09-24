@@ -1600,7 +1600,7 @@ const OpenSearchProcutDialog = () => {
 const onAddquotationProductItem = () => {
 	isImportProduct.value = false;
 	productData.value.push({
-		productId: '',
+		productId: 0,
 		productNum: '',
 		customerNum: '',
 		cproductname: '',
@@ -2043,7 +2043,7 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 			addQuotationRequest.isLatestVersion = quotationDialogform.isLatestVersion !== false;
 			productData.value.forEach(item => {
 				addQuotationRequest.quotationProductDetailsList.push({
-					productId: item.productId,
+					productId: item.productId !== undefined && item.productId !== null && item.productId !== '' ? item.productId : 0,
 					productNum: item.productNum,
 					customerNum: item.customerNum,
 					cproductname: item.cproductname,
@@ -2235,7 +2235,7 @@ const SaveDraft = async () => {
 	productData.value.forEach((item) => {
 		addQuotationRequest.quotationProductDetailsList.push({
 			id: item.id || 0,
-			productId: item.productId || '',
+			productId: item.productId !== undefined && item.productId !== null && item.productId !== '' ? item.productId : 0,
 			productNum: item.productNum || '',
 			customerNum: item.customerNum || '',
 			cproductname: item.cproductname || '',
@@ -2487,7 +2487,7 @@ const GetQuotationDetailsList = (ID) => {
 				productData.value.push
 					({
 						id: element.id,
-						productId: element.productId,
+						productId: element.productID,
 						productNum: element.productNum,
 						customerNum: element.customerNum,
 						cproductname: element.cProductName,
@@ -2642,7 +2642,7 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 			productData.value.forEach((item) => {
 				addQuotationRequest.quotationProductDetailsList.push({
 					id: item.id,
-					productId: item.productId,
+					productId: item.productId !== undefined && item.productId !== null && item.productId !== '' ? item.productId : 0,
 					productNum: item.productNum,
 					customerNum: item.customerNum,
 					cproductname: item.cproductname,

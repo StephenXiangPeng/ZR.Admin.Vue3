@@ -115,7 +115,7 @@
 				<el-table-column fixed="right" label="操作" width="280">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="CheckDetails(scope.row)">查看详情</el-button>
-						<el-button type="text" size="small"
+						<el-button v-if="isContractStatusApproved(scope.row)" type="text" size="small"
 							@click="GeneratePurchaseContract(scope.row)">生成采购合同PDF</el-button>
 						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
 							link type="danger" size="small" @click="DeletePurchaseContract(scope.row)">删除</el-button>
@@ -211,7 +211,6 @@
 							</el-col>
 						</el-row>
 						<el-row>
-
 							<el-col :span="6">
 								<el-form-item label="采购员">
 									<el-select disabled v-model="Addcontractofpurchaseform.purchaser"
@@ -227,14 +226,14 @@
 										:disabled="isFormDisabled" size="default"></el-input>
 								</el-form-item>
 							</el-col>
-							<el-col :span="6">
+							<el-col :span="6" v-if="false">
 								<el-form-item label="定金金额">
 									<el-input v-model="Addcontractofpurchaseform.deposit"
 										:disabled="!Addcontractofpurchaseform.hasDeposit || isFormDisabled"
 										style="width: 300px" placeholder="请输入定金金额" size="default"></el-input>
 								</el-form-item>
 							</el-col>
-							<el-col :span="6">
+							<el-col :span="6" v-if="false">
 								<el-form-item label="有无定金" prop="hasDeposit">
 									<el-checkbox v-model="Addcontractofpurchaseform.hasDeposit"
 										@change="handleDepositChange" :disabled="isFormDisabled"></el-checkbox>
@@ -2318,6 +2317,27 @@ const handleAddNewProduct = (row) => {
 	// 跳转到产品信息页面，可以带参数
 	router.push({ path: '/product/productinfomation', query: { from: 'purchase', contractProductsId: row.id } })
 
+}
+
+// 判断合同状态是否为已批准状态（3、4、5、6、7）
+const isContractStatusApproved = (row) => {
+	// 获取合同状态的数值
+	const contractStatusValue = getContractStatusValue(row);
+	// 已批准的状态：3-生产中、4-已完成、5-部分交货、6-已交货、7-已完结
+	return [3, 4, 5, 6, 7].includes(contractStatusValue);
+}
+
+// 获取合同状态的数值
+const getContractStatusValue = (row) => {
+	// 如果contractStatus是字符串，需要从字典中查找对应的数值
+	if (typeof row.contractStatus === 'string') {
+		const statusOption = state.optionss.hr_contract_status.find(item =>
+			item.dictLabel === row.contractStatus
+		);
+		return statusOption ? parseInt(statusOption.dictValue) : 0;
+	}
+	// 如果已经是数值，直接返回
+	return parseInt(row.contractStatus) || 0;
 }
 </script>
 

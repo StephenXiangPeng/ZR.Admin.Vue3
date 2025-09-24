@@ -310,15 +310,13 @@
 						</el-form-item>
 					</el-col>
 					<el-col :span="6">
-						<el-form-item label="单证员">
+						<el-form-item label="单证员" v-if="false">
 							<el-select filterable v-model="AddShippingDeliveryform.documentClerk" placeholder="选择单证员"
-								style="width: 300px" :disabled="IsEditable" size="default">
+								style="width: 300px" size="default" disabled>
 								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
-					</el-col>
-					<el-col :span="6">
 						<el-form-item label="有无定金">
 							<el-checkbox v-model="AddShippingDeliveryform.isDeposit" :disabled="IsEditable"
 								size="default"></el-checkbox>
@@ -983,7 +981,7 @@ const OpenCreateshippingdeliveryDialog = () => {
 		settlementMethod: '',
 		transportationMethod: '',
 		receivableDate: null,
-		documentClerk: '',
+		documentClerk: userId.toString(),  // 默认当前用户
 		isDeposit: 0,
 		preCarriageTransport: '',
 		shippingAgent: '',
@@ -1226,7 +1224,7 @@ const resetForm = () => {
 		settlementMethod: '',
 		transportationMethod: '',
 		receivableDate: null,
-		documentClerk: '',
+		documentClerk: userId.toString(),  // 默认当前用户
 		isDeposit: 0,
 		preCarriageTransport: '',
 		shippingAgent: '',
@@ -1582,7 +1580,7 @@ const CheckShipingDelivery = async (row) => {
 			AddShippingDeliveryform.value.settlementMethod = response.data.shippingDeliveries.settlementMethod ? response.data.shippingDeliveries.settlementMethod.toString() : '';
 			AddShippingDeliveryform.value.transportationMethod = response.data.shippingDeliveries.transportationMethod ? response.data.shippingDeliveries.transportationMethod.toString() : '';
 			AddShippingDeliveryform.value.receivableDate = response.data.shippingDeliveries.receivableDate;
-			AddShippingDeliveryform.value.documentClerk = response.data.shippingDeliveries.documentClerk ? response.data.shippingDeliveries.documentClerk.toString() : '';
+			AddShippingDeliveryform.value.documentClerk = response.data.shippingDeliveries.documentClerk ? response.data.shippingDeliveries.documentClerk.toString() : userId.toString();
 			AddShippingDeliveryform.value.isDeposit = response.data.shippingDeliveries.isDeposit;
 			AddShippingDeliveryform.value.preCarriageTransport = response.data.shippingDeliveries.preCarriageTransport ? response.data.shippingDeliveries.preCarriageTransport.toString() : '';
 			AddShippingDeliveryform.value.shippingAgent = response.data.shippingDeliveries.shippingAgent ? response.data.shippingDeliveries.shippingAgent.toString() : '';

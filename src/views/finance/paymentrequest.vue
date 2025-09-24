@@ -25,8 +25,8 @@
 					<el-col :span="4">
 						<el-select v-model="SearchSupplierID" filterable placeholder="选择收款单位" size="default"
 							style="width: 100%">
-							<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
-								:label="dict.dictLabel" :value="dict.dictValue" />
+							<el-option v-for="supplier in filteredSupplierList" :key="supplier.dictvalue"
+								:label="supplier.dictLabel" :value="supplier.dictvalue" />
 						</el-select>
 					</el-col>
 					<el-col :span="4">
@@ -166,8 +166,8 @@
 									<el-select v-model="addpaymentrequestform.payeeCode" style="width: 300px"
 										@change="payeeCodeChange()" :disabled="IsDisabled" filterable size="default"
 										clearable>
-										<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
-											:label="dict.dictLabel" :value="dict.dictValue" />
+										<el-option v-for="supplier in filteredSupplierList" :key="supplier.dictvalue"
+											:label="supplier.dictLabel" :value="supplier.dictvalue" />
 									</el-select>
 								</el-form-item>
 							</el-col>
@@ -451,6 +451,7 @@ import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 import { number } from 'echarts';
+import { getSupplierList } from '@/api/supplier';
 import { Edit } from '@element-plus/icons-vue/dist/types';
 import { ca, el, id } from 'element-plus/es/locale';
 import { dataScope } from '@/api/system/role';
@@ -690,6 +691,7 @@ const SearchPaymentRequsetID = ref('');
 const SearchSupplierID = ref('');
 const SearchPaymentDateStart = ref('');
 const SearchPaymentDateEnd = ref('');
+const filteredSupplierList = ref([])
 
 const isSaveBtnShow = ref(true);
 const isEditSaveBtnShow = ref(false);
@@ -804,12 +806,32 @@ var dictParams = [{ dictType: 'hr_ourcompany' }, { dictType: 'hr_export_currency
 { dictType: 'sql_hr_purchase' }, { dictType: 'sql_hr_finance' }, { dictType: 'sql_hr_dept' }, { dictType: 'hr_associated_modules' }, { dictType: 'sql_purchase_contract' },
 { dictType: 'sql_sale_contracts' }, { dictType: 'sql_payment_requests' }, { dictType: 'hr_payment_contract_type' }, { dictType: 'sql_shippingdeliveries' }, { dictType: 'hr_business_expenses' }, { dictType: 'hr_contract_status' }]
 
+// 加载过滤后的供应商列表
+async function loadFilteredSuppliers() {
+	try {
+		const response = await getSupplierList();
+		if (response && response.code === 200) {
+			filteredSupplierList.value = response.data || [];
+		} else {
+			console.error('获取过滤后的供应商列表失败:', response?.msg);
+			filteredSupplierList.value = [];
+		}
+	} catch (error) {
+		console.error('获取过滤后的供应商列表出错:', error);
+		filteredSupplierList.value = [];
+	}
+}
+
 async function fetchDataAndExecute() {
 	try {
 		const response = await proxy.getDicts(dictParams);
 		response.data.forEach((element) => {
 			state.optionss[element.dictType] = element.list;
 		});
+
+		// 加载过滤后的供应商列表
+		await loadFilteredSuppliers();
+
 		/*获取当前页面列表函数放在下方*/
 		await GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);  // 现在可以安全执行
 	} catch (error) {
@@ -915,8 +937,8 @@ const payeeCodeChange = async () => {
 		});
 
 		// 1. 取下拉框label作为收款单位名称
-		const selectedSupplier = state.optionss.sql_supplier_info.find(
-			item => item.dictValue == addpaymentrequestform.value.payeeCode
+		const selectedSupplier = filteredSupplierList.value.find(
+			item => item.dictvalue == addpaymentrequestform.value.payeeCode
 		);
 		addpaymentrequestform.value.payeeName = selectedSupplier ? selectedSupplier.dictLabel : '';
 

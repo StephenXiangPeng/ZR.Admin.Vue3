@@ -123,7 +123,7 @@
 				<el-table-column prop="customerId" label="客户ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="customerNumber" label="客户编号" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="customerAbbreviation" label="客户简称" width="200"></el-table-column>
-				<el-table-column prop="customerContract" label="客户合同" width="120"></el-table-column>
+				<el-table-column prop="customerContract" label="客户合同" width="150"></el-table-column>
 				<el-table-column prop="effectiveDate" label="生效日期" width="120" v-if="false"></el-table-column>
 				<el-table-column prop="deliveryDate" label="交货日期" width="110"></el-table-column>
 				<el-table-column prop="ourCompany" label="我方公司" width="110"></el-table-column>
@@ -149,12 +149,14 @@
 				<el-table-column prop="updateTime" label="更新时间" width="110"></el-table-column>
 				<el-table-column fixed="right" label="操作" width="200">
 					<template #default="scope">
-						<template v-if="scope.row.salesperson == userId">
+						<template v-if="scope.row.salesperson == useUserStore().userName.toString()">
 							<el-button type="text" size="small" icon="Bell"
 								@click="openReminderDialog(scope.row)">设置提醒</el-button>
 							<el-button type="text" size="small"
 								@click="checkContractsDetails(scope.row)">查看详情</el-button>
-							<el-button type="text" size="small" @click="GeneratePDF(scope.row)">生成PDF</el-button>
+							<el-button type="text" size="small"
+								v-if="scope.row.originalContractStatus >= 3 && scope.row.originalContractStatus <= 7"
+								@click="GeneratePDF(scope.row)">生成PDF</el-button>
 							<el-button type="warning" size="small" icon="Back" link
 								v-if="scope.row.contractReviewStatusStr === '审核中'"
 								@click="withdrawalApproval(scope.row)">撤回审批</el-button>
@@ -2415,6 +2417,8 @@ function GetContractList(start, end) {
 					contractsTableData.value[i].reviewStatus;
 					contractsTableData.value[i].contractReviewStatusStr = GetcontractReviewStatusStr(contractsTableData.value[i].reviewStatus);
 					if (contractsTableData.value[i].contractStatus.toString() != "") {
+						// 保存原始合同状态值用于判断
+						contractsTableData.value[i].originalContractStatus = contractsTableData.value[i].contractStatus;
 						contractsTableData.value[i].contractStatus = state.optionss.hr_contract_status.find(item => item.dictValue === contractsTableData.value[i].contractStatus.toString()).dictLabel;
 					}
 					if (contractsTableData.value[i].customerNumber > 0) {
@@ -3431,7 +3435,7 @@ const checkContractsDetails = async (row) => {
 			contractReviewStatus.value = row.contractReviewStatusStr;
 
 			// 检查当前用户是否是该合同的销售员
-			const isCurrentUserSalesperson = row.salesperson.toString() === userId.toString();
+			const isCurrentUserSalesperson = row.salesperson.toString() === useUserStore().userName.toString();
 
 			// 设置基本按钮状态
 			if (isCurrentUserSalesperson && (row.reviewStatus == 0 || row.reviewStatus == 3)) {
