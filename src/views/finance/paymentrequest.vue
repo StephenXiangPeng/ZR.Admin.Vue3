@@ -99,8 +99,8 @@
 				<el-table-column prop="ourCompany" label="我方公司" width="110"></el-table-column>
 				<el-table-column prop="currencyCode" label="货币代码" width="90"></el-table-column>
 				<el-table-column prop="totalAmount" label="申请总额" width="90"></el-table-column>
-				<el-table-column prop="paidAmount" label="已付金额" width="90"></el-table-column>
-				<el-table-column prop="unpaidAmount" label="未付金额" width="90"></el-table-column>
+				<el-table-column prop="paidAmount" label="已付金额" width="90" v-if="false"></el-table-column>
+				<el-table-column prop="unpaidAmount" label="未付金额" width="90" v-if="false"></el-table-column>
 				<el-table-column prop="applicant" label="申请人" width="90"></el-table-column>
 				<el-table-column prop="applicationDepartment" label="申请部门" width="110"></el-table-column>
 				<el-table-column prop="handler" label="经手人" width="150" v-if="false"></el-table-column>
@@ -153,7 +153,8 @@
 							<el-col :span="6">
 								<el-form-item label="款项名称">
 									<el-select v-model="addpaymentrequestform.paymentName" style="width: 300px"
-										placeholder="请选择款项名称" :disabled="IsDisabled" size="default" clearable>
+										placeholder="请选择款项名称" :disabled="IsDisabled" size="default" clearable
+										@change="paymentNameChange">
 										<el-option v-for="dict in PaymentTypeOptions" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -217,7 +218,8 @@
 							<el-col :span="6">
 								<el-form-item label="申请金额">
 									<el-input v-model="addpaymentrequestform.totalAmount" style="width: 300px"
-										:disabled="IsDisabled" size="default" clearable></el-input>
+										:disabled="IsDisabled || addpaymentrequestform.paymentCategory === '1'"
+										size="default" clearable></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6" v-if="false">
@@ -265,64 +267,27 @@
 							注：非工厂付款类别无需验证付款明细合计金额
 						</div>
 					</div>
-					<el-table :data="CostDetailsTbaleData" style="width: 100%; table-layout: fixed;" stripe
+					<el-table :data="CostDetailsTbaleData" style="width: 100%;" stripe
 						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
-						<el-table-column prop="shippingOrderNumber" label="出运单号" width="150">
+						<el-table-column prop="expenseName" label="费用名称" min-width="150">
 							<template #default="{ row }">
-								<span>{{ row.shippingOrderNumber }}</span>
+								<span>{{ row.expenseName || '未设置费用名称' }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="purchaseContractNumber" label="采购合同号" width="150">
+						<el-table-column prop="relatedDocumentTypeName" label="单据类型" min-width="120">
 							<template #default="{ row }">
-								<span>{{ row.purchaseContractNumber }}</span>
+								<span>{{ row.relatedDocumentTypeName || '未设置单据类型' }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="currentPaymentAmount" label="本次付款金额" width="150">
+						<el-table-column prop="relatedDocumentsNo" label="单据号" min-width="150">
 							<template #default="{ row }">
-								<el-input v-model="row.currentPaymentAmount" style="width: 130px" :disabled="IsDisabled"
-									@input="onCurrentPaymentAmountChange" type="number" placeholder="请输入金额"
-									:class="{ 'error-input': addpaymentrequestform.paymentCategory === '1' && isPaymentAmountExceeded(row) }"></el-input>
-								<div v-if="addpaymentrequestform.paymentCategory === '1' && isPaymentAmountExceeded(row)"
-									class="error-message" style="color: #f56c6c; font-size: 12px; margin-top: 2px;">
-									本次付款金额不能超过实际发货金额
-								</div>
+								<span>{{ row.relatedDocumentsNo || '未设置单据号' }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="totalGoodsValue" label="采购合同金额" width="150">
+						<el-table-column prop="amount" label="金额" min-width="120">
 							<template #default="{ row }">
-								<span>{{ row.totalGoodsValue }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="actualShippingAmount" label="实际发货金额" width="150">
-							<template #default="{ row }">
-								<span>{{ row.actualShippingAmount }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="deposit" label="已付定金" width="150">
-							<template #default="{ row }">
-								<span>{{ row.deposit }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="paidAmount" label="已付货款" width="150">
-							<template #default="{ row }">
-								<span>{{ row.paidAmount }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="unpaidAmount" label="未付货款" width="150">
-							<template #default="{ row }">
-								<span>{{ row.unpaidAmount }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="contractStatus" label="采购合同状态" width="150">
-							<template #default="{ row }">
-								<span>{{ row.contractStatus }}</span>
-							</template>
-						</el-table-column>
-
-						<el-table-column prop="remark" label="备注" width="150">
-							<template #default="{ row }">
-								<span>{{ row.remark }}</span>
+								<span>{{ row.amount || row.totalGoodsValue || '0.00' }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column fixed="right" label="操作" width="100">
@@ -342,7 +307,7 @@
 					<template #title>
 						<span style="font-size: 20px; font-weight: bold;">未支付款项详情</span>
 					</template>
-					<el-table :data="UnpaidDetailsTbaleData" style="width: 100%; table-layout: fixed;" stripe
+					<el-table :data="UnpaidDetailsTbaleData" style="width: 100%;" stripe
 						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 						<el-table-column label="选择" width="85">
@@ -357,54 +322,24 @@
 									@change="handleUnpaidItemSelect(row)" />
 							</template>
 						</el-table-column>
-						<el-table-column prop="id" label="ID" width="120" v-if="false">
+						<el-table-column prop="expenseName" label="费用名称" min-width="150">
 							<template #default="{ row }">
-								<span :class="{ 'selected-item': isItemSelected(row) }">{{ row.id }}</span>
+								<span>{{ row.expenseName || '未设置费用名称' }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="invoiceNumber" label="出运单号" width="120">
+						<el-table-column prop="relatedDocumentTypeName" label="单据类型" min-width="120">
 							<template #default="{ row }">
-								<span>{{ row.invoiceNumber }}</span>
+								<span>{{ row.relatedDocumentTypeName || '未设置单据类型' }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="purchaseContractNumber" label="采购合同号" width="120">
+						<el-table-column prop="relatedDocumentsNo" label="单据号" min-width="150">
 							<template #default="{ row }">
-								<span>{{ row.purchaseContractNumber }}</span>
+								<span>{{ row.relatedDocumentsNo || '未设置单据号' }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="totalGoodsValue" label="采购合同金额" width="120">
+						<el-table-column prop="amount" label="金额" min-width="120">
 							<template #default="{ row }">
-								<span>{{ row.totalGoodsValue }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="actualShippingAmount" label="实际发货金额" width="120">
-							<template #default="{ row }">
-								<span>{{ row.actualShippingAmount }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="deposit" label="已付定金" width="120">
-							<template #default="{ row }">
-								<span>{{ row.deposit }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="paidAmount" label="已付货款" width="120">
-							<template #default="{ row }">
-								<span>{{ row.paidAmount }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="unpaidAmount" label="未付货款" width="120">
-							<template #default="{ row }">
-								<span>{{ row.unpaidAmount }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="contractStatus" label="采购合同状态" width="120">
-							<template #default="{ row }">
-								<span>{{ row.contractStatus }}</span>
-							</template>
-						</el-table-column>
-						<el-table-column prop="remark" label="备注" width="120">
-							<template #default="{ row }">
-								<span>{{ row.remark }}</span>
+								<span>{{ row.amount || '0.00' }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column fixed="right" label="操作" width="100">
@@ -433,7 +368,7 @@
 						提交
 					</el-button>
 					<el-button type="info" v-show="showSubmitReviewBtn && !isAmountMatched()" disabled>
-						提交 ({{ addpaymentrequestform.paymentCategory === '1' ? '金额不匹配或超过实际发货金额' : '金额不匹配' }})
+						提交 ({{ addpaymentrequestform.paymentCategory === '1' ? '金额不匹配或超过金额' : '金额不匹配' }})
 					</el-button>
 					<el-button type="danger" v-show="showApproveRejectBtn" @click="ApproveReject">
 						驳回
@@ -447,7 +382,7 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, computed } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 import { number } from 'echarts';
@@ -460,6 +395,7 @@ import { get } from 'sortablejs';
 import { RefSymbol } from '@vue/reactivity';
 import useUserStore from '@/store/modules/user'
 import { useRoute } from 'vue-router'
+
 
 const route = useRoute()
 // 添加onMounted钩子
@@ -702,6 +638,8 @@ const paymentDetailsCollapseActive = ref(['paymentDetails']);//付款明细折�
 const unpaidDetailsCollapseActive = ref(['unpaidDetails']);//未支付款项详情折叠面板
 // 控制付款明细和未支付款项详情的显示
 const showPaymentDetails = ref(true);
+// 是否为定金（款项名称 dictValue == 1）
+const isDepositType = computed(() => Number(addpaymentrequestform.value.paymentName) === 1);
 const paymentrequesttableData = ref([])//付款申请列表Table
 const CostDetailsTbaleData = ref([])//费用明细Table
 const UnpaidDetailsTbaleData = ref([])//未支付款项详情Table
@@ -745,8 +683,8 @@ const handleAddRowCostDetails = () => {
 		ShippingOrderNumberOptions: [],
 		purchaseContractNumber: '',
 		PurchaseContractNumberOptions: [],
-		totalGoodsValue: '',
-		actualShippingAmount: '',
+		totalGoodsValue: 0,
+		actualShippingAmount: 0,
 		deposit: '',
 		paidAmount: '',
 		unpaidAmount: '',
@@ -880,17 +818,14 @@ const paymentCategoryChange = async () => {
 					url: 'PaymentRequest/GetUnpaidPaymentListBySupplierID/GetUnpaidPaymentList',
 					method: 'GET',
 					params: {
-						supplierID: addpaymentrequestform.value.payeeCode
+						supplierID: addpaymentrequestform.value.payeeCode,
+						paymentType: Number(addpaymentrequestform.value.paymentName) || 0
 					}
 				});
 
 				if (unpaidResponse.data && unpaidResponse.code === 200) {
 					UnpaidDetailsTbaleData.value = unpaidResponse.data || [];
-					UnpaidDetailsTbaleData.value.forEach((element) => {
-						// 保存原始的contractStatus数值，同时添加显示用的contractStatusLabel
-						element.contractStatusOriginal = element.contractStatus; // 保存原始数值
-						element.contractStatus = state.optionss.hr_contract_status.find((item) => item.dictValue == element.contractStatus)?.dictLabel || '';
-					});
+					// 新API数据结构不需要处理contractStatus，直接使用返回的数据
 				} else {
 					UnpaidDetailsTbaleData.value = [];
 				}
@@ -975,7 +910,8 @@ const payeeCodeChange = async () => {
 		if (showPaymentDetails.value) {
 			try {
 				const unpaidResponse = await request({
-					url: 'PaymentRequest/GetUnpaidPaymentListBySupplierID/GetUnpaidPaymentList',
+					//url: 'PaymentRequest/GetUnpaidPaymentListBySupplierID/GetUnpaidPaymentList',
+					url: 'UnpaidAmount/GetUnpaidAmountList/GetList',
 					method: 'GET',
 					params: {
 						supplierID: addpaymentrequestform.value.payeeCode
@@ -984,11 +920,7 @@ const payeeCodeChange = async () => {
 
 				if (unpaidResponse.data && unpaidResponse.code === 200) {
 					UnpaidDetailsTbaleData.value = unpaidResponse.data || [];
-					UnpaidDetailsTbaleData.value.forEach((element) => {
-						// 保存原始的contractStatus数值，同时添加显示用的contractStatusLabel
-						element.contractStatusOriginal = element.contractStatus; // 保存原始数值
-						element.contractStatus = state.optionss.hr_contract_status.find((item) => item.dictValue == element.contractStatus)?.dictLabel || '';
-					});
+					// 新API数据结构不需要处理contractStatus，直接使用返回的数据
 				} else {
 					UnpaidDetailsTbaleData.value = [];
 				}
@@ -1087,15 +1019,21 @@ const SavePaymentRequest = () => {
 		paymentRequestRequest.Remark = addpaymentrequestform.value.remarks;
 		paymentRequestRequest.IsDelete = 0;
 
-		// 转换contractStatus为数字格式，并添加所有必需的字段，确保PaymentAmount被正确传递
+		// 转换字段映射，使用新的请求体结构
 		const processedDetails = CostDetailsTbaleData.value.map(detail => ({
-			...detail,
-			ShippingOrderID: Number(detail.id) || 0, // 关联出运发货单ID（来自未支付款项明细中的id）
-			purchaseContracID: Number(detail.pcid) || 0, // 关联采购合同ID
-			invoiceNumber: detail.shippingOrderNumber || '', // 关联出运发货单号
-			purchaseContractNumber: detail.purchaseContractNumber || '', // 关联采购合同号
-			PaymentAmount: Number(detail.currentPaymentAmount) || 0, // 映射到服务端期望的PaymentAmount字段
-			contractStatus: Number(detail.contractStatusOriginal) || Number(detail.contractStatus) || 0 // 优先使用原始数值
+			// 基础字段
+			Id: Number(detail.id) || 0,
+			SupplierID: Number(addpaymentrequestform.value.payeeCode) || 0,
+			PaymentType: Number(detail.relatedDocumentType) || Number(detail.relatedmodules) || 0,
+			Currency: Number(addpaymentrequestform.value.currencyCode) || 0,
+			ExchangeRate: 1.0, // 默认汇率，可以根据需要调整
+			Amount: Number(detail.currentPaymentAmount) || 0,
+			IsPaid: 0, // 默认未支付
+			RelatedDocumentType: Number(detail.relatedDocumentType) || Number(detail.relatedmodules) || 0,
+			RelatedDocumentID: Number(detail.relatedDocumentID) || Number(detail.id) || 0,
+			IsDeleted: 0, // 默认未删除
+			ExpenseName: detail.expenseName || '',
+			PaymentRequestID: PaymentRequestID.value || 0
 		}));
 		paymentRequestRequest.PaymentRequestDetails = processedDetails;
 		request.post('PaymentRequest/AddPaymentRequest/Add', paymentRequestRequest).then(response => {
@@ -1240,6 +1178,31 @@ const CheckPaymentRequest = async (row) => {
 		addpaymentrequestform.value.bankName = response.data.paymentRequest.bankName;
 		addpaymentrequestform.value.bankAccount = response.data.paymentRequest.bankAccount;
 
+		// 确保供应商列表已加载
+		if (filteredSupplierList.value.length === 0) {
+			await loadFilteredSuppliers();
+		}
+
+		// 检查 filteredSupplierList 中是否有匹配的供应商
+		const matchedSupplier = filteredSupplierList.value.find(
+			item => item.dictvalue == response.data.paymentRequest.payeeCode
+		);
+
+		if (matchedSupplier) {
+			// 如果找到匹配的供应商，确保 payeeCode 和 payeeName 都正确设置
+			addpaymentrequestform.value.payeeCode = matchedSupplier.dictvalue;
+			addpaymentrequestform.value.payeeName = matchedSupplier.dictLabel;
+		} else {
+			// 如果 filteredSupplierList 中没有找到，尝试从 state.optionss.sql_supplier_info 中查找
+			const supplierInfo = state.optionss.sql_supplier_info.find((item) => item.dictValue == response.data.paymentRequest.payeeCode);
+			if (supplierInfo) {
+				addpaymentrequestform.value.payeeCode = supplierInfo.dictValue;
+				addpaymentrequestform.value.payeeName = supplierInfo.dictLabel;
+			}
+		}
+
+		await payeeCodeChange();
+
 		// 加载供应商银行账号列表
 		try {
 			const bankAccountResponse = await request({
@@ -1260,19 +1223,20 @@ const CheckPaymentRequest = async (row) => {
 			supplierBankAccounts.value = [];
 		}
 
-		// 只有在需要显示付款明细且处于编辑模式时才获取未付款详情列表
-		if (showPaymentDetails.value && !IsDisabled.value) {
+		// 只有在需要显示付款明细时才获取未付款详情列表（查看详情和编辑模式都需要）
+		if (showPaymentDetails.value) {
 			try {
 				const unpaidResponse = await request({
-					url: 'PaymentRequest/GetUnpaidPaymentList/GetUnpaidPaymentList',
+					url: 'PaymentRequest/GetUnpaidPaymentListBySupplierID/GetUnpaidPaymentList',
 					method: 'GET',
 					params: {
-						supplierID: response.data.paymentRequest.payeeCode
+						supplierID: response.data.paymentRequest.payeeCode,
+						paymentType: Number(response.data.paymentRequest.paymentName) || 0
 					}
 				});
 
-				if (unpaidResponse.data && unpaidResponse.data.code === 200) {
-					UnpaidDetailsTbaleData.value = unpaidResponse.data.data || [];
+				if (unpaidResponse && unpaidResponse.code === 200) {
+					UnpaidDetailsTbaleData.value = unpaidResponse.data || [];
 					// 处理contractStatus显示
 					UnpaidDetailsTbaleData.value.forEach((element) => {
 						// 保存原始的contractStatus数值，同时添加显示用的contractStatusLabel
@@ -1314,14 +1278,28 @@ const CheckPaymentRequest = async (row) => {
 			element.shippingOrderNumber = detail.invoiceNumber; // 出运单号
 			element.purchaseContractNumber = detail.purchaseContractNumber; // 采购合同号
 			element.totalGoodsValue = detail.totalGoodsValue;
-			element.actualShippingAmount = detail.actualShippingAmount;
+			element.actualShippingAmount = detail.actualShippingAmount || 0;
 			element.deposit = detail.deposit;
 			element.paidAmount = detail.paidAmount;
 			element.unpaidAmount = detail.unpaidAmount;
+			// —— 列表展示所需的字段别名（与“未支付款项详情”一致） —— //
+			element.depositPaidAmount = detail.deposit || 0;       // 已付定金
+			element.depositUnpaidAmount = detail.depositUnpaidAmount || 0; // 未付定金（如果后端没有该字段则为0）
+			element.goodsPaidAmount = detail.paidAmount || 0;      // 已付货款
+			element.goodsUnpaidAmount = detail.unpaidAmount || 0;  // 未付货款
 			element.contractStatusOriginal = detail.contractStatus; // 保存原始contractStatus数值
 			element.contractStatus = state.optionss.hr_contract_status.find((item) => item.dictValue == detail.contractStatus)?.dictLabel || ''; // 显示用的标签
-			element.currentPaymentAmount = detail.paymentAmount || ''; // 本次付款金额
+			// 确保 currentPaymentAmount 可编辑
+			element.currentPaymentAmount = detail.paymentAmount || 0;
 			element.remark = detail.remark;
+
+			// 新增字段映射 - 使用现有字段或提供默认值
+			element.expenseName = detail.expenseName || '未设置费用名称';
+			element.relatedDocumentType = detail.relatedDocumentType || detail.relatedModules || 0;
+			element.relatedDocumentTypeName = detail.relatedDocumentTypeName || '未设置单据类型';
+			element.relatedDocumentID = detail.relatedDocumentID || detail.shippingOrderID || 0;
+			element.relatedDocumentsNo = detail.relatedDocumentsNo || detail.invoiceNumber || detail.purchaseContractNumber || '';
+			element.amount = detail.amount || detail.totalGoodsValue || detail.actualShippingAmount || 0;
 
 			// 兼容旧字段
 			element.relatedmodules = detail.relatedModules?.toString() || '0';
@@ -1331,16 +1309,21 @@ const CheckPaymentRequest = async (row) => {
 			element.specificpaymentitems = detail.specificPaymentItems?.toString() || '0';
 
 			// 如果是从未付款项添加的数据，标记为已选择（仅在编辑模式下）
-			if (element.shippingOrderNumber && element.purchaseContractNumber && !IsDisabled.value) {
+			if (element.expenseName && element.relatedDocumentsNo && !IsDisabled.value) {
 				const unpaidItem = UnpaidDetailsTbaleData.value.find(item =>
-					item.invoiceNumber === element.shippingOrderNumber &&
-					item.purchaseContractNumber === element.purchaseContractNumber
+					item.expenseName === element.expenseName &&
+					item.relatedDocumentsNo === element.relatedDocumentsNo &&
+					item.relatedDocumentType === element.relatedDocumentType
 				);
 				if (unpaidItem) {
 					selectedUnpaidItemIds.value.add(unpaidItem.id);
 				}
 			}
 		});
+
+		// 重新计算总金额
+		CalculatetotalAmount();
+
 		getApprovalFlow(row.id).then(() => {
 			const isCurrentUserApprover = checkIfCurrentUserIsApprover();
 			// 只有当前用户是审批人且合同在审核中时才显示审核按钮
@@ -1445,15 +1428,21 @@ const EditSavePaymentRequest = () => {
 		paymentRequestRequest.Remark = addpaymentrequestform.value.remarks;
 		paymentRequestRequest.IsDelete = 0;
 
-		// 转换contractStatus为数字格式，并添加所有必需的字段，确保PaymentAmount被正确传递
+		// 转换字段映射，使用新的请求体结构
 		const processedDetails = CostDetailsTbaleData.value.map(detail => ({
-			...detail,
-			ShippingOrderID: Number(detail.id) || 0, // 关联出运发货单ID（来自未支付款项明细中的id）
-			purchaseContracID: Number(detail.pcid) || 0, // 关联采购合同ID
-			invoiceNumber: detail.shippingOrderNumber || '', // 关联出运发货单号
-			purchaseContractNumber: detail.purchaseContractNumber || '', // 关联采购合同号
-			PaymentAmount: Number(detail.currentPaymentAmount) || 0, // 映射到服务端期望的PaymentAmount字段
-			contractStatus: Number(detail.contractStatusOriginal) || Number(detail.contractStatus) || 0 // 优先使用原始数值
+			// 基础字段
+			Id: Number(detail.id) || 0,
+			SupplierID: Number(addpaymentrequestform.value.payeeCode) || 0,
+			PaymentType: Number(detail.relatedDocumentType) || Number(detail.relatedmodules) || 0,
+			Currency: Number(addpaymentrequestform.value.currencyCode) || 0,
+			ExchangeRate: 1.0, // 默认汇率，可以根据需要调整
+			Amount: Number(detail.currentPaymentAmount) || 0,
+			IsPaid: 0, // 默认未支付
+			RelatedDocumentType: Number(detail.relatedDocumentType) || Number(detail.relatedmodules) || 0,
+			RelatedDocumentID: Number(detail.relatedDocumentID) || Number(detail.id) || 0,
+			IsDeleted: 0, // 默认未删除
+			ExpenseName: detail.expenseName || '',
+			PaymentRequestID: PaymentRequestID.value || 0
 		}));
 		paymentRequestRequest.PaymentRequestDetails = processedDetails;
 		request.post('PaymentRequest/EditPaymentRequest/Edit', paymentRequestRequest).then(response => {
@@ -1509,28 +1498,29 @@ const EditPayment = async () => {
 	IsDisabled.value = false;
 	isEditSaveBtnShow.value = true;
 
-	// 编辑时获取未支付款项列表，过滤掉已选择的单据
+
+	// 编辑时重新加载未支付款项列表，过滤掉已选择的单据
 	if (showPaymentDetails.value) {
+		// 重新获取未支付款项列表，确保数据是最新的
 		try {
 			const unpaidResponse = await request({
-				url: 'PaymentRequest/GetUnpaidPaymentListBySupplierID/GetUnpaidPaymentList',
+				url: 'UnpaidAmount/GetUnpaidAmountList/GetList',
 				method: 'GET',
 				params: {
 					supplierID: addpaymentrequestform.value.payeeCode
 				}
 			});
 
-			if (unpaidResponse.data && unpaidResponse.code === 200) {
+			if (unpaidResponse && unpaidResponse.code === 200) {
 				const allUnpaidItems = unpaidResponse.data || [];
-
 				// 过滤掉已经存在于付款明细中的单据
 				const filteredUnpaidItems = allUnpaidItems.filter(unpaidItem => {
 					return !CostDetailsTbaleData.value.some(selectedItem =>
-						selectedItem.shippingOrderNumber === unpaidItem.invoiceNumber &&
-						selectedItem.purchaseContractNumber === unpaidItem.purchaseContractNumber
+						selectedItem.expenseName === unpaidItem.expenseName &&
+						selectedItem.relatedDocumentsNo === unpaidItem.relatedDocumentsNo &&
+						selectedItem.relatedDocumentType === unpaidItem.relatedDocumentType
 					);
 				});
-
 				UnpaidDetailsTbaleData.value = filteredUnpaidItems;
 
 				// 处理contractStatus显示
@@ -1578,6 +1568,10 @@ const AddPaymentDialog = async () => {
 	showEditBtn.value = false;
 	isEditSaveBtnShow.value = false;
 
+	// 新增付款申请时隐藏审核按钮
+	showApproveRejectBtn.value = false;
+	showApprovePassBtn.value = false;
+
 	// 设置默认申请日期为当天
 	const today = new Date();
 	const year = today.getFullYear();
@@ -1592,6 +1586,12 @@ const AddPaymentDialog = async () => {
 		addpaymentrequestform.value.applicationDepartment = state.optionss.sql_hr_dept.find((item) => item.dictValue == userInfo.deptId.toString()).dictValue;
 	}
 	addpaymentrequestform.value.applicant = state.optionss.sql_all_user.find((item) => item.dictValue == userInfo.userId.toString()).dictValue;
+
+	// 如果是工厂付款，初始化申请金额为0
+	if (addpaymentrequestform.value.paymentCategory === '1') {
+		addpaymentrequestform.value.totalAmount = '0.00';
+	}
+
 	addpaymentrequestdialog.value = true;
 }
 
@@ -1638,43 +1638,51 @@ const submitForReview = () => {
 					finalTotalAmount = Number(addpaymentrequestform.value.totalAmount) || 0;
 				}
 
-				// 构造请求数据（与保存草稿的数据结构保持一致）
-				const requestData = {
-					id: PaymentRequestID.value || 0, // 新增时为0，更新时为实际ID
-					ApplicationNumber: addpaymentrequestform.value.applicationNumber,
-					ApplicationDate: addpaymentrequestform.value.applicationDate,
-					PaymentCategory: Number(addpaymentrequestform.value.paymentCategory),
-					PaymentName: Number(addpaymentrequestform.value.paymentName),
-					PayeeCode: Number(addpaymentrequestform.value.payeeCode),
-					PayeeName: addpaymentrequestform.value.payeeName || '',
-					BankName: addpaymentrequestform.value.bankName,
-					BankAccount: addpaymentrequestform.value.bankAccount,
-					OurCompany: Number(addpaymentrequestform.value.ourCompany),
-					CurrencyCode: Number(addpaymentrequestform.value.currencyCode),
-					TotalAmount: finalTotalAmount, // 根据付款类别使用相应的金额
-					PaidAmount: Number(addpaymentrequestform.value.paidAmount),
-					UnpaidAmount: Number(addpaymentrequestform.value.unpaidAmount),
-					Applicant: Number(addpaymentrequestform.value.applicant),
-					ApplicationDepartment: Number(addpaymentrequestform.value.applicationDepartment),
-					FinancialApproval: Number(addpaymentrequestform.value.financialApproval),
-					Handler: Number(addpaymentrequestform.value.handler),
-					Remark: addpaymentrequestform.value.remarks, // 注意字段名映射
-					PaymentRequestDetails: (CostDetailsTbaleData.value || []).map(detail => ({
-						...detail,
-						ShippingOrderID: Number(detail.id) || 0, // 关联出运发货单ID（来自未支付款项明细中的id）
-						purchaseContracID: Number(detail.pcid) || 0, // 关联采购合同ID
-						invoiceNumber: detail.shippingOrderNumber || '', // 关联出运发货单号
-						purchaseContractNumber: detail.purchaseContractNumber || '', // 关联采购合同号
-						PaymentAmount: Number(detail.currentPaymentAmount) || 0, // 映射到服务端期望的PaymentAmount字段
-						contractStatus: Number(detail.contractStatusOriginal) || Number(detail.contractStatus) || 0 // 优先使用原始数值
-					}))
-				};
+				// 使用与保存草稿相同的数据结构
+				paymentRequestRequest.id = PaymentRequestID.value || 0; // 新增时为0，更新时为实际ID
+				paymentRequestRequest.ApplicationNumber = addpaymentrequestform.value.applicationNumber;
+				paymentRequestRequest.ApplicationDate = addpaymentrequestform.value.applicationDate;
+				paymentRequestRequest.PaymentCategory = Number(addpaymentrequestform.value.paymentCategory);
+				paymentRequestRequest.PaymentName = Number(addpaymentrequestform.value.paymentName);
+				paymentRequestRequest.PayeeCode = Number(addpaymentrequestform.value.payeeCode);
+				paymentRequestRequest.PayeeName = addpaymentrequestform.value.payeeName || '';
+				paymentRequestRequest.BankName = addpaymentrequestform.value.bankName;
+				paymentRequestRequest.BankAccount = addpaymentrequestform.value.bankAccount;
+				paymentRequestRequest.OurCompany = Number(addpaymentrequestform.value.ourCompany);
+				paymentRequestRequest.CurrencyCode = Number(addpaymentrequestform.value.currencyCode);
+				paymentRequestRequest.TotalAmount = finalTotalAmount; // 根据付款类别使用相应的金额
+				paymentRequestRequest.PaidAmount = Number(addpaymentrequestform.value.paidAmount);
+				paymentRequestRequest.UnpaidAmount = Number(addpaymentrequestform.value.unpaidAmount);
+				paymentRequestRequest.Applicant = Number(addpaymentrequestform.value.applicant);
+				paymentRequestRequest.ApplicationDepartment = Number(addpaymentrequestform.value.applicationDepartment);
+				paymentRequestRequest.FinancialApproval = Number(addpaymentrequestform.value.financialApproval);
+				paymentRequestRequest.Handler = Number(addpaymentrequestform.value.handler);
+				paymentRequestRequest.Remark = addpaymentrequestform.value.remarks;
+				paymentRequestRequest.IsDelete = 0;
+
+				// 转换字段映射，使用新的请求体结构
+				const processedDetails = CostDetailsTbaleData.value.map(detail => ({
+					// 基础字段
+					Id: Number(detail.id) || 0,
+					SupplierID: Number(addpaymentrequestform.value.payeeCode) || 0,
+					PaymentType: Number(detail.relatedDocumentType) || Number(detail.relatedmodules) || 0,
+					Currency: Number(addpaymentrequestform.value.currencyCode) || 0,
+					ExchangeRate: 1.0, // 默认汇率，可以根据需要调整
+					Amount: Number(detail.currentPaymentAmount) || 0,
+					IsPaid: 0, // 默认未支付
+					RelatedDocumentType: Number(detail.relatedDocumentType) || Number(detail.relatedmodules) || 0,
+					RelatedDocumentID: Number(detail.relatedDocumentID) || Number(detail.id) || 0,
+					IsDeleted: 0, // 默认未删除
+					ExpenseName: detail.expenseName || '',
+					PaymentRequestID: PaymentRequestID.value || 0
+				}));
+				paymentRequestRequest.PaymentRequestDetails = processedDetails;
 
 				// 发送保存并提交审核请求
 				request({
 					url: 'PaymentRequest/SaveAndSubmitForReview/SaveAndSubmitForReview',
 					method: 'POST',
-					data: requestData
+					data: paymentRequestRequest
 				}).then(response => {
 					if (response.code === 200) {
 						ElMessage({
@@ -1831,6 +1839,13 @@ const CalculatetotalAmount = () => {
 
 	// 遍历费用明细表格中的所有行
 	CostDetailsTbaleData.value.forEach(row => {
+		// 如果是工厂付款，自动设置本次付款金额为对应的金额
+		if (addpaymentrequestform.value.paymentCategory === '1') {
+			// 优先使用amount字段，如果没有则使用totalGoodsValue，最后使用actualShippingAmount
+			const amount = parseFloat(row.amount) || parseFloat(row.totalGoodsValue) || parseFloat(row.actualShippingAmount) || 0;
+			row.currentPaymentAmount = amount.toFixed(2);
+		}
+
 		// 将字符串转换为数字并累加
 		// 优先使用currentPaymentAmount，如果没有则使用unpaidAmount，最后使用applicationamount
 		let amount = 0;
@@ -1844,7 +1859,12 @@ const CalculatetotalAmount = () => {
 		total += amount;
 	});
 
-	// 只更新未付金额字段（总金额 - 已付金额），不再自动赋值申请金额
+	// 如果是工厂付款，自动更新申请金额为付款明细的总和
+	if (addpaymentrequestform.value.paymentCategory === '1') {
+		addpaymentrequestform.value.totalAmount = total.toFixed(2);
+	}
+
+	// 只更新未付金额字段（总金额 - 已付金额）
 	const paidAmount = parseFloat(addpaymentrequestform.value.paidAmount) || 0;
 	addpaymentrequestform.value.unpaidAmount = (total - paidAmount).toFixed(2);
 }
@@ -1861,8 +1881,9 @@ const isItemSelected = (row) => {
 const isUnpaidItemSelected = (row) => {
 	// 如果项目在付款明细中，则认为已选择
 	return CostDetailsTbaleData.value.some(item =>
-		item.shippingOrderNumber === row.invoiceNumber &&
-		item.purchaseContractNumber === row.purchaseContractNumber
+		item.expenseName === row.expenseName &&
+		item.relatedDocumentsNo === row.relatedDocumentsNo &&
+		item.relatedDocumentType === row.relatedDocumentType
 	);
 };
 
@@ -1884,12 +1905,13 @@ const handleUnpaidItemSelect = (row) => {
 
 	if (isSelected) {
 		// 如果已选择，则取消选择
-		selectedUnpaidItemIds.value.delete(row.id);
+		selectedUnpaidItemIds.value.delete(row.relatedDocumentID || row.id);
 
 		// 从付款明细中移除
 		const index = CostDetailsTbaleData.value.findIndex(item =>
-			item.shippingOrderNumber === row.invoiceNumber &&
-			item.purchaseContractNumber === row.purchaseContractNumber
+			item.expenseName === row.expenseName &&
+			item.relatedDocumentsNo === row.relatedDocumentsNo &&
+			item.relatedDocumentType === row.relatedDocumentType
 		);
 		if (index > -1) {
 			CostDetailsTbaleData.value.splice(index, 1);
@@ -1901,31 +1923,52 @@ const handleUnpaidItemSelect = (row) => {
 		ElMessage.success('已从付款明细中移除');
 	} else {
 		// 如果未选择，则添加到付款明细
+		const isDepositType = Number(addpaymentrequestform.value.paymentName) === 1;
+		// 计算今日日期字符串，作为默认的关联日期
+		const _today = new Date();
+		const _y = _today.getFullYear();
+		const _m = String(_today.getMonth() + 1).padStart(2, '0');
+		const _d = String(_today.getDate()).padStart(2, '0');
+		const _todayStr = `${_y}-${_m}-${_d}`;
 		const newDetail = {
-			id: row.id || 0, // 保存原始ID用于ShippingOrderID映射
-			pcid: row.pcid || 0, // 保存pcid用于purchaseContracID映射
-			shippingOrderNumber: row.invoiceNumber || '',
+			id: row.id || 0, // 使用未支付款项的原始ID
+			pcid: row.relatedDocumentID || 0,
+			shippingOrderNumber: row.relatedDocumentsNo || '',
 			ShippingOrderNumberOptions: [],
-			purchaseContractNumber: row.purchaseContractNumber || '',
+			purchaseContractNumber: row.relatedDocumentsNo || '',
 			PurchaseContractNumberOptions: [],
-			totalGoodsValue: row.totalGoodsValue || '',
-			actualShippingAmount: row.actualShippingAmount || '',
-			deposit: row.deposit || 0,
-			paidAmount: row.paidAmount || 0,
-			unpaidAmount: row.unpaidAmount || 0,
-			currentPaymentAmount: Math.min(row.unpaidAmount || 0, row.actualShippingAmount || 0), // 默认使用未付金额和实际发货金额的较小值
-			contractStatus: row.contractStatus || '', // 显示用的标签
-			contractStatusOriginal: row.contractStatusOriginal || row.contractStatus || 0, // 保存原始数值
-			remark: row.remark || ''
+			totalGoodsValue: row.amount || 0,
+			actualShippingAmount: row.amount || 0,
+			// —— 四个金额字段 —— //
+			depositPaidAmount: 0,
+			depositUnpaidAmount: 0,
+			goodsPaidAmount: 0,
+			goodsUnpaidAmount: row.amount || 0,
+			// 默认本次付款金额：使用amount字段
+			currentPaymentAmount: row.amount || 0,
+			contractStatus: '',
+			contractStatusOriginal: 0,
+			relevantdates: _todayStr,
+			remark: '',
+			// 新增字段
+			expenseName: row.expenseName || '',
+			relatedDocumentType: row.relatedDocumentType || 0,
+			relatedDocumentTypeName: row.relatedDocumentTypeName || '',
+			relatedDocumentsNo: row.relatedDocumentsNo || '',
+			amount: row.amount || 0
 		};
 
 		CostDetailsTbaleData.value.push(newDetail);
 
-		// 标记为已选择
+		// 标记为已选择 - 使用未支付款项的原始ID
 		selectedUnpaidItemIds.value.add(row.id);
 
 		// 从未支付款项详情列表中移除该行
-		const index = UnpaidDetailsTbaleData.value.findIndex(item => item.id === row.id);
+		const index = UnpaidDetailsTbaleData.value.findIndex(item =>
+			item.expenseName === row.expenseName &&
+			item.relatedDocumentsNo === row.relatedDocumentsNo &&
+			item.relatedDocumentType === row.relatedDocumentType
+		);
 		if (index > -1) {
 			UnpaidDetailsTbaleData.value.splice(index, 1);
 		}
@@ -1941,30 +1984,46 @@ const handleUnpaidItemSelect = (row) => {
 const handleSelectAllUnpaid = (checked) => {
 	if (checked) {
 		// 全选：将所有未付款项添加到付款明细（保留现有数据）
+		const isDepositType = Number(addpaymentrequestform.value.paymentName) === 1;
+		// 计算今日日期字符串，作为默认的关联日期
+		const _today = new Date();
+		const _y = _today.getFullYear();
+		const _m = String(_today.getMonth() + 1).padStart(2, '0');
+		const _d = String(_today.getDate()).padStart(2, '0');
+		const _todayStr = `${_y}-${_m}-${_d}`;
 		UnpaidDetailsTbaleData.value.forEach(row => {
 			// 检查是否已经存在于付款明细中
 			const alreadyExists = CostDetailsTbaleData.value.some(selectedItem =>
-				selectedItem.shippingOrderNumber === row.invoiceNumber &&
-				selectedItem.purchaseContractNumber === row.purchaseContractNumber
+				selectedItem.expenseName === row.expenseName &&
+				selectedItem.relatedDocumentsNo === row.relatedDocumentsNo &&
+				selectedItem.relatedDocumentType === row.relatedDocumentType
 			);
 
 			if (!alreadyExists) {
 				const newDetail = {
-					id: row.id || 0, // 保存原始ID用于ShippingOrderID映射
-					pcid: row.pcid || 0, // 保存pcid用于purchaseContracID映射
-					shippingOrderNumber: row.invoiceNumber || '',
+					id: row.id || 0, // 使用未支付款项的原始ID
+					pcid: row.relatedDocumentID || 0,
+					shippingOrderNumber: row.relatedDocumentsNo || '',
 					ShippingOrderNumberOptions: [],
-					purchaseContractNumber: row.purchaseContractNumber || '',
+					purchaseContractNumber: row.relatedDocumentsNo || '',
 					PurchaseContractNumberOptions: [],
-					totalGoodsValue: row.totalGoodsValue || '',
-					actualShippingAmount: row.actualShippingAmount || '',
-					deposit: row.deposit || 0,
-					paidAmount: row.paidAmount || 0,
-					unpaidAmount: row.unpaidAmount || 0,
-					currentPaymentAmount: Math.min(row.unpaidAmount || 0, row.actualShippingAmount || 0), // 使用未付金额和实际发货金额的较小值
-					contractStatus: row.contractStatus || '', // 显示用的标签
-					contractStatusOriginal: row.contractStatusOriginal || row.contractStatus || 0, // 保存原始数值
-					remark: row.remark || ''
+					totalGoodsValue: row.amount || 0,
+					actualShippingAmount: row.amount || 0,
+					depositPaidAmount: 0,
+					depositUnpaidAmount: 0,
+					goodsPaidAmount: 0,
+					goodsUnpaidAmount: row.amount || 0,
+					currentPaymentAmount: row.amount || 0,
+					contractStatus: '',
+					contractStatusOriginal: 0,
+					relevantdates: _todayStr,
+					remark: '',
+					// 新增字段
+					expenseName: row.expenseName || '',
+					relatedDocumentType: row.relatedDocumentType || 0,
+					relatedDocumentTypeName: row.relatedDocumentTypeName || '',
+					relatedDocumentsNo: row.relatedDocumentsNo || '',
+					amount: row.amount || 0
 				};
 
 				CostDetailsTbaleData.value.push(newDetail);
@@ -1982,15 +2041,23 @@ const handleSelectAllUnpaid = (checked) => {
 
 		CostDetailsTbaleData.value.forEach(item => {
 			const originalItem = {
-				id: item.id || Date.now() + Math.random(), // 保持原始ID，如果没有则生成新的
-				pcid: item.pcid || 0, // 保持原始pcid
-				invoiceNumber: item.shippingOrderNumber,
+				id: item.id || Date.now() + Math.random(),
+				pcid: item.pcid || 0,
+				relatedDocumentID: item.id || 0,
+				expenseName: item.expenseName || '',
+				relatedDocumentType: item.relatedDocumentType || 0,
+				relatedDocumentTypeName: item.relatedDocumentTypeName || '',
+				relatedDocumentsNo: item.relatedDocumentsNo || '',
+				amount: item.amount || 0,
+				// 兼容旧字段
+				invoiceNumbers: item.shippingOrderNumber,
 				purchaseContractNumber: item.purchaseContractNumber,
 				totalGoodsValue: item.totalGoodsValue,
-				actualShippingAmount: item.actualShippingAmount,
-				deposit: item.deposit || 0,
-				paidAmount: item.paidAmount || 0,
-				unpaidAmount: item.unpaidAmount || 0,
+				actualShippingAmount: item.actualShippingAmount || 0,
+				depositPaidAmount: item.depositPaidAmount || 0,
+				depositUnpaidAmount: item.depositUnpaidAmount || 0,
+				goodsPaidAmount: item.goodsPaidAmount || 0,
+				goodsUnpaidAmount: item.goodsUnpaidAmount || 0,
 				contractStatus: item.contractStatus,
 				contractStatusOriginal: item.contractStatusOriginal || item.contractStatus || 0,
 				remark: item.remark
@@ -2028,22 +2095,28 @@ const validatePaymentAmount = () => {
 
 	const applicationAmount = parseFloat(addpaymentrequestform.value.totalAmount) || 0;
 
-	// 检查是否有超过实际发货金额的情况
+	// 检查是否有超过金额的情况
 	const hasExceededAmount = CostDetailsTbaleData.value.some(row => isPaymentAmountExceeded(row));
 	if (hasExceededAmount) {
-		ElMessage.error('存在本次付款金额超过实际发货金额的情况，请检查');
+		ElMessage.error('存在本次付款金额超过金额的情况，请检查');
 		return false;
 	}
 
 	// 本次付款金额合计必须完全等于申请金额
-	return totalPaymentAmount === applicationAmount; // 必须完全匹配
+	if (totalPaymentAmount !== applicationAmount) {
+		ElMessage.error(`付款明细总金额(${totalPaymentAmount.toFixed(2)})与申请金额(${applicationAmount.toFixed(2)})不匹配，必须100%匹配`);
+		return false;
+	}
+
+	return true;
 };
 
-// 检查本次付款金额是否超过实际发货金额
+// 检查本次付款金额是否超过金额
 const isPaymentAmountExceeded = (row) => {
 	const currentPaymentAmount = parseFloat(row.currentPaymentAmount) || 0;
-	const actualShippingAmount = parseFloat(row.actualShippingAmount) || 0;
-	return currentPaymentAmount > actualShippingAmount;
+	// 优先使用amount字段，如果没有则使用totalGoodsValue，最后使用actualShippingAmount
+	const amount = parseFloat(row.amount) || parseFloat(row.totalGoodsValue) || parseFloat(row.actualShippingAmount) || 0;
+	return currentPaymentAmount > amount;
 };
 
 // 检查金额是否匹配（用于控制提交按钮）
@@ -2059,10 +2132,10 @@ const isAmountMatched = () => {
 	const totalPayment = parseFloat(getTotalCurrentPaymentAmount());
 	const applicationAmount = parseFloat(addpaymentrequestform.value.totalAmount) || 0;
 
-	// 检查是否有超过实际发货金额的情况
+	// 检查是否有超过金额的情况
 	const hasExceededAmount = CostDetailsTbaleData.value.some(row => isPaymentAmountExceeded(row));
 
-	return totalPayment === applicationAmount && !hasExceededAmount; // 必须完全匹配且不超过实际发货金额
+	return totalPayment === applicationAmount && !hasExceededAmount; // 必须完全匹配且不超过金额
 };
 
 
@@ -2121,25 +2194,34 @@ const CostDetailsTbaleDatahandleDelete = (index: number) => {
 	const deletedItem = CostDetailsTbaleData.value[index];
 
 	// 如果删除的项目来自未付款项，重新添加到未支付款项列表中
-	if (deletedItem.shippingOrderNumber && deletedItem.purchaseContractNumber) {
+	if (deletedItem.expenseName && deletedItem.relatedDocumentsNo) {
 		// 检查是否已经存在于未支付款项列表中
 		const alreadyExists = UnpaidDetailsTbaleData.value.some(item =>
-			item.invoiceNumber === deletedItem.shippingOrderNumber &&
-			item.purchaseContractNumber === deletedItem.purchaseContractNumber
+			item.expenseName === deletedItem.expenseName &&
+			item.relatedDocumentsNo === deletedItem.relatedDocumentsNo &&
+			item.relatedDocumentType === deletedItem.relatedDocumentType
 		);
 
 		if (!alreadyExists) {
 			// 重新添加到未支付款项列表中
 			const originalUnpaidItem = {
-				id: deletedItem.id || Date.now(), // 使用时间戳作为临时ID
-				pcid: deletedItem.pcid || 0, // 保持原始pcid
-				invoiceNumber: deletedItem.shippingOrderNumber,
+				id: deletedItem.id || Date.now(),
+				pcid: deletedItem.pcid || 0,
+				relatedDocumentID: deletedItem.id || 0,
+				expenseName: deletedItem.expenseName || '',
+				relatedDocumentType: deletedItem.relatedDocumentType || 0,
+				relatedDocumentTypeName: deletedItem.relatedDocumentTypeName || '',
+				relatedDocumentsNo: deletedItem.relatedDocumentsNo || '',
+				amount: deletedItem.amount || 0,
+				// 兼容旧字段
+				invoiceNumbers: deletedItem.shippingOrderNumber,
 				purchaseContractNumber: deletedItem.purchaseContractNumber,
 				totalGoodsValue: deletedItem.totalGoodsValue,
-				actualShippingAmount: deletedItem.actualShippingAmount,
-				deposit: deletedItem.deposit || 0,
-				paidAmount: deletedItem.paidAmount || 0,
-				unpaidAmount: deletedItem.unpaidAmount || 0,
+				actualShippingAmount: deletedItem.actualShippingAmount || 0,
+				depositPaidAmount: deletedItem.depositPaidAmount || 0,
+				depositUnpaidAmount: deletedItem.depositUnpaidAmount || 0,
+				goodsPaidAmount: deletedItem.goodsPaidAmount || 0,
+				goodsUnpaidAmount: deletedItem.goodsUnpaidAmount || 0,
 				contractStatus: deletedItem.contractStatus,
 				contractStatusOriginal: deletedItem.contractStatusOriginal || deletedItem.contractStatus || 0,
 				remark: deletedItem.remark
@@ -2150,11 +2232,40 @@ const CostDetailsTbaleDatahandleDelete = (index: number) => {
 		}
 
 		// 从已选择列表中移除
-		selectedUnpaidItemIds.value.delete(deletedItem.id);
+		selectedUnpaidItemIds.value.delete(deletedItem.relatedDocumentID || deletedItem.id);
 	}
 
 	CostDetailsTbaleData.value.splice(index, 1);
 	CalculatetotalAmount(); // 重新计算总金额
+};
+
+// 款项名称变化时，若需展示付款明细，则按当前供应商和款项类型重新拉取未支付款项详情
+const paymentNameChange = async () => {
+	if (!showPaymentDetails.value) {
+		return;
+	}
+	if (!addpaymentrequestform.value.payeeCode || addpaymentrequestform.value.payeeCode === '') {
+		UnpaidDetailsTbaleData.value = [];
+		return;
+	}
+	try {
+		const unpaidResponse = await request({
+			url: 'UnpaidAmount/GetUnpaidAmountList/GetList',
+			method: 'GET',
+			params: {
+				supplierID: addpaymentrequestform.value.payeeCode
+			}
+		});
+		if (unpaidResponse && unpaidResponse.code === 200) {
+			UnpaidDetailsTbaleData.value = unpaidResponse.data || [];
+			// 新API数据结构不需要处理contractStatus，直接使用返回的数据
+		} else {
+			UnpaidDetailsTbaleData.value = [];
+		}
+	} catch (error) {
+		console.error('获取未付款详情失败:', error);
+		UnpaidDetailsTbaleData.value = [];
+	}
 };
 
 const DeleteCustomerProfile = (row) => {

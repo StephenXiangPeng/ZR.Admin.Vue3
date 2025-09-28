@@ -424,13 +424,12 @@
 			</el-table>
 			<br><span style="font-size: 20px; font-weight: bold;">采购合同</span>
 			<el-divider></el-divider>
-			<el-table :data="shippingDeliveryPurchaseDetailsTableData"
-				style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
+			<el-table :data="getPurchaseTableData()" style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="purchaseContractID" label="采购合同ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="purchaseContractProductID" label="采购合同明细ID" width="150"
-					vif="false"></el-table-column>
+					v-if="false"></el-table-column>
 				<el-table-column prop="purchaseContractNumber" label="采购合同" width="150"></el-table-column>
 				<el-table-column prop="vendorAbbreviation" label="厂商简称" width="150"></el-table-column>
 				<el-table-column prop="productNumber" label="产品编号" width="150"></el-table-column>
@@ -560,7 +559,7 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, nextTick } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
 import type { Action } from 'element-plus'
 import request from '@/utils/request';
@@ -780,6 +779,11 @@ const shippingDeliveryPurchaseDetailsTableData = ref([])
 // 其它费用
 const shippingDeliveryOtherexpensesTableData = ref([]);
 
+// 获取采购表格数据的函数
+const getPurchaseTableData = () => {
+	return shippingDeliveryPurchaseDetailsTableData.value;
+};
+
 //客户编号改变
 const customerNumberChange = () => {
 	if (AddShippingDeliveryform.value.customerNumber != null && AddShippingDeliveryform.value.customerNumber != undefined && AddShippingDeliveryform.value.customerNumber != '') {
@@ -813,8 +817,9 @@ const customerNumberChange = () => {
 }
 
 //参考合同号改变
-const referenceContractNumberChange = () => {
+const referenceContractNumberChange = async () => {
 	var SaleContractID = AddShippingDeliveryform.value.referenceContractNumber;
+
 	if (SaleContractID == '' || SaleContractID == null || SaleContractID == undefined) {
 		shippingDeliveryContrctProductTableData.value = [];
 		shippingDeliveryPurchaseDetailsTableData.value = [];
@@ -822,13 +827,23 @@ const referenceContractNumberChange = () => {
 	}
 
 	// 先获取采购合同信息，检查是否有采购合同数据
+
 	request({
 		url: 'PurchaseContracts/GetCustomerPurchasesByContractID/GetAllPurchasess',
 		method: 'GET',
 		params: {
 			ContractID: SaleContractID
 		}
-	}).then(purchaseResponse => {
+	}).then(async (purchaseResponse) => {
+		// 检查API响应状态
+		if (purchaseResponse.code !== 200) {
+			ElMessage.error('获取采购合同信息失败：' + purchaseResponse.msg);
+			AddShippingDeliveryform.value.referenceContractNumber = '';
+			shippingDeliveryContrctProductTableData.value = [];
+			shippingDeliveryPurchaseDetailsTableData.value = [];
+			return;
+		}
+
 		// 检查是否有采购合同数据
 		if (!purchaseResponse.data || purchaseResponse.data.length === 0) {
 			ElMessage.error('该销售合同没有关联的采购合同，无法创建出运单！');
@@ -850,7 +865,22 @@ const referenceContractNumberChange = () => {
 		}).then(response => {
 			if (response.data != null) {
 				AddShippingDeliveryform.value.customerNumber = state.optionss.customer_data.find(item => item.dictValue === response.data.contract.customerId.toString())?.dictValue || '';
-				customerNumberChange();//改变客户编号
+
+				// 手动获取客户简称，而不调用 customerNumberChange()
+				request({
+					url: 'CustomerInfoMation/getCustomerInfoByID/GetCustomerInfo',
+					method: 'GET',
+					params: {
+						ID: response.data.contract.customerId
+					}
+				}).then(customerResponse => {
+					if (customerResponse != null) {
+						AddShippingDeliveryform.value.customerAbbreviation = customerResponse.customerAbbreviation
+					}
+				}).catch(error => {
+					console.error('获取客户简称失败:', error)
+				});
+
 				AddShippingDeliveryform.value.salesContractNumber = response.data.contract.contractNumber;
 				AddShippingDeliveryform.value.customerContractNumber = response.data.contract.customerContract;
 				AddShippingDeliveryform.value.ourCompany = response.data.contract.ourCompany.toString();
@@ -901,10 +931,10 @@ const referenceContractNumberChange = () => {
 							totalGrossWeight: element.totalGrossWeight,
 							singlesalesrevenue: element.singlesalesrevenue
 						});
+					}).catch(error => {
+						console.error(error);
 					});
-				}).catch(error => {
-					console.log(error)
-				})
+				});
 
 			}
 		}).catch(error => {
@@ -912,9 +942,11 @@ const referenceContractNumberChange = () => {
 		});
 
 		// 填充采购合同数据
-		shippingDeliveryPurchaseDetailsTableData.value = [];
-		purchaseResponse.data.forEach((element) => {
-			shippingDeliveryPurchaseDetailsTableData.value.push({
+		// 创建新的数组来存储处理后的数据
+		const newPurchaseData = [];
+
+		purchaseResponse.data.forEach((element, index) => {
+			const purchaseItem = {
 				purchaseContractID: element.purchaseContractID,
 				purchaseContractProductID: element.purchaseContractProductID,
 				purchaseContractNumber: element.purchaseContractNumber,
@@ -928,11 +960,23 @@ const referenceContractNumberChange = () => {
 				purchaseTotalPrice: element.purchaseTotalPrice,
 				measurementUnit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
 				invoice: element.invoice,
-				totalVolume: element.TotalVolume,
-				totalGrossWeight: element.TotalGrossWeight,
+				totalVolume: element.totalVolume,
+				totalGrossWeight: element.totalGrossWeight,
 				contractQuantity: element.contractQuantity
-			});
+			};
+
+			newPurchaseData.push(purchaseItem);
 		});
+
+		// 使用 nextTick 确保 DOM 更新
+		await nextTick();
+
+		// 一次性更新响应式数据
+		shippingDeliveryPurchaseDetailsTableData.value = newPurchaseData;
+
+		// 强制触发响应式更新
+		await nextTick();
+		shippingDeliveryPurchaseDetailsTableData.value = [...newPurchaseData];
 	}).catch(error => {
 		console.error('获取采购合同信息失败:', error);
 		ElMessage.error('获取采购合同信息失败，请稍后重试');

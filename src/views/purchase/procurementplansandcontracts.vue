@@ -338,10 +338,10 @@
 					<el-table :data="CustomerRelaterExoensesTableData" style="width: 100%; table-layout: fixed;" stripe
 						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
-						<el-table-column prop=" expenseName" label="费用名称" width="150">
+						<el-table-column prop="expenseName" label="费用名称" width="150">
 							<template #default="{ row }">
-								<el-input v-model="row.expenseName" placeholder="输入费用名称" size="default"
-									:disabled="isFormDisabled"></el-input>
+								<el-input v-model="row.expenseName" placeholder="请输入费用名称" size="default"
+									:disabled="isFormDisabled" style="width: 100%"></el-input>
 							</template>
 						</el-table-column>
 						<el-table-column prop="currency" label="币种" width="150">
@@ -1050,7 +1050,8 @@ const state = reactive({
 		hr_packing: [],
 		sql_product: [],
 		hr_purchase_pricing_term: [],
-		hr_purchase_payment_days: []
+		hr_purchase_payment_days: [],
+		hr_factory_payment: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -1059,7 +1060,7 @@ var dictParams = [{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' }
 { dictType: 'hr_transportation_method' }, { dictType: 'sys_yes_no' }, { dictType: 'hr_calculate_unit' }, { dictType: 'hr_contract_status' },
 { dictType: 'hr_customer_level' }, { dictType: 'hr_signing_place' }, { dictType: 'hr_quotation_basis' }, { dictType: 'hr_outerbox_unit' },
 { dictType: 'hr_supplier_level' }, { dictType: 'hr_business_scope' }, { dictType: 'hr_china_provinces' }, { dictType: 'hr_china_city' }, { dictType: 'sql_sale_contracts' },
-{ dictType: 'sql_supplier_info' }, { dictType: 'sql_hr_purchase' }, { dictType: 'hr_packing' }, { dictType: 'sql_product' }, { dictType: 'hr_purchase_pricing_term' }, { dictType: 'hr_purchase_payment_days' }]
+{ dictType: 'sql_supplier_info' }, { dictType: 'sql_hr_purchase' }, { dictType: 'hr_packing' }, { dictType: 'sql_product' }, { dictType: 'hr_purchase_pricing_term' }, { dictType: 'hr_purchase_payment_days' }, { dictType: 'hr_factory_payment' }]
 
 
 async function fetchDataAndExecute() {
@@ -2037,6 +2038,7 @@ const CheckDetails = async (row) => {
 				CustomerRelaterExoensesTableData.value.forEach(element => {
 					element.currency = optionss.value.hr_export_currency.find(item => item.dictValue === element.currency.toString())?.dictValue;
 					element.amount = element.expense * element.exchangeRate;
+					// 费用名称现在是手动输入的文本，不需要从字典中查找
 				});
 			}
 			Addcontractofpurchasedialog.value = true;
