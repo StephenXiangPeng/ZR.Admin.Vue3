@@ -566,14 +566,12 @@
 			</el-collapse>
 			<span style="font-size: 20px; font-weight: bold;">产品资料&客户相关费用</span>
 			<el-divider></el-divider>
-			<el-button class="mt-4" type="primary" @click="OpenSearchProcutDialog" style="margin-bottom: 10px;"
-				:disabled="isDisabled" size="default">导入产品</el-button>
 			<!-- <el-button class="mt-4" type="primary" @click="onAddquotationProductItem" style="margin-bottom: 10px;"
 				:disabled="isDisabled" size="default">添加新产品</el-button> -->
-			<el-button class="mt-4" type="primary" @click="handleAddRow" style="margin-bottom: 10px;"
-				:disabled="isDisabled" size="default">添加相关费用</el-button>
 			<el-tabs v-model="activeTab" tab-position="top" class="demo-tabs">
 				<el-tab-pane label="产品资料" name="productMaterialtab">
+					<el-button class="mt-4" type="primary" @click="OpenSearchProcutDialog" style="margin-bottom: 10px;"
+						:disabled="isDisabled" size="default">导入产品</el-button>
 					<el-table :data="productData" style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
 						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
@@ -828,6 +826,8 @@
 					</el-table>
 				</el-tab-pane>
 				<el-tab-pane label="客户相关费用" name="CustomerRelaterExoensestab">
+					<el-button class="mt-4" type="primary" @click="handleAddRow" style="margin-bottom: 10px;"
+						:disabled="isDisabled" size="default">添加相关费用</el-button>
 					<el-table :data="CustomerRelaterExoensesTableData" style="width: 100%; table-layout: fixed;"
 						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
@@ -1176,7 +1176,7 @@ import { JsonHubProtocol } from '@microsoft/signalr';
 import { get } from 'sortablejs';
 import useUserStore from "@/store/modules/user";
 import { Row } from 'element-plus/es/components/table-v2/src/components';
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import exchangeRateService from '@/utils/exchangeRateService';
 
 const activeSearchProductTab = ref('productInfoTab');
@@ -1309,6 +1309,8 @@ const handlecontractDialogclose = async () => {
 	errorElements.forEach(el => {
 		el.classList.remove('highlight-error');
 	});
+	// 清空路由参数（使用 history.replaceState 避免触发页面切换）
+	history.replaceState(null, '', route.path);
 }
 
 //定金日期触发函数，将定金日期赋值给有效日期
@@ -1320,7 +1322,7 @@ const handleDepositDateChange = (date) => {
 //美金汇率触发函数，将美金汇率保留4位小数
 const formatExchangeRate = () => {
 	if (Newcontractform.exchangeRate) {
-		Newcontractform.exchangeRate = Number(Newcontractform.exchangeRate).toFixed(3);
+		Newcontractform.exchangeRate = Number(Number(Newcontractform.exchangeRate).toFixed(3));
 	}
 	calculateTotal();
 }
@@ -1328,7 +1330,7 @@ const formatExchangeRate = () => {
 //海运费汇率触发函数，将海运费汇率保留3位小数
 const formatShippingRate = () => {
 	if (Newcontractform.shippingrate) {
-		Newcontractform.shippingrate = Number(Newcontractform.shippingrate).toFixed(3);
+		Newcontractform.shippingrate = Number(Number(Newcontractform.shippingrate).toFixed(3));
 	}
 	calculateTotal();
 }
@@ -1798,7 +1800,7 @@ const handleRowDblClick = (row) => {
 
 const shippingcurrencyChange = (value) => {
 	if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 3) {
-		Newcontractform.shippingrate = Number(1).toFixed(3);
+		Newcontractform.shippingrate = Number(1);
 	} else {
 		Newcontractform.shippingrate = null;
 	}
@@ -1806,27 +1808,28 @@ const shippingcurrencyChange = (value) => {
 
 const foreignCurrencyChange = async (value) => {
 	if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 3) {
-		Newcontractform.exchangeRate = Number(1).toFixed(3);
+		Newcontractform.exchangeRate = Number(1);
 	} else {
 		// 获取最新汇率
 		try {
 			const latestRate = await exchangeRateService.getLatestExchangeRate(value);
 			if (latestRate !== null) {
-				Newcontractform.exchangeRate = Number(latestRate).toFixed(3);
+				Newcontractform.exchangeRate = Number(latestRate);
 			} else {
 				// 如果获取不到最新汇率，使用默认汇率
 				const defaultRate = exchangeRateService.getDefaultExchangeRate(value);
-				Newcontractform.exchangeRate = Number(defaultRate).toFixed(3);
+				Newcontractform.exchangeRate = Number(defaultRate);
 				ElMessage.warning(`未找到${exchangeRateService.getCurrencyName(value, state.optionss.hr_export_currency)}的最新汇率，已使用默认汇率`);
 			}
 		} catch (error) {
 			console.error('获取汇率失败:', error);
 			// 使用默认汇率
 			const defaultRate = exchangeRateService.getDefaultExchangeRate(value);
-			Newcontractform.exchangeRate = Number(defaultRate).toFixed(3);
+			Newcontractform.exchangeRate = Number(defaultRate);
 			ElMessage.warning(`获取汇率失败，已使用默认汇率`);
 		}
 	}
+	calculateTotal();
 }
 
 function formatNumber(row, key) {
@@ -1974,8 +1977,10 @@ const calculateTotal = () => {
 	Newcontractform.ProfitAmount = Number(Number((TotalvalueOfGoods * Newcontractform.exchangeRate + TotalTaxRefund) - Number(TotalPurchases) - Number(TotalOtherFees)).toFixed(2)) || 0;
 	Newcontractform.Totalgrossprofit = Totalgrossprofit || 0;
 	Newcontractform.Totalprofitmargin = Totalprofitmargin || 0;
-	//金额合计
-	Newcontractform.amountTotal = Number((TotalvalueOfGoods * Newcontractform.exchangeRate).toFixed(2));
+	//金额合计 = 货值合计 + 客户相关费用
+	const goodsValueInRMB = TotalvalueOfGoods * Newcontractform.exchangeRate;
+	const customerExpenseTotal = Newcontractform.customerExpenseTotal || 0;
+	Newcontractform.amountTotal = Number((goodsValueInRMB + customerExpenseTotal).toFixed(2));
 	//美金换算
 	Newcontractform.usdConversion = Number((Newcontractform.amountTotal / Newcontractform.exchangeRate).toFixed(3));
 }
@@ -2377,6 +2382,16 @@ const contractsTableDatahandlePageChange = async (newPage) => {
 
 function GetContractList(start, end) {
 	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
+		// 检查字典数据是否已加载，如果没有则等待
+		if (!state.optionss.hr_contract_status || state.optionss.hr_contract_status.length === 0) {
+			console.warn('字典数据未完全加载，等待加载完成...');
+			// 如果字典数据未加载，延迟执行
+			setTimeout(() => {
+				GetContractList(start, end);
+			}, 100);
+			return;
+		}
+
 		// 构建过滤参数
 		const filterParams = {
 			PageNum: start,
@@ -2419,7 +2434,22 @@ function GetContractList(start, end) {
 					if (contractsTableData.value[i].contractStatus.toString() != "") {
 						// 保存原始合同状态值用于判断
 						contractsTableData.value[i].originalContractStatus = contractsTableData.value[i].contractStatus;
-						contractsTableData.value[i].contractStatus = state.optionss.hr_contract_status.find(item => item.dictValue === contractsTableData.value[i].contractStatus.toString()).dictLabel;
+
+						// 确保 state.optionss.hr_contract_status 有值且不为空
+						if (state.optionss.hr_contract_status && state.optionss.hr_contract_status.length > 0) {
+							const contractStatusItem = state.optionss.hr_contract_status.find(item => item.dictValue === contractsTableData.value[i].contractStatus.toString());
+							if (contractStatusItem) {
+								contractsTableData.value[i].contractStatus = contractStatusItem.dictLabel;
+							} else {
+								// 如果找不到匹配项，保持原始值或设置默认值
+								console.warn(`未找到合同状态 ${contractsTableData.value[i].contractStatus} 对应的字典项`);
+								contractsTableData.value[i].contractStatus = contractsTableData.value[i].contractStatus.toString();
+							}
+						} else {
+							// 如果字典数据未加载，保持原始值
+							console.warn('合同状态字典数据未加载或为空');
+							contractsTableData.value[i].contractStatus = contractsTableData.value[i].contractStatus.toString();
+						}
 					}
 					if (contractsTableData.value[i].customerNumber > 0) {
 						contractsTableData.value[i].customerNumber = state.optionss.sql_hr_customer.find(item => item.dictValue === contractsTableData.value[i].customerNumber.toString()).dictLabel;
@@ -2634,6 +2664,7 @@ const expenseChange = (row) => {
 const CalculateOtherCustomerFees = () => {
 	Newcontractform.customerExpenseTotal = 0;
 	CustomerRelaterExoensesTableData.value.forEach(item => {
+		// 直接累加已计算的金额，不重新计算
 		Newcontractform.customerExpenseTotal += Number(item.amount) || 0;
 	});
 }
@@ -2896,8 +2927,12 @@ const SaveContract = async (formEl: FormInstance | undefined) => {
 			addContractsRequest.PurchaseTotal = Newcontractform.TotalPurchases;
 			addContractsRequest.TaxRefundTotal = Newcontractform.TotalTaxRefund;
 			addContractsRequest.CustomerExpenseTotal = Newcontractform.customerExpenseTotal;
-			addContractsRequest.AmountTotal = Newcontractform.amountTotal;
-			addContractsRequest.UsdConversion = Newcontractform.usdConversion;
+			// 重新计算金额合计：货值合计 + 客户相关费用
+			const goodsValueInRMB = Newcontractform.TotalValueOfGoods * Newcontractform.exchangeRate;
+			const customerExpenseTotal = Newcontractform.customerExpenseTotal || 0;
+			addContractsRequest.AmountTotal = Number((goodsValueInRMB + customerExpenseTotal).toFixed(2));
+			// 重新计算美金换算：金额合计 / 汇率
+			addContractsRequest.UsdConversion = Number((addContractsRequest.AmountTotal / Newcontractform.exchangeRate).toFixed(3));
 			addContractsRequest.Totalgrossprofit = Newcontractform.Totalgrossprofit;
 			addContractsRequest.totalOtherFees = Newcontractform.TotalOtherFees;
 			addContractsRequest.ProfitAmount = Newcontractform.ProfitAmount;
@@ -3141,7 +3176,9 @@ const openContractDialog = () => {
 	const currentDate = new Date();
 	const formattedDate = currentDate.toISOString().split('T')[0];
 	Newcontractform.contractDate = formattedDate;
-	Newcontractform.contractStatus = state.optionss['hr_contract_status'].filter(item => item.dictValue == 1).map(item => item.dictValue).values().next().value;
+	// 设置合同状态为默认值（字典值为1的状态）
+	const defaultContractStatus = state.optionss['hr_contract_status']?.find(item => item.dictValue == 1);
+	Newcontractform.contractStatus = defaultContractStatus ? defaultContractStatus.dictValue : null;
 	Newcontractform.hasDeposit = false;
 	Newcontractform.salesperson = state.optionss['sql_hr_sale'].filter(item => item.dictValue == userId.toString()).map(item => item.dictValue).values().next().value;
 	GetContractNumber();
@@ -3466,7 +3503,9 @@ const checkContractsDetails = async (row) => {
 				}
 			});
 			isDisabled.value = true;
+			console.log('准备打开合同详情对话框')
 			contractDialog.value = true;
+			console.log('合同详情对话框已设置为打开状态:', contractDialog.value)
 		}).catch(error => {
 			console.error(error);
 			reject(error);
@@ -3638,8 +3677,12 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 		EditContractsRequest.PurchaseTotal = Newcontractform.TotalPurchases;
 		EditContractsRequest.TaxRefundTotal = Newcontractform.TotalTaxRefund;
 		EditContractsRequest.CustomerExpenseTotal = Newcontractform.customerExpenseTotal;
-		EditContractsRequest.AmountTotal = Newcontractform.amountTotal;
-		EditContractsRequest.UsdConversion = Newcontractform.usdConversion;
+		// 重新计算金额合计：货值合计 + 客户相关费用
+		const goodsValueInRMB = Newcontractform.TotalValueOfGoods * Newcontractform.exchangeRate;
+		const customerExpenseTotal = Newcontractform.customerExpenseTotal || 0;
+		EditContractsRequest.AmountTotal = Number((goodsValueInRMB + customerExpenseTotal).toFixed(2));
+		// 重新计算美金换算：金额合计 / 汇率
+		EditContractsRequest.UsdConversion = Number((EditContractsRequest.AmountTotal / Newcontractform.exchangeRate).toFixed(3));
 		EditContractsRequest.Totalgrossprofit = Newcontractform.Totalgrossprofit;
 		EditContractsRequest.totalOtherFees = Newcontractform.TotalOtherFees;
 		EditContractsRequest.ProfitAmount = Newcontractform.ProfitAmount;
@@ -4156,8 +4199,12 @@ const SaveContractDraft = async (formEl: FormInstance | undefined) => {
 		addContractsRequest.PurchaseTotal = Newcontractform.TotalPurchases;
 		addContractsRequest.TaxRefundTotal = Newcontractform.TotalTaxRefund;
 		addContractsRequest.CustomerExpenseTotal = Newcontractform.customerExpenseTotal;
-		addContractsRequest.AmountTotal = Newcontractform.amountTotal;
-		addContractsRequest.UsdConversion = Newcontractform.usdConversion;
+		// 重新计算金额合计：货值合计 + 客户相关费用
+		const goodsValueInRMB = Newcontractform.TotalValueOfGoods * Newcontractform.exchangeRate;
+		const customerExpenseTotal = Newcontractform.customerExpenseTotal || 0;
+		addContractsRequest.AmountTotal = Number((goodsValueInRMB + customerExpenseTotal).toFixed(2));
+		// 重新计算美金换算：金额合计 / 汇率
+		addContractsRequest.UsdConversion = Number((addContractsRequest.AmountTotal / Newcontractform.exchangeRate).toFixed(3));
 		addContractsRequest.Totalgrossprofit = Newcontractform.Totalgrossprofit;
 		addContractsRequest.totalOtherFees = Newcontractform.TotalOtherFees;
 		addContractsRequest.ProfitAmount = Newcontractform.ProfitAmount;
@@ -4418,8 +4465,9 @@ const GetCustomerContactPerson = (customerId) => {
 }
 
 // 在现有的import语句附近添加
-// 在script setup部分添加route定义
+// 在script setup部分添加route和router定义
 const route = useRoute()
+const router = useRouter()
 
 // 添加缺失的变量定义
 const quotationNum = ref('')
@@ -4440,29 +4488,75 @@ const salespersonSelectOptions = ref([])
 const contractStatusSelect = ref('')
 const contractStatusSelectOptions = ref([])
 
+// 添加防抖标志
+let isAutoLoading = false
+
 // 添加自动加载合同详情的函数
 const autoLoadContractDetail = () => {
+	// 防止重复执行
+	if (isAutoLoading) {
+		console.log('自动加载正在进行中，跳过重复执行')
+		return
+	}
+
 	// 检查URL参数
 	const contractId = route.query.contractId
 	const contractNumber = route.query.contractNumber
 	const viewDetail = route.query.viewDetail
+
+	console.log('检查路由参数:', { contractId, contractNumber, viewDetail })
+
+	// 如果dialog已经打开，则不重复打开
+	if (contractDialog.value) {
+		console.log('Dialog已经打开，跳过自动加载')
+		return
+	}
+
+	// 如果路由参数已经被清空，则不执行自动加载
+	if (!contractId && !contractNumber && !viewDetail) {
+		console.log('路由参数已清空，跳过自动加载')
+		return
+	}
+
 	if (contractId && viewDetail === 'true') {
-		console.log('自动加载合同详情, ID:', contractId, '合同编号:', contractNumber)
+		isAutoLoading = true
+		console.log('开始自动加载合同详情, ID:', contractId, '合同编号:', contractNumber)
+
+		// 检查字典数据是否已加载
+		if (!state.optionss.hr_contract_status || state.optionss.hr_contract_status.length === 0) {
+			console.log('字典数据未加载完成，等待加载...')
+			// 延迟执行，等待字典数据加载完成
+			setTimeout(() => {
+				isAutoLoading = false // 重置标志
+				autoLoadContractDetail()
+			}, 500)
+			return
+		}
 
 		// 查找匹配的合同
 		GetContractList(1, 100).then(() => {
+			console.log('合同列表加载完成，开始查找匹配的合同')
 			const contract = contractsTableData.value.find(item =>
 				item.id.toString() === contractId.toString() ||
 				(contractNumber && item.contractNumber === contractNumber)
 			)
 
 			if (contract) {
+				console.log('找到匹配的合同:', contract)
 				// 调用查看详情的函数
 				checkContractsDetails(contract)
 			} else {
 				console.error('未找到匹配的合同:', contractId, contractNumber)
+				console.log('当前合同列表:', contractsTableData.value)
 			}
+		}).catch(error => {
+			console.error('获取合同列表失败:', error)
+		}).finally(() => {
+			// 无论成功还是失败，都重置标志
+			isAutoLoading = false
 		})
+	} else {
+		console.log('路由参数不满足自动加载条件')
 	}
 }
 
@@ -4505,6 +4599,52 @@ onUnmounted(() => {
 		clearTimeout(saveFormDataTimer.value)
 	}
 	saveFormData()
+})
+
+// 记录dialog状态，用于页面切换时的状态管理
+let dialogStateOnDeactivate = false
+
+// 页面失活时记录dialog状态
+onDeactivated(() => {
+	console.log('销售合同页面失活，记录dialog状态')
+	dialogStateOnDeactivate = contractDialog.value
+	console.log('Dialog状态已记录:', dialogStateOnDeactivate)
+
+	// 如果dialog打开，保存当前状态
+	if (contractDialog.value) {
+		saveFormData()
+	}
+})
+
+// 页面激活时根据之前的状态决定是否恢复dialog
+onActivated(() => {
+	console.log('销售合同页面激活，检查dialog状态')
+	console.log('之前记录的dialog状态:', dialogStateOnDeactivate)
+
+	// 如果之前dialog是关闭状态，则不需要恢复
+	if (!dialogStateOnDeactivate) {
+		console.log('之前dialog是关闭状态，不需要恢复')
+		// 确保dialog是关闭状态
+		contractDialog.value = false
+		// 使用 history.replaceState 清空路由参数，避免触发页面切换
+		history.replaceState(null, '', route.path)
+		return
+	}
+
+	// 如果之前dialog是打开状态，检查路由参数
+	const contractId = route.query.contractId
+	const viewDetail = route.query.viewDetail
+
+	if (contractId && viewDetail === 'true') {
+		console.log('检测到有效路由参数，恢复dialog')
+		// 恢复dialog状态
+		contractDialog.value = true
+	} else {
+		console.log('没有有效路由参数，关闭dialog')
+		contractDialog.value = false
+		// 使用 history.replaceState 清空路由参数，避免触发页面切换
+		history.replaceState(null, '', route.path)
+	}
 })
 
 // 删除销售合同

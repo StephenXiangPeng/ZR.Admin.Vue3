@@ -2043,7 +2043,12 @@
     <el-dialog v-model="overdueDeliveryContractDialogVisible" title="逾期交货合同" width="600px"
       :close-on-click-modal="false">
       <el-table :data="overdueDeliveryContractData">
-        <el-table-column prop="contractNumber" label="合同号" width="150"></el-table-column>
+        <el-table-column prop="id" label="合同id" width="100" v-if="false"></el-table-column>
+        <el-table-column prop="contractNumber" label="合同号" width="150">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="handleContractNumberClick(row)">{{ row.contractNumber }}</el-button>
+          </template>
+        </el-table-column>
         <el-table-column prop="originalDeliveryDate" label="原交货日期" width="150"></el-table-column>
         <el-table-column prop="overdueDays" label="已超期天数" width="150"></el-table-column>
         <el-table-column fixed="right" label="操作" style="width: 25%;">
@@ -5336,6 +5341,19 @@ const handleModifyDeliveryDate = (row) => {
     }
   }).catch(() => {
     ElMessage.info('已取消修改')
+  })
+}
+
+// 处理合同号点击事件
+const handleContractNumberClick = (row) => {
+  // 跳转到销售合同页面，传递合同ID参数
+  router.push({
+    path: '/sale/sale/salecontract',
+    query: {
+      contractId: row.id,
+      contractNumber: row.contractNumber,
+      viewDetail: 'true'
+    }
   })
 }
 

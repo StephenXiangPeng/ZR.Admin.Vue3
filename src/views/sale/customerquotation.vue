@@ -472,7 +472,7 @@
 						<el-table-column prop="unitofmeasurement" label="计量单位" width="100">
 							<template #default="scope">
 								<el-select v-model="scope.row.unitofmeasurement" filterable placeholder="单位"
-									style="width: 100%;" :disabled="scope.row.isImported">
+									style="width: 100%;" :disabled="scope.row.isImported || isDisabled">
 									<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
 								</el-select>
@@ -1973,18 +1973,28 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 				ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
 			}
 
-			// 上传所有新选择的图片
-			ElMessage.info('正在上传产品图片...');
-			for (let i = 0; i < productData.value.length; i++) {
-				const product = productData.value[i];
-				// 如果有新选择的图片文件，则上传
-				if (selectedImages.value[i]) {
-					const imageUrl = await uploadImageToServer(selectedImages.value[i]);
-					if (imageUrl) {
-						product.productPhotoPath = imageUrl;
-					} else {
-						ElMessage.error(`产品 ${i + 1} 图片上传失败`);
-						return;
+			// 检查产品列表是否为空
+			if (productData.value.length === 0) {
+				ElMessage.error('请至少添加一个产品信息才能提交报价单');
+				return;
+			}
+
+			// 检查是否有图片需要上传
+			const hasImagesToUpload = Object.values(selectedImages.value).some(img => img);
+			if (hasImagesToUpload) {
+				// 上传所有新选择的图片
+				ElMessage.info('正在上传产品图片...');
+				for (let i = 0; i < productData.value.length; i++) {
+					const product = productData.value[i];
+					// 如果有新选择的图片文件，则上传
+					if (selectedImages.value[i]) {
+						const imageUrl = await uploadImageToServer(selectedImages.value[i]);
+						if (imageUrl) {
+							product.productPhotoPath = imageUrl;
+						} else {
+							ElMessage.error(`产品 ${i + 1} 图片上传失败`);
+							return;
+						}
 					}
 				}
 			}
@@ -2162,18 +2172,22 @@ const SaveDraft = async () => {
 		ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
 	}
 
-	// 上传所有新选择的图片
-	ElMessage.info('正在上传产品图片...');
-	for (let i = 0; i < productData.value.length; i++) {
-		const product = productData.value[i];
-		// 如果有新选择的图片文件，则上传
-		if (selectedImages.value[i]) {
-			const imageUrl = await uploadImageToServer(selectedImages.value[i]);
-			if (imageUrl) {
-				product.productPhotoPath = imageUrl;
-			} else {
-				ElMessage.error(`产品 ${i + 1} 图片上传失败`);
-				return;
+	// 检查是否有图片需要上传
+	const hasImagesToUpload = Object.values(selectedImages.value).some(img => img);
+	if (hasImagesToUpload) {
+		// 上传所有新选择的图片
+		ElMessage.info('正在上传产品图片...');
+		for (let i = 0; i < productData.value.length; i++) {
+			const product = productData.value[i];
+			// 如果有新选择的图片文件，则上传
+			if (selectedImages.value[i]) {
+				const imageUrl = await uploadImageToServer(selectedImages.value[i]);
+				if (imageUrl) {
+					product.productPhotoPath = imageUrl;
+				} else {
+					ElMessage.error(`产品 ${i + 1} 图片上传失败`);
+					return;
+				}
 			}
 		}
 	}
@@ -2568,18 +2582,28 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 				ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
 			}
 
-			// 上传所有新选择的图片
-			ElMessage.info('正在上传产品图片...');
-			for (let i = 0; i < productData.value.length; i++) {
-				const product = productData.value[i];
-				// 如果有新选择的图片文件，则上传
-				if (selectedImages.value[i]) {
-					const imageUrl = await uploadImageToServer(selectedImages.value[i]);
-					if (imageUrl) {
-						product.productPhotoPath = imageUrl;
-					} else {
-						ElMessage.error(`产品 ${i + 1} 图片上传失败`);
-						return;
+			// 检查产品列表是否为空
+			if (productData.value.length === 0) {
+				ElMessage.error('请至少添加一个产品信息才能提交报价单');
+				return;
+			}
+
+			// 检查是否有图片需要上传
+			const hasImagesToUpload = Object.values(selectedImages.value).some(img => img);
+			if (hasImagesToUpload) {
+				// 上传所有新选择的图片
+				ElMessage.info('正在上传产品图片...');
+				for (let i = 0; i < productData.value.length; i++) {
+					const product = productData.value[i];
+					// 如果有新选择的图片文件，则上传
+					if (selectedImages.value[i]) {
+						const imageUrl = await uploadImageToServer(selectedImages.value[i]);
+						if (imageUrl) {
+							product.productPhotoPath = imageUrl;
+						} else {
+							ElMessage.error(`产品 ${i + 1} 图片上传失败`);
+							return;
+						}
 					}
 				}
 			}
@@ -2692,7 +2716,7 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 						message: "报价单提交成功",
 						type: 'success'
 					})
-					isDisabled.value = false;
+					isDisabled.value = true;
 					showEditSaveBtn.value = false;
 					showEditBtn.value = false;
 					isReviewBtnShow.value = false;
@@ -2749,6 +2773,13 @@ const quotationDialogHandClose = () => {
 	showEditBtn.value = false;
 	showEditSaveBtn.value = false;
 	isDisabled.value = false;
+	isViewDetails.value = false; // 重置查看详情状态
+
+	// 重置版本相关字段
+	showCreateRevisionBtn.value = false;
+	for (let key in quotationDialogform) {
+		quotationDialogform[key] = null;
+	}
 }
 //提交审核报价单
 const SubmitReview = (row) => {
@@ -3106,9 +3137,6 @@ const handleImageSelect = async (event, index) => {
 		ElMessage.error('请选择图片文件');
 		return;
 	}
-
-	// 显示加载状态
-	ElMessage.info('正在上传图片...');
 
 	// 上传图片到服务器
 	const imageUrl = await uploadImageToServer(file);
