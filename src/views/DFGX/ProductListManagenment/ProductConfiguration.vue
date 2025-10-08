@@ -94,7 +94,11 @@
           />
         </template>
       </el-table-column>
-      <el-table-column label="备注" align="center" prop="remark" :show-overflow-tooltip="true" width="500" />
+      <el-table-column label="备注" align="center" prop="remark" :show-overflow-tooltip="true" width="500">
+        <template #default="scope">
+          <span>{{ scope.row.remark && scope.row.remark.trim() ? scope.row.remark : '无' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="创建时间" align="center" prop="createTime" width="180">
         <template #default="scope">
           <span>{{ scope.row.createTime }}</span>
@@ -308,7 +312,7 @@ function reset() {
     optionName: null,
     optionValue: null,
     status: '0',
-    remark: null
+    remark: ''
   }
   proxy.resetForm('lensOptionRef')
 }
@@ -350,14 +354,15 @@ function handleUpdate(row) {
   }
   getLensOption(id).then(response => {
     console.log('获取到的数据:', response.data) // 调试信息
-    // 确保数据格式正确
+    // 确保数据格式正确，处理备注字段
+    const remark = response.data.remark || response.data.Remarks || ''
     form.value = {
       id: response.data.id || response.data.ID,
       optionType: response.data.optionType || response.data.OptionType,
       optionName: response.data.optionName || response.data.OptionName,
       optionValue: response.data.optionValue || response.data.OptionValue,
       status: response.data.status || response.data.Status || '0',
-      remark: response.data.remark || response.data.Remarks || ''
+      remark: remark === '无' ? '' : remark // 如果备注是"无"，则显示为空，让用户可以重新输入
     }
     console.log('格式化后的表单数据:', form.value) // 调试信息
     open.value = true
@@ -374,6 +379,9 @@ function submitForm() {
     if (valid) {
       submitLoading.value = true
       
+      // 处理备注字段：如果为空或null，设置为"无"
+      const remark = form.value.remark && form.value.remark.trim() ? form.value.remark.trim() : '无'
+      
       if (form.value.id != null) {
         // 编辑时构建符合后端接口的数据格式
         const requestData = {
@@ -382,7 +390,7 @@ function submitForm() {
           OptionName: form.value.optionName,
           OptionValue: form.value.optionValue,
           Status: form.value.status,
-          Remarks: form.value.remark
+          Remarks: remark
         }
         console.log('修改请求数据:', requestData) // 调试信息
         updateLensOption(requestData).then(response => {
@@ -403,7 +411,7 @@ function submitForm() {
           OptionName: form.value.optionName,
           OptionValue: form.value.optionValue,
           Status: form.value.status,
-          Remarks: form.value.remark
+          Remarks: remark
         }
         console.log('新增请求数据:', requestData) // 调试信息
         addLensOption(requestData).then(response => {
