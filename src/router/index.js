@@ -95,6 +95,20 @@ export const constantRoutes = [
         meta: { title: '个人中心', icon: 'user', titleKey: 'menu.personalCenter' }
       }
     ]
+  },
+  {
+    path: '/procurement',
+    component: Layout,
+    hidden: true,
+    redirect: 'noredirect',
+    children: [
+      {
+        path: 'materialAdd',
+        component: () => import('@/views/ProcurementAndInventoryManagement/materialAdd.vue'),
+        name: 'MaterialAdd',
+        meta: { title: '新增物料', icon: 'materialGroup', titleKey: 'menu.materialAdd' }
+      }
+    ]
   }
 ]
 
