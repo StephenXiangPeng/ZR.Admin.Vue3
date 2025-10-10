@@ -375,6 +375,16 @@
             <el-table-column prop="salesperson" label="销售员" width="150" v-if="false"></el-table-column>
           </el-table>
         </el-tab-pane>
+        <el-tab-pane>
+          <template #label>
+            <span class="custom-tabs-label">
+              <el-icon>
+                <document />
+              </el-icon>
+              <span>审核驳回单据</span>
+            </span>
+          </template>
+        </el-tab-pane>
       </el-tabs>
     </el-dialog>
     <el-dialog v-model="contractDialog" title="销售合同审批" :close-on-click-modal=false style="width: 70%;">
@@ -4634,8 +4644,8 @@ const getPendingCount = () => {
     url: 'ApprovalFlow/GetApprovalRecord/GetApprovalRecordCount',
     method: 'GET'
   }).then(response => {
-    if (response.code == "200") {
-      pendingCount.value += response.data.length;
+    if (response.code == 200) {
+      pendingCount.value = response.data.length;
       if (response.data.length > 0) {
         AgencyProcesstableData.value = response.data;
         AgencyProcesstableData.value.forEach(item => {

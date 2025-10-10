@@ -174,7 +174,7 @@
 							<el-col :span="6">
 								<el-form-item label="价格条款">
 									<el-select v-model="Addcontractofpurchaseform.priceTerms" style="width: 300px"
-										:disabled="isFormDisabled" size="default">
+										:disabled="isFormDisabled" size="default" @change="handlePriceTermsChange">
 										<el-option v-for="dict in optionss.hr_purchase_pricing_term"
 											:key="dict.dictCode" :label="dict.dictLabel"
 											:value="dict.dictValue"></el-option>
@@ -194,7 +194,8 @@
 							<el-col :span="6">
 								<el-form-item label="销售合同">
 									<el-select v-model="Addcontractofpurchaseform.salesContract" placeholder="请选择销售合同"
-										style="width: 300px" :disabled="isFormDisabled" size="default">
+										style="width: 300px" :disabled="isFormDisabled || isSalesContractDisabled"
+										size="default">
 										<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -215,7 +216,7 @@
 								<el-form-item label="采购员">
 									<el-select disabled v-model="Addcontractofpurchaseform.purchaser"
 										placeholder="请选择采购员" style="width: 300px" size="default">
-										<el-option v-for="dict in optionss.sql_hr_purchase" :key="dict.dictCode"
+										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
 								</el-form-item>
@@ -317,7 +318,11 @@
 						</el-table-column>
 						<el-table-column prop="packaging" label="包装方式" width="90"></el-table-column>
 						<el-table-column prop="specialRequirements" label="特殊要求" width="90"></el-table-column>
-						<el-table-column prop="invoice" label="是否开票" width="90"></el-table-column>
+						<el-table-column prop="invoice" label="是否开票" width="90">
+							<template #default="scope">
+								<span>{{ scope.row.invoice === 1 || scope.row.invoice === '是' ? '是' : '否' }}</span>
+							</template>
+						</el-table-column>
 						<el-table-column prop="innerBoxQuantity" label="内盒装量" width="90"></el-table-column>
 						<el-table-column prop="outerBoxQuantity" label="外箱装量" width="90"></el-table-column>
 
@@ -625,9 +630,11 @@ const GeneratePurchaseContract = (row) => {
 
 			if (response.code === 200 && response.data) {
 				// 绑定基本信息
-				Addcontractofpurchaseform.value.purchaser = state.optionss.sql_hr_purchase.find(item => item.dictValue === userId.toString())?.dictValue;
+				Addcontractofpurchaseform.value.purchaser = state.optionss.sql_all_user.find(item => item.dictValue === userId.toString())?.dictValue;
 				Addcontractofpurchaseform.value.contractStatus = "1";
 				Addcontractofpurchaseform.value.salesContract = state.optionss.sql_sale_contracts.find(item => item.dictValue === response.data.contract.id.toString())?.dictValue;
+				// 销售合同绑定成功后，禁用销售合同选择框
+				isSalesContractDisabled.value = true;
 				Addcontractofpurchaseform.value.customerContract = response.data.contract.customerContract;
 				Addcontractofpurchaseform.value.customerid = response.data.contract.customerId;
 				Addcontractofpurchaseform.value.customerAbbreviation = response.data.contract.customerAbbreviation;
@@ -637,7 +644,10 @@ const GeneratePurchaseContract = (row) => {
 				Addcontractofpurchaseform.value.deposit = "0";
 				Addcontractofpurchaseform.value.hasDeposit = false;
 				Addcontractofpurchaseform.value.salesperson = response.data.contract.salesperson.toString();
-				Addcontractofpurchaseform.value.priceTerms = response.data.contract.priceTerms.toString();
+				// 判断价格条款是否在可选范围内
+				const priceTermsValue = response.data.contract.priceTerms.toString();
+				const isValidPriceTerm = state.optionss.hr_purchase_pricing_term.some(item => item.dictValue === priceTermsValue);
+				Addcontractofpurchaseform.value.priceTerms = isValidPriceTerm ? priceTermsValue : '';
 				Addcontractofpurchaseform.value.deliveryLocation = response.data.contract.deliveryLocation || '';
 
 				// 绑定商品信息
@@ -666,6 +676,13 @@ const GeneratePurchaseContract = (row) => {
 						remark: product.remark,
 						supplier: product.supplierId || null // 添加供应商信息
 					}));
+
+					// 如果价格条款是含税含运费（dictValue==7），将所有产品的是否开票设置为1
+					if (Addcontractofpurchaseform.value.priceTerms === '7') {
+						productinfotableData.value.forEach(product => {
+							product.invoice = 1; // 设置为数字1，表示开票
+						});
+					}
 
 					// 为每个产品预加载供应商信息
 					for (const product of productinfotableData.value) {
@@ -1018,6 +1035,7 @@ const showSubmitReviewBtn = ref(false);  // 提交审核按钮
 const isFormDisabled = ref(true);        // 表单是否禁用
 const showApproveRejectBtn = ref(false);      // 驳回按钮
 const showApprovePassBtn = ref(false);        // 审核按钮
+const isSalesContractDisabled = ref(false);   // 销售合同是否禁用
 
 /*动态下拉框start*/
 const proxy = getCurrentInstance().proxy
@@ -1051,7 +1069,8 @@ const state = reactive({
 		sql_product: [],
 		hr_purchase_pricing_term: [],
 		hr_purchase_payment_days: [],
-		hr_factory_payment: []
+		hr_factory_payment: [],
+		sql_all_user: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -1060,7 +1079,7 @@ var dictParams = [{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' }
 { dictType: 'hr_transportation_method' }, { dictType: 'sys_yes_no' }, { dictType: 'hr_calculate_unit' }, { dictType: 'hr_contract_status' },
 { dictType: 'hr_customer_level' }, { dictType: 'hr_signing_place' }, { dictType: 'hr_quotation_basis' }, { dictType: 'hr_outerbox_unit' },
 { dictType: 'hr_supplier_level' }, { dictType: 'hr_business_scope' }, { dictType: 'hr_china_provinces' }, { dictType: 'hr_china_city' }, { dictType: 'sql_sale_contracts' },
-{ dictType: 'sql_supplier_info' }, { dictType: 'sql_hr_purchase' }, { dictType: 'hr_packing' }, { dictType: 'sql_product' }, { dictType: 'hr_purchase_pricing_term' }, { dictType: 'hr_purchase_payment_days' }, { dictType: 'hr_factory_payment' }]
+{ dictType: 'sql_supplier_info' }, { dictType: 'sql_hr_purchase' }, { dictType: 'hr_packing' }, { dictType: 'sql_product' }, { dictType: 'hr_purchase_pricing_term' }, { dictType: 'hr_purchase_payment_days' }, { dictType: 'hr_factory_payment' }, { dictType: 'sql_all_user' }]
 
 
 async function fetchDataAndExecute() {
@@ -1168,6 +1187,20 @@ const handleProductDepositChange = (row) => {
 const handleDepositAmountChange = (row) => {
 	// 确保输入的是数字
 	row.depositAmount = parseFloat(row.depositAmount) || 0;
+}
+
+// 处理价格条款变化
+const handlePriceTermsChange = (value) => {
+	// 如果选择的是含税含运费（dictValue==7），将产品资料中的是否开票设置为1，否则设置为0
+	if (productinfotableData.value && productinfotableData.value.length > 0) {
+		productinfotableData.value.forEach(product => {
+			if (value === '7') {
+				product.invoice = 1; // 含税含运费，设置为开票（数字1）
+			} else {
+				product.invoice = 0; // 其他情况，设置为不开票（数字0）
+			}
+		});
+	}
 }
 
 const contractofpurchaseRequest = reactive({
@@ -1425,7 +1458,7 @@ const saveEditContract = () => {
 			PurchaseCurrency: state.optionss.hr_export_currency.find(item => item.dictLabel === Addcontractofpurchaseform.value.purchaseCurrency.toString())?.dictValue,
 			Deposit: parseFloat(Addcontractofpurchaseform.value.deposit || '0'),
 			Salesperson: state.optionss.sql_hr_sale.find(item => item.dictLabel === Addcontractofpurchaseform.value.salesperson.toString())?.dictValue,
-			Purchaser: state.optionss.sql_hr_purchase.find(item => item.dictLabel === Addcontractofpurchaseform.value.purchaser.toString())?.dictValue,
+			Purchaser: state.optionss.sql_all_user.find(item => item.dictLabel === Addcontractofpurchaseform.value.purchaser.toString())?.dictValue,
 			PaymentDays: parseInt(Addcontractofpurchaseform.value.paymentDays || '0'),
 			PriceTerms: Addcontractofpurchaseform.value.priceTerms,
 			TotalGoodsValue: parseFloat(Totalvalueofgoodsform.value.totalValue || '0'),
@@ -1844,7 +1877,7 @@ function GetpurchaseContractList(start, end) {
 					element.salesperson = optionss.value.sql_hr_sale.find(item =>
 						item.dictValue == element.salesperson.toString())?.dictLabel || '未知销售员';
 
-					element.purchaser = optionss.value.sql_hr_purchase.find(item =>
+					element.purchaser = optionss.value.sql_all_user.find(item =>
 						item.dictValue == element.purchaser.toString())?.dictLabel || '未知采购员';
 
 					// 格式化日期字段
@@ -1938,7 +1971,7 @@ const CheckDetails = async (row) => {
 	}
 	isFormDisabled.value = true;
 	currentContractId.value = row.id;  // 存储当前合同ID
-	CheckUser = state.optionss.sql_hr_purchase.find(p => p.dictLabel === row.purchaser.toString())?.dictValue;
+	CheckUser = state.optionss.sql_all_user.find(p => p.dictLabel === row.purchaser.toString())?.dictValue;
 	// 重置所有按钮状态
 	isSaveBtnShow.value = false;
 	// 根据合同状态设置按钮显示
@@ -2110,6 +2143,8 @@ const clearAll = () => {
 	Totalvalueofgoodsform.value.unpaidAmount = '';
 	productinfotableData.value = [];
 	CustomerRelaterExoensesTableData.value = [];
+	// 重置销售合同禁用状态
+	isSalesContractDisabled.value = false;
 }
 // 存储审批步骤数据
 const approvalSteps = ref([])

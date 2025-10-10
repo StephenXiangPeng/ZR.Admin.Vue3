@@ -826,10 +826,11 @@
 			<el-input v-model="searchProductNameText" placeholder="请输入产品关键字进行搜索" style="margin-bottom: 10px;"
 				@input="searchProductNameTextChange" />
 			<el-table :data="productDatatwo" style="width: 100%; table-layout: fixed;"
-				:default-sort="{ prop: 'productCode', order: 'descending' }" @row-dblclick="handleRowDblClick" stripe
+				:default-sort="{ prop: 'productCode', order: 'descending' }" @sort-change="handleSortChange"
+				@row-dblclick="handleRowDblClick" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
-				<el-table-column prop="productId" label="产品ID" width="120" v-if="false" />
+				<el-table-column prop="productId" sortable="custom" label="产品ID" width="120" v-if="false" />
 				<el-table-column prop="productCode" label="产品编号" sortable width="120" />
 				<el-table-column prop="customerGoodsNumber" label="客户货号" width="120" />
 				<el-table-column prop="chineseProductName" label="中文品名" width="150" />
@@ -1501,38 +1502,118 @@ const SearchProducthandlePageChange = async (newPage) => {
 	await GetProductInfoList(newPage, SearchProductpageSize.value);
 };
 GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
+
+// ✅ 维护一个排序状态
+const sortState = ref({
+	field: 'productcode',  // 与后端字段名一致（注意大小写）
+	order: 'desc'
+});
+
+
+// ✅ 前端->后端 字段名映射（表格 prop -> 后端真实字段）
+const sortFieldMap = {
+	productCode: 'ProductCode',
+	chineseProductName: 'ChineseProductName',
+	englishProductName: 'EnglishProductName',
+	chineseSpecification: 'ChineseSpecification',
+	englishSpecification: 'EnglishSpecification',
+	unitOfMeasurement: 'UnitOfMeasurement',
+	// unitPrice: 'UnitPrice' // 暂不支持后端排序，先不映射
+};
+
+// ✅ Element Plus 的 ascending/descending -> 后端 asc/desc
+function normalizeOrder(order) {
+	if (order === 'ascending') return 'asc';
+	if (order === 'descending') return 'desc';
+	return 'desc';
+}
+
+// ✅ 远程排序回调
+function handleSortChange({ prop, order }) {
+	// 没有排序时（order 为 null），回退默认
+	const field = sortFieldMap[prop] || 'Create_time';
+	const dir = order ? normalizeOrder(order) : 'desc';
+	sortState.value = { field, order: dir };
+	// 重置页码为 1（常见做法）
+	SearchProductCurrentPage.value = 1;
+	GetProductInfoList(1, pageSize.value); // 你现有的 pageSize 变量
+}
 //获取产品信息列表
 function GetProductInfoList(start, end) {
-	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
+	return new Promise((resolve, reject) => {
 		request({
 			url: 'ProductInformation/GetAllProductList/AllProduct',
 			method: 'GET',
 			params: {
-				PageNum: start,
+				PageNum: start,            // 你现有的分页参数（如果后端是 PageIndex，请保持一致）
 				PageSize: end,
-				chineseProductName: searchProductNameText.value
+				chineseProductName: searchProductNameText.value,
+				// ✅ 传后端排序参数
+				sortField: sortState.value.field,
+				sortOrder: sortState.value.order
 			}
 		}).then(response => {
-			if (response.data.data.length > 0) {
-				productDatatwo.value = response.data.data;
-				SearchProducttotalItems.value = response.data.totalNum;
-				SearchProductCurrentPage.value = response.data.pageIndex;
+			const res = response.data;
+			if (res.data && res.data.length > 0) {
+				productDatatwo.value = res.data;
+				SearchProducttotalItems.value = res.totalNum;
+				SearchProductCurrentPage.value = res.pageIndex;
+
 				productDatatwo.value.forEach(item => {
-					item.unitOfMeasurement = state.optionss['hr_calculate_unit'].filter(hr_calculate_unit => hr_calculate_unit.dictValue == item.unitOfMeasurement).map(item => item.dictLabel).values().next().value;
+					item.unitOfMeasurement = state.optionss['hr_calculate_unit']
+						.filter(u => u.dictValue == item.unitOfMeasurement)
+						.map(x => x.dictLabel)
+						.values()
+						.next().value;
 				});
-				resolve(response.data.data);
+				resolve(res.data);
 			} else {
-				if (response.data.totalNum > 0 && start > 1) {
-					GetProductInfoList(start - 1, end);
+				if (res.totalNum > 0 && start > 1) {
+					// ✅ 递归要 return 或手动 resolve
+					return GetProductInfoList(start - 1, end).then(resolve).catch(reject);
 				} else {
 					productDatatwo.value = [];
+					resolve([]); // 明确 resolve 空数组，避免 pending
 				}
 			}
-		}).catch(error => {
-			console.error(error);
+		}).catch(err => {
+			console.error(err);
+			reject(err);
 		});
 	});
 }
+
+// function GetProductInfoList(start, end) {
+// 	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
+// 		request({
+// 			url: 'ProductInformation/GetAllProductList/AllProduct',
+// 			method: 'GET',
+// 			params: {
+// 				PageNum: start,
+// 				PageSize: end,
+// 				chineseProductName: searchProductNameText.value
+// 			}
+// 		}).then(response => {
+// 			if (response.data.data.length > 0) {
+// 				productDatatwo.value = response.data.data;
+// 				SearchProducttotalItems.value = response.data.totalNum;
+// 				SearchProductCurrentPage.value = response.data.pageIndex;
+// 				productDatatwo.value.forEach(item => {
+// 					item.unitOfMeasurement = state.optionss['hr_calculate_unit'].filter(hr_calculate_unit => hr_calculate_unit.dictValue == item.unitOfMeasurement).map(item => item.dictLabel).values().next().value;
+// 				});
+// 				resolve(response.data.data);
+// 			} else {
+// 				if (response.data.totalNum > 0 && start > 1) {
+// 					GetProductInfoList(start - 1, end);
+// 				} else {
+// 					productDatatwo.value = [];
+// 				}
+// 			}
+// 		}).catch(error => {
+// 			console.error(error);
+// 		});
+// 	});
+// }
 
 const searchProductNameTextChange = () => {
 	GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
