@@ -135,7 +135,7 @@
 				</el-table-column>
 				<el-table-column prop="exchangeRate" label="汇率" width="80" v-if="false"></el-table-column>
 				<el-table-column prop="settlementMethod" label="结汇方式" width="150" v-if="false"></el-table-column>
-				<el-table-column prop="priceTerms" label="价格条款" width="90"></el-table-column>
+				<el-table-column prop="priceTerms" label="价格条款" width="110"></el-table-column>
 				<el-table-column prop="shippingPort" label="出运口岸" width="120" v-if="false"></el-table-column>
 				<el-table-column prop="destinationPort" label="目的地/港" width="160"></el-table-column>
 				<el-table-column prop="tradeCountry" label="贸易国别" width="90"></el-table-column>
@@ -622,7 +622,7 @@
 									x.dictValue == scope.row.unitofmeasurement)?.dictLabel || '-'}}
 							</template>
 						</el-table-column>
-						<el-table-column prop="purchasecurrency" label="采购币种" width="110">
+						<el-table-column prop="purchasecurrency" label="采购币种" width="120">
 							<template #default="scope">
 								<el-select v-model="scope.row.purchasecurrency" filterable placeholder="币种"
 									style="width: 100%;" :disabled="isDisabled" size="default">
@@ -812,7 +812,7 @@
 						</el-table-column>
 						<el-table-column prop="isPriceChanged" label="是否价格变动" width="140" v-if="true">
 							<template #default="scope">
-								<span>{{ scope.row.isPriceChanged }}</span>
+								<span>{{ scope.row.isPriceChanged === 1 ? '是' : '否' }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column fixed="right" label="操作" width="120">
@@ -4853,7 +4853,6 @@ const GetQutaionProductListByID = (quotationId) => {
 				// 根据价格条款设置invoice值
 				const invoiceValue = Newcontractform.priceTerms == 7 ? "1" : "0";
 				const invoiceOption = state.optionss.hr_yes_no.find(x => x.dictValue === invoiceValue);
-
 				// 添加到产品列表
 				productData.value.push({
 					productID: item.productID,
@@ -4866,7 +4865,7 @@ const GetQutaionProductListByID = (quotationId) => {
 					exporttotalprice: item.exportTotalPrice || 0,
 					unitofmeasurement: unitMeasurement?.dictValue,
 					unitOfMeasurementLabel: unitMeasurement?.dictLabel || '-',
-					purchasecurrency: item.purchaseCurrency,
+					purchasecurrency: state.optionss.hr_export_currency.find(x => x.dictValue == item.purchaseCurrency)?.dictValue,
 					purchaseunitprice: item.purchaseUnitPrice || 0,
 					inlandfreightprice: item.inlandfreightprice || 0,
 					AdditionalPackagingCosts: item.additionalPackagingCosts || 0,

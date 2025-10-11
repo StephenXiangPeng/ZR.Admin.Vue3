@@ -3880,11 +3880,11 @@ const openSaleContractDialog = (row) => {
         PurchaseContractDialogData.value.purchaseContract = purchaseContracts.purchaseContractNumber;
         PurchaseContractDialogData.value.contractStatus = state.optionss['hr_contract_status'].find(item => item.dictValue === purchaseContracts.contractStatus.toString()).dictLabel;
         PurchaseContractDialogData.value.deliveryDate = purchaseContracts.deliveryDate;
-        PurchaseContractDialogData.value.vendorCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === purchaseContracts.vendorCode.toString())?.dictLabel || '未知供应商';
+        PurchaseContractDialogData.value.vendorCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === purchaseContracts.vendorCode.toString())?.dictLabel || '无';
         PurchaseContractDialogData.value.purchaseCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === purchaseContracts.purchaseCurrency.toString()).dictLabel;
         PurchaseContractDialogData.value.deposit = purchaseContracts.deposit || '0';
         PurchaseContractDialogData.value.salesperson = (state.optionss['sql_hr_sale'].find(item => item.dictValue === purchaseContracts.salesperson.toString()) || { dictLabel: '未知销售员' }).dictLabel;
-        PurchaseContractDialogData.value.purchaser = (state.optionss['sql_hr_purchase'].find(item => item.dictValue === purchaseContracts.purchaser.toString()) || { dictLabel: '未知采购员' }).dictLabel;
+        PurchaseContractDialogData.value.purchaser = (state.optionss['sql_all_user'].find(item => item.dictValue === purchaseContracts.purchaser.toString()) || { dictLabel: '未知采购员' }).dictLabel;
         PurchaseContractDialogData.value.priceTerms = (state.optionss['hr_purchase_pricing_term'].find(item => item.dictValue === purchaseContracts.priceTerms.toString()) || { dictLabel: '未知价格条款' }).dictLabel;
         PurchaseContractDialogData.value.paymentDays = (state.optionss['hr_purchase_payment_days'].find(item => item.dictValue === purchaseContracts.paymentDays.toString()) || { dictLabel: '未知付款天数' }).dictLabel;
         PurchaseContractDialogData.value.salesContract = state.optionss['sql_sale_contracts'].find(item => item.dictValue === purchaseContracts.salesContract.toString())?.dictLabel || '未知合同';
@@ -3907,7 +3907,11 @@ const openSaleContractDialog = (row) => {
           productData.unit = state.optionss['hr_calculate_unit'].find(item => item.dictValue === productData.unit.toString())?.dictLabel || '无';
           productData.packaging = state.optionss['hr_packing'].find(item => item.dictValue === productData.packaging.toString())?.dictLabel || '无';
           productData.invoice = productData.invoice == 0 ? "否" : "是";
-          productData.supplier = state.optionss['sql_supplier_info'].find(item => item.dictValue === productData.supplierID.toString()).dictLabel;
+          if (productData.supplierID.toString() == '0') {
+            productData.supplier = '无';
+          } else {
+            productData.supplier = state.optionss['sql_supplier_info'].find(item => item.dictValue === productData.supplierID.toString()).dictLabel || '无';
+          }
           productData.hasDeposit = productData.hasdeposit == 1 || productData.hasdeposit === true;
           productData.customerCode = productData.customerNumber;
           // 确保字段名与表格显示一致
@@ -3960,7 +3964,7 @@ const openSaleContractDialog = (row) => {
             PaymentrequestForm.value.paymentName = state.optionss['hr_daily_expenses'].find(item => item.dictValue === response.data.paymentRequest.paymentName.toString()).dictLabel;
             break;
         }
-        PaymentrequestForm.value.payeeCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === response.data.paymentRequest.payeeCode.toString()).dictLabel;
+        PaymentrequestForm.value.payeeCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === response.data.paymentRequest.payeeCode.toString()).dictLabel || '无';
         PaymentrequestForm.value.payeeName = response.data.paymentRequest.payeeName;
         PaymentrequestForm.value.bankName = response.data.paymentRequest.bankName;
         PaymentrequestForm.value.bankAccount = response.data.paymentRequest.bankAccount;

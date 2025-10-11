@@ -175,9 +175,8 @@
 								<el-form-item label="价格条款">
 									<el-select v-model="Addcontractofpurchaseform.priceTerms" style="width: 300px"
 										:disabled="isFormDisabled" size="default" @change="handlePriceTermsChange">
-										<el-option v-for="dict in optionss.hr_purchase_pricing_term"
-											:key="dict.dictCode" :label="dict.dictLabel"
-											:value="dict.dictValue"></el-option>
+										<el-option v-for="dict in filteredPriceTermsOptions" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
 								</el-form-item>
 							</el-col>
@@ -555,7 +554,7 @@
 </template>
 
 <script setup lang="ts">
-import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, computed } from 'vue'
 import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 import { get } from 'sortablejs';
@@ -568,8 +567,10 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 // 添加onMounted钩子
-onMounted(() => {
+onMounted(async () => {
 	console.log('采购合同页面挂载，检查路由参数')
+	// 等待字典数据加载完成后再执行
+	await fetchDataAndExecute()
 	autoLoadpurchaseContractDetail()
 })
 
@@ -670,19 +671,33 @@ const GeneratePurchaseContract = (row) => {
 						specialRequirements: product.specialRequirements,
 						innerBoxQuantity: product.innerBoxQuantity,
 						outerBoxQuantity: product.outerBoxQuantity,
-						invoice: product.invoice == 1 ? '是' : '否',
+						invoice: product.invoice == 1 ? 1 : 0, // 统一使用数字格式
 						hasDeposit: product.hasDeposit == 1 || product.hasDeposit === true,
 						depositAmount: product.depositAmount || 0,
 						remark: product.remark,
 						supplier: product.supplierId || null // 添加供应商信息
 					}));
 
-					// 如果价格条款是含税含运费（dictValue==7），将所有产品的是否开票设置为1
-					if (Addcontractofpurchaseform.value.priceTerms === '7') {
-						productinfotableData.value.forEach(product => {
-							product.invoice = 1; // 设置为数字1，表示开票
-						});
+					// 记录产品的初始开票状态
+					initialInvoiceStates.value.clear();
+					productinfotableData.value.forEach(product => {
+						const isInvoice = product.invoice === 1 || product.invoice === '是' || product.invoice === '1';
+						initialInvoiceStates.value.add(isInvoice);
+					});
+
+					// 根据产品的是否开票值设置默认价格条款
+					const hasInvoiceProducts = initialInvoiceStates.value.has(true);
+					const hasNoInvoiceProducts = initialInvoiceStates.value.has(false);
+
+					// 如果所有产品都是开票的，设置默认价格条款为含税含运费（7）
+					if (hasInvoiceProducts && !hasNoInvoiceProducts) {
+						Addcontractofpurchaseform.value.priceTerms = '7';
 					}
+					// 如果所有产品都是不开票的，设置默认价格条款为不含税含运费（9）
+					else if (hasNoInvoiceProducts && !hasInvoiceProducts) {
+						Addcontractofpurchaseform.value.priceTerms = '9';
+					}
+					// 如果产品混合了开票和不开票，不设置默认价格条款，让用户选择
 
 					// 为每个产品预加载供应商信息
 					for (const product of productinfotableData.value) {
@@ -1096,7 +1111,6 @@ async function fetchDataAndExecute() {
 		console.error('Failed to fetch data:', error);
 	}
 }
-fetchDataAndExecute();
 /*动态下拉框end*/
 
 const activeName = ref('productinfo')
@@ -1189,18 +1203,42 @@ const handleDepositAmountChange = (row) => {
 	row.depositAmount = parseFloat(row.depositAmount) || 0;
 }
 
+// 存储产品的初始开票状态，用于确定价格条款选项
+const initialInvoiceStates = ref(new Set());
+
+// 根据产品初始开票状态过滤价格条款选项
+const filteredPriceTermsOptions = computed(() => {
+	if (!productinfotableData.value || productinfotableData.value.length === 0) {
+		return optionss.value.hr_purchase_pricing_term;
+	}
+
+	// 使用初始开票状态来判断，而不是当前的开票状态
+	const hasInvoiceProducts = initialInvoiceStates.value.has(true);
+	const hasNoInvoiceProducts = initialInvoiceStates.value.has(false);
+
+	// 如果所有产品都是开票的，只显示含税选项（7和8）
+	if (hasInvoiceProducts && !hasNoInvoiceProducts) {
+		return optionss.value.hr_purchase_pricing_term.filter(option =>
+			option.dictValue === '7' || option.dictValue === '8'
+		);
+	}
+	// 如果所有产品都是不开票的，只显示不含税选项（9和10）
+	else if (hasNoInvoiceProducts && !hasInvoiceProducts) {
+		return optionss.value.hr_purchase_pricing_term.filter(option =>
+			option.dictValue === '9' || option.dictValue === '10'
+		);
+	}
+	// 如果产品混合了开票和不开票，显示所有选项
+	else {
+		return optionss.value.hr_purchase_pricing_term;
+	}
+});
+
 // 处理价格条款变化
 const handlePriceTermsChange = (value) => {
-	// 如果选择的是含税含运费（dictValue==7），将产品资料中的是否开票设置为1，否则设置为0
-	if (productinfotableData.value && productinfotableData.value.length > 0) {
-		productinfotableData.value.forEach(product => {
-			if (value === '7') {
-				product.invoice = 1; // 含税含运费，设置为开票（数字1）
-			} else {
-				product.invoice = 0; // 其他情况，设置为不开票（数字0）
-			}
-		});
-	}
+	// 价格条款变化时不再自动更新产品的开票状态
+	// 产品的开票状态保持用户手动设置的值
+	console.log('价格条款已更改为:', value);
 }
 
 const contractofpurchaseRequest = reactive({
@@ -1272,7 +1310,7 @@ const submitPurchaseContract = () => {
 		productionLeadTime: product.productionLeadTime,
 		packaging: state.optionss.hr_packing.find(item => item.dictLabel === product.packaging.toString())?.dictValue,
 		specialRequirements: product.specialRequirements || '',
-		invoice: product.invoice == '是' ? 1 : 0,
+		invoice: product.invoice === 1 || product.invoice === '是' || product.invoice === '1' ? 1 : 0,
 		innerBoxQuantity: parseInt(product.innerBoxQuantity),
 		outerBoxQuantity: parseInt(product.outerBoxQuantity),
 		hasDeposit: product.hasDeposit ? 1 : 0,
@@ -1397,124 +1435,125 @@ const editContract = () => {
 	showSubmitReviewBtn.value = true;
 	isFormDisabled.value = false;         // 启用表单编辑
 }
+// 保存编辑数据（不显示确认框，用于内部调用）
+const saveEditContractData = async () => {
+	// 构建产品数据
+	const mappedProducts = productinfotableData.value.map(product => ({
+		Id: product.id || 0,
+		ProductId: product.productId || 0,
+		PurchaseContractId: currentContractId.value,
+		ProductNumber: product.productNumber || '',
+		SupplierID: parseInt(product.supplier) || 0, // 使用产品表格中的供应商
+		ProductCode: product.productCode || '',
+		CustomerCode: product.customerCode || '',
+		ChineseName: product.chineseName || '',
+		EnglishName: product.englishName || '',
+		chineseSpec: product.chineseSpecification || '',
+		ContractQuantity: parseFloat(product.contractQuantity) || 0,
+		Unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
+		PurchasePrice: parseFloat(product.purchaseUnitPrice),
+		PurchaseTotalPrice: parseFloat(product.purchaseTotalPrice),
+		DeliveryDate: product.deliveryDate,
+		ProductionLeadTime: product.productionLeadTime,
+		Packaging: state.optionss.hr_packing.find(item => item.dictLabel === product.packaging.toString())?.dictValue,
+		SpecialRequirements: product.specialRequirements || '',
+		Invoice: product.invoice === 1 || product.invoice === '是' || product.invoice === '1' ? 1 : 0,
+		InnerBoxQuantity: parseInt(product.innerBoxQuantity),
+		OuterBoxQuantity: parseInt(product.outerBoxQuantity),
+		HasDeposit: product.hasDeposit ? 1 : 0,
+		DepositAmount: parseFloat(product.depositAmount) || 0,
+		Remark: product.remark || '',
+		IsDelete: 0
+	}));
+
+	// 构建厂商费用数据
+	const mappedExpenses = CustomerRelaterExoensesTableData.value.map(expense => ({
+		id: expense.id || 0,
+		PurchaseContractID: currentContractId.value,
+		expenseName: expense.expenseName,
+		currency: parseInt(expense.currency),
+		exchangeRate: parseFloat(expense.exchangeRate),
+		expense: parseFloat(expense.expense),
+		Remark: expense.remark || '',
+		IsDelete: 0
+	}));
+
+	// 构建请求数据
+	const purchaseContractsRequest = {
+		id: currentContractId.value,
+		PurchaseContractNumber: Addcontractofpurchaseform.value.purchaseContract,
+		ContractStatus: 1,
+		VendorCode: '',
+		VendorAbbreviation: '',
+		SalesContract: state.optionss.sql_sale_contracts.find(item => item.dictLabel === Addcontractofpurchaseform.value.salesContract.toString())?.dictValue,
+		CustomerContract: Addcontractofpurchaseform.value.customerContract,
+		CustomerAbbreviation: Addcontractofpurchaseform.value.customerAbbreviation,
+		DeliveryDate: Addcontractofpurchaseform.value.deliveryDate,
+		PurchaseCurrency: state.optionss.hr_export_currency.find(item => item.dictLabel === Addcontractofpurchaseform.value.purchaseCurrency.toString())?.dictValue,
+		Deposit: parseFloat(Addcontractofpurchaseform.value.deposit || '0'),
+		Salesperson: state.optionss.sql_hr_sale.find(item => item.dictLabel === Addcontractofpurchaseform.value.salesperson.toString())?.dictValue,
+		Purchaser: state.optionss.sql_all_user.find(item => item.dictLabel === Addcontractofpurchaseform.value.purchaser.toString())?.dictValue,
+		PaymentDays: parseInt(Addcontractofpurchaseform.value.paymentDays || '0'),
+		PriceTerms: Addcontractofpurchaseform.value.priceTerms,
+		TotalGoodsValue: parseFloat(Totalvalueofgoodsform.value.totalValue || '0'),
+		TotalQuantity: parseFloat(Totalvalueofgoodsform.value.totalQuantity || '0'),
+		TotalBoxes: parseInt(Totalvalueofgoodsform.value.totalBoxCount || '0'),
+		TotalGrossWeight: parseFloat(Totalvalueofgoodsform.value.totalGrossWeight || '0'),
+		TotalNetWeight: parseFloat(Totalvalueofgoodsform.value.totalNetWeight || '0'),
+		TotalVolume: parseFloat(Totalvalueofgoodsform.value.totalVolume || '0'),
+		AppliedPayment: parseFloat(Totalvalueofgoodsform.value.appliedPayment || '0'),
+		AvailablePayment: parseFloat(Totalvalueofgoodsform.value.availablePayment || '0'),
+		PaidAmount: parseFloat(Totalvalueofgoodsform.value.paidAmount || '0'),
+		UnpaidAmount: parseFloat(Totalvalueofgoodsform.value.unpaidAmount || '0'),
+		Remark: '',
+		IsDelete: 0,
+		PurchaseContractProducts: mappedProducts,
+		PurchaseContractVendorExpenses: mappedExpenses,
+		isDraft: 1,
+		ProcurementRequirementID: ProcurementRequirementID.value,
+		hasdeposit: Addcontractofpurchaseform.value.hasDeposit ? 1 : 0, // 转换为数字：0否，1是
+		SupplierID: 0, // 供应商ID设为0，因为不再使用基本信息中的供应商
+		deliveryLocation: Addcontractofpurchaseform.value.deliveryLocation || '', // 交货地点
+		salesContractID: parseInt(Addcontractofpurchaseform.value.salesContract) || 0 // 销售合同ID
+	};
+
+	// 发送请求
+	const response = await request.post("PurchaseContracts/EditPurchaseContracts/Edit", purchaseContractsRequest);
+
+	if (response.code === 200) {
+		console.log('编辑保存成功');
+		return true;
+	} else {
+		throw new Error(response.msg || '编辑采购合同失败');
+	}
+};
+
 // 保存编辑
 const saveEditContract = () => {
 	ElMessageBox.confirm('确认保存编辑的采购合同信息吗？', '提示', {
 		confirmButtonText: '确定',
 		cancelButtonText: '取消',
 		type: 'warning'
-	}).then(() => {
-		// 构建产品数据
-		const mappedProducts = productinfotableData.value.map(product => ({
-			Id: product.id || 0,
-			ProductId: product.productId || 0,
-			PurchaseContractId: currentContractId.value,
-			ProductNumber: product.productNumber || '',
-			SupplierID: parseInt(product.supplier) || 0, // 使用产品表格中的供应商
-			ProductCode: product.productCode || '',
-			CustomerCode: product.customerCode || '',
-			ChineseName: product.chineseName || '',
-			EnglishName: product.englishName || '',
-			chineseSpec: product.chineseSpecification || '',
-			ContractQuantity: parseFloat(product.contractQuantity) || 0,
-			Unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
-			PurchasePrice: parseFloat(product.purchaseUnitPrice),
-			PurchaseTotalPrice: parseFloat(product.purchaseTotalPrice),
-			DeliveryDate: product.deliveryDate,
-			ProductionLeadTime: product.productionLeadTime,
-			Packaging: state.optionss.hr_packing.find(item => item.dictLabel === product.packaging.toString())?.dictValue,
-			SpecialRequirements: product.specialRequirements || '',
-			Invoice: product.invoice == '否' ? 0 : 1,
-			InnerBoxQuantity: parseInt(product.innerBoxQuantity),
-			OuterBoxQuantity: parseInt(product.outerBoxQuantity),
-			HasDeposit: product.hasDeposit ? 1 : 0,
-			DepositAmount: parseFloat(product.depositAmount) || 0,
-			Remark: product.remark || '',
-			IsDelete: 0
-		}));
-
-		// 构建厂商费用数据
-		const mappedExpenses = CustomerRelaterExoensesTableData.value.map(expense => ({
-			id: expense.id || 0,
-			PurchaseContractID: currentContractId.value,
-			expenseName: expense.expenseName,
-			currency: parseInt(expense.currency),
-			exchangeRate: parseFloat(expense.exchangeRate),
-			expense: parseFloat(expense.expense),
-			Remark: expense.remark || '',
-			IsDelete: 0
-		}));
-		// 构建请求数据
-		const purchaseContractsRequest = {
-			id: currentContractId.value,
-			PurchaseContractNumber: Addcontractofpurchaseform.value.purchaseContract,
-			ContractStatus: 1,
-			VendorCode: '',
-			VendorAbbreviation: '',
-			SalesContract: state.optionss.sql_sale_contracts.find(item => item.dictLabel === Addcontractofpurchaseform.value.salesContract.toString())?.dictValue,
-			CustomerContract: Addcontractofpurchaseform.value.customerContract,
-			CustomerAbbreviation: Addcontractofpurchaseform.value.customerAbbreviation,
-			DeliveryDate: Addcontractofpurchaseform.value.deliveryDate,
-			PurchaseCurrency: state.optionss.hr_export_currency.find(item => item.dictLabel === Addcontractofpurchaseform.value.purchaseCurrency.toString())?.dictValue,
-			Deposit: parseFloat(Addcontractofpurchaseform.value.deposit || '0'),
-			Salesperson: state.optionss.sql_hr_sale.find(item => item.dictLabel === Addcontractofpurchaseform.value.salesperson.toString())?.dictValue,
-			Purchaser: state.optionss.sql_all_user.find(item => item.dictLabel === Addcontractofpurchaseform.value.purchaser.toString())?.dictValue,
-			PaymentDays: parseInt(Addcontractofpurchaseform.value.paymentDays || '0'),
-			PriceTerms: Addcontractofpurchaseform.value.priceTerms,
-			TotalGoodsValue: parseFloat(Totalvalueofgoodsform.value.totalValue || '0'),
-			TotalQuantity: parseFloat(Totalvalueofgoodsform.value.totalQuantity || '0'),
-			TotalBoxes: parseInt(Totalvalueofgoodsform.value.totalBoxCount || '0'),
-			TotalGrossWeight: parseFloat(Totalvalueofgoodsform.value.totalGrossWeight || '0'),
-			TotalNetWeight: parseFloat(Totalvalueofgoodsform.value.totalNetWeight || '0'),
-			TotalVolume: parseFloat(Totalvalueofgoodsform.value.totalVolume || '0'),
-			AppliedPayment: parseFloat(Totalvalueofgoodsform.value.appliedPayment || '0'),
-			AvailablePayment: parseFloat(Totalvalueofgoodsform.value.availablePayment || '0'),
-			PaidAmount: parseFloat(Totalvalueofgoodsform.value.paidAmount || '0'),
-			UnpaidAmount: parseFloat(Totalvalueofgoodsform.value.unpaidAmount || '0'),
-			Remark: '',
-			IsDelete: 0,
-			PurchaseContractProducts: mappedProducts,
-			PurchaseContractVendorExpenses: mappedExpenses,
-			isDraft: 1,
-			ProcurementRequirementID: ProcurementRequirementID.value,
-			hasdeposit: Addcontractofpurchaseform.value.hasDeposit ? 1 : 0, // 转换为数字：0否，1是
-			SupplierID: 0, // 供应商ID设为0，因为不再使用基本信息中的供应商
-			deliveryLocation: Addcontractofpurchaseform.value.deliveryLocation || '', // 交货地点
-			salesContractID: parseInt(Addcontractofpurchaseform.value.salesContract) || 0 // 销售合同ID
-		};
-
-		// 发送请求
-		request.post("PurchaseContracts/EditPurchaseContracts/Edit", purchaseContractsRequest)
-			.then(response => {
-				if (response.code === 200) {
-					ElMessage({
-						message: response.msg || "采购合同编辑成功！",
-						type: "success",
-					});
-					showEditBtn.value = true;
-					showEditSaveBtn.value = false;
-					showSubmitReviewBtn.value = true;
-					isFormDisabled.value = true;
-					Addcontractofpurchasedialog.value = false;
-					GetpurchaseContractList(
-						purchasecontractsTableDatacurrentPage.value,
-						purchasecontractsTableDatapageSize.value
-					);
-				} else {
-					ElMessage.error(response.msg || '编辑采购合同失败');
-				}
-			})
-			.catch(error => {
-				console.error('编辑采购合同失败:', error);
-				if (error.response?.data?.errors) {
-					const errorMessages = Object.values(error.response.data.errors)
-						.flat()
-						.join(', ');
-					ElMessage.error(`验证失败: ${errorMessages}`);
-				} else {
-					ElMessage.error('编辑采购合同失败，请重试');
-				}
+	}).then(async () => {
+		try {
+			await saveEditContractData();
+			ElMessage({
+				message: "采购合同编辑成功！",
+				type: "success",
 			});
+			showEditBtn.value = true;
+			showEditSaveBtn.value = false;
+			showSubmitReviewBtn.value = true;
+			isFormDisabled.value = true;
+			Addcontractofpurchasedialog.value = false;
+			GetpurchaseContractList(
+				purchasecontractsTableDatacurrentPage.value,
+				purchasecontractsTableDatapageSize.value
+			);
+		} catch (error) {
+			console.error('编辑采购合同失败:', error);
+			ElMessage.error('编辑采购合同失败，请重试');
+		}
 	}).catch(() => {
 		ElMessage({
 			type: 'info',
@@ -1555,7 +1594,7 @@ const submitForReview = () => {
 					productionLeadTime: product.productionLeadTime,
 					packaging: state.optionss.hr_packing.find(item => item.dictLabel === product.packaging.toString())?.dictValue,
 					specialRequirements: product.specialRequirements || '',
-					invoice: product.invoice == '否' ? 0 : 1,
+					invoice: product.invoice === 1 || product.invoice === '是' || product.invoice === '1' ? 1 : 0,
 					innerBoxQuantity: parseInt(product.innerBoxQuantity),
 					outerBoxQuantity: parseInt(product.outerBoxQuantity),
 					hasDeposit: product.hasDeposit ? 1 : 0,
@@ -1672,18 +1711,25 @@ const submitForReview = () => {
 				ElMessage.error('提交审核失败，请重试');
 			}
 		} else {
-			request({
-				url: 'PurchaseContracts/SubmitForReview/SubmitPurchseContractReview',
-				method: 'GET',
-				params: {
-					ContractID: currentContractId.value // 需要添加这个响应式变量来存储当前合同ID
-				}
-			}).then(async response => {
+			// 编辑合同时，先保存数据再提交审核
+			try {
+				// 先调用保存编辑函数
+				await saveEditContractData();
+
+				// 保存成功后，再提交审核
+				const response = await request({
+					url: 'PurchaseContracts/SubmitForReview/SubmitPurchseContractReview',
+					method: 'GET',
+					params: {
+						ContractID: currentContractId.value
+					}
+				});
+
 				if (response.code === 200) {
 					ElMessage.success('提交审核成功');
 					Addcontractofpurchasedialog.value = false;  // 关闭对话框
 					// 刷新采购合同列表
-					GetpurchaseContractList(
+					await GetpurchaseContractList(
 						purchasecontractsTableDatacurrentPage.value,
 						purchasecontractsTableDatapageSize.value
 					);
@@ -1691,10 +1737,10 @@ const submitForReview = () => {
 				} else {
 					ElMessage.error('提交审核失败');
 				}
-			}).catch(error => {
+			} catch (error) {
 				console.error('提交审核失败:', error);
 				ElMessage.error('提交审核失败，请重试');
-			});
+			}
 		}
 	}).catch(() => {
 		ElMessage.info('已取消提交审核');

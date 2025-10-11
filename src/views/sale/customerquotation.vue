@@ -763,11 +763,8 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="银行费用">
-									<el-input
-										:value="isDisabled ? formatCNYAmount(quotationDialogform.BankFee) : quotationDialogform.BankFee"
-										:disabled="isDisabled" style="width: 300px;" @change="calculateTotal"
-										@input="(val) => { if (!isDisabled) quotationDialogform.BankFee = val }"
-										size="default" />
+									<el-input v-model="bankFeeDisplay" :disabled="isDisabled" style="width: 300px;"
+										@change="calculateTotal" size="default" />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -775,11 +772,8 @@
 
 							<el-col :span="6">
 								<el-form-item label="文件杂费">
-									<el-input
-										:value="isDisabled ? formatCNYAmount(quotationDialogform.DocumentationFees) : quotationDialogform.DocumentationFees"
-										:disabled="isDisabled" style="width: 300px;" @change="calculateTotal"
-										@input="(val) => { if (!isDisabled) quotationDialogform.DocumentationFees = val }"
-										size="default" />
+									<el-input v-model="documentationFeesDisplay" :disabled="isDisabled"
+										style="width: 300px;" @change="calculateTotal" size="default" />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -1022,7 +1016,7 @@
 </style>
 
 <script setup lang="ts">
-import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, computed } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElMessageBox, ElMessage, FormInstance, FormRules } from 'element-plus'
 import request from '@/utils/request';
 import { Search, UploadFilled } from '@element-plus/icons-vue';
@@ -1055,6 +1049,31 @@ const isSaveBtnShow = ref(false);
 const showEditBtn = ref(false);
 const showEditSaveBtn = ref(false);
 const isDisabled = ref(false);
+
+// 计算属性：银行费用显示值
+const bankFeeDisplay = computed({
+	get: () => {
+		return isDisabled.value ? formatCNYAmount(quotationDialogform.BankFee) : quotationDialogform.BankFee;
+	},
+	set: (val) => {
+		if (!isDisabled.value) {
+			quotationDialogform.BankFee = Number(val) || 0;
+		}
+	}
+});
+
+// 计算属性：文件杂费显示值
+const documentationFeesDisplay = computed({
+	get: () => {
+		return isDisabled.value ? formatCNYAmount(quotationDialogform.DocumentationFees) : quotationDialogform.DocumentationFees;
+	},
+	set: (val) => {
+		if (!isDisabled.value) {
+			quotationDialogform.DocumentationFees = Number(val) || 0;
+		}
+	}
+});
+
 const isReviewBtnShow = ref(false);
 const showSaveDraftBtn = ref(false);
 const isViewDetails = ref(false); // 新增变量，用于标记是否是通过查看详情打开的对话框
