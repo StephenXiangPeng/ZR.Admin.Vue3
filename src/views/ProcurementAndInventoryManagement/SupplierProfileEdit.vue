@@ -2,7 +2,7 @@
   <div class="app-container">
     <!-- 页面头部 -->
     <div class="page-header">
-      <h1 class="page-title">新增供应商</h1>
+      <h1 class="page-title">{{ getPageTitle() }}</h1>
       <div class="header-actions">
         <el-button @click="handleCancel">取消</el-button>
         <el-button type="primary" @click="handleSave" v-if="mode !== 'view'" :loading="uploading">保存</el-button>
@@ -260,7 +260,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowUp, QuestionFilled, UploadFilled, Plus } from '@element-plus/icons-vue'
-import { addSupplierInfo } from '@/api/ProcurementAndInventoryManagement/supplier'
+import { addSupplierInfo, updateSupplierWithRelations } from '@/api/ProcurementAndInventoryManagement/supplier'
 import { upload } from '@/api/common'
 
 const route = useRoute()
@@ -269,6 +269,8 @@ const router = useRouter()
 // 获取路由参数
 const supplierId = ref(route.query.id)
 const mode = ref(route.query.mode || 'add')
+const isEditMode = ref(mode.value === 'edit')
+const isViewMode = ref(mode.value === 'view')
 
 // 文件列表
 const fileList = ref([])
@@ -292,7 +294,7 @@ const bankInfoList = ref([
     accountName: '',
     bankName: '',
     bankAccount: '',
-    isDefault: false
+    isDefault: true  // 第一条记录默认为默认
   }
 ])
 
@@ -303,7 +305,7 @@ const contactInfoList = ref([
     contactPerson: '',
     contactMethod: '',
     contactAddress: '',
-    isDefault: false
+    isDefault: true  // 第一条记录默认为默认
   }
 ])
 
@@ -355,6 +357,7 @@ async function handleSave() {
 
     // 构建联系信息数组
     const contactItems = contactInfoList.value.map(contact => ({
+      id: contact.id, // 保留ID用于更新判断
       contactName: contact.contactPerson,
       contactPhone: contact.contactMethod,
       contactAddress: contact.contactAddress,
@@ -364,6 +367,7 @@ async function handleSave() {
 
     // 构建财务信息数组
     const financialItems = bankInfoList.value.map(bank => ({
+      id: bank.id, // 保留ID用于更新判断
       taxIDNumber: bank.taxId,
       accountName: bank.accountName,
       openAccountBank: bank.bankName,
@@ -372,33 +376,77 @@ async function handleSave() {
       remark: ''
     }))
 
-    // 构建请求数据 - 根据后端接口要求
-    const requestData = {
-      supplierCode: form.supplierNumber || '',
-      supplierName: form.supplierName || '',
-      productClassificationSet: form.productCategory || '',
-      materialsClassificationSet: form.materialCategory || '',
-      defaultPurchaseTaxRate: parseFloat(form.taxRate) || 0,
-      settlementPeriodID: form.settlementPeriod ? new Date(form.settlementPeriod).getTime() : 0,
-      departmentID: parseInt(form.department) || 0,
-      buyerID: parseInt(form.purchaser) || 0,
-      attachmentSet: attachmentSet,
-      imageSet: imageSet,
-      weChatNumber: form.wechat || '',
-      remark: form.remarks || '',
-      contactItems: contactItems,
-      financialItems: financialItems
+    // 根据模式构建不同的请求数据
+    let response
+    if (isEditMode.value) {
+      // 编辑模式：使用更新接口
+      const updateData = {
+        supplier: {
+          id: parseInt(String(supplierId.value)),
+          supplierCode: form.supplierNumber || '',
+          supplierName: form.supplierName || '',
+          productClassificationSet: form.productCategory || '',
+          materialsClassificationSet: form.materialCategory || '',
+          defaultPurchaseTaxRate: parseFloat(form.taxRate) || 0,
+          settlementPeriodID: form.settlementPeriod ? new Date(form.settlementPeriod).getTime() : 0,
+          departmentID: parseInt(form.department) || 0,
+          buyerID: parseInt(form.purchaser) || 0,
+          attachmentSet: attachmentSet,
+          imageSet: imageSet,
+          weChatNumber: form.wechat || '',
+          remark: form.remarks || ''
+        },
+        contacts: contactItems.map(contact => ({
+          id: contact.id || 0, // 新增为0，更新为实际ID
+          supplierId: parseInt(String(supplierId.value)),
+          contactName: contact.contactName,
+          contactPhone: contact.contactPhone,
+          contactAddress: contact.contactAddress,
+          isDefaultContact: contact.isDefaultContact,
+          remark: contact.remark
+        })),
+        finances: financialItems.map(finance => ({
+          id: finance.id || 0, // 新增为0，更新为实际ID
+          supplierId: parseInt(String(supplierId.value)),
+          taxIDNumber: finance.taxIDNumber,
+          accountName: finance.accountName,
+          openAccountBank: finance.openAccountBank,
+          bankAccount: finance.bankAccount,
+          isDefault: finance.isDefault,
+          remark: finance.remark
+        }))
+      }
+      response = await updateSupplierWithRelations(updateData)
+    } else {
+      // 新增模式：使用新增接口
+      const requestData = {
+        supplierCode: form.supplierNumber || '',
+        supplierName: form.supplierName || '',
+        productClassificationSet: form.productCategory || '',
+        materialsClassificationSet: form.materialCategory || '',
+        defaultPurchaseTaxRate: parseFloat(form.taxRate) || 0,
+        settlementPeriodID: form.settlementPeriod ? new Date(form.settlementPeriod).getTime() : 0,
+        departmentID: parseInt(form.department) || 0,
+        buyerID: parseInt(form.purchaser) || 0,
+        attachmentSet: attachmentSet,
+        imageSet: imageSet,
+        weChatNumber: form.wechat || '',
+        remark: form.remarks || '',
+        contactItems: contactItems,
+        financialItems: financialItems
+      }
+      response = await addSupplierInfo(requestData)
     }
-
-    // 调用新增接口
-    const response = await addSupplierInfo(requestData)
     
     // 根据后端返回结果处理
-    if (response && response.data && response.data.code === 200) {
-      ElMessage.success('供应商信息添加成功')
+    const data = response.data || response
+    if (data.code == 200) {
+      const successMessage = isEditMode.value ? '供应商信息更新成功' : '供应商信息添加成功'
+      ElMessage.success(successMessage)
       handleCancel()
     } else {
-      ElMessage.error(response?.data?.msg || '供应商信息添加失败')
+      const errorMessage = isEditMode.value ? '供应商信息更新失败' : '供应商信息添加失败'
+      ElMessage.error(data?.msg || errorMessage)
     }
   } catch (error) {
     console.error('保存失败:', error)
@@ -466,6 +514,18 @@ function handleCancel() {
   router.back()
 }
 
+// 获取页面标题
+function getPageTitle() {
+  switch (mode.value) {
+    case 'edit':
+      return '编辑供应商'
+    case 'view':
+      return '查看供应商'
+    default:
+      return '新增供应商'
+  }
+}
+
 // 重置表单
 function resetForm() {
   Object.keys(form).forEach(key => {
@@ -484,9 +544,9 @@ function toggleCollapse(section: string) {
 
 // 银行信息操作
 function addBankInfo() {
-  const newId = Math.max(...bankInfoList.value.map(item => item.id)) + 1
+  // 新增的银行信息ID应该为0，让后端识别为新增操作
   bankInfoList.value.push({
-    id: newId,
+    id: 0, // 新增数据ID设为0
     taxId: '',
     accountName: '',
     bankName: '',
@@ -520,9 +580,9 @@ function deleteBankInfo() {
 
 // 联系信息操作
 function addContactInfo() {
-  const newId = Math.max(...contactInfoList.value.map(item => item.id)) + 1
+  // 新增的联系信息ID应该为0，让后端识别为新增操作
   contactInfoList.value.push({
-    id: newId,
+    id: 0, // 新增数据ID设为0
     contactPerson: '',
     contactMethod: '',
     contactAddress: '',
@@ -599,17 +659,132 @@ function beforeUpload(file: any) {
 
 // 页面加载时获取数据
 onMounted(() => {
-  if (supplierId.value && mode.value === 'edit') {
-    // 这里应该调用API获取供应商详情
-    console.log('获取供应商详情:', supplierId.value)
-    // 模拟数据
-    form.supplierNumber = 'SUP001'
-    form.supplierName = '示例供应商'
-    // 设置联系信息
-    contactInfoList.value[0].contactPerson = '张三'
-    contactInfoList.value[0].contactMethod = '13800138000'
+  // 初始化默认状态
+  initializeDefaultStates()
+  
+  // 处理编辑或查看模式
+  if (supplierId.value && (mode.value === 'edit' || mode.value === 'view')) {
+    loadSupplierData()
   }
 })
+
+// 加载供应商数据
+function loadSupplierData() {
+  try {
+    // 从路由参数中获取详情数据
+    const dataParam = route.query.data
+    if (dataParam && typeof dataParam === 'string') {
+      const supplierData = JSON.parse(dataParam)
+      populateFormWithData(supplierData)
+    } else {
+      console.warn('未找到供应商详情数据')
+      ElMessage.warning('未找到供应商详情数据')
+    }
+  } catch (error) {
+    console.error('解析供应商数据失败:', error)
+    ElMessage.error('加载供应商数据失败')
+  }
+}
+
+// 填充表单数据
+function populateFormWithData(data) {
+  const { supplier, contacts, finances } = data
+  
+  // 填充基础信息
+  if (supplier) {
+    form.supplierNumber = supplier.supplierCode || ''
+    form.supplierName = supplier.supplierName || ''
+    form.productCategory = supplier.productClassificationSet || ''
+    form.materialCategory = supplier.materialsClassificationSet || ''
+    form.taxRate = supplier.defaultPurchaseTaxRate || ''
+    // 处理结算周期ID - 如果是时间戳则转换，否则直接使用
+    if (supplier.settlementPeriodID && supplier.settlementPeriodID > 0) {
+      if (supplier.settlementPeriodID > 1000000000000) { // 时间戳格式
+        form.settlementPeriod = new Date(supplier.settlementPeriodID).toISOString().split('T')[0]
+      } else {
+        form.settlementPeriod = supplier.settlementPeriodID.toString()
+      }
+    } else {
+      form.settlementPeriod = ''
+    }
+    form.department = supplier.departmentID || ''
+    form.purchaser = supplier.buyerID || ''
+    form.remarks = supplier.remark || ''
+    form.wechat = supplier.weChatNumber || ''
+  }
+  
+  // 填充联系信息
+  if (contacts && contacts.length > 0) {
+    contactInfoList.value = contacts.map((contact, index) => ({
+      id: contact.id || 0, // 保留原有ID，新增数据ID为0
+      contactPerson: contact.contactName || '',
+      contactMethod: contact.contactPhone || '',
+      contactAddress: contact.contactAddress || '',
+      isDefault: contact.isDefaultContact === 1
+    }))
+    
+    // 设置默认联系信息索引
+    const foundDefaultContactIndex = contacts.findIndex(c => c.isDefaultContact === 1)
+    if (foundDefaultContactIndex >= 0) {
+      defaultContactIndex.value = foundDefaultContactIndex
+    } else {
+      // 如果没有找到默认联系人，设置第一个为默认
+      defaultContactIndex.value = 0
+      if (contactInfoList.value.length > 0) {
+        contactInfoList.value[0].isDefault = true
+      }
+    }
+  }
+  
+  // 填充财务信息
+  if (finances && finances.length > 0) {
+    bankInfoList.value = finances.map((finance, index) => ({
+      id: finance.id || 0, // 保留原有ID，新增数据ID为0
+      taxId: finance.taxIDNumber || '',
+      accountName: finance.accountName || '',
+      bankName: finance.openAccountBank || '',
+      bankAccount: finance.bankAccount || '',
+      isDefault: finance.isDefault === 1
+    }))
+    
+    // 设置默认财务信息索引
+    const foundDefaultBankIndex = finances.findIndex(f => f.isDefault === 1)
+    if (foundDefaultBankIndex >= 0) {
+      defaultBankIndex.value = foundDefaultBankIndex
+    } else {
+      // 如果没有找到默认财务信息，设置第一个为默认
+      defaultBankIndex.value = 0
+      if (bankInfoList.value.length > 0) {
+        bankInfoList.value[0].isDefault = true
+      }
+    }
+  }
+  
+  console.log('数据填充完成:', {
+    supplier: supplier,
+    contacts: contactInfoList.value,
+    finances: bankInfoList.value
+  })
+}
+
+// 初始化默认状态
+function initializeDefaultStates() {
+  // 确保第一条财务信息为默认
+  if (bankInfoList.value.length > 0) {
+    bankInfoList.value.forEach((item, index) => {
+      item.isDefault = index === 0
+    })
+    defaultBankIndex.value = 0
+  }
+  
+  // 确保第一条联系信息为默认
+  if (contactInfoList.value.length > 0) {
+    contactInfoList.value.forEach((item, index) => {
+      item.isDefault = index === 0
+    })
+    defaultContactIndex.value = 0
+  }
+}
 </script>
 
 <style scoped>

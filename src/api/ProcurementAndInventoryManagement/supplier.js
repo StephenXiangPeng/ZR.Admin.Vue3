@@ -18,7 +18,7 @@ export function addSupplierInfo(data) {
  */
 export function listSupplierInfo(query) {
 	return request({
-		url: '/SupplierInfomation/AddSupplierInfo/list',
+		url: '/SupplierInfomation/GetSupplierInfoList/GetList',
 		method: 'get',
 		params: query
 	})
@@ -36,6 +36,17 @@ export function getSupplierInfo(id) {
 }
 
 /**
+ * 获取供应商详情（主表 + 联系人 + 财务）
+ * @param {Number} id 供应商ID
+ */
+export function getSupplierDetail(id) {
+	return request({
+		url: '/SupplierInfomation/GetSupplierDetail/Detail/' + id,
+		method: 'get'
+	})
+}
+
+/**
  * 修改供应商信息
  * @param {Object} data 供应商信息
  */
@@ -48,13 +59,26 @@ export function updateSupplierInfo(data) {
 }
 
 /**
- * 删除供应商信息
- * @param {Number} id 供应商ID
+ * 更新供应商及其关联信息（主表+联系人+财务）
+ * @param {Object} data 供应商完整信息
  */
-export function delSupplierInfo(id) {
+export function updateSupplierWithRelations(data) {
 	return request({
-		url: '/SupplierInfomation/AddSupplierInfo/' + id,
-		method: 'delete'
+		url: '/SupplierInfomation/UpdateSupplierWithRelations/UpdateSupplierWithRels',
+		method: 'put',
+		data: data
+	})
+}
+
+/**
+ * 删除供应商信息（软删除）
+ * @param {Array} ids 供应商ID集合
+ */
+export function delSupplierInfo(ids) {
+	return request({
+		url: '/SupplierInfomation/DelSupplierInfo/DelSupplierInfo',
+		method: 'delete',
+		data: ids
 	})
 }
 
