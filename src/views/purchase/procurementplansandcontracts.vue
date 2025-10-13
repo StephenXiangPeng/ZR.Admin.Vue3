@@ -564,6 +564,7 @@ import { FormInstance } from 'element-plus'
 import { invoke } from '@vueuse/core';
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer } from 'element-plus'
 import { useRouter } from 'vue-router'
+import exchangeRateService from '@/utils/exchangeRateService'
 
 const router = useRouter()
 // 添加onMounted钩子
@@ -1139,17 +1140,28 @@ const Addcontractofpurchaseform = ref({
 
 
 
-const currencyChange = (row) => {
-	switch (row.currency) {
-		case '1':
-			row.exchangeRate = 7.23;
-			break;
-		case '2':
-			row.exchangeRate = 7.69;
-			break;
-		case '3':
-			row.exchangeRate = 1;
-			break;
+const currencyChange = async (row) => {
+	if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == row.currency).map(item => item.dictValue).values().next().value == 3) {
+		row.exchangeRate = Number(1);
+	} else {
+		// 获取最新汇率
+		try {
+			const latestRate = await exchangeRateService.getLatestExchangeRate(row.currency);
+			if (latestRate !== null) {
+				row.exchangeRate = Number(latestRate);
+			} else {
+				// 如果获取不到最新汇率，使用默认汇率
+				const defaultRate = exchangeRateService.getDefaultExchangeRate(row.currency);
+				row.exchangeRate = Number(defaultRate);
+				ElMessage.warning(`未找到${exchangeRateService.getCurrencyName(row.currency, state.optionss.hr_export_currency)}的最新汇率，已使用默认汇率`);
+			}
+		} catch (error) {
+			console.error('获取汇率失败:', error);
+			// 使用默认汇率
+			const defaultRate = exchangeRateService.getDefaultExchangeRate(row.currency);
+			row.exchangeRate = Number(defaultRate);
+			ElMessage.warning(`获取汇率失败，已使用默认汇率`);
+		}
 	}
 	// 币种变化后重新计算金额
 	expenseChange(row);

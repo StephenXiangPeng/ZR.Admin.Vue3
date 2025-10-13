@@ -1,5 +1,30 @@
 <template>
   <div class="home">
+    <!-- 当日汇率显示 - 紧凑型 -->
+    <el-row class="exchange-rate-header" justify="center">
+      <el-col :span="6" class="exchange-rate-container">
+        <el-card class="exchange-rate-card" shadow="hover">
+          <div class="exchange-rate-content">
+            <div class="exchange-rate-title">
+              <el-icon class="exchange-rate-icon">
+                <Money />
+              </el-icon>
+              <span>当日汇率</span>
+            </div>
+            <div class="exchange-rate-list" v-if="todayExchangeRates.length > 0">
+              <div v-for="rate in todayExchangeRates" :key="rate.currency" class="exchange-rate-item">
+                <span class="currency-name">{{ rate.currencyName }}</span>
+                <span class="exchange-rate-value">{{ rate.exchangeRate }}</span>
+              </div>
+            </div>
+            <div v-else class="no-exchange-rate">
+              <span>暂无数据</span>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 任务看板 - 优化布局 -->
     <el-row :gutter="12" class="dashboard-header">
       <el-col :lg="8" class="mb8">
@@ -2273,11 +2298,12 @@ import useUserStore from '@/store/modules/user'
 import useSocketStore from '@/store/modules/socket'
 // 时间插件
 import duration from 'dayjs/plugin/duration'
-import { Picture, Warning, CircleCheck, Clock, Message, Calendar, List, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { Picture, Warning, CircleCheck, Clock, Message, Calendar, List, ArrowLeft, ArrowRight, Money } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { useRouter } from 'vue-router'
 import { eventBus } from '@/utils/eventBus'
 import { useRoute } from 'vue-router'
+import exchangeRateService from '@/utils/exchangeRateService'
 
 
 const totalAmount = ref(0);
@@ -2293,6 +2319,9 @@ const exchangeRateNotificationVisible = ref(false);
 const exchangeRateFormRef = ref();
 const exchangeRateNotificationTimer = ref(null);
 const exchangeRateCheckTimer = ref(null);
+
+// 当日汇率显示相关变量
+const todayExchangeRates = ref([]);
 
 // 汇率填写表单
 interface ExchangeRateForm {
@@ -2969,6 +2998,56 @@ function getBusinessDashboard() {
     method: 'get'
   })
 }
+
+// 获取当日汇率数据
+const getTodayExchangeRates = async () => {
+  try {
+    // 使用exchangeRateService获取所有币种的最新汇率
+    const allRates = await exchangeRateService.getAllLatestExchangeRates();
+
+    if (allRates && Object.keys(allRates).length > 0) {
+      // 将汇率数据转换为显示格式
+      const formattedRates = [];
+
+      // 检查币种选项是否已加载
+      const currencyOptions = optionss.value.hr_export_currency;
+      if (!currencyOptions || currencyOptions.length === 0) {
+        console.warn('币种选项数据未加载，等待数据加载完成...');
+        // 延迟重试
+        setTimeout(() => {
+          getTodayExchangeRates();
+        }, 1000);
+        return;
+      }
+
+      // 遍历所有币种汇率
+      for (const [currency, rate] of Object.entries(allRates)) {
+        // 过滤掉人民币汇率（币种ID为'3'）
+        if (currency === '3') {
+          continue;
+        }
+
+        // 获取币种名称
+        const currencyName = exchangeRateService.getCurrencyName(currency, currencyOptions);
+
+        formattedRates.push({
+          currency: currency,
+          currencyName: currencyName,
+          exchangeRate: exchangeRateService.formatExchangeRate(rate)
+        });
+      }
+
+      todayExchangeRates.value = formattedRates;
+      console.log('当日汇率数据加载完成:', formattedRates);
+    } else {
+      console.warn('未获取到任何汇率数据');
+      todayExchangeRates.value = [];
+    }
+  } catch (error) {
+    console.error('获取当日汇率出错:', error);
+    todayExchangeRates.value = [];
+  }
+};
 
 // 获取报价单看板数据
 function getQuotationsKanBanData() {
@@ -5839,6 +5918,9 @@ onMounted(() => {
   if (route.query.contactId) {
     needOpenSaleContract.value = route.query.contactId;
   }
+
+  // 获取当日汇率数据
+  getTodayExchangeRates();
 });
 
 // 监听数据变化
@@ -6615,6 +6697,88 @@ onUnmounted(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* 当日汇率显示样式 - 紧凑型 */
+.exchange-rate-header {
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.exchange-rate-container {
+  width: 100%;
+}
+
+.exchange-rate-card {
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.exchange-rate-content {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  height: 40px;
+}
+
+.exchange-rate-title {
+  display: flex;
+  align-items: center;
+  font-size: 20px;
+  font-weight: 600;
+  margin-right: 12px;
+  white-space: nowrap;
+}
+
+.exchange-rate-icon {
+  margin-right: 8px;
+  font-size: 20px;
+}
+
+.exchange-rate-list {
+  display: flex;
+  gap: 12px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.exchange-rate-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.currency-name {
+  font-size: 18px;
+  opacity: 0.9;
+  margin-bottom: 0px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.exchange-rate-value {
+  font-size: 16px;
+  font-weight: bold;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0px 2px;
+  border-radius: 1px;
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.no-exchange-rate {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 18px;
+  font-style: italic;
+  line-height: 1;
 }
 
 /* 仪表板头部样式 */

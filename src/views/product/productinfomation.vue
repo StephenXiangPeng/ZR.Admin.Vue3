@@ -1339,6 +1339,7 @@ const clearProductform = () => {
 	isDisabled.value = false;
 	showEditSaveBtn.value = false;
 	showEditBtn.value = false;
+	isViewMode.value = false;
 	Productform.productDescription = '';
 	Productform.customerGoodsNumber = '';
 	Productform.Supplier = null;
