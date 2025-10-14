@@ -255,15 +255,8 @@
         <el-form-item label="分类编号" prop="categoryNumber" required>
           <el-input
             v-model="addCategoryForm.categoryNumber"
-            placeholder="使用系统编号"
-            readonly
-          >
-            <template #suffix>
-              <el-icon class="auto-generate-icon">
-                <Check />
-              </el-icon>
-            </template>
-          </el-input>
+            placeholder="请输入分类编号"
+          />
         </el-form-item>
         <el-form-item label="分类名称" prop="categoryName" required>
           <el-input
@@ -434,6 +427,9 @@ const addCategoryForm = reactive({
 
 // 新增分类表单验证规则
 const addCategoryRules = {
+  categoryNumber: [
+    { required: true, message: '请输入分类编号', trigger: 'blur' }
+  ],
   categoryName: [
     { required: true, message: '请输入分类名称', trigger: 'blur' }
   ]
@@ -468,9 +464,8 @@ const handleSelectionChange = (selection: any[]) => {
 
 // 操作按钮处理函数
 const handleAddCategory = () => {
-  // 生成系统编号
-  const newCategoryNumber = `FL${String(categories.value.length + 1).padStart(4, '0')}`
-  addCategoryForm.categoryNumber = newCategoryNumber
+  // 清空表单
+  addCategoryForm.categoryNumber = ''
   addCategoryForm.categoryName = ''
   addCategoryDialogVisible.value = true
 }
