@@ -3153,23 +3153,32 @@ const handleBatchDelete = async () => {
 		)
 
 		isBatchProcessing.value = true
-		const emailIds = selectedRows.value.map(row => row.id)
+		const emailIds = selectedRows.value.map(row => row.id.toString())
+
+		// 构建垃圾箱移动请求参数
+		const trashFolderData = {
+			isSystem: true,
+			type: 4,
+			dataId: 4,
+			label: '垃圾箱'
+		}
+
+		const moveRequest = buildBatchMoveRequest(trashFolderData, emailIds)
+
+		console.log('批量删除到垃圾箱请求参数:', moveRequest)
 
 		const response = await request({
-			url: 'Email/BatchMoveEmail/BatchMoveEmail',
+			url: 'Email/BatchMoveEmailToFolder/BatchMoveToFolder',
 			method: 'POST',
-			data: {
-				emailIds: emailIds,
-				emailType: 4
-			}
+			data: moveRequest
 		})
 
-		if (response.code == 200) {
-			ElMessage.success(`成功删除 ${selectedRows.value.length} 封邮件`)
+		if (response.code === 200) {
+			ElMessage.success(response.msg || `成功删除 ${selectedRows.value.length} 封邮件`)
 			clearSelection()
 			await refreshCurrentView()
 		} else {
-			ElMessage.error('批量删除失败')
+			ElMessage.error(response.msg || '批量删除失败')
 		}
 	} catch (error) {
 		if (error !== 'cancel') {

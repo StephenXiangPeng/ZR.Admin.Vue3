@@ -343,7 +343,7 @@
       </el-col>
     </el-row> -->
     <el-dialog v-model="AgencyProcessdialogTableVisible" title="待办流程" width="800">
-      <el-tabs v-model="AgencyProcessdialogTableActiveName" type="card">
+      <el-tabs v-model="AgencyProcessdialogTableActiveName" type="card" @tab-click="handleTabClick">
         <el-tab-pane label="待审批单据" name="first">
           <el-table :data="AgencyProcesstableData">
             <el-table-column prop="documentType" label="单据类型ID" width="150" align="center" v-if="false" />
@@ -400,7 +400,7 @@
             <el-table-column prop="salesperson" label="销售员" width="150" v-if="false"></el-table-column>
           </el-table>
         </el-tab-pane>
-        <el-tab-pane>
+        <el-tab-pane name="reject">
           <template #label>
             <span class="custom-tabs-label">
               <el-icon>
@@ -409,6 +409,43 @@
               <span>审核驳回单据</span>
             </span>
           </template>
+          <!-- 被驳回的采购合同表格 -->
+          <div style="margin-bottom: 20px;" v-if="rejectPurchaseContractList && rejectPurchaseContractList.length > 0">
+            <el-table :data="rejectPurchaseContractList" :height="200" style="width: 100%"
+              @row-dblclick="handleRejectPurchaseContractRowDblClick">
+              <el-table-column prop="purchaseContractNumber" label="采购合同号" width="150"></el-table-column>
+              <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
+              <el-table-column fixed="right" prop="operate" label="操作" width="120" align="center">
+                <template v-slot:default="scope">
+                  <el-button link type="primary" size="small"
+                    @click="viewRejectPurchaseContract(scope.row)">查看详情</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+          <!-- 被驳回的销售合同表格 -->
+          <div v-if="rejectContractList && rejectContractList.length > 0">
+            <el-table :data="rejectContractList" :height="200" style="width: 100%"
+              @row-dblclick="handleRejectContractRowDblClick">
+              <el-table-column prop="contractNumber" label="销售合同号" width="150"></el-table-column>
+              <el-table-column prop="createTime" label="创建时间" width="180"></el-table-column>
+              <el-table-column fixed="right" prop="operate" label="操作" width="120" align="center">
+                <template v-slot:default="scope">
+                  <el-button link type="primary" size="small" @click="viewRejectContract(scope.row)">查看详情</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <!-- 当两个列表都为空时显示提示信息 -->
+          <div
+            v-if="(!rejectPurchaseContractList || rejectPurchaseContractList.length === 0) && (!rejectContractList || rejectContractList.length === 0)"
+            style="text-align: center; padding: 40px; color: #909399;">
+            <el-icon size="48" style="margin-bottom: 16px;">
+              <document />
+            </el-icon>
+            <p style="font-size: 16px; margin: 0;">暂无被驳回的单据</p>
+          </div>
         </el-tab-pane>
       </el-tabs>
     </el-dialog>
@@ -4720,6 +4757,76 @@ const getUserCustomerData = async () => {
 }
 
 
+// 统一的pendingCount计算函数
+const calculatePendingCount = async () => {
+  let totalCount = 0;
+
+  try {
+    // 1. 获取待审批单据数量
+    const approvalResponse = await request({
+      url: 'ApprovalFlow/GetApprovalRecord/GetApprovalRecordCount',
+      method: 'GET'
+    });
+    if (approvalResponse.code == 200) {
+      totalCount += approvalResponse.data.length;
+    }
+
+    // 2. 获取询价需求数量
+    if (userStore.userInfo && userStore.userInfo.deptId === 210) {
+      const inquiryResponse = await request({
+        url: 'Inquiry/GetInquiryProductListByBuyer/GetInquiryProductList',
+        method: 'get',
+        params: {
+          PageNum: 1,
+          PageSize: 10,
+          Status: 0
+        }
+      });
+      if (inquiryResponse.code === 200) {
+        totalCount += inquiryResponse.data.result.length;
+      }
+
+      // 3. 获取采购需求数量
+      const procurementResponse = await request({
+        url: 'ProcurementRequirements/GetProcurementRequirementsList/GetList',
+        method: 'get',
+        params: {
+          PageNum: 1,
+          PageSize: 10,
+          Status: 0
+        }
+      });
+      if (procurementResponse.code === 200) {
+        totalCount += procurementResponse.data.result.length;
+      }
+
+      // 4. 获取被驳回的采购合同数量
+      const rejectPurchaseResponse = await request({
+        url: 'PurchaseContracts/GetRejectPurchaseContractList/GetRejectList',
+        method: 'get'
+      });
+      if (rejectPurchaseResponse.code == 200) {
+        totalCount += rejectPurchaseResponse.data.length;
+      }
+    }
+
+    // 5. 获取被驳回的销售合同数量
+    const rejectContractResponse = await request({
+      url: 'Contracts/GetRejectContractsList/GetRejectList',
+      method: 'get'
+    });
+    if (rejectContractResponse.code == 200) {
+      totalCount += rejectContractResponse.data.length;
+    }
+
+    // 更新pendingCount
+    pendingCount.value = totalCount;
+
+  } catch (error) {
+    console.error('计算pendingCount失败:', error);
+  }
+};
+
 //获取待办流程数量
 const getPendingCount = () => {
   AgencyProcesstableData.value = [];
@@ -4728,7 +4835,6 @@ const getPendingCount = () => {
     method: 'GET'
   }).then(response => {
     if (response.code == 200) {
-      pendingCount.value = response.data.length;
       if (response.data.length > 0) {
         AgencyProcesstableData.value = response.data;
         AgencyProcesstableData.value.forEach(item => {
@@ -4757,6 +4863,8 @@ const getPendingCount = () => {
     } else {
       ElMessage.error("获取待办流程数量失败");
     }
+    // 处理完待审批单据后，重新计算总的pendingCount
+    calculatePendingCount();
   }).catch(error => {
     console.error(error);
   });
@@ -5752,6 +5860,12 @@ const handleRowDblClick = (row) => {
 // 询价列表数据
 const inquiryList = ref([])
 
+// 被驳回的采购合同列表数据
+const rejectPurchaseContractList = ref([])
+
+// 被驳回的销售合同列表数据
+const rejectContractList = ref([])
+
 // 获取询价列表
 const getInquiryList = async () => {
   try {
@@ -5766,7 +5880,7 @@ const getInquiryList = async () => {
     })
     if (res.code === 200) {
       inquiryList.value = res.data.result
-      pendingCount.value += res.data.result.length
+      // 不再累加pendingCount，由统一计算函数处理
     }
   } catch (error) {
     console.error('获取询价列表失败', error)
@@ -5825,7 +5939,7 @@ const GetProcurementequirements = async () => {
     ElMessage.error('获取数据失败，请重试')
     throw error
   }
-  pendingCount.value += shoppinglisttableData.value.length;
+  // 不再累加pendingCount，由统一计算函数处理
 }
 
 // 动态合并单元格
@@ -5863,14 +5977,25 @@ const shoppinglisttableDatahandleRowDblClick = (row) => {
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
   // 初始化日历
   initCalendar();
 
+  // 使用统一的计算函数来获取pendingCount
+  await calculatePendingCount();
+
+  // 获取各种数据
+  GetRejectContractList();
   if (userStore.userInfo && userStore.userInfo.deptId === 210) {
     getInquiryList();
+    GetRejectPurchaseContractList();
     GetProcurementequirements();
   }
+
+  // 监听更新待办数量事件
+  eventBus.on('updatePendingCount', () => {
+    calculatePendingCount();
+  });
 })
 
 const overduePendingTaskPlanItemList = ref([])
@@ -6211,6 +6336,122 @@ onUnmounted(() => {
   }
 })
 
+//#region 获取驳回的采购合同列表
+const GetRejectPurchaseContractList = async () => {
+  try {
+    //获取驳回的采购合同列表
+    const RejectPurchaseContractListResponse = await request({
+      url: 'PurchaseContracts/GetRejectPurchaseContractList/GetRejectList',
+      method: 'get'
+    })
+    if (RejectPurchaseContractListResponse.code == 200) {
+      rejectPurchaseContractList.value = RejectPurchaseContractListResponse.data || []
+      // 处理数据格式化
+      rejectPurchaseContractList.value.forEach(item => {
+        // 格式化日期
+        if (item.createTime) {
+          item.createTime = formatDate(item.createTime)
+        }
+        // 格式化金额
+        if (item.totalAmount) {
+          item.totalAmount = parseFloat(item.totalAmount).toFixed(2)
+        }
+      })
+    }
+  } catch (error) {
+    console.error('获取驳回采购合同列表失败', error)
+  }
+}
+//#endregion
+
+//#region 获取驳回的合同列表
+const GetRejectContractList = async () => {
+  try {
+    const RejectContractListResponse = await request({
+      url: 'Contracts/GetRejectContractsList/GetRejectList',
+      method: 'get'
+    })
+    if (RejectContractListResponse.code == 200) {
+      rejectContractList.value = RejectContractListResponse.data || []
+      // 处理数据格式化
+      rejectContractList.value.forEach(item => {
+        // 格式化日期
+        if (item.createTime) {
+          item.createTime = formatDate(item.createTime)
+        }
+        // 格式化金额
+        if (item.totalAmount) {
+          item.totalAmount = parseFloat(item.totalAmount).toFixed(2)
+        }
+      })
+    }
+  } catch (error) {
+    console.error('获取驳回合同列表失败', error)
+  }
+}
+//#endregion
+
+//#region 被驳回单据相关处理函数
+// 处理tab切换事件
+const handleTabClick = (tab) => {
+  if (tab.props.name === 'reject') {
+    // 当切换到被驳回单据tab时，重新加载数据
+    GetRejectPurchaseContractList()
+    GetRejectContractList()
+    // 重新计算pendingCount
+    calculatePendingCount()
+  }
+}
+
+// 处理被驳回采购合同表格行双击事件
+const handleRejectPurchaseContractRowDblClick = (row) => {
+  console.log('双击被驳回采购合同:', row)
+  // 双击时也跳转到详情页面
+  viewRejectPurchaseContract(row)
+}
+
+// 处理被驳回销售合同表格行双击事件
+const handleRejectContractRowDblClick = (row) => {
+  console.log('双击被驳回销售合同:', row)
+  // 双击时也跳转到详情页面
+  viewRejectContract(row)
+}
+
+// 查看被驳回采购合同详情
+const viewRejectPurchaseContract = (row) => {
+  console.log('查看被驳回采购合同详情:', row)
+  if (row.id || row.purchaseContractId) {
+    const contractId = row.id || row.purchaseContractId
+    router.push({
+      path: '/purchase/procurementplansandcontracts',
+      query: {
+        purchaseContractId: contractId,
+        viewDetail: 'true'
+      }
+    })
+  } else {
+    ElMessage.warning('无法获取采购合同ID')
+  }
+}
+
+// 查看被驳回销售合同详情
+const viewRejectContract = (row) => {
+  console.log('查看被驳回销售合同详情:', row)
+  if (row.id || row.contractId) {
+    const contractId = row.id || row.contractId
+    router.push({
+      path: '/sale/sale/salecontract',
+      query: {
+        contractId: contractId,
+        contractNumber: row.contractNumber,
+        viewDetail: 'true'
+      }
+    })
+  } else {
+    ElMessage.warning('无法获取销售合同ID')
+  }
+}
+//#endregion
 </script>
 
 
