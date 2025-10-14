@@ -31,7 +31,12 @@ INSERT INTO `dfgx_lens_options` (`option_type`, `option_name`, `option_value`, `
 (3, 'PC材质', 3, '0', '聚碳酸酯镜片材质', 'admin', NOW(), 0),
 (4, '经典设计', 1, '0', '经典镜片设计', 'admin', NOW(), 0),
 (4, '时尚设计', 2, '0', '时尚镜片设计', 'admin', NOW(), 0),
-(4, '运动设计', 3, '0', '运动镜片设计', 'admin', NOW(), 0);
+(4, '运动设计', 3, '0', '运动镜片设计', 'admin', NOW(), 0),
+(5, '1.50', 1, '0', '折射率1.50', 'admin', NOW(), 0),
+(5, '1.56', 2, '0', '折射率1.56', 'admin', NOW(), 0),
+(5, '1.60', 3, '0', '折射率1.60', 'admin', NOW(), 0),
+(5, '1.67', 4, '0', '折射率1.67', 'admin', NOW(), 0),
+(5, '1.74', 5, '0', '折射率1.74', 'admin', NOW(), 0);
 
 -- 创建索引优化查询性能
 CREATE INDEX `idx_option_name` ON `dfgx_lens_options` (`option_name`);

@@ -5,6 +5,57 @@
     
     <div class="order-form">
       <el-form :model="orderForm" :rules="rules" ref="orderFormRef" label-width="120px">
+        <!-- 客户信息 -->
+        <el-card class="form-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>客户信息</span>
+            </div>
+          </template>
+          
+          <el-row :gutter="20">
+            <el-col :span="8">
+              <el-form-item label="订单编号" prop="orderNo">
+                <el-input v-model="orderForm.orderNo" placeholder="请输入订单编号" @blur="checkOrderNoUnique">
+                  <template #append>
+                    <el-button @click="generateOrderNo" :loading="generatingOrderNo">生成</el-button>
+                  </template>
+                </el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="客户姓名" prop="customerName">
+                <el-input v-model="orderForm.customerName" placeholder="请输入客户姓名"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="客户电话" prop="customerPhone">
+                <el-input v-model="orderForm.customerPhone" placeholder="请输入客户电话"></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="客户邮箱" prop="customerEmail">
+                <el-input v-model="orderForm.customerEmail" placeholder="请输入客户邮箱"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="订单日期" prop="orderDate">
+                <el-date-picker
+                  v-model="orderForm.orderDate"
+                  type="datetime"
+                  placeholder="选择订单日期"
+                  format="YYYY-MM-DD HH:mm:ss"
+                  value-format="YYYY-MM-DD HH:mm:ss"
+                  style="width: 100%">
+                </el-date-picker>
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </el-card>
+
         <!-- 镜片信息 -->
         <el-card class="form-card" shadow="hover">
           <template #header>
@@ -17,21 +68,24 @@
             <el-col :span="12">
               <el-form-item label="镜片类型" prop="lensType">
                 <el-select v-model="orderForm.lensType" placeholder="请选择镜片类型" style="width: 100%">
-                  <el-option label="单焦点" value="single"></el-option>
-                  <el-option label="双焦点" value="bifocal"></el-option>
-                  <el-option label="渐进多焦点" value="progressive"></el-option>
-                  <el-option label="防蓝光" value="blue-light"></el-option>
+                  <el-option 
+                    v-for="option in lensTypeOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="膜层" prop="coating">
                 <el-select v-model="orderForm.coating" placeholder="请选择膜层" style="width: 100%">
-                  <el-option label="无膜层" value="none"></el-option>
-                  <el-option label="防反射膜" value="ar"></el-option>
-                  <el-option label="背面超防水绿膜" value="backside-ar"></el-option>
-                  <el-option label="防紫外线膜" value="uv"></el-option>
-                  <el-option label="防刮膜" value="scratch-resistant"></el-option>
+                  <el-option 
+                    v-for="option in coatingOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
                 </el-select>
               </el-form-item>
             </el-col>
@@ -39,30 +93,44 @@
           
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="途径" prop="path">
-                <el-select v-model="orderForm.path" placeholder="请选择途径" style="width: 100%">
-                  <el-option label="6mm" value="6mm"></el-option>
-                  <el-option label="7mm" value="7mm"></el-option>
-                  <el-option label="8mm" value="8mm"></el-option>
-                  <el-option label="9mm (ACOMODA)" value="9mm"></el-option>
-                  <el-option label="10mm" value="10mm"></el-option>
+              <el-form-item label="设计名称" prop="designName">
+                <el-select v-model="orderForm.designName" placeholder="请选择设计名称" style="width: 100%">
+                  <el-option 
+                    v-for="option in designNameOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="材质" prop="material">
                 <el-select v-model="orderForm.material" placeholder="请选择材质" style="width: 100%">
-                  <el-option label="MR7" value="MR7"></el-option>
-                  <el-option label="MR8" value="MR8"></el-option>
-                  <el-option label="MR174" value="MR174"></el-option>
-                  <el-option label="CR39" value="CR39"></el-option>
-                  <el-option label="PC" value="PC"></el-option>
+                  <el-option 
+                    v-for="option in materialOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
                 </el-select>
               </el-form-item>
             </el-col>
           </el-row>
           
           <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="折射率" prop="refractiveIndex">
+                <el-select v-model="orderForm.refractiveIndex" placeholder="请选择折射率" style="width: 100%">
+                  <el-option 
+                    v-for="option in refractiveIndexOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
             <el-col :span="12">
               <el-form-item label="镜框类型" prop="frameType">
                 <el-radio-group v-model="orderForm.frameType">
@@ -72,6 +140,9 @@
                 </el-radio-group>
               </el-form-item>
             </el-col>
+          </el-row>
+          
+          <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="数量" prop="quantity">
                 <el-input-number v-model="orderForm.quantity" :min="1" :max="100" style="width: 100%"></el-input-number>
@@ -234,21 +305,47 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { View } from '@element-plus/icons-vue'
+import { getCurrentInstance } from 'vue'
+import { listLensOptions } from '@/api/DFGX/lensOptions'
+import { addCustomerOrder, checkOrderNoUnique as checkOrderNoUniqueAPI } from '@/api/DFGX/customerOrders'
+import { addOrderDetails } from '@/api/DFGX/orderDetails'
+import { recordOrderStatusChange } from '@/api/DFGX/orderStatusHistory'
+import { createCompleteOrder } from '@/api/DFGX/orderManagement'
 
 const router = useRouter()
+const { proxy } = getCurrentInstance()
+
+// 字典数据
+const lensTypeOptions = ref([])
+const coatingOptions = ref([])
+const designNameOptions = ref([])
+const materialOptions = ref([])
+const refractiveIndexOptions = ref([])
 
 // 表单数据
 const orderForm = reactive({
+  // 客户信息
+  orderNo: '',
+  customerName: '',
+  customerPhone: '',
+  customerEmail: '',
+  orderDate: new Date().toISOString().slice(0, 19).replace('T', ' '),
+  status: '0', // 默认待处理状态
+  
+  // 镜片信息
   lensType: '',
   coating: '',
-  path: '',
+  designName: '',
   material: '',
+  refractiveIndex: '',
   frameType: 'full',
   quantity: 1,
+  
+  // 左右眼参数
   leftEye: {
     sph: '',
     cyl: '',
@@ -263,18 +360,48 @@ const orderForm = reactive({
     add: '',
     prism: ''
   },
-  remarks: ''
+  
+  // 其他信息
+  remarks: '',
+  totalAmount: 0
 })
 
 // 自动备注
 const autoRemarks = ref<string[]>([])
 
+// 订单编号验证器
+const validateOrderNo = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请输入订单编号'))
+  } else {
+    // 这里可以添加更多验证逻辑
+    callback()
+  }
+}
+
 // 表单验证规则
 const rules = {
+  // 客户信息验证
+  orderNo: [
+    { required: true, message: '请输入订单编号', trigger: 'blur' },
+    { validator: validateOrderNo, trigger: 'blur' }
+  ],
+  customerName: [{ required: true, message: '请输入客户姓名', trigger: 'blur' }],
+  customerPhone: [
+    { required: true, message: '请输入客户电话', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
+  ],
+  customerEmail: [
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  orderDate: [{ required: true, message: '请选择订单日期', trigger: 'change' }],
+  
+  // 镜片信息验证
   lensType: [{ required: true, message: '请选择镜片类型', trigger: 'change' }],
   coating: [{ required: true, message: '请选择膜层', trigger: 'change' }],
-  path: [{ required: true, message: '请选择途径', trigger: 'change' }],
+  designName: [{ required: true, message: '请选择设计名称', trigger: 'change' }],
   material: [{ required: true, message: '请选择材质', trigger: 'change' }],
+  refractiveIndex: [{ required: true, message: '请选择折射率', trigger: 'change' }],
   frameType: [{ required: true, message: '请选择镜框类型', trigger: 'change' }],
   quantity: [{ required: true, message: '请输入数量', trigger: 'blur' }]
 }
@@ -287,9 +414,70 @@ const totalPrice = computed(() => {
 
 // 提交状态
 const submitting = ref(false)
+const generatingOrderNo = ref(false)
+const orderNoValidating = ref(false)
+
+// 获取字典数据
+const getDictData = async () => {
+  try {
+    // 获取所有镜片选项数据
+    const response = await listLensOptions({})
+    const allOptions = response.data.result || response.data
+    
+    // 根据选项类型分类数据
+    // 1: 镜片类型, 2: 膜层, 3: 材质, 4: 设计名称, 5: 折射率
+    lensTypeOptions.value = allOptions
+      .filter(item => item.optionType === 1)
+      .map(item => ({
+        label: item.optionName,
+        value: item.optionValue,
+        price: item.remark ? parseFloat(item.remark) : 0
+      }))
+    
+    coatingOptions.value = allOptions
+      .filter(item => item.optionType === 2)
+      .map(item => ({
+        label: item.optionName,
+        value: item.optionValue,
+        price: item.remark ? parseFloat(item.remark) : 0
+      }))
+    
+    materialOptions.value = allOptions
+      .filter(item => item.optionType === 3)
+      .map(item => ({
+        label: item.optionName,
+        value: item.optionValue,
+        price: item.remark ? parseFloat(item.remark) : 0
+      }))
+    
+    designNameOptions.value = allOptions
+      .filter(item => item.optionType === 4)
+      .map(item => ({
+        label: item.optionName,
+        value: item.optionValue,
+        price: item.remark ? parseFloat(item.remark) : 0
+      }))
+    
+    refractiveIndexOptions.value = allOptions
+      .filter(item => item.optionType === 5)
+      .map(item => ({
+        label: item.optionName,
+        value: item.optionValue,
+        price: item.remark ? parseFloat(item.remark) : 0
+      }))
+  } catch (error) {
+    console.error('获取选项数据失败:', error)
+    ElMessage.error('获取配置数据失败')
+  }
+}
+
+// 组件挂载时获取字典数据
+onMounted(() => {
+  getDictData()
+})
 
 // 监听表单变化，自动计算价格和添加备注
-watch([() => orderForm.lensType, () => orderForm.coating, () => orderForm.path, () => orderForm.material], () => {
+watch([() => orderForm.lensType, () => orderForm.coating, () => orderForm.designName, () => orderForm.material, () => orderForm.refractiveIndex], () => {
   calculatePrice()
   generateAutoRemarks()
 }, { deep: true })
@@ -298,35 +486,18 @@ watch([() => orderForm.lensType, () => orderForm.coating, () => orderForm.path, 
 const calculatePrice = () => {
   let basePrice = 0
   
-  // 根据镜片类型计算基础价格
-  const lensTypePrices = {
-    'single': 100,
-    'bifocal': 200,
-    'progressive': 300,
-    'blue-light': 150
-  }
+  // 从字典数据中获取价格
+  const lensTypeOption = lensTypeOptions.value.find(option => option.value === orderForm.lensType)
+  const coatingOption = coatingOptions.value.find(option => option.value === orderForm.coating)
+  const designNameOption = designNameOptions.value.find(option => option.value === orderForm.designName)
+  const materialOption = materialOptions.value.find(option => option.value === orderForm.material)
+  const refractiveIndexOption = refractiveIndexOptions.value.find(option => option.value === orderForm.refractiveIndex)
   
-  // 根据膜层计算价格
-  const coatingPrices = {
-    'none': 0,
-    'ar': 50,
-    'backside-ar': 80,
-    'uv': 30,
-    'scratch-resistant': 40
-  }
-  
-  // 根据材质计算价格
-  const materialPrices = {
-    'MR7': 20,
-    'MR8': 30,
-    'MR174': 40,
-    'CR39': 10,
-    'PC': 15
-  }
-  
-  basePrice = (lensTypePrices[orderForm.lensType] || 0) + 
-              (coatingPrices[orderForm.coating] || 0) + 
-              (materialPrices[orderForm.material] || 0)
+  basePrice = (lensTypeOption?.price || 0) + 
+              (coatingOption?.price || 0) + 
+              (designNameOption?.price || 0) + 
+              (materialOption?.price || 0) + 
+              (refractiveIndexOption?.price || 0)
   
   calculatedPrice.value = basePrice
 }
@@ -340,9 +511,12 @@ const generateAutoRemarks = () => {
     remarks.push('ST自动改成FT')
   }
   
-  // 途径9mm是ACOMODA
-  if (orderForm.path === '9mm') {
-    remarks.push('途径9mm是ACOMODA')
+  // 设计名称相关备注
+  if (orderForm.designName) {
+    const designNameOption = designNameOptions.value.find(option => option.value === orderForm.designName)
+    if (designNameOption && designNameOption.label.includes('ACOMODA')) {
+      remarks.push('设计名称包含ACOMODA')
+    }
   }
   
   // 膜层Backside AR改成背面超防水绿膜
@@ -356,27 +530,125 @@ const generateAutoRemarks = () => {
   autoRemarks.value = remarks
 }
 
+// 生成订单编号
+const generateOrderNo = async () => {
+  try {
+    generatingOrderNo.value = true
+    const now = new Date()
+    const timestamp = now.getTime()
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+    const orderNo = `ORD${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${random}`
+    
+    // 检查订单编号是否唯一
+    const isUnique = await checkOrderNoUniqueAPI(orderNo)
+    if (isUnique.data) {
+      orderForm.orderNo = orderNo
+      ElMessage.success('订单编号生成成功')
+    } else {
+      ElMessage.warning('生成的订单编号已存在，请重新生成')
+    }
+  } catch (error) {
+    ElMessage.error('生成订单编号失败')
+  } finally {
+    generatingOrderNo.value = false
+  }
+}
+
+// 校验订单编号唯一性
+const checkOrderNoUnique = async () => {
+  if (!orderForm.orderNo) return
+  
+  try {
+    orderNoValidating.value = true
+    const response = await checkOrderNoUniqueAPI(orderForm.orderNo)
+    if (!response.data) {
+      ElMessage.warning('订单编号已存在，请重新输入')
+    }
+  } catch (error) {
+    ElMessage.error('校验订单编号失败')
+  } finally {
+    orderNoValidating.value = false
+  }
+}
+
 // 提交订单
 const submitOrder = async () => {
   try {
     await orderFormRef.value.validate()
     submitting.value = true
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // 构建订单数据
+    const orderData = {
+      orderNo: orderForm.orderNo,
+      customerName: orderForm.customerName,
+      customerPhone: orderForm.customerPhone,
+      customerEmail: orderForm.customerEmail,
+      orderDate: orderForm.orderDate,
+      status: orderForm.status,
+      totalAmount: totalPrice.value,
+      remarks: orderForm.remarks
+    }
     
-    ElMessage.success('订单生成成功！')
-    
-    // 这里可以调用实际的API
-    console.log('订单数据:', {
-      ...orderForm,
-      calculatedPrice: calculatedPrice.value,
+    // 构建订单详情数据
+    const orderDetailsData = [{
+      lensType: orderForm.lensType,
+      lensTypeName: lensTypeOptions.value.find(opt => opt.value === orderForm.lensType)?.label || '',
+      coating: orderForm.coating,
+      coatingName: coatingOptions.value.find(opt => opt.value === orderForm.coating)?.label || '',
+      designName: orderForm.designName,
+      designNameText: designNameOptions.value.find(opt => opt.value === orderForm.designName)?.label || '',
+      material: orderForm.material,
+      materialName: materialOptions.value.find(opt => opt.value === orderForm.material)?.label || '',
+      refractiveIndex: orderForm.refractiveIndex,
+      refractiveIndexValue: refractiveIndexOptions.value.find(opt => opt.value === orderForm.refractiveIndex)?.label || '',
+      frameType: orderForm.frameType,
+      quantity: orderForm.quantity,
+      unitPrice: calculatedPrice.value,
       totalPrice: totalPrice.value,
-      autoRemarks: autoRemarks.value
-    })
+      leftEyeSph: orderForm.leftEye.sph,
+      leftEyeCyl: orderForm.leftEye.cyl,
+      leftEyeAxis: orderForm.leftEye.axis,
+      leftEyeAdd: orderForm.leftEye.add,
+      leftEyePrism: orderForm.leftEye.prism,
+      rightEyeSph: orderForm.rightEye.sph,
+      rightEyeCyl: orderForm.rightEye.cyl,
+      rightEyeAxis: orderForm.rightEye.axis,
+      rightEyeAdd: orderForm.rightEye.add,
+      rightEyePrism: orderForm.rightEye.prism,
+      autoRemarks: autoRemarks.value.join(', ')
+    }]
+    
+    // 使用综合管理接口创建完整订单
+    const completeOrderData = {
+      order: orderData,
+      orderDetails: orderDetailsData
+    }
+    
+    const response = await createCompleteOrder(completeOrderData)
+    
+    if (response.code == 200) {
+      ElMessage.success('订单创建成功！')
+      
+      // 记录状态变更
+      try {
+        // 根据实际API响应结构获取订单ID
+        const orderId = response.data.orderId 
+        if (orderId) {
+          await recordOrderStatusChange(orderId, '0', '待处理', orderForm.customerName)
+        }
+      } catch (error) {
+        console.warn('记录状态变更失败:', error)
+      }
+      
+      // 跳转到查看订单页面
+      router.push('/CheckOrder')
+    } else {
+      ElMessage.error(response.data.message || '订单创建失败')
+    }
     
   } catch (error) {
-    ElMessage.error('请检查表单信息')
+    console.error('提交订单失败:', error)
+    ElMessage.error('订单创建失败，请检查表单信息')
   } finally {
     submitting.value = false
   }
@@ -387,20 +659,39 @@ const resetForm = () => {
   orderFormRef.value.resetFields()
   calculatedPrice.value = 0
   autoRemarks.value = []
+  // 重置订单日期为当前时间
+  orderForm.orderDate = new Date().toISOString().slice(0, 19).replace('T', ' ')
 }
 
 // 预览订单
 const previewOrder = () => {
+  const lensTypeLabel = lensTypeOptions.value.find(option => option.value === orderForm.lensType)?.label || orderForm.lensType
+  const coatingLabel = coatingOptions.value.find(option => option.value === orderForm.coating)?.label || orderForm.coating
+  const designNameLabel = designNameOptions.value.find(option => option.value === orderForm.designName)?.label || orderForm.designName
+  const materialLabel = materialOptions.value.find(option => option.value === orderForm.material)?.label || orderForm.material
+  const refractiveIndexLabel = refractiveIndexOptions.value.find(option => option.value === orderForm.refractiveIndex)?.label || orderForm.refractiveIndex
+  
   ElMessageBox.alert(
     `订单预览：
-镜片类型：${orderForm.lensType}
-膜层：${orderForm.coating}
-途径：${orderForm.path}
-材质：${orderForm.material}
+订单编号：${orderForm.orderNo}
+客户姓名：${orderForm.customerName}
+客户电话：${orderForm.customerPhone}
+客户邮箱：${orderForm.customerEmail}
+订单日期：${orderForm.orderDate}
+
+镜片信息：
+镜片类型：${lensTypeLabel}
+膜层：${coatingLabel}
+设计名称：${designNameLabel}
+材质：${materialLabel}
+折射率：${refractiveIndexLabel}
 镜框类型：${orderForm.frameType}
 数量：${orderForm.quantity}
 单价：${calculatedPrice.value}元
 总价：${totalPrice.value}元
+
+备注信息：
+用户备注：${orderForm.remarks || '无'}
 自动备注：${autoRemarks.value.join(', ')}`,
     '订单预览',
     { type: 'info' }

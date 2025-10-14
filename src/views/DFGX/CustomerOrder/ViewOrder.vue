@@ -18,25 +18,61 @@
           </el-input>
         </el-col>
         <el-col :span="6">
+          <el-input
+            v-model="searchForm.customerName"
+            placeholder="客户姓名"
+            clearable
+            @clear="handleSearch">
+          </el-input>
+        </el-col>
+        <el-col :span="6">
+          <el-input
+            v-model="searchForm.customerPhone"
+            placeholder="客户电话"
+            clearable
+            @clear="handleSearch">
+          </el-input>
+        </el-col>
+        <el-col :span="6">
           <el-select v-model="searchForm.status" placeholder="订单状态" clearable @change="handleSearch">
             <el-option label="全部" value=""></el-option>
-            <el-option label="待处理" value="pending"></el-option>
-            <el-option label="处理中" value="processing"></el-option>
-            <el-option label="已完成" value="completed"></el-option>
-            <el-option label="已取消" value="cancelled"></el-option>
+            <el-option label="待处理" value="0"></el-option>
+            <el-option label="生产中" value="1"></el-option>
+            <el-option label="已完成" value="2"></el-option>
+            <el-option label="已取消" value="3"></el-option>
           </el-select>
+        </el-col>
+      </el-row>
+      
+      <el-row :gutter="20" style="margin-top: 15px;">
+        <el-col :span="6">
+          <el-date-picker
+            v-model="searchForm.beginTime"
+            type="datetime"
+            placeholder="开始日期"
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            @change="handleSearch">
+          </el-date-picker>
         </el-col>
         <el-col :span="6">
           <el-date-picker
-            v-model="searchForm.dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
+            v-model="searchForm.endTime"
+            type="datetime"
+            placeholder="结束日期"
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
             @change="handleSearch">
           </el-date-picker>
+        </el-col>
+        <el-col :span="6">
+          <el-input-number
+            v-model="searchForm.minAmount"
+            placeholder="最小金额"
+            :min="0"
+            :precision="2"
+            @change="handleSearch">
+          </el-input-number>
         </el-col>
         <el-col :span="6">
           <el-button type="primary" @click="handleSearch">
@@ -63,7 +99,7 @@
         </div>
       </template>
       
-      <el-table :data="filteredOrders" v-loading="loading" stripe>
+      <el-table :data="orderList" v-loading="loading" stripe>
         <el-table-column prop="orderNo" label="订单号" width="150" fixed="left">
           <template #default="{ row }">
             <el-link type="primary" @click="viewOrderDetail(row)">
@@ -72,28 +108,21 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="createTime" label="下单时间" width="180">
+        <el-table-column prop="customerName" label="客户姓名" width="120">
+        </el-table-column>
+        
+        <el-table-column prop="customerPhone" label="客户电话" width="130">
+        </el-table-column>
+        
+        <el-table-column prop="orderDate" label="下单时间" width="180">
           <template #default="{ row }">
-            {{ formatDate(row.createTime) }}
+            {{ formatDate(row.orderDate) }}
           </template>
         </el-table-column>
         
-        <el-table-column prop="lensInfo" label="镜片信息" width="200">
+        <el-table-column prop="totalAmount" label="总金额" width="120" align="right">
           <template #default="{ row }">
-            <div class="lens-info">
-              <div><strong>类型：</strong>{{ getLensTypeName(row.lensType) }}</div>
-              <div><strong>材质：</strong>{{ row.material }}</div>
-              <div><strong>膜层：</strong>{{ getCoatingName(row.coating) }}</div>
-            </div>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="quantity" label="数量" width="80" align="center">
-        </el-table-column>
-        
-        <el-table-column prop="totalPrice" label="总价" width="120" align="right">
-          <template #default="{ row }">
-            <span class="price">¥{{ row.totalPrice }}</span>
+            <span class="price">¥{{ row.totalAmount }}</span>
           </template>
         </el-table-column>
         
@@ -108,13 +137,20 @@
         <el-table-column prop="remarks" label="备注" min-width="200" show-overflow-tooltip>
         </el-table-column>
         
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="viewOrderDetail(row)">
               查看详情
             </el-button>
             <el-button 
-              v-if="row.status === 'pending'" 
+              v-if="row.status === '1'" 
+              type="success" 
+              size="small" 
+              @click="completeOrder(row)">
+              完成订单
+            </el-button>
+            <el-button 
+              v-if="['0', '1'].includes(row.status)" 
               type="danger" 
               size="small" 
               @click="cancelOrder(row)">
@@ -145,69 +181,52 @@
       width="800px"
       :before-close="handleCloseDetail">
       <div v-if="selectedOrder" class="order-detail">
+        <!-- 订单基本信息 -->
         <el-descriptions :column="2" border>
           <el-descriptions-item label="订单号">{{ selectedOrder.orderNo }}</el-descriptions-item>
-          <el-descriptions-item label="下单时间">{{ formatDate(selectedOrder.createTime) }}</el-descriptions-item>
-          <el-descriptions-item label="镜片类型">{{ getLensTypeName(selectedOrder.lensType) }}</el-descriptions-item>
-          <el-descriptions-item label="膜层">{{ getCoatingName(selectedOrder.coating) }}</el-descriptions-item>
-          <el-descriptions-item label="途径">{{ selectedOrder.path }}</el-descriptions-item>
-          <el-descriptions-item label="材质">{{ selectedOrder.material }}</el-descriptions-item>
-          <el-descriptions-item label="镜框类型">{{ getFrameTypeName(selectedOrder.frameType) }}</el-descriptions-item>
-          <el-descriptions-item label="数量">{{ selectedOrder.quantity }}</el-descriptions-item>
-          <el-descriptions-item label="单价">¥{{ selectedOrder.unitPrice }}</el-descriptions-item>
-          <el-descriptions-item label="总价">¥{{ selectedOrder.totalPrice }}</el-descriptions-item>
+          <el-descriptions-item label="客户姓名">{{ selectedOrder.customerName }}</el-descriptions-item>
+          <el-descriptions-item label="客户电话">{{ selectedOrder.customerPhone }}</el-descriptions-item>
+          <el-descriptions-item label="客户邮箱">{{ selectedOrder.customerEmail }}</el-descriptions-item>
+          <el-descriptions-item label="下单时间">{{ formatDate(selectedOrder.orderDate) }}</el-descriptions-item>
+          <el-descriptions-item label="总金额">¥{{ selectedOrder.totalAmount }}</el-descriptions-item>
           <el-descriptions-item label="订单状态">
             <el-tag :type="getStatusType(selectedOrder.status)">
               {{ getStatusName(selectedOrder.status) }}
             </el-tag>
           </el-descriptions-item>
+          <el-descriptions-item label="备注">{{ selectedOrder.remarks || '无' }}</el-descriptions-item>
         </el-descriptions>
         
-        <!-- 左右眼参数 -->
-        <div class="eye-params-section">
-          <h4>左右眼参数</h4>
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <div class="eye-params">
-                <h5>左眼参数</h5>
-                <el-descriptions :column="2" size="small">
-                  <el-descriptions-item label="SPH">{{ selectedOrder.leftEye.sph || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="CYL">{{ selectedOrder.leftEye.cyl || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="AXIS">{{ selectedOrder.leftEye.axis || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="ADD">{{ selectedOrder.leftEye.add || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="PRISM">{{ selectedOrder.leftEye.prism || '-' }}</el-descriptions-item>
-                </el-descriptions>
-              </div>
-            </el-col>
-            <el-col :span="12">
-              <div class="eye-params">
-                <h5>右眼参数</h5>
-                <el-descriptions :column="2" size="small">
-                  <el-descriptions-item label="SPH">{{ selectedOrder.rightEye.sph || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="CYL">{{ selectedOrder.rightEye.cyl || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="AXIS">{{ selectedOrder.rightEye.axis || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="ADD">{{ selectedOrder.rightEye.add || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="PRISM">{{ selectedOrder.rightEye.prism || '-' }}</el-descriptions-item>
-                </el-descriptions>
-              </div>
-            </el-col>
-          </el-row>
+        <!-- 订单详情列表 -->
+        <div v-if="orderDetails.length > 0" class="order-details-section">
+          <h4>订单详情</h4>
+          <el-table :data="orderDetails" size="small" border>
+            <el-table-column prop="lensTypeName" label="镜片类型" width="120"></el-table-column>
+            <el-table-column prop="coatingName" label="膜层" width="120"></el-table-column>
+            <el-table-column prop="materialName" label="材质" width="120"></el-table-column>
+            <el-table-column prop="frameType" label="镜框类型" width="100"></el-table-column>
+            <el-table-column prop="quantity" label="数量" width="80" align="center"></el-table-column>
+            <el-table-column prop="unitPrice" label="单价" width="100" align="right">
+              <template #default="{ row }">¥{{ row.unitPrice }}</template>
+            </el-table-column>
+            <el-table-column prop="totalPrice" label="总价" width="100" align="right">
+              <template #default="{ row }">¥{{ row.totalPrice }}</template>
+            </el-table-column>
+          </el-table>
         </div>
         
-        <!-- 备注信息 -->
-        <div class="remarks-section">
-          <h4>备注信息</h4>
-          <div class="remarks-content">
-            <p><strong>用户备注：</strong>{{ selectedOrder.remarks || '无' }}</p>
-            <div v-if="selectedOrder.autoRemarks && selectedOrder.autoRemarks.length > 0">
-              <p><strong>自动备注：</strong></p>
-              <div class="auto-remarks">
-                <el-tag v-for="remark in selectedOrder.autoRemarks" :key="remark" type="info" class="remark-tag">
-                  {{ remark }}
-                </el-tag>
-              </div>
-            </div>
-          </div>
+        <!-- 状态历史 -->
+        <div v-if="statusHistory.length > 0" class="status-history-section">
+          <h4>状态历史</h4>
+          <el-timeline>
+            <el-timeline-item
+              v-for="(history, index) in statusHistory"
+              :key="index"
+              :timestamp="formatDate(history.createTime)"
+              :type="getStatusType(history.status)">
+              {{ history.statusName }} - {{ history.operator }}
+            </el-timeline-item>
+          </el-timeline>
         </div>
       </div>
       
@@ -224,14 +243,23 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
+import { listCustomerOrders, getCustomerOrder, updateOrderStatus, delCustomerOrder } from '@/api/DFGX/customerOrders'
+import { getOrderDetailsByOrderId } from '@/api/DFGX/orderDetails'
+import { getOrderStatusHistoryByOrderId, recordOrderStatusChange } from '@/api/DFGX/orderStatusHistory'
+import { getCompleteOrder } from '@/api/DFGX/orderManagement'
 
 const router = useRouter()
 
 // 搜索表单
 const searchForm = reactive({
   orderNo: '',
+  customerName: '',
+  customerPhone: '',
   status: '',
-  dateRange: []
+  beginTime: '',
+  endTime: '',
+  minAmount: '',
+  maxAmount: ''
 })
 
 // 分页
@@ -247,194 +275,36 @@ const loading = ref(false)
 // 详情对话框
 const detailDialogVisible = ref(false)
 const selectedOrder = ref(null)
+const orderDetails = ref([])
+const statusHistory = ref([])
 
-// Mock数据 - 订单历史记录
-const mockOrders = [
-  {
-    id: 1,
-    orderNo: 'ORD20241201001',
-    createTime: '2024-12-01 10:30:00',
-    lensType: 'single',
-    coating: 'backside-ar',
-    path: '9mm',
-    material: 'MR8',
-    frameType: 'full',
-    quantity: 2,
-    unitPrice: 180,
-    totalPrice: 360,
-    status: 'completed',
-    leftEye: {
-      sph: '-2.50',
-      cyl: '-0.75',
-      axis: '180',
-      add: '',
-      prism: ''
-    },
-    rightEye: {
-      sph: '-2.25',
-      cyl: '-0.50',
-      axis: '175',
-      add: '',
-      prism: ''
-    },
-    remarks: '请尽快处理',
-    autoRemarks: ['ST自动改成FT', '途径9mm是ACOMODA', '膜层Backside AR改成背面超防水绿膜', '需要不干胶标贴']
-  },
-  {
-    id: 2,
-    orderNo: 'ORD20241130002',
-    createTime: '2024-11-30 14:20:00',
-    lensType: 'progressive',
-    coating: 'ar',
-    path: '8mm',
-    material: 'MR174',
-    frameType: 'half',
-    quantity: 1,
-    unitPrice: 380,
-    totalPrice: 380,
-    status: 'processing',
-    leftEye: {
-      sph: '+1.50',
-      cyl: '',
-      axis: '',
-      add: '+2.00',
-      prism: ''
-    },
-    rightEye: {
-      sph: '+1.25',
-      cyl: '',
-      axis: '',
-      add: '+2.00',
-      prism: ''
-    },
-    remarks: '',
-    autoRemarks: ['需要不干胶标贴']
-  },
-  {
-    id: 3,
-    orderNo: 'ORD20241129003',
-    createTime: '2024-11-29 09:15:00',
-    lensType: 'blue-light',
-    coating: 'uv',
-    path: '7mm',
-    material: 'CR39',
-    frameType: 'none',
-    quantity: 1,
-    unitPrice: 190,
-    totalPrice: 190,
-    status: 'pending',
-    leftEye: {
-      sph: '-1.00',
-      cyl: '-0.25',
-      axis: '90',
-      add: '',
-      prism: ''
-    },
-    rightEye: {
-      sph: '-0.75',
-      cyl: '-0.25',
-      axis: '85',
-      add: '',
-      prism: ''
-    },
-    remarks: '防蓝光镜片',
-    autoRemarks: ['需要不干胶标贴']
-  },
-  {
-    id: 4,
-    orderNo: 'ORD20241128004',
-    createTime: '2024-11-28 16:45:00',
-    lensType: 'bifocal',
-    coating: 'scratch-resistant',
-    path: '10mm',
-    material: 'PC',
-    frameType: 'full',
-    quantity: 1,
-    unitPrice: 270,
-    totalPrice: 270,
-    status: 'cancelled',
-    leftEye: {
-      sph: '+2.00',
-      cyl: '',
-      axis: '',
-      add: '+1.50',
-      prism: ''
-    },
-    rightEye: {
-      sph: '+1.75',
-      cyl: '',
-      axis: '',
-      add: '+1.50',
-      prism: ''
-    },
-    remarks: '客户取消',
-    autoRemarks: ['需要不干胶标贴']
-  },
-  {
-    id: 5,
-    orderNo: 'ORD20241127005',
-    createTime: '2024-11-27 11:30:00',
-    lensType: 'single',
-    coating: 'none',
-    path: '6mm',
-    material: 'MR7',
-    frameType: 'half',
-    quantity: 2,
-    unitPrice: 120,
-    totalPrice: 240,
-    status: 'completed',
-    leftEye: {
-      sph: '-3.00',
-      cyl: '-1.00',
-      axis: '170',
-      add: '',
-      prism: ''
-    },
-    rightEye: {
-      sph: '-2.75',
-      cyl: '-0.75',
-      axis: '175',
-      add: '',
-      prism: ''
-    },
-    remarks: '',
-    autoRemarks: ['ST自动改成FT', '需要不干胶标贴']
-  }
-]
+// 订单列表数据
+const orderList = ref([])
 
-// 过滤后的订单列表
-const filteredOrders = computed(() => {
-  let orders = [...mockOrders]
-  
-  // 按订单号搜索
-  if (searchForm.orderNo) {
-    orders = orders.filter(order => 
-      order.orderNo.toLowerCase().includes(searchForm.orderNo.toLowerCase())
-    )
+// 获取订单列表
+const getOrderList = async () => {
+  try {
+    loading.value = true
+    const params = {
+      pageNum: pagination.currentPage,
+      pageSize: pagination.pageSize,
+      ...searchForm
+    }
+    
+    const response = await listCustomerOrders(params)
+    if (response.code == 200) {
+      orderList.value = response.data.result || []
+      pagination.total = response.data.totalNum || 0
+    } else {
+      ElMessage.error(response.data.msg || '获取订单列表失败')
+    }
+  } catch (error) {
+    console.error('获取订单列表失败:', error)
+    ElMessage.error('获取订单列表失败')
+  } finally {
+    loading.value = false
   }
-  
-  // 按状态筛选
-  if (searchForm.status) {
-    orders = orders.filter(order => order.status === searchForm.status)
-  }
-  
-  // 按日期范围筛选
-  if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-    const [startDate, endDate] = searchForm.dateRange
-    orders = orders.filter(order => {
-      const orderDate = order.createTime.split(' ')[0]
-      return orderDate >= startDate && orderDate <= endDate
-    })
-  }
-  
-  // 更新总数
-  pagination.total = orders.length
-  
-  // 分页
-  const start = (pagination.currentPage - 1) * pagination.pageSize
-  const end = start + pagination.pageSize
-  return orders.slice(start, end)
-})
+}
 
 // 获取镜片类型名称
 const getLensTypeName = (type: string) => {
@@ -472,10 +342,10 @@ const getFrameTypeName = (type: string) => {
 // 获取状态名称
 const getStatusName = (status: string) => {
   const statuses = {
-    'pending': '待处理',
-    'processing': '处理中',
-    'completed': '已完成',
-    'cancelled': '已取消'
+    '0': '待处理',
+    '1': '生产中',
+    '2': '已完成',
+    '3': '已取消'
   }
   return statuses[status] || status
 }
@@ -483,10 +353,10 @@ const getStatusName = (status: string) => {
 // 获取状态类型
 const getStatusType = (status: string) => {
   const types = {
-    'pending': 'warning',
-    'processing': 'primary',
-    'completed': 'success',
-    'cancelled': 'danger'
+    '0': 'warning',
+    '1': 'primary',
+    '2': 'success',
+    '3': 'danger'
   }
   return types[status] || 'info'
 }
@@ -499,37 +369,96 @@ const formatDate = (dateStr: string) => {
 // 搜索
 const handleSearch = () => {
   pagination.currentPage = 1
+  getOrderList()
 }
 
 // 重置搜索
 const resetSearch = () => {
   searchForm.orderNo = ''
+  searchForm.customerName = ''
+  searchForm.customerPhone = ''
   searchForm.status = ''
-  searchForm.dateRange = []
+  searchForm.beginTime = ''
+  searchForm.endTime = ''
+  searchForm.minAmount = ''
+  searchForm.maxAmount = ''
   pagination.currentPage = 1
+  getOrderList()
 }
 
 // 分页大小改变
 const handleSizeChange = (size: number) => {
   pagination.pageSize = size
   pagination.currentPage = 1
+  getOrderList()
 }
 
 // 当前页改变
 const handleCurrentChange = (page: number) => {
   pagination.currentPage = page
+  getOrderList()
 }
 
 // 查看订单详情
-const viewOrderDetail = (order: any) => {
-  selectedOrder.value = order
-  detailDialogVisible.value = true
+const viewOrderDetail = async (order: any) => {
+  try {
+    loading.value = true
+    selectedOrder.value = order
+    
+    // 获取完整订单信息
+    const response = await getCompleteOrder(order.id)
+    if (response.code == 200) {
+      selectedOrder.value = response.data.order
+      orderDetails.value = response.data.orderDetails || []
+      statusHistory.value = response.data.statusHistory || []
+    } else {
+      ElMessage.error(response.data.msg || '获取订单详情失败')
+    }
+    
+    detailDialogVisible.value = true
+  } catch (error) {
+    console.error('获取订单详情失败:', error)
+    ElMessage.error('获取订单详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 关闭详情对话框
 const handleCloseDetail = () => {
   detailDialogVisible.value = false
   selectedOrder.value = null
+}
+
+// 完成订单
+const completeOrder = async (order: any) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要将订单 ${order.orderNo} 标记为已完成吗？`,
+      '完成订单',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'success'
+      }
+    )
+    
+    const response = await updateOrderStatus(order.id, '2', '系统管理员')
+    if (response.code == 200) {
+      ElMessage.success('订单已完成')
+      // 记录状态变更
+      await recordOrderStatusChange(order.id, '2', '已完成', '系统管理员')
+      // 刷新订单列表
+      getOrderList()
+    } else {
+      ElMessage.error(response.data.msg || '完成订单失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('完成订单失败:', error)
+      ElMessage.error('完成订单失败')
+    }
+  }
 }
 
 // 取消订单
@@ -545,11 +474,21 @@ const cancelOrder = async (order: any) => {
       }
     )
     
-    // 更新订单状态
-    order.status = 'cancelled'
-    ElMessage.success('订单已取消')
-  } catch {
-    // 用户取消操作
+    const response = await updateOrderStatus(order.id, '3', '系统管理员')
+    if (response.code === 200) {
+      ElMessage.success('订单已取消')
+      // 记录状态变更
+      await recordOrderStatusChange(order.id, '3', '已取消', '系统管理员')
+      // 刷新订单列表
+      getOrderList()
+    } else {
+      ElMessage.error(response.data.msg || '取消订单失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('取消订单失败:', error)
+      ElMessage.error('取消订单失败')
+    }
   }
 }
 
@@ -560,7 +499,7 @@ const goToPlaceOrder = () => {
 
 // 初始化
 onMounted(() => {
-  pagination.total = mockOrders.length
+  getOrderList()
 })
 </script>
 
