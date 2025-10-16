@@ -193,9 +193,9 @@
 						</el-form-item>
 					</el-col>
 					<el-col :span="6">
-						<el-form-item label="计量单位" prop="unitOfMeasurement" data-field="unitOfMeasurement">
-							<el-select v-model="Productform.unitOfMeasurement" :disabled="isDisabled"
-								placeholder="请选择计量单位" style="width: 300px;" size="default">
+						<el-form-item label="计量单位" prop="unit" data-field="unit">
+							<el-select v-model="Productform.unit" :disabled="isDisabled" placeholder="请选择计量单位"
+								style="width: 300px;" size="default">
 								<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -2648,6 +2648,11 @@ const EditSaveProductinfomation = async () => {
 				throw new Error('请完善表单信息');
 			}
 		});
+
+		// 调试信息：检查UnitOfMeasurement字段
+		console.log('Productform.unit value:', Productform.unit);
+		console.log('Productform.unit type:', typeof Productform.unit);
+
 		const editProductInfoRequest = {
 			id: EditProductID.value,
 			ProductCategoriesID: Productform.ProductCategories,
@@ -2657,7 +2662,7 @@ const EditSaveProductinfomation = async () => {
 			englishProductName: Productform.englishProductName,
 			chineseSpecification: Productform.chineseSpecification,
 			englishSpecification: Productform.englishSpecification,
-			unitOfMeasurement: Productform.unit,
+			UnitOfMeasurement: Productform.unit,
 			customsCode: Productform.customsCode,
 			chineseDeclarationProductName: Productform.chineseDeclarationProductName,
 			englishDeclarationProductName: Productform.englishDeclarationProductName,
@@ -2825,6 +2830,11 @@ const EditSaveProductinfomation = async () => {
 				};
 			}));
 		}
+
+		// 调试信息：检查最终请求参数
+		console.log('editProductInfoRequest:', editProductInfoRequest);
+		console.log('UnitOfMeasurement in request:', editProductInfoRequest.UnitOfMeasurement);
+
 		const response = await request.post('ProductInformation/UpdateProductInfo/Edit', editProductInfoRequest);
 		if (response != null) {
 			ElMessage({
@@ -3204,7 +3214,7 @@ const EditSaveDraft = async () => {
 			englishProductName: Productform.englishProductName,
 			chineseSpecification: Productform.chineseSpecification,
 			englishSpecification: Productform.englishSpecification,
-			unitOfMeasurement: Productform.unit,
+			UnitOfMeasurement: Productform.unit,
 			customsCode: Productform.customsCode,
 			chineseDeclarationProductName: Productform.chineseDeclarationProductName,
 			englishDeclarationProductName: Productform.englishDeclarationProductName,
