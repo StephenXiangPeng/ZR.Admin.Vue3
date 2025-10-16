@@ -506,7 +506,7 @@
 					<template #default="scope">
 						<el-button v-if="scope.row.productId === 0 || scope.row.productId === null" type="primary"
 							size="small" @click="handleAddNewProduct(scope.row)">
-							添加新产品
+							发送添加产品申请
 						</el-button>
 					</template>
 				</el-table-column>
@@ -2407,11 +2407,27 @@ const DeletePurchaseContract = (row) => {
 	});
 };
 
-const handleAddNewProduct = (row) => {
+const handleAddNewProduct = async (row) => {
 	viewDetailsDialog.value = false;
-	// 跳转到产品信息页面，可以带参数
-	router.push({ path: '/product/productinfomation', query: { from: 'purchase', contractProductsId: row.id } })
 
+	try {
+		// 调用发送添加新产品消息接口
+		const response = await request({
+			url: 'PurchaseContracts/SendAddProductMessage/SendAddProductMessage',
+			method: 'GET'
+		});
+
+		if (response.code === 200) {
+			ElMessage.success('已发送添加新产品申请消息');
+		} else {
+			ElMessage.warning('发送消息失败，但可以继续添加产品');
+		}
+	} catch (error) {
+		console.error('发送添加新产品消息失败:', error);
+		ElMessage.warning('发送消息失败，但可以继续添加产品');
+	}
+	// 跳转到产品信息页面，可以带参数
+	//router.push({ path: '/product/productinfomation', query: { from: 'purchase', contractProductsId: row.id } })
 }
 
 // 判断合同状态是否为已批准状态（3、4、5、6、7）
