@@ -95,3 +95,11 @@ export function getNextOptionValue(optionType) {
 		params: { OptionType: optionType }
 	})
 }
+
+// 获取所有选项值
+export function getAllLensOptions() {
+	return request({
+		url: 'ProductConfiguration/GetLensOptions/GetAll',
+		method: 'get'
+	})
+}

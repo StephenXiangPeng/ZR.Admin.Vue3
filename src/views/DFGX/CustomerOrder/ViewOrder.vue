@@ -9,7 +9,7 @@
         <el-col :span="6">
           <el-input
             v-model="searchForm.orderNo"
-            placeholder="订单号"
+            placeholder="Order No."
             clearable
             @clear="handleSearch">
             <template #prefix>
@@ -20,26 +20,18 @@
         <el-col :span="6">
           <el-input
             v-model="searchForm.customerName"
-            placeholder="客户姓名"
+            placeholder="Customer Name"
             clearable
             @clear="handleSearch">
           </el-input>
         </el-col>
         <el-col :span="6">
-          <el-input
-            v-model="searchForm.customerPhone"
-            placeholder="客户电话"
-            clearable
-            @clear="handleSearch">
-          </el-input>
-        </el-col>
-        <el-col :span="6">
-          <el-select v-model="searchForm.status" placeholder="订单状态" clearable @change="handleSearch">
-            <el-option label="全部" value=""></el-option>
-            <el-option label="待处理" value="0"></el-option>
-            <el-option label="生产中" value="1"></el-option>
-            <el-option label="已完成" value="2"></el-option>
-            <el-option label="已取消" value="3"></el-option>
+          <el-select v-model="searchForm.status" placeholder="Order Status" clearable @change="handleSearch">
+            <el-option label="All" value=""></el-option>
+            <el-option label="Pending" value="0"></el-option>
+            <el-option label="In Production" value="1"></el-option>
+            <el-option label="Completed" value="2"></el-option>
+            <el-option label="Cancelled" value="3"></el-option>
           </el-select>
         </el-col>
       </el-row>
@@ -49,7 +41,7 @@
           <el-date-picker
             v-model="searchForm.beginTime"
             type="datetime"
-            placeholder="开始日期"
+            placeholder="Start Date"
             format="YYYY-MM-DD HH:mm:ss"
             value-format="YYYY-MM-DD HH:mm:ss"
             @change="handleSearch">
@@ -59,7 +51,7 @@
           <el-date-picker
             v-model="searchForm.endTime"
             type="datetime"
-            placeholder="结束日期"
+            placeholder="End Date"
             format="YYYY-MM-DD HH:mm:ss"
             value-format="YYYY-MM-DD HH:mm:ss"
             @change="handleSearch">
@@ -68,7 +60,7 @@
         <el-col :span="6">
           <el-input-number
             v-model="searchForm.minAmount"
-            placeholder="最小金额"
+            placeholder="Min Amount"
             :min="0"
             :precision="2"
             @change="handleSearch">
@@ -77,11 +69,11 @@
         <el-col :span="6">
           <el-button type="primary" @click="handleSearch">
             <el-icon><Search /></el-icon>
-            搜索
+            Search
           </el-button>
           <el-button @click="resetSearch">
             <el-icon><Refresh /></el-icon>
-            重置
+            Reset
           </el-button>
         </el-col>
       </el-row>
@@ -91,16 +83,16 @@
     <el-card class="order-list-card" shadow="hover">
       <template #header>
         <div class="card-header">
-          <span>订单列表</span>
+          <span>Order List</span>
           <el-button type="primary" @click="goToPlaceOrder">
             <el-icon><Plus /></el-icon>
-            新建订单
+            New Order
           </el-button>
         </div>
       </template>
       
       <el-table :data="orderList" v-loading="loading" stripe>
-        <el-table-column prop="orderNo" label="订单号" width="150" fixed="left">
+        <el-table-column prop="orderNo" label="Order No." width="150" fixed="left">
           <template #default="{ row }">
             <el-link type="primary" @click="viewOrderDetail(row)">
               {{ row.orderNo }}
@@ -108,25 +100,22 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="customerName" label="客户姓名" width="120">
+        <el-table-column prop="customerName" label="Customer Name" width="150">
         </el-table-column>
         
-        <el-table-column prop="customerPhone" label="客户电话" width="130">
-        </el-table-column>
-        
-        <el-table-column prop="orderDate" label="下单时间" width="180">
+        <el-table-column prop="orderDate" label="Order Date" width="120">
           <template #default="{ row }">
-            {{ formatDate(row.orderDate) }}
+            {{ formatDate(row.order_date) }}
           </template>
         </el-table-column>
         
-        <el-table-column prop="totalAmount" label="总金额" width="120" align="right">
+        <el-table-column prop="totalAmount" label="Total Amount" width="150" align="right">
           <template #default="{ row }">
             <span class="price">¥{{ row.totalAmount }}</span>
           </template>
         </el-table-column>
         
-        <el-table-column prop="status" label="状态" width="120" align="center">
+        <el-table-column prop="status" label="Status" width="120" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
               {{ getStatusName(row.status) }}
@@ -134,27 +123,27 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="remarks" label="备注" min-width="200" show-overflow-tooltip>
+        <el-table-column prop="remarks" label="Remarks" min-width="200" show-overflow-tooltip>
         </el-table-column>
         
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="Actions" width="230" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="viewOrderDetail(row)">
-              查看详情
+              View Details
             </el-button>
             <el-button 
               v-if="row.status === '1'" 
               type="success" 
               size="small" 
               @click="completeOrder(row)">
-              完成订单
+              Complete Order
             </el-button>
             <el-button 
               v-if="['0', '1'].includes(row.status)" 
               type="danger" 
               size="small" 
               @click="cancelOrder(row)">
-              取消订单
+              Cancel Order
             </el-button>
           </template>
         </el-table-column>
@@ -177,47 +166,104 @@
     <!-- 订单详情对话框 -->
     <el-dialog
       v-model="detailDialogVisible"
-      title="订单详情"
+      title="Order Details"
       width="800px"
       :before-close="handleCloseDetail">
       <div v-if="selectedOrder" class="order-detail">
         <!-- 订单基本信息 -->
         <el-descriptions :column="2" border>
-          <el-descriptions-item label="订单号">{{ selectedOrder.orderNo }}</el-descriptions-item>
-          <el-descriptions-item label="客户姓名">{{ selectedOrder.customerName }}</el-descriptions-item>
-          <el-descriptions-item label="客户电话">{{ selectedOrder.customerPhone }}</el-descriptions-item>
-          <el-descriptions-item label="客户邮箱">{{ selectedOrder.customerEmail }}</el-descriptions-item>
-          <el-descriptions-item label="下单时间">{{ formatDate(selectedOrder.orderDate) }}</el-descriptions-item>
-          <el-descriptions-item label="总金额">¥{{ selectedOrder.totalAmount }}</el-descriptions-item>
-          <el-descriptions-item label="订单状态">
+          <el-descriptions-item label="Order No.">{{ selectedOrder.orderNo }}</el-descriptions-item>
+          <el-descriptions-item label="Customer Name">{{ selectedOrder.customerName }}</el-descriptions-item>
+          <el-descriptions-item label="Order Date">{{ formatDate(selectedOrder.orderDate) }}</el-descriptions-item>
+          <el-descriptions-item label="Total Amount">${{ selectedOrder.totalAmount }}</el-descriptions-item>
+          <el-descriptions-item label="Order Status">
             <el-tag :type="getStatusType(selectedOrder.status)">
               {{ getStatusName(selectedOrder.status) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="备注">{{ selectedOrder.remarks || '无' }}</el-descriptions-item>
+          <el-descriptions-item label="Remarks">{{ selectedOrder.remarks || 'None' }}</el-descriptions-item>
         </el-descriptions>
+        
+        <!-- Frame Information -->
+        <div v-if="selectedOrder.frameType || selectedOrder.frameModel || selectedOrder.edEda || selectedOrder.sizeA || selectedOrder.sizeB" class="frame-info-section">
+          <h4>Frame Information</h4>
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="Frame Type">{{ selectedOrder.frameType || 'None' }}</el-descriptions-item>
+            <el-descriptions-item label="Model">{{ selectedOrder.frameModel || 'None' }}</el-descriptions-item>
+            <el-descriptions-item label="ED/EDA">{{ selectedOrder.edEda || 'None' }}</el-descriptions-item>
+            <el-descriptions-item label="sizeA-DBL-sizeA">{{ selectedOrder.sizeA || 'None' }}</el-descriptions-item>
+            <el-descriptions-item label="sizeB">{{ selectedOrder.sizeB || 'None' }}</el-descriptions-item>
+          </el-descriptions>
+        </div>
+        
+        <!-- Eye Parameters -->
+        <div v-if="selectedOrder.rightEyeSph || selectedOrder.rightEyeCyl || selectedOrder.leftEyeSph || selectedOrder.leftEyeCyl" class="eye-params-section">
+          <h4>Eye Parameters</h4>
+          <div class="eye-params">
+            <h5>Right Eye</h5>
+            <el-descriptions :column="3" border>
+              <el-descriptions-item label="SPH">{{ selectedOrder.rightEyeSph || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="CYL">{{ selectedOrder.rightEyeCyl || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="AXIS">{{ selectedOrder.rightEyeAxis || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="ADD">{{ selectedOrder.rightEyeAdd || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="PRISM">{{ selectedOrder.rightEyePrism || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="DIRECTION">{{ selectedOrder.rightEyePrismDirection || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="BASE">{{ selectedOrder.rightEyeBase || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="PH">{{ selectedOrder.rightEyePh || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="NEAR PD">{{ selectedOrder.rightEyeNearPd || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="DISTANCE PD">{{ selectedOrder.rightEyeDistancePd || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="QUANTITY">{{ selectedOrder.rightEyeQuantity || '1' }}</el-descriptions-item>
+            </el-descriptions>
+          </div>
+          <div class="eye-params">
+            <h5>Left Eye</h5>
+            <el-descriptions :column="3" border>
+              <el-descriptions-item label="SPH">{{ selectedOrder.leftEyeSph || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="CYL">{{ selectedOrder.leftEyeCyl || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="AXIS">{{ selectedOrder.leftEyeAxis || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="ADD">{{ selectedOrder.leftEyeAdd || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="PRISM">{{ selectedOrder.leftEyePrism || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="DIRECTION">{{ selectedOrder.leftEyePrismDirection || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="BASE">{{ selectedOrder.leftEyeBase || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="PH">{{ selectedOrder.leftEyePh || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="NEAR PD">{{ selectedOrder.leftEyeNearPd || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="DISTANCE PD">{{ selectedOrder.leftEyeDistancePd || 'None' }}</el-descriptions-item>
+              <el-descriptions-item label="QUANTITY">{{ selectedOrder.leftEyeQuantity || '1' }}</el-descriptions-item>
+            </el-descriptions>
+          </div>
+        </div>
         
         <!-- 订单详情列表 -->
         <div v-if="orderDetails.length > 0" class="order-details-section">
-          <h4>订单详情</h4>
+          <h4>Order Details</h4>
           <el-table :data="orderDetails" size="small" border>
-            <el-table-column prop="lensTypeName" label="镜片类型" width="120"></el-table-column>
-            <el-table-column prop="coatingName" label="膜层" width="120"></el-table-column>
-            <el-table-column prop="materialName" label="材质" width="120"></el-table-column>
-            <el-table-column prop="frameType" label="镜框类型" width="100"></el-table-column>
-            <el-table-column prop="quantity" label="数量" width="80" align="center"></el-table-column>
-            <el-table-column prop="unitPrice" label="单价" width="100" align="right">
-              <template #default="{ row }">¥{{ row.unitPrice }}</template>
+            <el-table-column prop="coatingName" label="Coating" width="120"></el-table-column>
+            <el-table-column prop="tintingName" label="Tinting" width="120"></el-table-column>
+            <el-table-column prop="designNameText" label="Design" width="120"></el-table-column>
+            <el-table-column prop="materialName" label="Material" width="120"></el-table-column>
+            <el-table-column prop="refractiveIndexValue" label="Index" width="100"></el-table-column>
+            <el-table-column prop="frameType" label="Frame Type" width="100"></el-table-column>
+            <el-table-column label="Quantity" width="120" align="center">
+              <template #default="{ row }">
+                <div class="quantity-info">
+                  <div>Left: {{ row.leftEyeQuantity || 1 }}</div>
+                  <div>Right: {{ row.rightEyeQuantity || 1 }}</div>
+                  <div>Total: {{ row.quantity || (row.leftEyeQuantity || 1) + (row.rightEyeQuantity || 1) }}</div>
+                </div>
+              </template>
             </el-table-column>
-            <el-table-column prop="totalPrice" label="总价" width="100" align="right">
-              <template #default="{ row }">¥{{ row.totalPrice }}</template>
+            <el-table-column prop="unitPrice" label="Unit Price" width="100" align="right">
+              <template #default="{ row }">${{ row.unitPrice }}</template>
+            </el-table-column>
+            <el-table-column prop="totalPrice" label="Total Price" width="100" align="right">
+              <template #default="{ row }">${{ row.totalPrice }}</template>
             </el-table-column>
           </el-table>
         </div>
         
         <!-- 状态历史 -->
         <div v-if="statusHistory.length > 0" class="status-history-section">
-          <h4>状态历史</h4>
+          <h4>Status History</h4>
           <el-timeline>
             <el-timeline-item
               v-for="(history, index) in statusHistory"
@@ -231,8 +277,8 @@
       </div>
       
       <template #footer>
-        <el-button @click="detailDialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="goToPlaceOrder">新建订单</el-button>
+        <el-button @click="detailDialogVisible = false">Close</el-button>
+        <el-button type="primary" @click="goToPlaceOrder">New Order</el-button>
       </template>
     </el-dialog>
   </div>
@@ -254,7 +300,6 @@ const router = useRouter()
 const searchForm = reactive({
   orderNo: '',
   customerName: '',
-  customerPhone: '',
   status: '',
   beginTime: '',
   endTime: '',
@@ -292,39 +337,40 @@ const getOrderList = async () => {
     }
     
     const response = await listCustomerOrders(params)
-    if (response.code == 200) {
+    if (response.data && response.code == 200) {
       orderList.value = response.data.result || []
       pagination.total = response.data.totalNum || 0
     } else {
-      ElMessage.error(response.data.msg || '获取订单列表失败')
+      ElMessage.error(response.data.msg || 'Failed to get order list')
     }
   } catch (error) {
     console.error('获取订单列表失败:', error)
-    ElMessage.error('获取订单列表失败')
+    ElMessage.error('Failed to get order list')
   } finally {
     loading.value = false
   }
 }
 
-// 获取镜片类型名称
-const getLensTypeName = (type: string) => {
-  const types = {
-    'single': '单焦点',
-    'bifocal': '双焦点',
-    'progressive': '渐进多焦点',
-    'blue-light': '防蓝光'
+// 获取染色名称
+const getTintingName = (tinting: string) => {
+  const tintings = {
+    'none': 'No Tinting',
+    'light': 'Light Tinting',
+    'medium': 'Medium Tinting',
+    'dark': 'Dark Tinting',
+    'photochromic': 'Photochromic'
   }
-  return types[type] || type
+  return tintings[tinting] || tinting
 }
 
 // 获取膜层名称
 const getCoatingName = (coating: string) => {
   const coatings = {
-    'none': '无膜层',
-    'ar': '防反射膜',
-    'backside-ar': '背面超防水绿膜',
-    'uv': '防紫外线膜',
-    'scratch-resistant': '防刮膜'
+    'none': 'No Coating',
+    'ar': 'Anti-Reflective',
+    'backside-ar': 'Backside Waterproof Green',
+    'uv': 'UV Protection',
+    'scratch-resistant': 'Scratch Resistant'
   }
   return coatings[coating] || coating
 }
@@ -332,9 +378,9 @@ const getCoatingName = (coating: string) => {
 // 获取镜框类型名称
 const getFrameTypeName = (type: string) => {
   const types = {
-    'full': '全框',
-    'half': '半框',
-    'none': '无框'
+    'full': 'Full Frame',
+    'half': 'Half Frame',
+    'none': 'Rimless'
   }
   return types[type] || type
 }
@@ -342,10 +388,10 @@ const getFrameTypeName = (type: string) => {
 // 获取状态名称
 const getStatusName = (status: string) => {
   const statuses = {
-    '0': '待处理',
-    '1': '生产中',
-    '2': '已完成',
-    '3': '已取消'
+    '0': 'Pending',
+    '1': 'In Production',
+    '2': 'Completed',
+    '3': 'Cancelled'
   }
   return statuses[status] || status
 }
@@ -363,7 +409,20 @@ const getStatusType = (status: string) => {
 
 // 格式化日期
 const formatDate = (dateStr: string) => {
-  return dateStr
+  if (!dateStr) return ''
+  
+  try {
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return dateStr
+    
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    
+    return `${year}-${month}-${day}`
+  } catch (error) {
+    return dateStr
+  }
 }
 
 // 搜索
@@ -376,7 +435,6 @@ const handleSearch = () => {
 const resetSearch = () => {
   searchForm.orderNo = ''
   searchForm.customerName = ''
-  searchForm.customerPhone = ''
   searchForm.status = ''
   searchForm.beginTime = ''
   searchForm.endTime = ''
@@ -407,18 +465,18 @@ const viewOrderDetail = async (order: any) => {
     
     // 获取完整订单信息
     const response = await getCompleteOrder(order.id)
-    if (response.code == 200) {
+    if (response.data && response.code == 200) {
       selectedOrder.value = response.data.order
       orderDetails.value = response.data.orderDetails || []
       statusHistory.value = response.data.statusHistory || []
     } else {
-      ElMessage.error(response.data.msg || '获取订单详情失败')
+      ElMessage.error(response.data.msg || 'Failed to get order details')
     }
     
     detailDialogVisible.value = true
   } catch (error) {
     console.error('获取订单详情失败:', error)
-    ElMessage.error('获取订单详情失败')
+    ElMessage.error('Failed to get order details')
   } finally {
     loading.value = false
   }
@@ -434,29 +492,29 @@ const handleCloseDetail = () => {
 const completeOrder = async (order: any) => {
   try {
     await ElMessageBox.confirm(
-      `确定要将订单 ${order.orderNo} 标记为已完成吗？`,
-      '完成订单',
+      `Are you sure to mark order ${order.orderNo} as completed?`,
+      'Complete Order',
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Confirm',
+        cancelButtonText: 'Cancel',
         type: 'success'
       }
     )
     
     const response = await updateOrderStatus(order.id, '2', '系统管理员')
-    if (response.code == 200) {
-      ElMessage.success('订单已完成')
+    if (response.data && response.data.code == 200) {
+      ElMessage.success('Order completed')
       // 记录状态变更
       await recordOrderStatusChange(order.id, '2', '已完成', '系统管理员')
       // 刷新订单列表
       getOrderList()
     } else {
-      ElMessage.error(response.data.msg || '完成订单失败')
+      ElMessage.error(response.data.msg || 'Failed to complete order')
     }
   } catch (error) {
     if (error !== 'cancel') {
       console.error('完成订单失败:', error)
-      ElMessage.error('完成订单失败')
+      ElMessage.error('Failed to complete order')
     }
   }
 }
@@ -465,29 +523,29 @@ const completeOrder = async (order: any) => {
 const cancelOrder = async (order: any) => {
   try {
     await ElMessageBox.confirm(
-      `确定要取消订单 ${order.orderNo} 吗？`,
-      '取消订单',
+      `Are you sure to cancel order ${order.orderNo}?`,
+      'Cancel Order',
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Confirm',
+        cancelButtonText: 'Cancel',
         type: 'warning'
       }
     )
     
     const response = await updateOrderStatus(order.id, '3', '系统管理员')
-    if (response.code === 200) {
-      ElMessage.success('订单已取消')
+    if (response.data && response.data.code === 200) {
+      ElMessage.success('Order cancelled')
       // 记录状态变更
       await recordOrderStatusChange(order.id, '3', '已取消', '系统管理员')
       // 刷新订单列表
       getOrderList()
     } else {
-      ElMessage.error(response.data.msg || '取消订单失败')
+      ElMessage.error(response.data.msg || 'Failed to cancel order')
     }
   } catch (error) {
     if (error !== 'cancel') {
       console.error('取消订单失败:', error)
-      ElMessage.error('取消订单失败')
+      ElMessage.error('Failed to cancel order')
     }
   }
 }
@@ -568,6 +626,19 @@ onMounted(() => {
   overflow-y: auto;
 }
 
+.frame-info-section {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.frame-info-section h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+}
+
 .eye-params-section {
   margin: 20px 0;
   padding: 15px;
@@ -634,5 +705,14 @@ onMounted(() => {
 :deep(.el-card__header) {
   background-color: #f8f9fa;
   border-bottom: 1px solid #e4e7ed;
+}
+
+.quantity-info {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.quantity-info div {
+  margin-bottom: 2px;
 }
 </style>

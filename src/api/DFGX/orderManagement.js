@@ -13,7 +13,10 @@ export function createCompleteOrder(data) {
 	return request({
 		url: '/dfgx/order-management/create-complete',
 		method: 'post',
-		data: data
+		data: data,
+		headers: {
+			'Content-Type': 'application/json'
+		}
 	})
 }
 
