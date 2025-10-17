@@ -169,7 +169,7 @@
           <el-input 
             v-model="form.optionName" 
             placeholder="请输入选项名称"
-            maxlength="50"
+            maxlength="100"
             show-word-limit
             clearable
           />
@@ -274,7 +274,7 @@ const data = reactive({
     ],
     optionName: [
       { required: true, message: '请输入选项名称', trigger: 'blur' },
-      { min: 1, max: 50, message: '选项名称长度在 1 到 50 个字符', trigger: 'blur' }
+      { min: 1, max: 100, message: '选项名称长度在 1 到 100 个字符', trigger: 'blur' }
     ],
     optionValue: [
       { required: true, message: '选项值不能为空', trigger: 'blur' },

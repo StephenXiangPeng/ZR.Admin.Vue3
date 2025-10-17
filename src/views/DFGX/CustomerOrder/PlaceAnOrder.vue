@@ -34,6 +34,8 @@
               </el-form-item>
             </el-col>
           </el-row>
+          
+        <!-- 订单状态选项已隐藏，但会在提交时默认设置为第一个状态 -->
         </el-card>
 
         <!-- Frame Information -->
@@ -71,14 +73,7 @@
             </el-col>
             <el-col :span="8">
               <el-form-item label="ED/EDA" prop="edEda">
-                <el-select v-model="orderForm.edEda" placeholder="Please select ED/EDA" style="width: 100%">
-                  <el-option 
-                    v-for="option in edEdaOptions" 
-                    :key="option.value" 
-                    :label="option.label" 
-                    :value="option.value">
-                  </el-option>
-                </el-select>
+                <el-input v-model="orderForm.edEda" placeholder="Please enter ED/EDA"></el-input>
               </el-form-item>
             </el-col>
           </el-row>
@@ -86,26 +81,12 @@
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="sizeA-DBL-sizeA" prop="sizeA">
-                <el-select v-model="orderForm.sizeA" placeholder="Please select sizeA-DBL-sizeA" style="width: 100%">
-                  <el-option 
-                    v-for="option in sizeAOptions" 
-                    :key="option.value" 
-                    :label="option.label" 
-                    :value="option.value">
-                  </el-option>
-                </el-select>
+                <el-input v-model="orderForm.sizeA" placeholder="Please enter sizeA-DBL-sizeA"></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="sizeB" prop="sizeB">
-                <el-select v-model="orderForm.sizeB" placeholder="Please select sizeB" style="width: 100%">
-                  <el-option 
-                    v-for="option in sizeBOptions" 
-                    :key="option.value" 
-                    :label="option.label" 
-                    :value="option.value">
-                  </el-option>
-                </el-select>
+                <el-input v-model="orderForm.sizeB" placeholder="Please enter sizeB"></el-input>
               </el-form-item>
             </el-col>
           </el-row>
@@ -119,24 +100,18 @@
             </div>
           </template>
           
+          <!-- 第一行：Dia, Index -->
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="Coating" prop="coating">
-                <el-select v-model="orderForm.coating" placeholder="Please select Coating" style="width: 100%">
-                  <el-option 
-                    v-for="option in coatingOptions" 
-                    :key="option.value" 
-                    :label="option.label" 
-                    :value="option.value">
-                  </el-option>
-                </el-select>
+              <el-form-item label="Dia" prop="dia">
+                <el-input v-model="orderForm.dia" placeholder="Please enter Dia"></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="Tinting" prop="tinting">
-                <el-select v-model="orderForm.tinting" placeholder="Please select Tinting" style="width: 100%">
+              <el-form-item label="Index" prop="refractiveIndex">
+                <el-select v-model="orderForm.refractiveIndex" placeholder="Please select Index" style="width: 100%">
                   <el-option 
-                    v-for="option in tintingOptions" 
+                    v-for="option in refractiveIndexOptions" 
                     :key="option.value" 
                     :label="option.label" 
                     :value="option.value">
@@ -146,6 +121,7 @@
             </el-col>
           </el-row>
           
+          <!-- 第二行：Design, Material -->
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="Design" prop="designName">
@@ -161,7 +137,13 @@
             </el-col>
             <el-col :span="12">
               <el-form-item label="Material" prop="material">
-                <el-select v-model="orderForm.material" placeholder="Please select Material" style="width: 100%">
+                <el-select 
+                  v-model="orderForm.material" 
+                  placeholder="Please select Material" 
+                  style="width: 100%"
+                  multiple
+                  collapse-tags
+                  collapse-tags-tooltip>
                   <el-option 
                     v-for="option in materialOptions" 
                     :key="option.value" 
@@ -173,19 +155,8 @@
             </el-col>
           </el-row>
           
+          <!-- 第三行：Corridor, Coating -->
           <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="Index" prop="refractiveIndex">
-                <el-select v-model="orderForm.refractiveIndex" placeholder="Please select Index" style="width: 100%">
-                  <el-option 
-                    v-for="option in refractiveIndexOptions" 
-                    :key="option.value" 
-                    :label="option.label" 
-                    :value="option.value">
-                  </el-option>
-                </el-select>
-              </el-form-item>
-            </el-col>
             <el-col :span="12">
               <el-form-item label="Corridor" prop="channel">
                 <el-select v-model="orderForm.channel" placeholder="Please select Corridor" style="width: 100%">
@@ -196,6 +167,82 @@
                     :value="option.value">
                   </el-option>
                 </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="Coating" prop="coating">
+                <el-select v-model="orderForm.coating" placeholder="Please select Coating" style="width: 100%">
+                  <el-option 
+                    v-for="option in coatingOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          
+          <!-- 第四行：Tinting (保留原有功能) -->
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="Tinting" prop="tinting">
+                <el-select v-model="orderForm.tinting" placeholder="Please select Tinting" style="width: 100%">
+                  <el-option 
+                    v-for="option in tintingOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="Tint Percentage" prop="tintPercentage">
+                <el-select v-model="orderForm.tintPercentage" placeholder="Please select Tint Percentage" style="width: 100%">
+                  <el-option 
+                    v-for="option in tintPercentageOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          
+          <!-- 第五行：Color 和 Tint Percentage -->
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="Color" prop="color">
+                <el-select v-model="orderForm.color" placeholder="Please select Color" style="width: 100%">
+                  <el-option 
+                    v-for="option in colorOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12" v-if="shouldShowColorUpload">
+              <el-form-item label="Color Attachment" prop="colorAttachment">
+                <OrderFileUpload
+                ref="colorUploadRef"
+                :limit="5"
+                :fileSize="10"
+                :fileType="['jpg','jpeg','png']"
+                :data="colorUploadData"
+                :autoUpload="false"
+                :drag="false"
+                accept=".jpg,.jpeg,.png"
+                @success="handleColorUploadSuccess">
+                <template #tip>
+                  <div class="el-upload__tip">
+                    JPG format only, please use white background
+                  </div>
+                </template>
+              </OrderFileUpload>
               </el-form-item>
             </el-col>
           </el-row>
@@ -397,12 +444,35 @@
             </el-col>
           </el-row>
           
+          <el-row :gutter="20" v-if="shouldShowRemarksUpload">
+            <el-col :span="12">
+              <el-form-item label="Remarks Attachment" prop="remarksAttachment">
+                <OrderFileUpload
+                  ref="remarksUploadRef"
+                  :limit="5"
+                  :fileSize="10"
+                  :fileType="['oma']"
+                  :data="remarksUploadData"
+                  :autoUpload="false"
+                  :drag="false"
+                  accept=".oma"
+                  @success="handleRemarksUploadSuccess">
+                  <template #tip>
+                    <div class="el-upload__tip">
+                      OMA format only
+                    </div>
+                  </template>
+                </OrderFileUpload>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          
           <div class="auto-remarks">
             <h4>Remarks Summary:</h4>
             <div class="remarks-list">
-              <!-- 选择的备注类型 -->
-              <el-tag v-if="orderForm.remarksType && orderForm.remarksType.length > 0" type="primary">
-                备注类型: {{ getRemarksTypeLabel(orderForm.remarksType) }}
+              <!-- 选择的备注类型 - 过滤掉"Need to be cut" -->
+              <el-tag v-if="orderForm.remarksType && orderForm.remarksType.length > 0 && getFilteredRemarksTypeLabel(orderForm.remarksType)" type="primary">
+                备注类型: {{ getFilteredRemarksTypeLabel(orderForm.remarksType) }}
               </el-tag>
               <!-- 用户填写的备注内容 -->
               <el-tag v-if="orderForm.remarks" type="info">
@@ -471,6 +541,7 @@ import { addOrderDetails } from '@/api/DFGX/orderDetails'
 import { recordOrderStatusChange } from '@/api/DFGX/orderStatusHistory'
 import { createCompleteOrder } from '@/api/DFGX/orderManagement'
 import useUserStore from '@/store/modules/user'
+import OrderFileUpload from '@/components/OrderFileUpload/index.vue'
 
 const router = useRouter()
 const { proxy } = getCurrentInstance()
@@ -485,10 +556,11 @@ const refractiveIndexOptions = ref([])
 const frameTypeOptions = ref([])
 const frameModelOptions = ref([])
 const channelOptions = ref([])
-const edEdaOptions = ref([])
-const sizeAOptions = ref([])
-const sizeBOptions = ref([])
+// ED/EDA、sizeA、sizeB 现在是文本输入框，不需要选项数据
 const remarksTypeOptions = ref([])
+const colorOptions = ref([])
+const tintPercentageOptions = ref([])
+const orderStatusOptions = ref([])
 
 // 表单数据
 const orderForm = reactive({
@@ -497,6 +569,7 @@ const orderForm = reactive({
   customerName: '',
   orderDate: new Date().toISOString().slice(0, 10), // 自动设置为当前日期
   status: '0', // 默认待处理状态
+  orderStatus: '', // 订单状态
   
   // 镜框信息
   frameType: '',
@@ -506,12 +579,15 @@ const orderForm = reactive({
   sizeB: '',
   
   // 镜片信息
+  dia: '',
+  refractiveIndex: '',
+  designName: '',
+  material: [], // 改为数组支持多选
+  channel: '',
   coating: '',
   tinting: '',
-  designName: '',
-  material: '',
-  refractiveIndex: '',
-  channel: '',
+  color: '',
+  tintPercentage: '',
   
   // 左右眼参数
   leftEye: {
@@ -544,11 +620,34 @@ const orderForm = reactive({
   // 其他信息
   remarksType: [],
   remarks: '',
-  totalAmount: 0
+  totalAmount: 0,
+  
+  // 文件上传
+  colorAttachment: '',
+  remarksAttachment: ''
 })
 
 // 自动备注
 const autoRemarks = ref<string[]>([])
+
+// 文件上传相关
+const colorFileList = ref([])
+const remarksFileList = ref([])
+const colorUploadRef = ref(null)
+const remarksUploadRef = ref(null)
+
+// 上传数据配置
+const colorUploadData = ref({
+  fileDir: 'color-attachments',
+  storeType: 1, // 本地存储
+  fileNameType: 3 // 自动生成文件名
+})
+
+const remarksUploadData = ref({
+  fileDir: 'remarks-attachments', 
+  storeType: 1, // 本地存储
+  fileNameType: 3 // 自动生成文件名
+})
 
 // Order ID validator
 const validateOrderNo = (rule, value, callback) => {
@@ -571,18 +670,46 @@ const rules = {
   orderDate: [{ required: true, message: 'Please generate Date', trigger: 'blur' }],
   
   // Lens information validation
-  coating: [{ required: true, message: 'Please select Coating', trigger: 'change' }],
-  tinting: [{ required: true, message: 'Please select Tinting', trigger: 'change' }],
+  dia: [{ required: true, message: 'Please enter Dia', trigger: 'blur' }],
+  refractiveIndex: [{ required: true, message: 'Please select Index', trigger: 'change' }],
   designName: [{ required: true, message: 'Please select Design', trigger: 'change' }],
   material: [{ required: true, message: 'Please select Material', trigger: 'change' }],
-  refractiveIndex: [{ required: true, message: 'Please select Index', trigger: 'change' }],
-  frameType: [{ required: true, message: 'Please select Frame Type', trigger: 'change' }]
+  channel: [{ required: true, message: 'Please select Corridor', trigger: 'change' }],
+  coating: [{ required: true, message: 'Please select Coating', trigger: 'change' }],
+  tinting: [{ required: true, message: 'Please select Tinting', trigger: 'change' }],
+  color: [{ required: false, message: 'Please select Color', trigger: 'change' }],
+  tintPercentage: [{ required: false, message: 'Please select Tint Percentage', trigger: 'change' }],
+  frameType: [{ required: true, message: 'Please select Frame Type', trigger: 'change' }],
+  orderStatus: [{ required: false, message: 'Please select Order Status', trigger: 'change' }]
 }
 
 // 计算价格
 const calculatedPrice = ref(0)
 const totalPrice = computed(() => {
   return calculatedPrice.value * (orderForm.leftEye.quantity + orderForm.rightEye.quantity)
+})
+
+// 计算是否显示文件上传组件
+const shouldShowColorUpload = computed(() => {
+  if (!orderForm.color) return false
+  const colorOption = colorOptions.value.find(option => option.value === orderForm.color)
+  
+  // 修正标签文本匹配：使用实际的标签文本（没有空格）
+  const shouldShow = colorOption && colorOption.label === 'Attach tint sample image(please use white background)'
+  
+  return shouldShow
+})
+
+const shouldShowRemarksUpload = computed(() => {
+  if (!orderForm.remarksType || !Array.isArray(orderForm.remarksType)) return false
+  
+  // 找到"Need to be cut"选项对应的value
+  const needToBeCutOption = remarksTypeOptions.value.find(option => option.label === 'Need to be cut')
+  
+  // 检查是否选择了对应的value
+  const shouldShow = needToBeCutOption && orderForm.remarksType.includes(needToBeCutOption.value)
+  
+  return shouldShow
 })
 
 // 提交状态
@@ -595,22 +722,18 @@ const loadingOptions = ref(false)
 const getDictData = async () => {
   try {
     loadingOptions.value = true
-    console.log('开始获取所有选项数据...')
     // 获取所有选项数据
     const response = await getAllLensOptions()
-    console.log('API响应:', response)
     
     const allOptions = response.data.result || response.data
-    console.log('所有选项数据:', allOptions)
     
     if (!allOptions || !Array.isArray(allOptions)) {
-      console.error('获取到的数据格式不正确:', allOptions)
       ElMessage.error('获取选项数据失败，数据格式不正确')
       return
     }
     
     // 根据optionType查找对应的选项数据
-    // optionType映射: 2:膜层, 3:材质, 4:设计名称, 5:折射率, 6:通道, 7:frame type, 8:model, 13:染色
+    // optionType映射: 2:膜层, 3:材质, 4:设计名称, 5:折射率, 6:通道, 7:frame type, 8:model, 13:染色, 14:颜色, 15:染色百分比, 16:订单状态
     coatingOptions.value = allOptions
       .filter(item => item.optionType === 2)
       .map(item => ({
@@ -676,16 +799,9 @@ const getDictData = async () => {
         price: item.remark ? parseFloat(item.remark) : 0
       }))
     
-    // 根据数据结构，ED/EDA、sizeA-DBL-sizeA、sizeB 需要根据实际数据确定optionType
-    // 暂时设置为空，需要根据实际数据调整
-    edEdaOptions.value = []
-    sizeAOptions.value = []
-    sizeBOptions.value = []
+    // ED/EDA、sizeA-DBL-sizeA、sizeB 现在是文本输入框，不需要选项数据
     
     // 备注类型选项 - optionType为12
-    console.log('所有选项数据:', allOptions)
-    console.log('optionType为12的数据:', allOptions.filter(item => item.optionType === 12))
-    
     remarksTypeOptions.value = allOptions
       .filter(item => item.optionType === 12)
       .map(item => ({
@@ -694,25 +810,35 @@ const getDictData = async () => {
         price: item.remark ? parseFloat(item.remark) : 0
       }))
     
-    console.log('备注类型选项映射结果:', remarksTypeOptions.value)
+    // 颜色选项 - optionType为14
+    colorOptions.value = allOptions
+      .filter(item => item.optionType === 14)
+      .map(item => ({
+        label: item.optionName,
+        value: item.optionValue,
+        price: item.remark ? parseFloat(item.remark) : 0
+      }))
     
-    // 输出各选项的映射结果用于调试
-    console.log('膜层选项:', coatingOptions.value)
-    console.log('染色选项:', tintingOptions.value)
-    console.log('材质选项:', materialOptions.value)
-    console.log('设计名称选项:', designNameOptions.value)
-    console.log('折射率选项:', refractiveIndexOptions.value)
-    console.log('通道选项:', channelOptions.value)
-    console.log('镜框类型选项:', frameTypeOptions.value)
-    console.log('镜框型号选项:', frameModelOptions.value)
-    console.log('ED/EDA选项:', edEdaOptions.value)
-    console.log('sizeA选项:', sizeAOptions.value)
-    console.log('sizeB选项:', sizeBOptions.value)
-    console.log('备注类型选项:', remarksTypeOptions.value)
+    // 染色百分比选项 - optionType为15
+    tintPercentageOptions.value = allOptions
+      .filter(item => item.optionType === 15)
+      .map(item => ({
+        label: item.optionName,
+        value: item.optionValue,
+        price: item.remark ? parseFloat(item.remark) : 0
+      }))
+    
+    // 订单状态选项 - optionType为16
+    orderStatusOptions.value = allOptions
+      .filter(item => item.optionType === 16)
+      .map(item => ({
+        label: item.optionName,
+        value: item.optionValue,
+        price: item.remark ? parseFloat(item.remark) : 0
+      }))
     
     ElMessage.success('选项数据加载成功')
   } catch (error) {
-    console.error('获取选项数据失败:', error)
     ElMessage.error('Failed to get configuration data')
   } finally {
     loadingOptions.value = false
@@ -734,7 +860,7 @@ onMounted(() => {
 })
 
 // 监听表单变化，自动计算价格和添加备注
-watch([() => orderForm.coating, () => orderForm.tinting, () => orderForm.designName, () => orderForm.material, () => orderForm.refractiveIndex], () => {
+watch([() => orderForm.dia, () => orderForm.refractiveIndex, () => orderForm.designName, () => orderForm.material, () => orderForm.channel, () => orderForm.coating, () => orderForm.tinting, () => orderForm.color, () => orderForm.tintPercentage], () => {
   calculatePrice()
   generateAutoRemarks()
 }, { deep: true })
@@ -747,14 +873,27 @@ const calculatePrice = () => {
   const coatingOption = coatingOptions.value.find(option => option.value === orderForm.coating)
   const tintingOption = tintingOptions.value.find(option => option.value === orderForm.tinting)
   const designNameOption = designNameOptions.value.find(option => option.value === orderForm.designName)
-  const materialOption = materialOptions.value.find(option => option.value === orderForm.material)
+  
+  // 处理多选材料的价格计算
+  let materialPrice = 0
+  if (Array.isArray(orderForm.material)) {
+    materialPrice = orderForm.material.reduce((total, materialValue) => {
+      const materialOption = materialOptions.value.find(option => option.value === materialValue)
+      return total + (materialOption?.price || 0)
+    }, 0)
+  }
+  
   const refractiveIndexOption = refractiveIndexOptions.value.find(option => option.value === orderForm.refractiveIndex)
+  const colorOption = colorOptions.value.find(option => option.value === orderForm.color)
+  const tintPercentageOption = tintPercentageOptions.value.find(option => option.value === orderForm.tintPercentage)
   
   basePrice = (coatingOption?.price || 0) + 
               (tintingOption?.price || 0) + 
               (designNameOption?.price || 0) + 
-              (materialOption?.price || 0) + 
-              (refractiveIndexOption?.price || 0)
+              materialPrice + 
+              (refractiveIndexOption?.price || 0) +
+              (colorOption?.price || 0) +
+              (tintPercentageOption?.price || 0)
   
   calculatedPrice.value = basePrice
 }
@@ -772,9 +911,37 @@ const getRemarksTypeLabel = (values) => {
   return option ? option.label : values
 }
 
+// 获取过滤后的备注类型标签（排除"Need to be cut"）
+const getFilteredRemarksTypeLabel = (values) => {
+  if (!values || values.length === 0) return ''
+  
+  // 找到"Need to be cut"选项的value
+  const needToBeCutOption = remarksTypeOptions.value.find(option => option.label === 'Need to be cut')
+  const needToBeCutValue = needToBeCutOption ? needToBeCutOption.value : null
+  
+  if (Array.isArray(values)) {
+    // 过滤掉"Need to be cut"选项
+    const filteredValues = values.filter(value => value !== needToBeCutValue)
+    if (filteredValues.length === 0) return ''
+    
+    return filteredValues.map(value => {
+      const option = remarksTypeOptions.value.find(option => option.value === value)
+      return option ? option.label : value
+    }).join(', ')
+  }
+  
+  // 单个值的情况
+  if (values === needToBeCutValue) return ''
+  const option = remarksTypeOptions.value.find(option => option.value === values)
+  return option ? option.label : values
+}
+
 // 生成自动备注
 const generateAutoRemarks = () => {
   const remarks = []
+  
+  // 自动添加"需要不干胶标贴"到每个订单
+  remarks.push('需要不干胶标贴')
   
   // 设计名称相关备注
   if (orderForm.designName) {
@@ -842,16 +1009,68 @@ const checkOrderNoUnique = async () => {
   }
 }
 
+// 检查是否有文件需要上传
+const hasFilesToUpload = () => {
+  // 检查颜色附件上传组件是否有文件
+  const hasColorFiles = colorUploadRef.value && colorUploadRef.value.fileList && colorUploadRef.value.fileList.length > 0
+  // 检查备注附件上传组件是否有文件
+  const hasRemarksFiles = remarksUploadRef.value && remarksUploadRef.value.fileList && remarksUploadRef.value.fileList.length > 0
+  
+  return hasColorFiles || hasRemarksFiles
+}
+
+// 上传所有文件
+const uploadAllFiles = async () => {
+  // 上传颜色附件
+  if (colorUploadRef.value && colorUploadRef.value.fileList && colorUploadRef.value.fileList.length > 0) {
+    try {
+      colorUploadRef.value.submitUpload()
+      // 等待一小段时间让上传完成
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    } catch (error) {
+      throw error
+    }
+  }
+  
+  // 上传备注附件
+  if (remarksUploadRef.value && remarksUploadRef.value.fileList && remarksUploadRef.value.fileList.length > 0) {
+    try {
+      remarksUploadRef.value.submitUpload()
+      // 等待一小段时间让上传完成
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    } catch (error) {
+      throw error
+    }
+  }
+}
+
 // 提交订单
 const submitOrder = async () => {
   try {
     await orderFormRef.value.validate()
     submitting.value = true
     
+    // 检查是否有文件需要上传
+    if (hasFilesToUpload()) {
+      ElMessage.info('正在上传附件，请稍候...')
+      
+      try {
+        await uploadAllFiles()
+        ElMessage.success('附件上传完成')
+      } catch (error) {
+        ElMessage.error('文件上传失败: ' + error.message)
+        return
+      }
+    }
+    
     // 构建订单数据
     const orderDateValue = orderForm.orderDate ? 
       new Date(orderForm.orderDate).toISOString() : 
       new Date().toISOString()
+    
+    // 设置默认订单状态为第一个状态（ORDER CREATED）
+    const defaultOrderStatus = orderStatusOptions.value.length > 0 ? orderStatusOptions.value[0].value : 1
+    const defaultOrderStatusName = orderStatusOptions.value.length > 0 ? orderStatusOptions.value[0].label : 'ORDER CREATED'
     
     const orderData = {
       orderNo: orderForm.orderNo,
@@ -867,6 +1086,31 @@ const submitOrder = async () => {
       edEda: orderForm.edEda,
       sizeA: orderForm.sizeA,
       sizeB: orderForm.sizeB,
+      // 镜片信息 - 按新顺序：Dia、Index、Design、Material、Corridor、Coating
+      dia: orderForm.dia,
+      refractiveIndex: orderForm.refractiveIndex,
+      refractiveIndexValue: refractiveIndexOptions.value.find(opt => opt.value === orderForm.refractiveIndex)?.label || '',
+      designName: orderForm.designName,
+      designNameText: designNameOptions.value.find(opt => opt.value === orderForm.designName)?.label || '',
+      material: Array.isArray(orderForm.material) ? orderForm.material.join(',') : orderForm.material,
+      materialName: Array.isArray(orderForm.material) ? 
+        orderForm.material.map(value => materialOptions.value.find(opt => opt.value === value)?.label || value).join(', ') : 
+        materialOptions.value.find(opt => opt.value === orderForm.material)?.label || '',
+      channel: orderForm.channel,
+      channelName: channelOptions.value.find(opt => opt.value === orderForm.channel)?.label || '',
+      coating: orderForm.coating,
+      coatingName: coatingOptions.value.find(opt => opt.value === orderForm.coating)?.label || '',
+      tinting: orderForm.tinting,
+      tintingName: tintingOptions.value.find(opt => opt.value === orderForm.tinting)?.label || '',
+      color: orderForm.color,
+      colorName: colorOptions.value.find(opt => opt.value === orderForm.color)?.label || '',
+      tintPercentage: orderForm.tintPercentage,
+      tintPercentageName: tintPercentageOptions.value.find(opt => opt.value === orderForm.tintPercentage)?.label || '',
+      orderStatus: defaultOrderStatus,
+      orderStatusName: defaultOrderStatusName,
+      // 文件附件
+      colorAttachment: orderForm.colorAttachment,
+      remarksAttachment: orderForm.remarksAttachment,
       // 新增：左右眼数量
       rightEyeQuantity: orderForm.rightEye.quantity,
       leftEyeQuantity: orderForm.leftEye.quantity,
@@ -899,22 +1143,38 @@ const submitOrder = async () => {
     
     // 构建订单详情数据
     const orderDetailsData = [{
+      // 镜片信息 - 按新顺序：Dia、Index、Design、Material、Corridor、Coating
+      dia: orderForm.dia,
+      refractiveIndex: orderForm.refractiveIndex,
+      refractiveIndexValue: refractiveIndexOptions.value.find(opt => opt.value === orderForm.refractiveIndex)?.label || '',
+      designName: orderForm.designName,
+      designNameText: designNameOptions.value.find(opt => opt.value === orderForm.designName)?.label || '',
+      material: Array.isArray(orderForm.material) ? orderForm.material.join(',') : orderForm.material,
+      materialName: Array.isArray(orderForm.material) ? 
+        orderForm.material.map(value => materialOptions.value.find(opt => opt.value === value)?.label || value).join(', ') : 
+        materialOptions.value.find(opt => opt.value === orderForm.material)?.label || '',
+      channel: orderForm.channel,
+      channelName: channelOptions.value.find(opt => opt.value === orderForm.channel)?.label || '',
       coating: orderForm.coating,
       coatingName: coatingOptions.value.find(opt => opt.value === orderForm.coating)?.label || '',
       tinting: orderForm.tinting,
       tintingName: tintingOptions.value.find(opt => opt.value === orderForm.tinting)?.label || '',
-      designName: orderForm.designName,
-      designNameText: designNameOptions.value.find(opt => opt.value === orderForm.designName)?.label || '',
-      material: orderForm.material,
-      materialName: materialOptions.value.find(opt => opt.value === orderForm.material)?.label || '',
-      refractiveIndex: orderForm.refractiveIndex,
-      refractiveIndexValue: refractiveIndexOptions.value.find(opt => opt.value === orderForm.refractiveIndex)?.label || '',
+      color: orderForm.color,
+      colorName: colorOptions.value.find(opt => opt.value === orderForm.color)?.label || '',
+      tintPercentage: orderForm.tintPercentage,
+      tintPercentageName: tintPercentageOptions.value.find(opt => opt.value === orderForm.tintPercentage)?.label || '',
+      orderStatus: defaultOrderStatus,
+      orderStatusName: defaultOrderStatusName,
+      // 文件附件
+      colorAttachment: orderForm.colorAttachment,
+      remarksAttachment: orderForm.remarksAttachment,
+      // 镜框信息
       frameType: orderForm.frameType,
       frameModel: orderForm.frameModel,
       edEda: orderForm.edEda,
       sizeA: orderForm.sizeA,
       sizeB: orderForm.sizeB,
-      // 修改：数量字段调整
+      // 数量和价格
       leftEyeQuantity: orderForm.leftEye.quantity,
       rightEyeQuantity: orderForm.rightEye.quantity,
       quantity: orderForm.leftEye.quantity + orderForm.rightEye.quantity, // 总数量
@@ -953,10 +1213,20 @@ const submitOrder = async () => {
       OrderDetails: orderDetailsData
     }
     
+    // 验证必要字段
+    if (!orderForm.orderNo) {
+      ElMessage.error('Please enter Order ID')
+      return
+    }
+    if (!orderForm.customerName) {
+      ElMessage.error('Please enter Customer Name')
+      return
+    }
+    
     const response = await createCompleteOrder(completeOrderData)
     
     if (response.data && response.code == 200) {
-      const payload = response.data.data || {}
+      const payload = response.data || {}
       const orderId = payload.OrderId || response.data.orderId
       
       ElMessage.success(payload.Message || 'Order created successfully!')
@@ -967,8 +1237,10 @@ const submitOrder = async () => {
           await recordOrderStatusChange(orderId, '0', '待处理', orderForm.customerName)
         }
       } catch (error) {
-        console.warn('记录状态变更失败:', error)
+        // 静默处理状态变更失败
       }
+      
+      // 自动备注已经在创建订单时包含，无需额外处理
       
       // 跳转到查看订单页面
       router.push('/CheckOrder')
@@ -978,7 +1250,6 @@ const submitOrder = async () => {
     }
     
   } catch (error) {
-    console.error('提交订单失败:', error)
     ElMessage.error('Order creation failed, please check form information')
   } finally {
     submitting.value = false
@@ -996,24 +1267,38 @@ const resetForm = () => {
 
 // 预览订单
 const previewOrder = () => {
+  const diaLabel = orderForm.dia
+  const refractiveIndexLabel = refractiveIndexOptions.value.find(option => option.value === orderForm.refractiveIndex)?.label || orderForm.refractiveIndex
+  const designNameLabel = designNameOptions.value.find(option => option.value === orderForm.designName)?.label || orderForm.designName
+  const materialLabel = Array.isArray(orderForm.material) ? 
+    orderForm.material.map(value => materialOptions.value.find(option => option.value === value)?.label || value).join(', ') : 
+    materialOptions.value.find(option => option.value === orderForm.material)?.label || orderForm.material
+  const channelLabel = channelOptions.value.find(option => option.value === orderForm.channel)?.label || orderForm.channel
   const coatingLabel = coatingOptions.value.find(option => option.value === orderForm.coating)?.label || orderForm.coating
   const tintingLabel = tintingOptions.value.find(option => option.value === orderForm.tinting)?.label || orderForm.tinting
-  const designNameLabel = designNameOptions.value.find(option => option.value === orderForm.designName)?.label || orderForm.designName
-  const materialLabel = materialOptions.value.find(option => option.value === orderForm.material)?.label || orderForm.material
-  const refractiveIndexLabel = refractiveIndexOptions.value.find(option => option.value === orderForm.refractiveIndex)?.label || orderForm.refractiveIndex
+  const colorLabel = colorOptions.value.find(option => option.value === orderForm.color)?.label || orderForm.color
+  const tintPercentageLabel = tintPercentageOptions.value.find(option => option.value === orderForm.tintPercentage)?.label || orderForm.tintPercentage
+  const defaultOrderStatus = orderStatusOptions.value.length > 0 ? orderStatusOptions.value[0].value : 1
+  const defaultOrderStatusName = orderStatusOptions.value.length > 0 ? orderStatusOptions.value[0].label : 'ORDER CREATED'
+  const orderStatusLabel = orderStatusOptions.value.find(option => option.value === defaultOrderStatus)?.label || defaultOrderStatusName
   
   ElMessageBox.alert(
     `Order Preview:
 Order ID: ${orderForm.orderNo}
 Customer Name: ${orderForm.customerName}
 Date: ${orderForm.orderDate}
+Order Status: ${orderStatusLabel}
 
 Lens Information:
-Coating: ${coatingLabel}
-Tinting: ${tintingLabel}
+Dia: ${diaLabel}
+Index: ${refractiveIndexLabel}
 Design: ${designNameLabel}
 Material: ${materialLabel}
-Index: ${refractiveIndexLabel}
+Corridor: ${channelLabel}
+Coating: ${coatingLabel}
+Tinting: ${tintingLabel}
+Color: ${colorLabel}
+Tint Percentage: ${tintPercentageLabel}
 Frame Type: ${orderForm.frameType}
 Left Eye Qty: ${orderForm.leftEye.quantity}
 Right Eye Qty: ${orderForm.rightEye.quantity}
@@ -1032,6 +1317,40 @@ Auto Remarks: ${autoRemarks.value.join(', ')}`,
 const goToViewOrder = () => {
   router.push('/CheckOrder')
 }
+
+// 文件上传处理函数
+const handleColorUploadSuccess = (fileList) => {
+  // 将文件URL保存到表单数据中（支持多个文件，逗号分隔）
+  orderForm.colorAttachment = fileList || ''
+  
+  ElMessage.success('Color file uploaded successfully')
+}
+
+const handleRemarksUploadSuccess = (fileList) => {
+  // 将文件URL保存到表单数据中（支持多个文件，逗号分隔）
+  orderForm.remarksAttachment = fileList || ''
+  
+  ElMessage.success('Remarks file uploaded successfully')
+}
+
+
+// 监听颜色选择变化，清除已上传的文件
+watch(() => orderForm.color, (newColor, oldColor) => {
+  if (newColor !== oldColor) {
+    // 清除已上传的颜色文件
+    orderForm.colorAttachment = ''
+  }
+})
+
+// 监听备注类型变化，清除已上传的文件
+watch(() => orderForm.remarksType, (newRemarksType, oldRemarksType) => {
+  if (JSON.stringify(newRemarksType) !== JSON.stringify(oldRemarksType)) {
+    // 清除已上传的备注文件
+    orderForm.remarksAttachment = ''
+  }
+})
+
+// 自动备注功能已集成到订单创建过程中，无需单独的更新接口
 
 const orderFormRef = ref()
 </script>
