@@ -24,7 +24,7 @@ import pagemenuTw from './pages/menu/zh-tw.json'
 const i18n = createI18n({
   // 全局注入 $t 函数
   globalInjection: true,
-  fallbackLocale: 'zh-cn',
+  fallbackLocale: 'en',
   locale: language.value, //默认选择的语言
   legacy: false, // 使用 Composition API 模式，则需要将其设置为false
   messages: {
