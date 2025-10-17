@@ -422,6 +422,23 @@
 					</template>
 				</el-table-column>
 			</el-table>
+			<br><span style="font-size: 20px; font-weight: bold;">客户其他费用</span>
+			<el-divider></el-divider>
+			<el-table :data="shippingDeliveryCustomerExpensesTableData"
+				style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="expenseName" label="费用名称" width="150"></el-table-column>
+				<el-table-column prop="currency" label="币种" width="150">
+					<template #default="scope">
+						<span>{{ getCurrencyLabel(scope.row.currency) }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="exchangeRate" label="汇率" width="150"></el-table-column>
+				<el-table-column prop="expense" label="费用" width="150"></el-table-column>
+				<el-table-column prop="amount" label="金额" width="150"></el-table-column>
+				<el-table-column prop="remark" label="备注" width="150"></el-table-column>
+			</el-table>
 			<br><span style="font-size: 20px; font-weight: bold;">采购合同</span>
 			<el-divider></el-divider>
 			<el-table :data="getPurchaseTableData()" style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
@@ -778,10 +795,51 @@ const shippingDeliveryContrctProductTableData = ref([])
 const shippingDeliveryPurchaseDetailsTableData = ref([])
 // 其它费用
 const shippingDeliveryOtherexpensesTableData = ref([]);
+// 客户其他费用
+const shippingDeliveryCustomerExpensesTableData = ref([]);
 
 // 获取采购表格数据的函数
 const getPurchaseTableData = () => {
 	return shippingDeliveryPurchaseDetailsTableData.value;
+};
+
+// 获取币种标签
+const getCurrencyLabel = (currencyValue) => {
+	if (!currencyValue) return '无';
+	const currency = state.optionss.hr_export_currency.find(c => c.dictValue === currencyValue.toString());
+	return currency ? currency.dictLabel : '无';
+};
+
+// 加载客户其他费用数据
+const loadCustomerExpensesData = async (contractId) => {
+	try {
+		// 清空现有数据
+		shippingDeliveryCustomerExpensesTableData.value = [];
+
+		// 调用API获取合同详情，包含客户其他费用数据
+		const response = await request({
+			url: 'Contracts/GetContractDetailsById/GetContractDetails',
+			method: 'GET',
+			params: {
+				contractId: contractId
+			}
+		});
+
+		if (response.data && response.data.contractExpenses && response.data.contractExpenses.length > 0) {
+			// 处理数据并设置到表格中
+			shippingDeliveryCustomerExpensesTableData.value = response.data.contractExpenses.map(item => ({
+				expenseName: item.expenseName || '',
+				currency: item.currency || '',
+				exchangeRate: item.exchangeRate || 0,
+				expense: item.expense || 0,
+				amount: (item.expense || 0) * (item.exchangeRate || 0),
+				remark: item.remark || ''
+			}));
+		}
+	} catch (error) {
+		console.error('获取客户其他费用数据失败:', error);
+		// 不显示错误消息，因为可能没有客户其他费用数据
+	}
 };
 
 //客户编号改变
@@ -811,6 +869,7 @@ const customerNumberChange = () => {
 	// 清空相关数据，因为客户改变时需要重新选择参考合同
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];
+	shippingDeliveryCustomerExpensesTableData.value = [];
 	AddShippingDeliveryform.value.referenceContractNumber = '';
 	AddShippingDeliveryform.value.salesContractNumber = '';
 	AddShippingDeliveryform.value.customerContractNumber = '';
@@ -823,6 +882,7 @@ const referenceContractNumberChange = async () => {
 	if (SaleContractID == '' || SaleContractID == null || SaleContractID == undefined) {
 		shippingDeliveryContrctProductTableData.value = [];
 		shippingDeliveryPurchaseDetailsTableData.value = [];
+		shippingDeliveryCustomerExpensesTableData.value = [];
 		return;
 	}
 
@@ -852,6 +912,7 @@ const referenceContractNumberChange = async () => {
 			// 清空相关数据
 			shippingDeliveryContrctProductTableData.value = [];
 			shippingDeliveryPurchaseDetailsTableData.value = [];
+			shippingDeliveryCustomerExpensesTableData.value = [];
 			return;
 		}
 
@@ -977,6 +1038,9 @@ const referenceContractNumberChange = async () => {
 		// 强制触发响应式更新
 		await nextTick();
 		shippingDeliveryPurchaseDetailsTableData.value = [...newPurchaseData];
+
+		// 加载客户其他费用数据
+		await loadCustomerExpensesData(SaleContractID);
 	}).catch(error => {
 		console.error('获取采购合同信息失败:', error);
 		ElMessage.error('获取采购合同信息失败，请稍后重试');
@@ -1037,6 +1101,7 @@ const OpenCreateshippingdeliveryDialog = () => {
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];
 	shippingDeliveryOtherexpensesTableData.value = [];
+	shippingDeliveryCustomerExpensesTableData.value = [];
 	OriginalShipmentQuantity.value = [];
 
 	// 获取新的发票号码
@@ -1279,6 +1344,7 @@ const resetForm = () => {
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];
 	shippingDeliveryOtherexpensesTableData.value = [];
+	shippingDeliveryCustomerExpensesTableData.value = [];
 };
 
 const IsEditShippingDeliveryID = ref(0)
@@ -1806,6 +1872,7 @@ const CreateshippingdeliveryDialogClose = async () => {
 	AddShippingDeliveryform.value.shippingAgent = '';
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];
+	shippingDeliveryCustomerExpensesTableData.value = [];
 }
 
 // 获取下一个出运发货单编号

@@ -3646,6 +3646,10 @@ const Approvepass = () => {
       ShippingDeliveryDialog.value = false;
       SettlementApprovalDialog.value = false;
       getPendingCount();
+      // 触发业务示警更新事件
+      eventBus.emit('updateBusinessAlerts');
+      // 触发工作任务更新事件
+      eventBus.emit('updateWorkTasks');
     } else {
       console.error('审批失败');
     }
@@ -3668,6 +3672,10 @@ const ApproveReject = () => {
       ShippingDeliveryDialog.value = false;
       SettlementApprovalDialog.value = false;
       getPendingCount();
+      // 触发业务示警更新事件
+      eventBus.emit('updateBusinessAlerts');
+      // 触发工作任务更新事件
+      eventBus.emit('updateWorkTasks');
     } else {
       console.error('驳回失败');
     }
@@ -5475,6 +5483,8 @@ const confirmTaskCompletion = async () => {
         const startDate = formatDate(calendarDates.value[0].date)
         const endDate = formatDate(calendarDates.value[calendarDates.value.length - 1].date)
         await getPlanTaskItems(startDate, endDate)
+        // 触发工作任务更新事件
+        eventBus.emit('updateWorkTasks')
       } else {
         ElMessage.error(res.data.msg || '确认失败');
       }
@@ -5579,6 +5589,8 @@ const handleModifyDeliveryDate = (row) => {
         if (res.data == true) {
           // 获取逾期交货合同数量
           GetOverdueDeliveryContractCount()
+          // 触发业务示警更新事件
+          eventBus.emit('updateBusinessAlerts')
           ElMessage.success('交货日期修改申请已提交！')
         } else {
           ElMessage.error('交货日期修改申请提交失败！')
@@ -5694,6 +5706,8 @@ const handleModifyPaymentDate = (row) => {
         if (res.data == true) {
           // 获取逾期交货合同数量
           GetOverdueDeliveryContractCount()
+          // 触发业务示警更新事件
+          eventBus.emit('updateBusinessAlerts')
           ElMessage.success('收款日期修改申请已提交！')
         } else {
           ElMessage.error('收款日期修改申请提交失败！')
@@ -5806,6 +5820,20 @@ onMounted(async () => {
     const endDate = formatDate(calendarDates.value[calendarDates.value.length - 1].date)
     getPlanTaskItems(startDate, endDate);
   });
+  // 监听业务示警更新事件
+  eventBus.on('updateBusinessAlerts', () => {
+    console.log('收到业务示警更新事件');
+    GetOverdueDeliveryContractCount();
+    GetCommunicationOverdueCount();
+    getOverdueContracts();
+  });
+  // 监听工作任务更新事件
+  eventBus.on('updateWorkTasks', () => {
+    console.log('收到工作任务更新事件');
+    getWithin24hoursEmailCount();
+    getOutside24hoursEmailCount();
+    getOverduePendingTaskPlanItemList();
+  });
   try {
     // 首先加载字典数据
     const dictResponse = await proxy.getDicts(dictParams);
@@ -5845,6 +5873,8 @@ onMounted(async () => {
 onUnmounted(() => {
   eventBus.off('updatePendingCount');
   eventBus.off('updatePlanTaskItems');
+  eventBus.off('updateBusinessAlerts');
+  eventBus.off('updateWorkTasks');
   displayedMessages.clear();
   // 关闭所有通知
   ElNotification.closeAll();
