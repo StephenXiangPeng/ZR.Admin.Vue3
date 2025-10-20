@@ -2071,8 +2071,64 @@
               </div>
             </div>
           </el-row>
+
+          <!-- 收款单据图片和附件显示 -->
+          <el-row v-if="addcustomercollectionform.receiptImageUrl || addcustomercollectionform.attachmentUrl">
+            <el-col :span="24">
+              <span style="font-size: 20px; font-weight: bold;">收款单据</span>
+              <el-divider></el-divider>
+
+              <!-- 收款单据图片显示 -->
+              <div v-if="addcustomercollectionform.receiptImageUrl" style="margin-bottom: 20px;">
+                <h4 style="margin-bottom: 10px; color: #606266;">收款单据图片</h4>
+                <div class="image-gallery">
+                  <div v-for="(imageUrl, index) in getImageUrls(addcustomercollectionform.receiptImageUrl)" :key="index"
+                    class="image-item" @click="previewImage(imageUrl)">
+                    <img :src="imageUrl" :alt="`收款单据图片 ${index + 1}`" class="receipt-image" />
+                    <div class="image-overlay">
+                      <el-icon>
+                        <ZoomIn />
+                      </el-icon>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 附件显示 -->
+              <div v-if="addcustomercollectionform.attachmentUrl">
+                <h4 style="margin-bottom: 10px; color: #606266;">相关附件</h4>
+                <div class="attachment-list">
+                  <div v-for="(attachmentUrl, index) in getAttachmentUrls(addcustomercollectionform.attachmentUrl)"
+                    :key="index" class="attachment-item">
+                    <div class="attachment-info">
+                      <el-icon class="attachment-icon">
+                        <Document />
+                      </el-icon>
+                      <span class="attachment-name">{{ getFileName(attachmentUrl) }}</span>
+                    </div>
+                    <div class="attachment-actions">
+                      <el-button type="text" size="small" @click="previewAttachment(attachmentUrl)">
+                        <el-icon>
+                          <View />
+                        </el-icon>
+                        预览
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </el-col>
+          </el-row>
         </el-form>
       </el-form>
+
+      <!-- 图片预览对话框 -->
+      <el-dialog v-model="imagePreviewVisible" title="图片预览" width="80%" center>
+        <div style="text-align: center;">
+          <img :src="previewImageUrl" style="max-width: 100%; max-height: 70vh;" alt="预览图片" />
+        </div>
+      </el-dialog>
+
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="claimDialogVisible = false">取 消</el-button>
@@ -2478,6 +2534,8 @@ const addcustomercollectionform = ref({
   amount: '',
   bank: '',
   attachment: '',
+  receiptImageUrl: '',
+  attachmentUrl: '',
   Customer: '',
   FundsClassification: '',
   AssociatedModules: '',
@@ -3340,6 +3398,10 @@ const isToday = (dateString) => {
 const claimDialogVisible = ref(false)
 const claimFormRef = ref(null)
 
+// 图片和附件预览相关
+const imagePreviewVisible = ref(false)
+const previewImageUrl = ref('')
+
 // 表单数据
 const claimForm = reactive({
   id: '', // 收款单ID
@@ -3393,6 +3455,8 @@ const handleClaim = async (row) => {
         amount: details.amount || '',
         bank: details.bank || '',
         attachment: details.attachment || '',
+        receiptImageUrl: details.receiptImageUrl || '',
+        attachmentUrl: details.attachmentUrl || '',
         Customer: details.customer || '',
         FundsClassification: details.fundsClassification || '',
         AssociatedModules: details.associatedModules || '',
@@ -3441,6 +3505,48 @@ const relatedmoduleshandleChange = (type) => {
       break;
   }
 }
+
+// 处理图片和附件显示的方法
+// 获取图片URL数组
+const getImageUrls = (imageUrlString) => {
+  if (!imageUrlString) return [];
+  return imageUrlString.split(',').filter(url => url.trim());
+};
+
+// 获取附件URL数组
+const getAttachmentUrls = (attachmentUrlString) => {
+  if (!attachmentUrlString) return [];
+  return attachmentUrlString.split(',').filter(url => url.trim());
+};
+
+// 从URL中提取文件名
+const getFileName = (url) => {
+  if (!url) return '未知文件';
+  const parts = url.split('/');
+  return parts[parts.length - 1] || '未知文件';
+};
+
+// 预览图片
+const previewImage = (imageUrl) => {
+  previewImageUrl.value = imageUrl;
+  imagePreviewVisible.value = true;
+};
+
+// 预览附件
+const previewAttachment = (attachmentUrl) => {
+  window.open(attachmentUrl, '_blank');
+};
+
+// 下载附件
+const downloadAttachment = (attachmentUrl, fileName) => {
+  const link = document.createElement('a');
+  link.href = attachmentUrl;
+  link.download = fileName;
+  link.target = '_blank';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
 // 提交领取
 const submitClaim = () => {
@@ -3539,6 +3645,8 @@ const resetClaimForm = () => {
     amount: '',
     bank: '',
     attachment: '',
+    receiptImageUrl: '',
+    attachmentUrl: '',
     Customer: '',
     FundsClassification: '',
     AssociatedModules: '',
@@ -7759,5 +7867,111 @@ const viewRejectContract = (row) => {
   .right-panel {
     height: auto;
   }
+}
+
+// 图片和附件显示样式
+.image-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.image-item {
+  position: relative;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.image-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.receipt-image {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: white;
+  font-size: 24px;
+}
+
+.image-item:hover .image-overlay {
+  opacity: 1;
+}
+
+.attachment-list {
+  margin-top: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px;
+  background-color: #f9fafb;
+}
+
+.attachment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.attachment-item:hover {
+  background-color: #f8f9fa;
+  border-color: #d1d5db;
+}
+
+.attachment-item:last-child {
+  margin-bottom: 0;
+}
+
+.attachment-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.attachment-icon {
+  margin-right: 8px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.attachment-name {
+  font-weight: 500;
+  color: #374151;
+  word-break: break-all;
+}
+
+.attachment-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.attachment-actions .el-button {
+  padding: 4px 8px;
+  font-size: 12px;
 }
 </style>

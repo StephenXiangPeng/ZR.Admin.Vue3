@@ -1579,6 +1579,9 @@ const AddPaymentDialog = async () => {
 	const day = String(today.getDate()).padStart(2, '0');
 	addpaymentrequestform.value.applicationDate = `${year}-${month}-${day}`;
 
+	// 设置币种默认为人民币
+	addpaymentrequestform.value.currencyCode = '2';
+
 	// 设置部门和申请人
 	if (userInfo.deptId.toString() == "0") {
 		addpaymentrequestform.value.applicationDepartment = state.optionss.sql_hr_dept.find((item) => item.dictValue == "205").dictValue;
@@ -1810,7 +1813,7 @@ const resetForm = () => {
 		bankName: '',
 		bankAccount: '',
 		ourCompany: '',
-		currencyCode: '',
+		currencyCode: '2', // 默认人民币
 		totalAmount: '',
 		paidAmount: '',
 		unpaidAmount: '',

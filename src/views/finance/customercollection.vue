@@ -234,6 +234,64 @@
 								</el-form-item>
 							</el-col>
 						</el-row>
+						<el-row>
+							<el-col :span="24">
+								<el-form-item label="附件上传">
+									<el-upload multiple :auto-upload="false" v-model:file-list="attachmentList"
+										:limit="5" :disabled="isReadOnly || attachmentList.length >= 5"
+										@change="handleAttachmentChange" :action="UploadUrl"
+										:before-upload="handleBeforeAttachmentUpload"
+										:on-exceed="handleAttachmentExceed" :show-file-list="true"
+										:file-list="attachmentList" class="attachment-upload">
+										<el-button type="primary" :disabled="isReadOnly">
+											<el-icon>
+												<Upload />
+											</el-icon>
+											选择附件
+										</el-button>
+										<template #tip>
+											<div class="el-upload__tip">
+												支持上传文档、图片等文件，单个文件不超过10MB，最多5个文件
+											</div>
+										</template>
+									</el-upload>
+									<!-- 附件列表显示 -->
+									<div v-if="attachmentList.length > 0" class="attachment-list">
+										<div v-for="(file, index) in attachmentList" :key="file.uid || index"
+											class="attachment-item">
+											<div class="attachment-info">
+												<el-icon class="attachment-icon">
+													<Document />
+												</el-icon>
+												<span class="attachment-name">{{ file.name }}</span>
+												<span class="attachment-size">{{ formatFileSize(file.size) }}</span>
+											</div>
+											<div class="attachment-actions">
+												<el-button type="text" size="small" @click="previewAttachment(file)">
+													<el-icon>
+														<View />
+													</el-icon>
+													预览
+												</el-button>
+												<el-button type="text" size="small" @click="downloadAttachment(file)">
+													<el-icon>
+														<Download />
+													</el-icon>
+													下载
+												</el-button>
+												<el-button v-if="!isReadOnly" type="text" size="small"
+													@click="removeAttachment(file, index)" class="delete-btn">
+													<el-icon>
+														<Delete />
+													</el-icon>
+													删除
+												</el-button>
+											</div>
+										</div>
+									</div>
+								</el-form-item>
+							</el-col>
+						</el-row>
 					</el-form>
 				</el-collapse-item>
 			</el-collapse>
@@ -878,6 +936,11 @@ const dialogImageUrl = ref('')
 const dialogVisible = ref(false)
 const disabled = ref(false)
 
+// 附件上传相关变量
+const attachmentList = ref([]);  // 附件列表
+const attachmentUrlStr = ref('');  // 附件URL字符串
+const uploadedAttachments = ref([]);  // 已上传的附件
+
 // 检查上传客户图片数量
 const handleChange = (file, fileList) => {
 	// 先检查文件数量限制
@@ -970,6 +1033,153 @@ const handleRemove = (file: UploadFile) => {
 	});
 };
 
+// 附件上传前验证
+const handleBeforeAttachmentUpload = (file) => {
+	// 检查文件大小（10MB限制）
+	const isLt10M = file.size / 1024 / 1024 < 10;
+	if (!isLt10M) {
+		ElMessage.error('上传文件大小不能超过 10MB!');
+		return false;
+	}
+
+	// 检查文件类型（允许常见文档和图片格式）
+	const allowedTypes = [
+		'application/pdf',
+		'application/msword',
+		'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+		'application/vnd.ms-excel',
+		'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+		'application/vnd.ms-powerpoint',
+		'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+		'text/plain',
+		'image/jpeg',
+		'image/png',
+		'image/gif',
+		'image/bmp',
+		'image/webp'
+	];
+
+	const fileExtension = file.name.split('.').pop().toLowerCase();
+	const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+
+	if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+		ElMessage.error('不支持的文件格式，请上传文档或图片文件!');
+		return false;
+	}
+
+	return true;
+};
+
+// 附件数量超出限制
+const handleAttachmentExceed = () => {
+	ElMessage.warning('最多只能上传5个附件!');
+};
+
+// 附件变化处理
+const handleAttachmentChange = (file, fileList) => {
+	// 检查文件数量限制
+	if (fileList.length > 5) {
+		ElMessage.warning('最多只能上传5个附件!');
+		fileList.splice(5);
+		return;
+	}
+
+	// 检查重复文件
+	const duplicate = uploadedAttachments.value.findIndex(fileItem => fileItem.name === file.name);
+	if (duplicate !== -1) {
+		ElMessage.warning('请不要上传重复的文件!');
+		const duplicatesInFileList = fileList.filter(fileItem => fileItem.name === file.name);
+		if (duplicatesInFileList.length > 1) {
+			for (let i = 1; i < duplicatesInFileList.length; i++) {
+				const index = fileList.findIndex(fileItem => fileItem.uid === duplicatesInFileList[i].uid);
+				if (index !== -1) {
+					fileList.splice(index, 1);
+				}
+			}
+		}
+	} else {
+		// 添加文件到已上传列表
+		const newFiles = fileList.filter(file => !uploadedAttachments.value.some(fileItem => fileItem.name === file.name));
+		newFiles.forEach(file => {
+			if (!file.isChanged) {
+				file.isChanged = true;
+				uploadedAttachments.value.push(file);
+			}
+		});
+	}
+};
+
+// 格式化文件大小
+const formatFileSize = (size) => {
+	if (!size) return '';
+	const units = ['B', 'KB', 'MB', 'GB'];
+	let unitIndex = 0;
+	let fileSize = size;
+
+	while (fileSize >= 1024 && unitIndex < units.length - 1) {
+		fileSize /= 1024;
+		unitIndex++;
+	}
+
+	return `${fileSize.toFixed(1)} ${units[unitIndex]}`;
+};
+
+// 预览附件
+const previewAttachment = (file) => {
+	if (file.url) {
+		window.open(file.url, '_blank');
+	} else {
+		ElMessage.warning('文件还未上传，无法预览');
+	}
+};
+
+// 下载附件
+const downloadAttachment = (file) => {
+	if (file.url) {
+		const link = document.createElement('a');
+		link.href = file.url;
+		link.download = file.name;
+		link.target = '_blank';
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+	} else {
+		ElMessage.warning('文件还未上传，无法下载');
+	}
+};
+
+// 删除附件
+const removeAttachment = (file, index) => {
+	ElMessageBox.confirm('确定删除该附件吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning',
+	}).then(() => {
+		// 从附件列表中移除
+		attachmentList.value.splice(index, 1);
+
+		// 从已上传列表中移除
+		const uploadedIndex = uploadedAttachments.value.findIndex(f => f.uid === file.uid);
+		if (uploadedIndex !== -1) {
+			uploadedAttachments.value.splice(uploadedIndex, 1);
+		}
+
+		// 从URL字符串中移除
+		if (attachmentUrlStr.value) {
+			const urls = attachmentUrlStr.value.split(',');
+			const urlIndex = urls.indexOf(file.url);
+			if (urlIndex !== -1) {
+				urls.splice(urlIndex, 1);
+				attachmentUrlStr.value = urls.join(',');
+			}
+		}
+
+		ElMessage.success('删除成功!');
+	}).catch(() => {
+		ElMessage.info('已取消删除');
+	});
+};
+
 const customerCollectionsRequest = reactive({
 	Id: 0,
 	ReceiptNumber: "",
@@ -980,6 +1190,7 @@ const customerCollectionsRequest = reactive({
 	Amount: 0,
 	Bank: "",
 	ReceiptImageUrl: "",
+	AttachmentUrl: "",
 	Remark: "",
 	IsDelete: 0,
 	isDraft: 1,
@@ -1036,6 +1247,26 @@ const SaveCustomerCollection = async () => {
 			receiptImageUrls = [...existingUrls, ...receiptImageUrls];
 		}
 		customerCollectionsRequest.ReceiptImageUrl = receiptImageUrls.join(',');
+
+		// 上传附件
+		let attachmentUrls = [];
+		if (Array.isArray(attachmentList.value) && attachmentList.value.length > 0) {
+			attachmentUrls = await Promise.all(attachmentList.value
+				.filter(file => file.isChanged)
+				.map(async (file) => {
+					const response = await uploadAttachment(file);
+					if (response.code === 200 && response.data.url) {
+						return response.data.url;
+					}
+					throw new Error('上传附件失败');
+				}));
+		}
+		// 合并现有的和新上传的附件URL
+		if (attachmentUrlStr.value) {
+			const existingAttachmentUrls = attachmentUrlStr.value.split(',');
+			attachmentUrls = [...existingAttachmentUrls, ...attachmentUrls];
+		}
+		customerCollectionsRequest.AttachmentUrl = attachmentUrls.join(',');
 		// 保存数据
 		const response = await request.post(
 			!isEdit.value
@@ -1069,6 +1300,17 @@ const uploadReceiptPhoto = async (file) => {
 	return await request.postForm(UploadUrl, formData);
 };
 
+// 辅助函数：上传附件
+const uploadAttachment = async (file) => {
+	const formData = new FormData();
+	formData.append('FileName', file.name || '未命名文件');
+	formData.append('FileDir', 'CustomerCollection/Attachments');
+	formData.append('FileNameType', '1');
+	formData.append('File', file.raw || file);
+	formData.append('storeType', '1');
+	return await request.postForm(UploadUrl, formData);
+};
+
 const clearAll = () => {
 	addcustomercollectionform.value.receiptNumber = ''
 	addcustomercollectionform.value.receiptDate = ''
@@ -1086,10 +1328,13 @@ const clearAll = () => {
 	addcustomercollectionform.value.AssociatedModulesDocumentID = ''
 	fileList.value = []
 	filelistUrlStr.value = ''
+	// 清空附件相关数据
+	attachmentList.value = []
+	attachmentUrlStr.value = ''
+	uploadedAttachments.value = []
 	isEdit.value = false
 	isReadOnly.value = false
 	EditID.value = 0
-	filelistUrlStr.value = ''
 	// 清空收款明细
 	ReceivingPaymentsDetailsTbaleData.value = []
 	totalAmount.value = 0
@@ -1232,6 +1477,29 @@ const CheckCustomerCollectionDetails = async (row) => {
 	// 更新已上传文件列表
 	uploadedFiles.value = [...fileList.value];
 
+	// 清空现有附件列表
+	attachmentList.value = [];
+	attachmentUrlStr.value = '';
+
+	// 处理附件显示，添加完整的 URL 路径
+	if (row.attachmentUrl) {
+		const attachmentUrls = row.attachmentUrl.split(',');
+		attachmentList.value = attachmentUrls.map((url, index) => {
+			const fileName = url.split('/').pop() || `Attachment ${index + 1}`;
+			return {
+				name: fileName,
+				url: url,
+				isChanged: false,
+				uid: Date.now() + index + 1000
+			};
+		});
+
+		attachmentUrlStr.value = row.attachmentUrl;
+	}
+
+	// 更新已上传附件列表
+	uploadedAttachments.value = [...attachmentList.value];
+
 	// 如果有客户ID和领取人，获取收款明细
 	if (addcustomercollectionform.value.customerID && addcustomercollectionform.value.receivingUser) {
 		await getCustomerCollectionsDetailsList(row.id);
@@ -1315,6 +1583,26 @@ const SaveCustomerCollectionForSubmit = async () => {
 			receiptImageUrls = [...existingUrls, ...receiptImageUrls];
 		}
 		customerCollectionsRequest.ReceiptImageUrl = receiptImageUrls.join(',');
+
+		// 上传附件
+		let attachmentUrls = [];
+		if (Array.isArray(attachmentList.value) && attachmentList.value.length > 0) {
+			attachmentUrls = await Promise.all(attachmentList.value
+				.filter(file => file.isChanged)
+				.map(async (file) => {
+					const response = await uploadAttachment(file);
+					if (response.code === 200 && response.data.url) {
+						return response.data.url;
+					}
+					throw new Error('上传附件失败');
+				}));
+		}
+		// 合并现有的和新上传的附件URL
+		if (attachmentUrlStr.value) {
+			const existingAttachmentUrls = attachmentUrlStr.value.split(',');
+			attachmentUrls = [...existingAttachmentUrls, ...attachmentUrls];
+		}
+		customerCollectionsRequest.AttachmentUrl = attachmentUrls.join(',');
 
 		// 保存数据
 		const response = await request.post(
@@ -1514,5 +1802,88 @@ const getCustomerCollectionsDetailsList = async (customerCollectionID) => {
 /* 创建收款单据dialog中的表单组件间距减少一半 */
 .el-dialog .el-form-item {
 	margin-bottom: 5px !important;
+}
+
+/* 附件上传样式 */
+.attachment-upload {
+	margin-bottom: 10px;
+}
+
+.attachment-list {
+	margin-top: 10px;
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	padding: 10px;
+	background-color: #f9fafb;
+}
+
+.attachment-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 12px;
+	margin-bottom: 8px;
+	background-color: white;
+	border: 1px solid #e5e7eb;
+	border-radius: 4px;
+	transition: all 0.2s ease;
+}
+
+.attachment-item:hover {
+	background-color: #f8f9fa;
+	border-color: #d1d5db;
+}
+
+.attachment-item:last-child {
+	margin-bottom: 0;
+}
+
+.attachment-info {
+	display: flex;
+	align-items: center;
+	flex: 1;
+}
+
+.attachment-icon {
+	margin-right: 8px;
+	color: #6b7280;
+	font-size: 16px;
+}
+
+.attachment-name {
+	font-weight: 500;
+	color: #374151;
+	margin-right: 8px;
+	word-break: break-all;
+}
+
+.attachment-size {
+	color: #6b7280;
+	font-size: 12px;
+}
+
+.attachment-actions {
+	display: flex;
+	gap: 4px;
+}
+
+.attachment-actions .el-button {
+	padding: 4px 8px;
+	font-size: 12px;
+}
+
+.delete-btn {
+	color: #ef4444 !important;
+}
+
+.delete-btn:hover {
+	background-color: #fef2f2 !important;
+}
+
+/* 附件上传提示样式 */
+.el-upload__tip {
+	color: #6b7280;
+	font-size: 12px;
+	margin-top: 5px;
 }
 </style>

@@ -68,8 +68,12 @@
 		<el-dialog :modal="false" :modal-penetrable="true" :title="title" v-model="open" width="75%"
 			:close-on-click-modal=false>
 			<el-form ref="logisticsCompanyRef" :model="form" :rules="rules" label-width="120px">
-				<el-tabs v-model="activeTab">
-					<el-tab-pane label="基本信息" name="basic">
+				<!-- 基本信息 -->
+				<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
+					<el-collapse-item title="基本信息" name="basicInfo">
+						<template #title>
+							<span style="font-size: 18px; font-weight: bold; color: #000000;">基本信息</span>
+						</template>
 						<el-row>
 							<el-col :span="6">
 								<el-form-item label="公司简称" prop="simpleCompanyName">
@@ -101,18 +105,6 @@
 						</el-row>
 						<el-row>
 							<el-col :span="6">
-								<el-form-item label="开户银行" prop="openAccountBank">
-									<el-input v-model="form.openAccountBank" placeholder="请输入开户银行" style="width: 300px"
-										size="default" />
-								</el-form-item>
-							</el-col>
-							<el-col :span="6">
-								<el-form-item label="银行账号" prop="bankAccount">
-									<el-input v-model="form.bankAccount" placeholder="请输入银行账号" style="width: 300px"
-										size="default" />
-								</el-form-item>
-							</el-col>
-							<el-col :span="6">
 								<el-form-item label="公司税号" prop="companyTaxNumber">
 									<el-input v-model="form.companyTaxNumber" placeholder="请输入公司税号" style="width: 300px"
 										size="default" />
@@ -125,8 +117,15 @@
 								</el-form-item>
 							</el-col>
 						</el-row>
-					</el-tab-pane>
-					<el-tab-pane label="联系人信息" name="contact">
+					</el-collapse-item>
+				</el-collapse>
+
+				<!-- 联系人信息 -->
+				<el-collapse v-model="contactInfoCollapseActive" style="margin-bottom: 20px;">
+					<el-collapse-item title="联系人信息" name="contactInfo">
+						<template #title>
+							<span style="font-size: 18px; font-weight: bold; color: #000000;">联系人信息</span>
+						</template>
 						<div class="mb10">
 							<el-button type="primary" icon="Plus" @click="addContact" size="default">添加联系人</el-button>
 						</div>
@@ -160,8 +159,58 @@
 								</template>
 							</el-table-column>
 						</el-table>
-					</el-tab-pane>
-				</el-tabs>
+					</el-collapse-item>
+				</el-collapse>
+
+				<!-- 银行账号信息 -->
+				<el-collapse v-model="bankAccountCollapseActive" style="margin-bottom: 20px;">
+					<el-collapse-item title="银行账号信息" name="bankAccountInfo">
+						<template #title>
+							<span style="font-size: 18px; font-weight: bold; color: #000000;">银行账号信息</span>
+						</template>
+						<div class="mb10">
+							<el-button type="primary" icon="Plus" @click="addBankAccount"
+								size="default">添加银行账号</el-button>
+						</div>
+						<el-table :data="bankAccountTableData" style="width: 100%; table-layout: fixed;" stripe
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+							<el-table-column label="开户名称" prop="bankAccountName">
+								<template #default="scope">
+									<el-input v-model="scope.row.bankAccountName" placeholder="请输入开户名称"
+										size="default" />
+								</template>
+							</el-table-column>
+							<el-table-column label="开户银行" prop="bank">
+								<template #default="scope">
+									<el-input v-model="scope.row.bank" placeholder="请输入开户银行" size="default" />
+								</template>
+							</el-table-column>
+							<el-table-column label="银行账号" prop="bankAccountNumber">
+								<template #default="scope">
+									<el-input v-model="scope.row.bankAccountNumber" placeholder="请输入银行账号"
+										size="default" />
+								</template>
+							</el-table-column>
+							<el-table-column label="银行地址" prop="bankAddress">
+								<template #default="scope">
+									<el-input v-model="scope.row.bankAddress" placeholder="请输入银行地址" size="default" />
+								</template>
+							</el-table-column>
+							<el-table-column label="备注" prop="remark">
+								<template #default="scope">
+									<el-input v-model="scope.row.remark" placeholder="请输入备注" size="default" />
+								</template>
+							</el-table-column>
+							<el-table-column label="操作" width="100">
+								<template #default="scope">
+									<el-button type="danger" icon="Delete" circle size="small"
+										@click="removeBankAccount(scope.$index)" />
+								</template>
+							</el-table-column>
+						</el-table>
+					</el-collapse-item>
+				</el-collapse>
 			</el-form>
 			<template #footer>
 				<div class="dialog-footer">
@@ -180,8 +229,6 @@
 					<dict-tag :options="state.optionss.hr_logisticscompany_type" :value="detailForm.companyType" />
 				</el-descriptions-item>
 				<el-descriptions-item label="详细地址">{{ detailForm.address || '-' }}</el-descriptions-item>
-				<el-descriptions-item label="开户银行">{{ detailForm.openAccountBank || '-' }}</el-descriptions-item>
-				<el-descriptions-item label="银行账号">{{ detailForm.bankAccount || '-' }}</el-descriptions-item>
 				<el-descriptions-item label="公司税号">{{ detailForm.companyTaxNumber || '-' }}</el-descriptions-item>
 				<el-descriptions-item label="备注">{{ detailForm.remark || '-' }}</el-descriptions-item>
 			</el-descriptions>
@@ -194,6 +241,19 @@
 					<el-table-column label="联系人姓名" prop="name" />
 					<el-table-column label="电话号码" prop="phoneNumber" />
 					<el-table-column label="电子邮件" prop="email" />
+					<el-table-column label="备注" prop="remark" />
+				</el-table>
+			</div>
+
+			<div style="margin-top: 20px;">
+				<div style="font-weight: bold; margin-bottom: 10px;">银行账号信息</div>
+				<el-table :data="detailBankAccounts" style="width: 100%; table-layout: fixed;" stripe
+					:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+					:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+					<el-table-column label="开户名称" prop="bankAccountName" />
+					<el-table-column label="开户银行" prop="bank" />
+					<el-table-column label="银行账号" prop="bankAccountNumber" />
+					<el-table-column label="银行地址" prop="bankAddress" />
 					<el-table-column label="备注" prop="remark" />
 				</el-table>
 			</div>
@@ -218,7 +278,8 @@ import {
 	updateLogisticsCompany,
 	delLogisticsCompany,
 	exportLogisticsCompany,
-	getLogisticsCompanyContacts
+	getLogisticsCompanyContacts,
+	getLogisticsCompanyBankAccounts
 } from '@/api/huirong/logisticscompany'
 
 /*动态下拉框start*/
@@ -230,9 +291,9 @@ const state = reactive({
 	}
 })
 const { optionss } = toRefs(state)
-var dictParams = [{ dictType: 'hr_logisticscompany_type' }]
-proxy.getDicts(dictParams).then((response) => {
-	response.data.forEach((element) => {
+var dictParams = [{ dictType: 'hr_logisticscompany_type' }] as any
+(proxy as any).getDicts(dictParams).then((response: any) => {
+	response.data.forEach((element: any) => {
 		state.optionss[element.dictType] = element.list
 	});
 	getList();
@@ -259,8 +320,7 @@ const total = ref(0)
 const title = ref('')
 // 是否显示弹出层
 const open = ref(false)
-// 当前激活的标签页
-const activeTab = ref('basic')
+// 移除activeTab，不再需要tab切换
 // 查询参数
 const queryParams = ref({
 	pageNum: 1,
@@ -276,8 +336,8 @@ const form = ref({
 	companyName: undefined,
 	companyType: undefined,
 	address: undefined,
-	openAccountBank: undefined,
-	bankAccount: undefined,
+	openAccountBank: '', // 后端接口需要，但不在界面显示
+	bankAccount: '', // 后端接口需要，但不在界面显示
 	companyTaxNumber: undefined,
 	remark: undefined,
 	contacts: []
@@ -297,6 +357,14 @@ const loading = ref(false)
 // 联系人表格数据
 const contactsTableData = ref([]);
 
+// 银行账号表格数据
+const bankAccountTableData = ref([]);
+
+// 折叠面板状态管理
+const basicInfoCollapseActive = ref(['basicInfo'])
+const contactInfoCollapseActive = ref(['contactInfo'])
+const bankAccountCollapseActive = ref(['bankAccountInfo'])
+
 // 是否显示详情弹出层
 const detailOpen = ref(false)
 // 详情表单参数
@@ -314,6 +382,8 @@ const detailForm = ref({
 })
 // 详情联系人数据
 const detailContacts = ref([])
+// 详情银行账号数据
+const detailBankAccounts = ref([])
 
 /** 查询物流公司列表 */
 function getList() {
@@ -340,14 +410,16 @@ function reset() {
 		companyName: undefined,
 		companyType: undefined,
 		address: undefined,
-		openAccountBank: undefined,
-		bankAccount: undefined,
+		openAccountBank: '', // 后端接口需要，但不在界面显示
+		bankAccount: '', // 后端接口需要，但不在界面显示
 		companyTaxNumber: undefined,
 		remark: undefined,
 		contacts: []
 	}
 	// 清空联系人表格
 	contactsTableData.value = [];
+	// 清空银行账号表格
+	bankAccountTableData.value = [];
 }
 
 /** 搜索按钮操作 */
@@ -386,7 +458,6 @@ function handleAdd() {
 	reset()
 	open.value = true
 	title.value = '添加物流公司'
-	activeTab.value = 'basic'
 }
 
 /** 修改按钮操作 */
@@ -395,7 +466,7 @@ function handleUpdate(row) {
 	const id = row.id || ids.value[0]
 	// 获取物流公司详情
 	getLogisticsCompany(id).then(response => {
-		if (response.code === 200 && response.data) {
+		if (response && response.data) {
 			// 确保 companyType 是字符串类型
 			if (response.data.companyType !== null && response.data.companyType !== undefined) {
 				response.data.companyType = response.data.companyType.toString();
@@ -403,9 +474,11 @@ function handleUpdate(row) {
 			Object.assign(form.value, response.data)
 			// 清空联系人表格
 			contactsTableData.value = []
+			// 清空银行账号表格
+			bankAccountTableData.value = []
 			// 获取联系人列表
 			getLogisticsCompanyContacts(id).then(contactResponse => {
-				if (contactResponse.code === 200) {
+				if (contactResponse && contactResponse.data) {
 					// 将联系人数据添加到表格
 					contactsTableData.value = contactResponse.data.map(contact => ({
 						id: contact.id,
@@ -420,9 +493,26 @@ function handleUpdate(row) {
 			}).catch(() => {
 				ElMessage.warning('获取联系人数据失败')
 			})
+			// 获取银行账号列表
+			getLogisticsCompanyBankAccounts(id).then(bankResponse => {
+				if (bankResponse && bankResponse.data) {
+					// 将银行账号数据添加到表格
+					bankAccountTableData.value = bankResponse.data.map(bank => ({
+						id: bank.id,
+						bankAccountName: bank.bankAccountName,
+						bank: bank.bank,
+						bankAccountNumber: bank.bankAccountNumber,
+						bankAddress: bank.bankAddress || '',
+						remark: bank.remark || ''
+					})) || []
+				} else {
+					ElMessage.warning('获取银行账号数据失败')
+				}
+			}).catch(() => {
+				ElMessage.warning('获取银行账号数据失败')
+			})
 			open.value = true
 			title.value = '修改物流公司'
-			activeTab.value = 'basic'
 		} else {
 			ElMessage.error('获取物流公司详情失败')
 		}
@@ -438,7 +528,6 @@ function submitForm() {
 			// 检查联系人是否为空
 			if (contactsTableData.value.length === 0) {
 				ElMessage.warning('请至少添加一个联系人');
-				activeTab.value = 'contact';
 				return;
 			}
 
@@ -447,7 +536,6 @@ function submitForm() {
 				const contact = contactsTableData.value[i];
 				if (!contact.name || !contact.phone) {
 					ElMessage.warning(`第${i + 1}个联系人的姓名和电话不能为空`);
-					activeTab.value = 'contact';
 					return;
 				}
 			}
@@ -455,26 +543,36 @@ function submitForm() {
 			// 准备提交的数据
 			const submitData = {
 				...form.value,
-				// 确保联系人数据字段名与后端匹配
-				contacts: contactsTableData.value.map(contact => ({
-					id: contact.id,
-					logisticsCompanyId: form.value.id, // 如果是修改，需要保留关联ID
-					name: contact.name,
-					Phone: contact.phone, // 注意字段名可能需要转换
-					email: contact.email,
-					remark: contact.remark
+				// 联系人数据字段名与后端匹配
+				Contacts: contactsTableData.value.map(contact => ({
+					Id: contact.id,
+					LogisticsCompanyId: form.value.id, // 如果是修改，需要保留关联ID
+					Name: contact.name,
+					Phone: contact.phone,
+					Email: contact.email,
+					Remark: contact.remark
+				})),
+				// 银行账号数据字段名与后端匹配
+				BankAccounts: bankAccountTableData.value.map(bank => ({
+					Id: bank.id,
+					LogisticsCompanyID: form.value.id, // 如果是修改，需要保留关联ID
+					Bank_account_name: bank.bankAccountName,
+					Bank: bank.bank,
+					Bank_account_number: bank.bankAccountNumber,
+					Bank_address: bank.bankAddress || '', // 添加银行地址字段
+					Remark: bank.remark
 				}))
 			};
 
 			if (form.value.id) {
 				// 修改操作
 				updateLogisticsCompany(submitData).then(response => {
-					if (response.code === 200) {
+					if (response && response.data) {
 						ElMessage.success('修改成功')
 						open.value = false
 						getList()
 					} else {
-						ElMessage.error(response.msg || '修改失败')
+						ElMessage.error('修改失败')
 					}
 				}).catch(() => {
 					ElMessage.error('修改失败，请稍后重试')
@@ -482,12 +580,12 @@ function submitForm() {
 			} else {
 				// 新增操作
 				addLogisticsCompany(submitData).then(response => {
-					if (response.code === 200) {
+					if (response && response.data) {
 						ElMessage.success('新增成功')
 						open.value = false
 						getList()
 					} else {
-						ElMessage.error(response.msg || '新增失败')
+						ElMessage.error('新增失败')
 					}
 				}).catch(() => {
 					ElMessage.error('新增失败，请稍后重试')
@@ -539,23 +637,50 @@ function removeContact(index) {
 	contactsTableData.value.splice(index, 1);
 }
 
+// 添加银行账号
+function addBankAccount() {
+	bankAccountTableData.value.push({
+		id: undefined,
+		bankAccountName: '',
+		bank: '',
+		bankAccountNumber: '',
+		bankAddress: '',
+		remark: ''
+	});
+}
+
+// 移除银行账号
+function removeBankAccount(index) {
+	bankAccountTableData.value.splice(index, 1);
+}
+
 /** 查看详情按钮操作 */
 function handleDetail(row) {
 	detailForm.value = { ...row }
 	detailContacts.value = [] // 先清空联系人数据
+	detailBankAccounts.value = [] // 先清空银行账号数据
 	// 获取联系人列表
 	getLogisticsCompanyContacts(row.id).then(response => {
-		if (response.code === 200) {
+		if (response && response.data) {
 			detailContacts.value = response.data || []
 		} else {
 			ElMessage.error('获取联系人数据失败')
 		}
+	}).catch(() => {
+		ElMessage.error('获取联系人数据失败')
+	})
+	// 获取银行账号列表
+	getLogisticsCompanyBankAccounts(row.id).then(response => {
+		if (response && response.data) {
+			detailBankAccounts.value = response.data || []
+		} else {
+			ElMessage.error('获取银行账号数据失败')
+		}
 		detailOpen.value = true
 	}).catch(() => {
 		detailOpen.value = true
-		ElMessage.error('获取联系人数据失败')
+		ElMessage.error('获取银行账号数据失败')
 	})
-	detailOpen.value = true
 }
 
 onMounted(() => {

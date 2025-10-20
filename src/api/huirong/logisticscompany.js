@@ -62,3 +62,12 @@ export function getLogisticsCompanyContacts(logisticsCompanyId) {
 		params: { logisticsCompanyId }
 	})
 }
+
+// 获取物流公司银行账号列表
+export function getLogisticsCompanyBankAccounts(logisticsCompanyId) {
+	return request({
+		url: 'LogisticsCompany/GetLogisticsCompanyBankAccountList/GetBankAccountList',
+		method: 'get',
+		params: { logisticsCompanyId }
+	})
+}
