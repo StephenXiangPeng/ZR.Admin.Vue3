@@ -198,6 +198,37 @@
           </el-col>
         </el-row>
         
+        <!-- 关联材质下拉框 - 仅当选项类型为折射率时显示 -->
+        <el-form-item 
+          label="关联材质" 
+          prop="relatedMaterial" 
+          v-if="form.optionType === 5"
+        >
+          <el-select 
+            v-model="form.relatedMaterial" 
+            placeholder="请选择关联材质（支持多选）"
+            style="width: 100%"
+            clearable
+            filterable
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            :max-collapse-tags="2"
+          >
+            <el-option 
+              v-for="material in materialOptions" 
+              :key="material.value" 
+              :label="material.label" 
+              :value="material.value"
+            />
+          </el-select>
+          <div class="form-tip">
+            <el-text type="info" size="small">
+              提示：可以选择多个材质，系统会以数组格式保存
+            </el-text>
+          </div>
+        </el-form-item>
+        
         <el-form-item label="备注" prop="remark">
           <el-input 
             v-model="form.remark" 
@@ -219,6 +250,9 @@
             <span class="preview-separator">-</span>
             <span class="preview-name">{{ form.optionName }}</span>
             <span class="preview-value" v-if="form.optionValue">(值: {{ form.optionValue }})</span>
+            <span class="preview-material" v-if="form.optionType === 5 && form.relatedMaterial && form.relatedMaterial.length > 0">
+              (关联材质: {{ getMaterialNames(form.relatedMaterial) }})
+            </span>
           </div>
         </el-form-item>
       </el-form>
@@ -257,6 +291,7 @@ const multiple = ref(true)
 const total = ref(0)
 const title = ref('')
 const optionTypeOptions = ref([])
+const materialOptions = ref([])
 const submitLoading = ref(false)
 
 const data = reactive({
@@ -282,6 +317,18 @@ const data = reactive({
     ],
     status: [
       { required: true, message: '请选择状态', trigger: 'change' }
+    ],
+    relatedMaterial: [
+      { 
+        validator: (rule, value, callback) => {
+          if (form.value.optionType === 5 && (!value || value.length === 0)) {
+            callback(new Error('折射率选项必须选择关联材质'))
+          } else {
+            callback()
+          }
+        }, 
+        trigger: 'change' 
+      }
     ]
   }
 })
@@ -312,7 +359,8 @@ function reset() {
     optionName: null,
     optionValue: null,
     status: '0',
-    remark: ''
+    remark: '',
+    relatedMaterial: []
   }
   proxy.resetForm('lensOptionRef')
 }
@@ -354,15 +402,28 @@ function handleUpdate(row) {
   }
   getLensOption(id).then(response => {
     console.log('获取到的数据:', response.data) // 调试信息
+    
+    // 处理新的接口结构
+    const productConfig = response.data.productConfiguration || response.data
+    const relatedMaterials = response.data.relatedMaterials || []
+    
     // 确保数据格式正确，处理备注字段
-    const remark = response.data.remark || response.data.Remarks || ''
+    const remark = productConfig.remark || productConfig.Remarks || ''
+    
+    // 从relatedMaterials数组中提取material_id
+    let relatedMaterial = []
+    if (Array.isArray(relatedMaterials) && relatedMaterials.length > 0) {
+      relatedMaterial = relatedMaterials.map(item => item.material_id).filter(id => id != null)
+    }
+    
     form.value = {
-      id: response.data.id || response.data.ID,
-      optionType: response.data.optionType || response.data.OptionType,
-      optionName: response.data.optionName || response.data.OptionName,
-      optionValue: response.data.optionValue || response.data.OptionValue,
-      status: response.data.status || response.data.Status || '0',
-      remark: remark === '无' ? '' : remark // 如果备注是"无"，则显示为空，让用户可以重新输入
+      id: productConfig.id || productConfig.ID,
+      optionType: productConfig.optionType || productConfig.OptionType,
+      optionName: productConfig.optionName || productConfig.OptionName,
+      optionValue: productConfig.optionValue || productConfig.OptionValue,
+      status: productConfig.status || productConfig.Status || '0',
+      remark: remark === '无' ? '' : remark, // 如果备注是"无"，则显示为空，让用户可以重新输入
+      relatedMaterial: relatedMaterial
     }
     console.log('格式化后的表单数据:', form.value) // 调试信息
     open.value = true
@@ -390,7 +451,8 @@ function submitForm() {
           OptionName: form.value.optionName,
           OptionValue: form.value.optionValue,
           Status: form.value.status,
-          Remarks: remark
+          Remarks: remark,
+          RelatedMaterial: form.value.relatedMaterial && form.value.relatedMaterial.length > 0 ? form.value.relatedMaterial : null
         }
         console.log('修改请求数据:', requestData) // 调试信息
         updateLensOption(requestData).then(response => {
@@ -411,7 +473,8 @@ function submitForm() {
           OptionName: form.value.optionName,
           OptionValue: form.value.optionValue,
           Status: form.value.status,
-          Remarks: remark
+          Remarks: remark,
+          RelatedMaterial: form.value.relatedMaterial && form.value.relatedMaterial.length > 0 ? form.value.relatedMaterial : null
         }
         console.log('新增请求数据:', requestData) // 调试信息
         addLensOption(requestData).then(response => {
@@ -505,6 +568,20 @@ function getOptionTypeOptions() {
   })
 }
 
+// 获取材质选项数据
+function getMaterialOptions() {
+  // 从所有选项数据中筛选出材质选项（optionType = 3）
+  listLensOptions({ optionType: 3, status: '0' }).then(response => {
+    materialOptions.value = response.data.result.map(item => ({
+      label: item.optionName,
+      value: item.id  // 使用id作为value，对应material_id
+    }))
+  }).catch(error => {
+    console.error('获取材质选项失败:', error)
+    materialOptions.value = []
+  })
+}
+
 // 获取标签类型
 function getTagType(optionType) {
   const typeMap = {
@@ -528,13 +605,31 @@ function getOptionTypeDescription(optionType) {
     1: '镜片类型选项',
     2: '膜层选项',
     3: '材质选项',
-    4: '设计名称选项'
+    4: '设计名称选项',
+    5: '折射率选项'
   }
   return descriptions[optionType] || '未知类型'
 }
 
+// 获取材质名称
+function getMaterialName(materialValue) {
+  const material = materialOptions.value.find(item => item.value === materialValue)
+  return material ? material.label : materialValue
+}
+
+// 获取多个材质名称
+function getMaterialNames(materialValues) {
+  if (!Array.isArray(materialValues) || materialValues.length === 0) {
+    return ''
+  }
+  return materialValues.map(value => getMaterialName(value)).filter(name => name).join(', ')
+}
+
 // 处理选项类型变化
 function handleOptionTypeChange(value) {
+  // 清空关联材质字段
+  form.value.relatedMaterial = []
+  
   if (value && !form.value.id) { // 只在新增时获取
     getNextOptionValue(value).then(response => {
       form.value.optionValue = response.data
@@ -549,7 +644,7 @@ function handleOptionTypeChange(value) {
 onMounted(() => {
   getList()
   getOptionTypeOptions()
-  
+  getMaterialOptions()
 })
 </script>
 
@@ -599,6 +694,19 @@ onMounted(() => {
   margin-left: 6px;
   font-size: 11px;
   color: #909399;
+}
+
+.preview-material {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #67c23a;
+  font-weight: 500;
+}
+
+/* 表单提示样式 */
+.form-tip {
+  margin-top: 4px;
+  line-height: 1.4;
 }
 
 /* 对话框底部按钮样式 */

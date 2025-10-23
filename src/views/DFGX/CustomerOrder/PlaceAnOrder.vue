@@ -198,15 +198,29 @@
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="Tint Percentage" prop="tintPercentage">
-                <el-select v-model="orderForm.tintPercentage" placeholder="Please select Tint Percentage" style="width: 100%">
-                  <el-option 
-                    v-for="option in tintPercentageOptions" 
-                    :key="option.value" 
-                    :label="option.label" 
-                    :value="option.value">
-                  </el-option>
-                </el-select>
+              <el-form-item label="Tint Percentage">
+                <div style="display: flex; gap: 10px;">
+                  <div style="flex: 1;">
+                    <el-input 
+                      v-model="orderForm.tintPercentageTop" 
+                      placeholder="TOP" 
+                      >
+                      <template #append>
+                        <span>%</span>
+                      </template>
+                    </el-input>
+                  </div>
+                  <div style="flex: 1;">
+                    <el-input 
+                      v-model="orderForm.tintPercentageBottom" 
+                      placeholder="BOTTOM" 
+                      >
+                      <template #append>
+                        <span>%</span>
+                      </template>
+                    </el-input>
+                  </div>
+                </div>
               </el-form-item>
             </el-col>
           </el-row>
@@ -559,7 +573,6 @@ const channelOptions = ref([])
 // ED/EDA、sizeA、sizeB 现在是文本输入框，不需要选项数据
 const remarksTypeOptions = ref([])
 const colorOptions = ref([])
-const tintPercentageOptions = ref([])
 const orderStatusOptions = ref([])
 
 // 表单数据
@@ -587,7 +600,8 @@ const orderForm = reactive({
   coating: '',
   tinting: '',
   color: '',
-  tintPercentage: '',
+  tintPercentageTop: '',
+  tintPercentageBottom: '',
   
   // 左右眼参数
   leftEye: {
@@ -678,7 +692,8 @@ const rules = {
   coating: [{ required: true, message: 'Please select Coating', trigger: 'change' }],
   tinting: [{ required: true, message: 'Please select Tinting', trigger: 'change' }],
   color: [{ required: false, message: 'Please select Color', trigger: 'change' }],
-  tintPercentage: [{ required: false, message: 'Please select Tint Percentage', trigger: 'change' }],
+  tintPercentageTop: [{ required: false, message: 'Please enter TOP Tint Percentage', trigger: 'blur' }],
+  tintPercentageBottom: [{ required: false, message: 'Please enter BOTTOM Tint Percentage', trigger: 'blur' }],
   frameType: [{ required: true, message: 'Please select Frame Type', trigger: 'change' }],
   orderStatus: [{ required: false, message: 'Please select Order Status', trigger: 'change' }]
 }
@@ -819,14 +834,6 @@ const getDictData = async () => {
         price: item.remark ? parseFloat(item.remark) : 0
       }))
     
-    // 染色百分比选项 - optionType为15
-    tintPercentageOptions.value = allOptions
-      .filter(item => item.optionType === 15)
-      .map(item => ({
-        label: item.optionName,
-        value: item.optionValue,
-        price: item.remark ? parseFloat(item.remark) : 0
-      }))
     
     // 订单状态选项 - optionType为16
     orderStatusOptions.value = allOptions
@@ -860,7 +867,7 @@ onMounted(() => {
 })
 
 // 监听表单变化，自动计算价格和添加备注
-watch([() => orderForm.dia, () => orderForm.refractiveIndex, () => orderForm.designName, () => orderForm.material, () => orderForm.channel, () => orderForm.coating, () => orderForm.tinting, () => orderForm.color, () => orderForm.tintPercentage], () => {
+watch([() => orderForm.dia, () => orderForm.refractiveIndex, () => orderForm.designName, () => orderForm.material, () => orderForm.channel, () => orderForm.coating, () => orderForm.tinting, () => orderForm.color, () => orderForm.tintPercentageTop, () => orderForm.tintPercentageBottom], () => {
   calculatePrice()
   generateAutoRemarks()
 }, { deep: true })
@@ -885,15 +892,13 @@ const calculatePrice = () => {
   
   const refractiveIndexOption = refractiveIndexOptions.value.find(option => option.value === orderForm.refractiveIndex)
   const colorOption = colorOptions.value.find(option => option.value === orderForm.color)
-  const tintPercentageOption = tintPercentageOptions.value.find(option => option.value === orderForm.tintPercentage)
   
   basePrice = (coatingOption?.price || 0) + 
               (tintingOption?.price || 0) + 
               (designNameOption?.price || 0) + 
               materialPrice + 
               (refractiveIndexOption?.price || 0) +
-              (colorOption?.price || 0) +
-              (tintPercentageOption?.price || 0)
+              (colorOption?.price || 0)
   
   calculatedPrice.value = basePrice
 }
@@ -1104,8 +1109,8 @@ const submitOrder = async () => {
       tintingName: tintingOptions.value.find(opt => opt.value === orderForm.tinting)?.label || '',
       color: orderForm.color,
       colorName: colorOptions.value.find(opt => opt.value === orderForm.color)?.label || '',
-      tintPercentage: orderForm.tintPercentage,
-      tintPercentageName: tintPercentageOptions.value.find(opt => opt.value === orderForm.tintPercentage)?.label || '',
+      tintPercentageTop: orderForm.tintPercentageTop,
+      tintPercentageBottom: orderForm.tintPercentageBottom,
       orderStatus: defaultOrderStatus,
       orderStatusName: defaultOrderStatusName,
       // 文件附件
@@ -1161,8 +1166,8 @@ const submitOrder = async () => {
       tintingName: tintingOptions.value.find(opt => opt.value === orderForm.tinting)?.label || '',
       color: orderForm.color,
       colorName: colorOptions.value.find(opt => opt.value === orderForm.color)?.label || '',
-      tintPercentage: orderForm.tintPercentage,
-      tintPercentageName: tintPercentageOptions.value.find(opt => opt.value === orderForm.tintPercentage)?.label || '',
+      tintPercentageTop: orderForm.tintPercentageTop,
+      tintPercentageBottom: orderForm.tintPercentageBottom,
       orderStatus: defaultOrderStatus,
       orderStatusName: defaultOrderStatusName,
       // 文件附件
@@ -1277,7 +1282,7 @@ const previewOrder = () => {
   const coatingLabel = coatingOptions.value.find(option => option.value === orderForm.coating)?.label || orderForm.coating
   const tintingLabel = tintingOptions.value.find(option => option.value === orderForm.tinting)?.label || orderForm.tinting
   const colorLabel = colorOptions.value.find(option => option.value === orderForm.color)?.label || orderForm.color
-  const tintPercentageLabel = tintPercentageOptions.value.find(option => option.value === orderForm.tintPercentage)?.label || orderForm.tintPercentage
+  const tintPercentageLabel = `TOP: ${orderForm.tintPercentageTop}%, BOTTOM: ${orderForm.tintPercentageBottom}%`
   const defaultOrderStatus = orderStatusOptions.value.length > 0 ? orderStatusOptions.value[0].value : 1
   const defaultOrderStatusName = orderStatusOptions.value.length > 0 ? orderStatusOptions.value[0].label : 'ORDER CREATED'
   const orderStatusLabel = orderStatusOptions.value.find(option => option.value === defaultOrderStatus)?.label || defaultOrderStatusName

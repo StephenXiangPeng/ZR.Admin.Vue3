@@ -213,7 +213,7 @@
         </div>
         
         <!-- Lens Information -->
-        <div v-if="selectedOrder.dia || selectedOrder.refractiveIndex || selectedOrder.designName || selectedOrder.material || selectedOrder.channel || selectedOrder.coating || selectedOrder.color || selectedOrder.tintPercentage" class="lens-info-section">
+        <div v-if="selectedOrder.dia || selectedOrder.refractiveIndex || selectedOrder.designName || selectedOrder.material || selectedOrder.channel || selectedOrder.coating || selectedOrder.color || selectedOrder.tintPercentageTop || selectedOrder.tintPercentageBottom" class="lens-info-section">
           <h4>Lens Information</h4>
           <el-descriptions :column="2" border>
             <el-descriptions-item label="Dia">{{ selectedOrder.dia || 'None' }}</el-descriptions-item>
@@ -224,7 +224,8 @@
             <el-descriptions-item label="Coating">{{ selectedOrder.coatingName || selectedOrder.coating || 'None' }}</el-descriptions-item>
             <el-descriptions-item label="Tinting">{{ selectedOrder.tintingName || selectedOrder.tinting || 'None' }}</el-descriptions-item>
             <el-descriptions-item label="Color">{{ selectedOrder.colorName || selectedOrder.color || 'None' }}</el-descriptions-item>
-            <el-descriptions-item label="Tint Percentage">{{ selectedOrder.tintPercentageName || selectedOrder.tintPercentage || 'None' }}</el-descriptions-item>
+            <el-descriptions-item label="Tint Percentage TOP">{{ selectedOrder.tintPercentageTop || 'None' }}</el-descriptions-item>
+            <el-descriptions-item label="Tint Percentage BOTTOM">{{ selectedOrder.tintPercentageBottom || 'None' }}</el-descriptions-item>
           </el-descriptions>
         </div>
         
