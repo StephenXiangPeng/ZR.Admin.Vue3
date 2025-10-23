@@ -164,9 +164,9 @@
 						<el-row>
 							<el-col :span="6">
 								<el-form-item label="收款单位" placeholder="请选择收款单位">
-									<el-select v-model="addpaymentrequestform.payeeCode" style="width: 300px"
-										@change="payeeCodeChange()" :disabled="IsDisabled" filterable size="default"
-										clearable>
+									<el-select filterable allow-create v-model="addpaymentrequestform.payeeCode"
+										style="width: 300px" @change="payeeCodeChange()" :disabled="IsDisabled"
+										size="default" clearable>
 										<el-option v-for="supplier in filteredSupplierList" :key="supplier.dictvalue"
 											:label="supplier.dictLabel" :value="supplier.dictvalue" />
 									</el-select>
@@ -190,8 +190,8 @@
 										placeholder="请选择银行账号" :disabled="IsDisabled" @change="bankAccountChange"
 										filterable clearable size="default">
 										<el-option v-for="account in supplierBankAccounts" :key="account.id"
-											:label="`${account.bank} - ${account.bank_account_number}`"
-											:value="account.bank_account_number" />
+											:label="`${account.bank_account_number || account.bankAccountNumber}`"
+											:value="account.bank_account_number || account.bankAccountNumber" />
 									</el-select>
 								</el-form-item>
 							</el-col>
@@ -749,7 +749,12 @@ async function loadFilteredSuppliers() {
 	try {
 		const response = await getSupplierList();
 		if (response && response.code === 200) {
-			filteredSupplierList.value = response.data || [];
+			// 标准化供应商数据结构
+			const data = response.data || [];
+			filteredSupplierList.value = data.map(item => ({
+				dictvalue: item.dictvalue || item.dictValue || item.value,
+				dictLabel: item.dictLabel || item.label || item.name
+			}));
 		} else {
 			console.error('获取过滤后的供应商列表失败:', response?.msg);
 			filteredSupplierList.value = [];
@@ -781,29 +786,52 @@ fetchDataAndExecute();
 const PaymentTypeOptions = ref([]);
 const paymentCategoryChange = async () => {
 	addpaymentrequestform.value.paymentName = '';
+
+	// 清空收款单位相关字段
+	addpaymentrequestform.value.payeeCode = '';
+	addpaymentrequestform.value.payeeName = '';
+	addpaymentrequestform.value.bankName = '';
+	addpaymentrequestform.value.bankAccount = '';
+	supplierBankAccounts.value = [];
+
 	switch (addpaymentrequestform.value.paymentCategory) {
 		case '1':
 			PaymentTypeOptions.value = state.optionss.hr_factory_payment
 			showPaymentDetails.value = true; // 工厂付款显示付款明细和未支付款项详情
+			// 加载默认供应商选项
+			await loadFilteredSuppliers();
 			break;
 		case '2':
 			PaymentTypeOptions.value = state.optionss.hr_domestic_charges
 			showPaymentDetails.value = true; // 国内费用显示付款明细和未支付款项详情
+			// 加载默认供应商选项
+			await loadFilteredSuppliers();
 			break;
 		case '3':
 			PaymentTypeOptions.value = state.optionss.hr_foreign_charges
 			showPaymentDetails.value = true; // 国外费用显示付款明细和未支付款项详情
+			// 加载默认供应商选项
+			await loadFilteredSuppliers();
 			break;
 		case '4':
 			PaymentTypeOptions.value = state.optionss.hr_daily_expenses
 			showPaymentDetails.value = false; // 日常费用隐藏付款明细和未支付款项详情
+			// 加载默认供应商选项
+			await loadFilteredSuppliers();
 			break;
 		case '5':
 			PaymentTypeOptions.value = state.optionss.hr_business_expenses
 			showPaymentDetails.value = false; // 业务费用隐藏付款明细和未支付款项详情
+			// 业务费用默认加载供应商选项，等选择款项名称后再动态更新
+			// 在查看详情时，不要在这里加载供应商选项，而是在后面根据款项名称加载
+			if (!isCheckAndEdit.value) {
+				await loadFilteredSuppliers();
+			}
 			break;
 		default:
 			showPaymentDetails.value = true;
+			// 加载默认供应商选项
+			await loadFilteredSuppliers();
 			break;
 	}
 
@@ -862,48 +890,83 @@ const relatedmoduleshandleChange = (row) => {
 }
 const payeeCodeChange = async () => {
 	try {
-		// 获取供应商基本信息
-		const supplierResponse = await request({
-			url: 'Supplierinfo/GetSupplierInfoByID/GetSupplierInfo',
-			method: 'GET',
-			params: {
-				SupplierID: addpaymentrequestform.value.payeeCode
-			}
-		});
-
 		// 1. 取下拉框label作为收款单位名称
 		const selectedSupplier = filteredSupplierList.value.find(
-			item => item.dictvalue == addpaymentrequestform.value.payeeCode
+			item => item.dictvalue == addpaymentrequestform.value.payeeCode ||
+				item.dictvalue == addpaymentrequestform.value.payeeCode.toString() ||
+				item.dictvalue == Number(addpaymentrequestform.value.payeeCode)
 		);
 		addpaymentrequestform.value.payeeName = selectedSupplier ? selectedSupplier.dictLabel : '';
 
-		// 获取供应商银行账号列表
-		const bankAccountResponse = await request({
-			url: 'Supplierinfo/GetSupplierBankAccountList/GetBankAccountList',
-			method: 'GET',
-			params: {
-				supplierId: addpaymentrequestform.value.payeeCode
-			}
-		});
+		// 判断是否为业务费用且款项名称为快递费、运杂费、海运费，使用物流公司银行账号接口
+		if (addpaymentrequestform.value.paymentCategory === '5' && isLogisticsPaymentName()) {
+			// 业务费用（快递费、运杂费、海运费）：使用物流公司银行账号接口
+			const bankAccountResponse = await request({
+				url: 'LogisticsCompany/GetLogisticsCompanyBankAccountList/GetBankAccountList',
+				method: 'GET',
+				params: {
+					logisticsCompanyId: addpaymentrequestform.value.payeeCode
+				}
+			});
 
-		if (bankAccountResponse.data && bankAccountResponse.code === 200) {
-			supplierBankAccounts.value = bankAccountResponse.data || [];
+			if (bankAccountResponse && bankAccountResponse.code === 200) {
+				supplierBankAccounts.value = bankAccountResponse.data || [];
 
-			// 如果有银行账号，默认选中第一个
-			if (supplierBankAccounts.value.length > 0) {
-				const firstAccount = supplierBankAccounts.value[0];
-				addpaymentrequestform.value.bankName = firstAccount.bank || '';
-				addpaymentrequestform.value.bankAccount = firstAccount.bank_account_number || '';
+				// 如果有银行账号，默认选中第一个
+				if (supplierBankAccounts.value.length > 0) {
+					const firstAccount = supplierBankAccounts.value[0];
+					addpaymentrequestform.value.bankName = firstAccount.bank || '';
+					addpaymentrequestform.value.bankAccount = firstAccount.bankAccountNumber || '';
+				} else {
+					// 如果没有银行账号，清空相关字段
+					addpaymentrequestform.value.bankName = '';
+					addpaymentrequestform.value.bankAccount = '';
+				}
 			} else {
-				// 如果没有银行账号，清空相关字段
+				// 如果获取银行账号失败，清空相关字段
 				addpaymentrequestform.value.bankName = '';
 				addpaymentrequestform.value.bankAccount = '';
+				supplierBankAccounts.value = [];
 			}
 		} else {
-			// 如果获取银行账号失败，使用供应商基本信息中的银行信息
-			addpaymentrequestform.value.bankName = supplierResponse.bankName || '';
-			addpaymentrequestform.value.bankAccount = supplierResponse.bankAccount || '';
-			supplierBankAccounts.value = [];
+			// 非业务费用：使用供应商银行账号接口
+			// 获取供应商基本信息
+			const supplierResponse = await request({
+				url: 'Supplierinfo/GetSupplierInfoByID/GetSupplierInfo',
+				method: 'GET',
+				params: {
+					SupplierID: addpaymentrequestform.value.payeeCode
+				}
+			});
+
+			// 获取供应商银行账号列表
+			const bankAccountResponse = await request({
+				url: 'Supplierinfo/GetSupplierBankAccountList/GetBankAccountList',
+				method: 'GET',
+				params: {
+					supplierId: addpaymentrequestform.value.payeeCode
+				}
+			});
+
+			if (bankAccountResponse.data && bankAccountResponse.code === 200) {
+				supplierBankAccounts.value = bankAccountResponse.data || [];
+
+				// 如果有银行账号，默认选中第一个
+				if (supplierBankAccounts.value.length > 0) {
+					const firstAccount = supplierBankAccounts.value[0];
+					addpaymentrequestform.value.bankName = firstAccount.bank || '';
+					addpaymentrequestform.value.bankAccount = firstAccount.bank_account_number || '';
+				} else {
+					// 如果没有银行账号，清空相关字段
+					addpaymentrequestform.value.bankName = '';
+					addpaymentrequestform.value.bankAccount = '';
+				}
+			} else {
+				// 如果获取银行账号失败，使用供应商基本信息中的银行信息
+				addpaymentrequestform.value.bankName = supplierResponse.bankName || '';
+				addpaymentrequestform.value.bankAccount = supplierResponse.bankAccount || '';
+				supplierBankAccounts.value = [];
+			}
 		}
 
 		// 只有在需要显示付款明细时才获取未付款详情列表
@@ -979,6 +1042,7 @@ const paymentRequestRequest = reactive({
 	Handler: 0,
 	Remark: '',
 	IsDelete: 0,
+	CompanyType: 0, // 新增公司类型字段
 	PaymentRequestDetails: []
 });
 
@@ -1018,6 +1082,7 @@ const SavePaymentRequest = () => {
 		paymentRequestRequest.Handler = Number(addpaymentrequestform.value.handler);
 		paymentRequestRequest.Remark = addpaymentrequestform.value.remarks;
 		paymentRequestRequest.IsDelete = 0;
+		paymentRequestRequest.CompanyType = getCurrentCompanyType();
 
 		// 转换字段映射，使用新的请求体结构
 		const processedDetails = CostDetailsTbaleData.value.map(detail => ({
@@ -1171,55 +1236,136 @@ const CheckPaymentRequest = async (row) => {
 				showPaymentDetails.value = true;
 				break;
 		}
-		paymentCategoryChange();
+
+		// 第一步：先加载付款类别和款项名称
+		await paymentCategoryChange();
 		addpaymentrequestform.value.paymentName = response.data.paymentRequest.paymentName.toString();
-		addpaymentrequestform.value.payeeCode = response.data.paymentRequest.payeeCode.toString();
-		addpaymentrequestform.value.payeeName = response.data.paymentRequest.payeeName;
-		addpaymentrequestform.value.bankName = response.data.paymentRequest.bankName;
-		addpaymentrequestform.value.bankAccount = response.data.paymentRequest.bankAccount;
-
-		// 确保供应商列表已加载
-		if (filteredSupplierList.value.length === 0) {
-			await loadFilteredSuppliers();
+		// 第二步：根据付款类别和款项名称决定加载哪种收款单位选项
+		// 如果是业务费用，根据款项名称加载对应的收款单位选项
+		if (addpaymentrequestform.value.paymentCategory == '5') {
+			// 等待一个微任务，确保PaymentTypeOptions已经设置
+			await new Promise(resolve => setTimeout(resolve, 0));
+			await loadBusinessExpensePayeeOptionsForViewByPaymentName(addpaymentrequestform.value.paymentName);
+		} else {
+			// 确保供应商列表已加载
+			if (filteredSupplierList.value.length === 0) {
+				await loadFilteredSuppliers();
+			}
 		}
-
-		// 检查 filteredSupplierList 中是否有匹配的供应商
-		const matchedSupplier = filteredSupplierList.value.find(
+		// 第三步：确保当前保存的收款单位在选项列表中
+		const currentPayeeExists = filteredSupplierList.value.find(
 			item => item.dictvalue == response.data.paymentRequest.payeeCode
 		);
 
-		if (matchedSupplier) {
-			// 如果找到匹配的供应商，确保 payeeCode 和 payeeName 都正确设置
-			addpaymentrequestform.value.payeeCode = matchedSupplier.dictvalue;
-			addpaymentrequestform.value.payeeName = matchedSupplier.dictLabel;
-		} else {
-			// 如果 filteredSupplierList 中没有找到，尝试从 state.optionss.sql_supplier_info 中查找
-			const supplierInfo = state.optionss.sql_supplier_info.find((item) => item.dictValue == response.data.paymentRequest.payeeCode);
-			if (supplierInfo) {
-				addpaymentrequestform.value.payeeCode = supplierInfo.dictValue;
-				addpaymentrequestform.value.payeeName = supplierInfo.dictLabel;
+		if (!currentPayeeExists) {
+			// 只有在非业务费用情况下，才从原始供应商列表中查找
+			if (addpaymentrequestform.value.paymentCategory !== '5') {
+				const originalSupplier = state.optionss.sql_supplier_info.find(
+					item => item.dictValue == response.data.paymentRequest.payeeCode
+				);
+				if (originalSupplier) {
+					// 将当前收款单位添加到选项列表的开头
+					filteredSupplierList.value.unshift({
+						dictvalue: originalSupplier.dictValue,
+						dictLabel: originalSupplier.dictLabel
+					});
+				}
+			} else {
+				// 业务费用情况下，如果当前收款单位不在物流公司选项中，尝试从供应商列表中查找
+				const originalSupplier = state.optionss.sql_supplier_info.find(
+					item => item.dictValue == response.data.paymentRequest.payeeCode
+				);
+				if (originalSupplier) {
+					// 检查是否已经存在相同的收款单位（避免重复）
+					const duplicateExists = filteredSupplierList.value.find(
+						item => item.dictvalue == originalSupplier.dictValue
+					);
+					if (!duplicateExists) {
+						filteredSupplierList.value.unshift({
+							dictvalue: originalSupplier.dictValue,
+							dictLabel: originalSupplier.dictLabel
+						});
+					}
+				}
 			}
 		}
 
-		await payeeCodeChange();
+		// 第四步：标准化和去重选项列表
+		const standardizedOptions = filteredSupplierList.value.map(item => ({
+			dictvalue: item.dictvalue || item.dictValue || item.value,
+			dictLabel: item.dictLabel || item.label || item.name
+		}));
 
-		// 加载供应商银行账号列表
+		// 去重检查（基于标准化后的dictvalue）
+		const uniqueOptions = standardizedOptions.filter((item, index, self) =>
+			index === self.findIndex(t => t.dictvalue == item.dictvalue)
+		);
+
+		// 更新选项列表为去重后的标准化数据
+		filteredSupplierList.value = uniqueOptions;
+
+		// 第五步：收款单位选项列表准备好后，再设置收款单位的值
+		const payeeCodeValue = response.data.paymentRequest.payeeCode;
+
+		// 尝试在选项列表中查找匹配的收款单位
+		const matchedPayee = filteredSupplierList.value.find(
+			item => item.dictvalue == payeeCodeValue ||
+				item.dictvalue == payeeCodeValue.toString() ||
+				item.dictvalue == Number(payeeCodeValue)
+		);
+
+		if (matchedPayee) {
+			// 使用匹配到的收款单位的dictvalue作为payeeCode
+			addpaymentrequestform.value.payeeCode = matchedPayee.dictvalue;
+			addpaymentrequestform.value.payeeName = matchedPayee.dictLabel;
+		} else {
+			// 如果没有找到匹配的，使用原始值
+			addpaymentrequestform.value.payeeCode = payeeCodeValue.toString();
+			addpaymentrequestform.value.payeeName = response.data.paymentRequest.payeeName;
+		}
+
+		addpaymentrequestform.value.bankName = response.data.paymentRequest.bankName;
+		addpaymentrequestform.value.bankAccount = response.data.paymentRequest.bankAccount;
+
+		// 收款单位选项和值已经在上面的逻辑中处理完成
+
+		// 查看详情时不需要调用payeeCodeChange，直接根据付款类别和款项名称加载银行账号
+
+		// 加载银行账号列表（根据付款类别和款项名称使用不同接口）
 		try {
-			const bankAccountResponse = await request({
-				url: 'Supplierinfo/GetSupplierBankAccountList/GetBankAccountList',
-				method: 'GET',
-				params: {
-					supplierId: response.data.paymentRequest.payeeCode
-				}
-			});
+			if (addpaymentrequestform.value.paymentCategory === '5' && isLogisticsPaymentNameForView(addpaymentrequestform.value.paymentName)) {
+				// 业务费用（快递费、运杂费、海运费）：使用物流公司银行账号接口
+				const bankAccountResponse = await request({
+					url: 'LogisticsCompany/GetLogisticsCompanyBankAccountList/GetBankAccountList',
+					method: 'GET',
+					params: {
+						logisticsCompanyId: addpaymentrequestform.value.payeeCode
+					}
+				});
 
-			if (bankAccountResponse.data && bankAccountResponse.data.code === 200) {
-				supplierBankAccounts.value = bankAccountResponse.data.data || [];
+				if (bankAccountResponse && bankAccountResponse.code === 200) {
+					supplierBankAccounts.value = bankAccountResponse.data || [];
+				} else {
+					supplierBankAccounts.value = [];
+				}
 			} else {
-				supplierBankAccounts.value = [];
+				// 非业务费用或业务费用的"其他"款项：使用供应商银行账号接口
+				const bankAccountResponse = await request({
+					url: 'Supplierinfo/GetSupplierBankAccountList/GetBankAccountList',
+					method: 'GET',
+					params: {
+						supplierId: addpaymentrequestform.value.payeeCode
+					}
+				});
+
+				if (bankAccountResponse.data && bankAccountResponse.data.code === 200) {
+					supplierBankAccounts.value = bankAccountResponse.data.data || [];
+				} else {
+					supplierBankAccounts.value = [];
+				}
 			}
 		} catch (error) {
-			console.error('获取供应商银行账号列表失败:', error);
+			console.error('获取银行账号列表失败:', error);
 			supplierBankAccounts.value = [];
 		}
 
@@ -1427,6 +1573,7 @@ const EditSavePaymentRequest = () => {
 		paymentRequestRequest.Handler = Number(addpaymentrequestform.value.handler);
 		paymentRequestRequest.Remark = addpaymentrequestform.value.remarks;
 		paymentRequestRequest.IsDelete = 0;
+		paymentRequestRequest.CompanyType = getCurrentCompanyType();
 
 		// 转换字段映射，使用新的请求体结构
 		const processedDetails = CostDetailsTbaleData.value.map(detail => ({
@@ -1662,6 +1809,7 @@ const submitForReview = () => {
 				paymentRequestRequest.Handler = Number(addpaymentrequestform.value.handler);
 				paymentRequestRequest.Remark = addpaymentrequestform.value.remarks;
 				paymentRequestRequest.IsDelete = 0;
+				paymentRequestRequest.CompanyType = getCurrentCompanyType();
 
 				// 转换字段映射，使用新的请求体结构
 				const processedDetails = CostDetailsTbaleData.value.map(detail => ({
@@ -2244,6 +2392,11 @@ const CostDetailsTbaleDatahandleDelete = (index: number) => {
 
 // 款项名称变化时，若需展示付款明细，则按当前供应商和款项类型重新拉取未支付款项详情
 const paymentNameChange = async () => {
+	// 业务费用收款单位选项动态获取逻辑
+	if (addpaymentrequestform.value.paymentCategory === '5') { // 业务费用
+		await loadBusinessExpensePayeeOptions();
+	}
+
 	if (!showPaymentDetails.value) {
 		return;
 	}
@@ -2268,6 +2421,254 @@ const paymentNameChange = async () => {
 	} catch (error) {
 		console.error('获取未付款详情失败:', error);
 		UnpaidDetailsTbaleData.value = [];
+	}
+};
+
+// 业务费用收款单位选项动态获取函数
+const loadBusinessExpensePayeeOptions = async () => {
+	const paymentName = addpaymentrequestform.value.paymentName;
+
+	// 获取当前选择的款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === paymentName
+	)?.dictLabel || '';
+
+	let companyType = 0; // 默认收款单位
+
+	// 根据款项名称标签确定公司类型
+	if (currentPaymentNameLabel.includes('快递费') || currentPaymentNameLabel.includes('快递')) {
+		companyType = 2; // 快递公司
+	} else if (currentPaymentNameLabel.includes('运费') && !currentPaymentNameLabel.includes('海运费')) {
+		companyType = 3; // 物流公司
+	} else if (currentPaymentNameLabel.includes('海运费') || currentPaymentNameLabel.includes('运杂费')) {
+		companyType = 1; // 货代公司
+	} else if (currentPaymentNameLabel.includes('佣金')) {
+		companyType = 4; // 客户
+	} else {
+		// 其他情况恢复到初始供应商选项
+		await loadFilteredSuppliers();
+		return;
+	}
+
+	try {
+		// 调用API获取对应的收款单位选项
+		const response = await request({
+			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
+			method: 'GET',
+			params: {
+				companyType: companyType
+			}
+		});
+
+		if (response && response.code === 200) {
+			// 更新收款单位选项列表，标准化数据结构
+			const data = response.data || [];
+			filteredSupplierList.value = data.map(item => ({
+				dictvalue: item.dictvalue || item.dictValue || item.value,
+				dictLabel: item.dictLabel || item.label || item.name
+			}));
+
+			// 清空当前选择的收款单位
+			addpaymentrequestform.value.payeeCode = '';
+			addpaymentrequestform.value.payeeName = '';
+			addpaymentrequestform.value.bankName = '';
+			addpaymentrequestform.value.bankAccount = '';
+			supplierBankAccounts.value = [];
+
+			ElMessage.success(`已加载${getCompanyTypeName(companyType)}选项`);
+		} else {
+			ElMessage.error('获取收款单位选项失败');
+		}
+	} catch (error) {
+		console.error('获取收款单位选项失败:', error);
+		ElMessage.error('获取收款单位选项失败，请重试');
+	}
+};
+
+// 获取公司类型名称
+const getCompanyTypeName = (companyType) => {
+	switch (companyType) {
+		case 1: return '货代公司';
+		case 2: return '快递公司';
+		case 3: return '物流公司';
+		case 4: return '客户';
+		default: return '收款单位';
+	}
+};
+
+// 获取当前付款申请的公司类型
+const getCurrentCompanyType = () => {
+	// 只有业务费用才需要设置公司类型
+	if (addpaymentrequestform.value.paymentCategory !== '5') {
+		return 0; // 默认收款单位
+	}
+
+	const paymentName = addpaymentrequestform.value.paymentName;
+
+	// 获取当前选择的款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === paymentName
+	)?.dictLabel || '';
+
+	// 根据款项名称标签确定公司类型
+	if (currentPaymentNameLabel.includes('快递费') || currentPaymentNameLabel.includes('快递')) {
+		return 2; // 快递公司
+	} else if (currentPaymentNameLabel.includes('运费') && !currentPaymentNameLabel.includes('海运费')) {
+		return 3; // 物流公司
+	} else if (currentPaymentNameLabel.includes('海运费') || currentPaymentNameLabel.includes('运杂费')) {
+		return 1; // 货代公司
+	} else if (currentPaymentNameLabel.includes('佣金')) {
+		return 4; // 客户
+	} else {
+		return 0; // 默认收款单位
+	}
+};
+
+// 判断是否为物流相关款项名称（快递费、运费、运杂费、海运费）
+const isLogisticsPaymentName = () => {
+	const paymentName = addpaymentrequestform.value.paymentName;
+
+	// 获取当前选择的款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === paymentName
+	)?.dictLabel || '';
+
+	// 判断是否为快递费、运费、运杂费、海运费
+	return currentPaymentNameLabel.includes('快递费') ||
+		currentPaymentNameLabel.includes('运费') ||
+		currentPaymentNameLabel.includes('运杂费') ||
+		currentPaymentNameLabel.includes('海运费');
+};
+
+// 判断是否为"其他"款项名称
+const isOtherPaymentName = () => {
+	const paymentName = addpaymentrequestform.value.paymentName;
+
+	// 获取当前选择的款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === paymentName
+	)?.dictLabel || '';
+
+	// 判断是否为"其他"或类似的通用款项名称
+	return currentPaymentNameLabel.includes('其他') ||
+		currentPaymentNameLabel.includes('杂费') ||
+		currentPaymentNameLabel.includes('费用') ||
+		currentPaymentNameLabel === '';
+};
+
+// 查看详情时判断是否为物流相关款项名称（快递费、运费、运杂费、海运费）
+const isLogisticsPaymentNameForView = (paymentName) => {
+	// 获取款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === paymentName
+	)?.dictLabel || '';
+
+	// 判断是否为快递费、运费、运杂费、海运费
+	return currentPaymentNameLabel.includes('快递费') ||
+		currentPaymentNameLabel.includes('运费') ||
+		currentPaymentNameLabel.includes('运杂费') ||
+		currentPaymentNameLabel.includes('海运费');
+};
+
+// 查看详情时判断是否为"其他"款项名称
+const isOtherPaymentNameForView = (paymentName) => {
+	// 获取款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === paymentName
+	)?.dictLabel || '';
+
+	// 判断是否为"其他"或类似的通用款项名称
+	return currentPaymentNameLabel.includes('其他') ||
+		currentPaymentNameLabel.includes('杂费') ||
+		currentPaymentNameLabel.includes('费用') ||
+		currentPaymentNameLabel === '';
+};
+
+// 查看详情时根据款项名称加载业务费用收款单位选项
+const loadBusinessExpensePayeeOptionsForViewByPaymentName = async (paymentName) => {
+	try {
+		// 获取款项名称标签
+		const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+			option.dictValue === paymentName
+		)?.dictLabel || '';
+
+		let companyType = 0; // 默认收款单位
+
+		// 根据款项名称标签确定公司类型
+		if (currentPaymentNameLabel.includes('快递费') || currentPaymentNameLabel.includes('快递')) {
+			companyType = 2; // 快递公司
+		} else if (currentPaymentNameLabel.includes('运费') && !currentPaymentNameLabel.includes('海运费')) {
+			companyType = 3; // 物流公司
+		} else if (currentPaymentNameLabel.includes('海运费') || currentPaymentNameLabel.includes('运杂费')) {
+			companyType = 1; // 货代公司
+		} else if (currentPaymentNameLabel.includes('佣金')) {
+			companyType = 4; // 客户
+		} else {
+			// 其他情况加载默认供应商选项
+			// 清空当前选项列表，避免重复
+			filteredSupplierList.value = [];
+			await loadFilteredSuppliers();
+			return;
+		}
+
+		// 调用API获取对应的收款单位选项
+		const response = await request({
+			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
+			method: 'GET',
+			params: {
+				companyType: companyType
+			}
+		});
+
+		if (response && response.code === 200) {
+			// 更新收款单位选项列表，标准化数据结构
+			const data = response.data || [];
+			filteredSupplierList.value = data.map(item => ({
+				dictvalue: item.dictvalue || item.dictValue || item.value,
+				dictLabel: item.dictLabel || item.label || item.name
+			}));
+		} else {
+			// 如果获取失败，加载默认供应商选项
+			// 清空当前选项列表，避免重复
+			filteredSupplierList.value = [];
+			await loadFilteredSuppliers();
+		}
+	} catch (error) {
+		console.error('获取收款单位选项失败:', error);
+		// 如果获取失败，加载默认供应商选项
+		// 清空当前选项列表，避免重复
+		filteredSupplierList.value = [];
+		await loadFilteredSuppliers();
+	}
+};
+
+// 查看详情时加载业务费用收款单位选项（保留原函数以兼容其他调用）
+const loadBusinessExpensePayeeOptionsForView = async (companyType) => {
+	try {
+		// 调用API获取对应的收款单位选项
+		const response = await request({
+			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
+			method: 'GET',
+			params: {
+				companyType: companyType
+			}
+		});
+
+		if (response && response.code === 200) {
+			// 更新收款单位选项列表，标准化数据结构
+			const data = response.data || [];
+			filteredSupplierList.value = data.map(item => ({
+				dictvalue: item.dictvalue || item.dictValue || item.value,
+				dictLabel: item.dictLabel || item.label || item.name
+			}));
+		} else {
+			// 如果获取失败，加载默认供应商选项
+			await loadFilteredSuppliers();
+		}
+	} catch (error) {
+		console.error('获取收款单位选项失败:', error);
+		// 如果获取失败，加载默认供应商选项
+		await loadFilteredSuppliers();
 	}
 };
 
