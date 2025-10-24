@@ -53,3 +53,18 @@ export function getSupplierBankAccounts(supplierId) {
 		}
 	})
 }
+
+/**
+ * 根据客户ID获取合同列表（销售合同+出运合同）
+ * @param {Number} customerId 客户ID
+ * @returns {Promise} 返回合同列表
+ */
+export function getContractListByCustomerId(customerId) {
+	return request({
+		url: 'CustomerInfoMation/GetContractListByCustomerID/GetContractList',
+		method: 'GET',
+		params: {
+			CustomerID: customerId
+		}
+	})
+}

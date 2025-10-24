@@ -1348,6 +1348,13 @@
         </el-descriptions-item>
       </el-descriptions>
 
+      <!-- 关联合同字段 - 仅在业务费用且款项名称为其它时显示 -->
+      <el-descriptions v-if="shouldShowRelatedContract" :column="3" :border="true" label-width="120px">
+        <el-descriptions-item label="关联合同">
+          {{ PaymentrequestForm.relatedContract }}
+        </el-descriptions-item>
+      </el-descriptions>
+
       <!-- 备注说明 -->
       <el-descriptions :column="3" :border="true" label-width="120px">
         <el-descriptions-item label="备注说明">
@@ -4283,6 +4290,7 @@ const openSaleContractDialog = (row) => {
         PaymentrequestForm.value.unpaidAmount = response.data.paymentRequest.unpaidAmount || '0';
         PaymentrequestForm.value.handler = state.optionss['sql_all_user'].find(item => item.dictValue === response.data.paymentRequest.handler.toString())?.dictLabel || '未知';
         PaymentrequestForm.value.remarks = response.data.paymentRequest.remarks || '';
+        PaymentrequestForm.value.relatedContract = response.data.paymentRequest.relatedContracts || '';
 
         // 费用明细处理
         CostDetailsTbaleData.value = [];
@@ -5184,6 +5192,24 @@ const receivingBankOptions = computed(() => {
   return [];
 });
 
+// 计算属性：判断是否显示关联合同字段
+const shouldShowRelatedContract = computed(() => {
+  // 检查是否为业务费用类别
+  const paymentCategory = PaymentrequestForm.value.paymentCategory;
+  if (!paymentCategory || paymentCategory !== '业务费用') {
+    return false;
+  }
+
+  // 检查款项名称是否为"其它"
+  const paymentName = PaymentrequestForm.value.paymentName;
+  if (!paymentName) {
+    return false;
+  }
+
+  // 判断是否为其它款项名称
+  return paymentName.includes('其它') || paymentName.includes('其他');
+});
+
 
 let lineChartData = reactive([])
 const dataType = ref(null)
@@ -5262,7 +5288,8 @@ const PaymentrequestForm = ref({
   applicationDepartment: '',
   financialApproval: '',
   handler: '',
-  remarks: ''
+  remarks: '',
+  relatedContract: '' // 关联合同字段
 })
 
 //出运发货单审批

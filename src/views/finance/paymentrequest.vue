@@ -186,8 +186,8 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="开户银行">
-									<!-- 日常费用且为市场开发、产品开发、其它费用时，使用可编辑输入框 -->
-									<el-input v-if="isDailyExpenseWithManualInput()"
+									<!-- 需要手动输入银行信息时，使用可编辑输入框 -->
+									<el-input v-if="isDailyExpenseWithManualInput() || isManualBankInput()"
 										v-model="addpaymentrequestform.bankName" style="width: 300px"
 										:disabled="IsDisabled" size="default" placeholder="请输入开户银行" />
 									<!-- 其他情况使用只读输入框 -->
@@ -197,8 +197,8 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="银行账号">
-									<!-- 日常费用且为市场开发、产品开发、其它费用时，使用输入框 -->
-									<el-input v-if="isDailyExpenseWithManualInput()"
+									<!-- 需要手动输入银行信息时，使用输入框 -->
+									<el-input v-if="isDailyExpenseWithManualInput() || isManualBankInput()"
 										v-model="addpaymentrequestform.bankAccount" style="width: 300px"
 										:disabled="IsDisabled" size="default" placeholder="请输入银行账号" />
 									<!-- 其他情况使用下拉选择 -->
@@ -250,6 +250,18 @@
 										:disabled="IsDisabled" size="default" clearable>
 										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" :disabled="IsDisabled" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<!-- 关联合同行 - 仅在业务费用且为其它款项名称时显示 -->
+						<el-row v-if="isBusinessExpenseWithContract()">
+							<el-col :span="6">
+								<el-form-item label="关联合同">
+									<el-select v-model="addpaymentrequestform.relatedContract" style="width: 300px"
+										:disabled="IsDisabled" size="default" clearable placeholder="请选择关联合同">
+										<el-option v-for="contract in contractList" :key="contract.dictvalue"
+											:label="contract.dictLabel" :value="contract.dictvalue" />
 									</el-select>
 								</el-form-item>
 							</el-col>
@@ -402,7 +414,7 @@ import { createApp, getCurrentInstance, reactive, toRefs, ref, computed } from '
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 import { number } from 'echarts';
-import { getSupplierList } from '@/api/supplier';
+import { getSupplierList, getContractListByCustomerId } from '@/api/supplier';
 import { Edit } from '@element-plus/icons-vue/dist/types';
 import { ca, el, id } from 'element-plus/es/locale';
 import { dataScope } from '@/api/system/role';
@@ -679,11 +691,14 @@ const addpaymentrequestform = ref({
 	applicationDepartment: '',
 	financialApproval: '',
 	handler: '',
-	remarks: ''
+	remarks: '',
+	relatedContract: '' // 关联合同字段
 })
 
 // 供应商银行账号列表
 const supplierBankAccounts = ref([])
+// 关联合同列表
+const contractList = ref([])
 const handleAddRowCostDetails = () => {
 	activeTab.value = 'CostDetailsTab'
 
@@ -810,6 +825,26 @@ async function loadFilteredSuppliers() {
 	} catch (error) {
 		ApiRequestHandler.handleError(error, () => {
 			filteredSupplierList.value = [];
+		});
+	}
+}
+
+// 加载合同列表
+async function loadContractList(customerId) {
+	try {
+		const response = await getContractListByCustomerId(customerId);
+		ApiRequestHandler.handleResponse(
+			response,
+			(data) => {
+				contractList.value = ApiRequestHandler.standardizeData(data);
+			},
+			() => {
+				contractList.value = [];
+			}
+		);
+	} catch (error) {
+		ApiRequestHandler.handleError(error, () => {
+			contractList.value = [];
 		});
 	}
 }
@@ -950,8 +985,14 @@ const payeeCodeChange = async () => {
 		);
 		addpaymentrequestform.value.payeeName = selectedSupplier ? selectedSupplier.dictLabel : '';
 
+		// 如果需要手动输入银行信息，清空银行信息让用户手动输入
+		if (isManualBankInput()) {
+			addpaymentrequestform.value.bankName = '';
+			addpaymentrequestform.value.bankAccount = '';
+			supplierBankAccounts.value = [];
+		}
 		// 判断是否为业务费用且款项名称为快递费、运杂费、海运费，使用物流公司银行账号接口
-		if (addpaymentrequestform.value.paymentCategory === '5' && isLogisticsPaymentName()) {
+		else if (addpaymentrequestform.value.paymentCategory === '5' && isLogisticsPaymentName()) {
 			// 业务费用（快递费、运杂费、海运费）：使用物流公司银行账号接口
 			const bankAccountResponse = await request({
 				url: 'LogisticsCompany/GetLogisticsCompanyBankAccountList/GetBankAccountList',
@@ -1047,6 +1088,17 @@ const payeeCodeChange = async () => {
 			// 如果不需要显示付款明细，清空未付款详情数据
 			UnpaidDetailsTbaleData.value = [];
 		}
+
+		// 如果是业务费用且为其它款项名称，加载合同列表
+		if (isBusinessExpenseWithContract()) {
+			// 清空之前的关联合同选择
+			addpaymentrequestform.value.relatedContract = '';
+			await loadContractList(addpaymentrequestform.value.payeeCode);
+		} else {
+			// 如果不是业务费用或不是其它款项名称，清空合同列表和关联合同
+			contractList.value = [];
+			addpaymentrequestform.value.relatedContract = '';
+		}
 	} catch (error) {
 		console.error('获取供应商信息失败:', error);
 		ElMessage({
@@ -1057,8 +1109,10 @@ const payeeCodeChange = async () => {
 		addpaymentrequestform.value.payeeName = '';
 		addpaymentrequestform.value.bankName = '';
 		addpaymentrequestform.value.bankAccount = '';
+		addpaymentrequestform.value.relatedContract = '';
 		supplierBankAccounts.value = [];
 		UnpaidDetailsTbaleData.value = [];
+		contractList.value = [];
 	}
 }
 
@@ -1154,6 +1208,7 @@ const FormHandler = {
 			Remark: addpaymentrequestform.value.remarks,
 			IsDelete: 0,
 			CompanyType: getCurrentCompanyType(),
+			RelatedContract: addpaymentrequestform.value.relatedContract || '', // 关联合同字段
 			PaymentRequestDetails: processedDetails
 		};
 	},
@@ -1499,6 +1554,18 @@ const CheckPaymentRequest = async (row) => {
 		addpaymentrequestform.value.financialApproval = response.data.paymentRequest.financialApproval.toString();
 		addpaymentrequestform.value.handler = response.data.paymentRequest.handler.toString();
 		addpaymentrequestform.value.remarks = response.data.paymentRequest.remark || '';
+		addpaymentrequestform.value.relatedContract = response.data.paymentRequest.relatedContracts || '';
+		// 如果是业务费用且为其它款项名称，先加载合同列表，再设置关联合同值
+		if (isBusinessExpenseWithContract()) {
+			await loadContractList(addpaymentrequestform.value.payeeCode);
+			// 合同列表加载完成后再设置关联合同值
+			addpaymentrequestform.value.relatedContract = response.data.paymentRequest.relatedContracts || '';
+		} else {
+			// 如果不是业务费用或不是其它款项名称，清空合同列表
+			contractList.value = [];
+			addpaymentrequestform.value.relatedContract = response.data.paymentRequest.relatedContracts || '';
+		}
+
 		// 清空已选择的未付款项
 		selectedUnpaidItemIds.value.clear();
 
@@ -1960,7 +2027,8 @@ const resetForm = () => {
 		applicant: '',
 		financialApproval: '',
 		handler: '',
-		remarks: ''
+		remarks: '',
+		relatedContract: '' // 关联合同字段
 	};
 
 	// 清空费用明细表格数据
@@ -1968,6 +2036,9 @@ const resetForm = () => {
 
 	// 清空供应商银行账号列表
 	supplierBankAccounts.value = [];
+
+	// 清空合同列表
+	contractList.value = [];
 
 	// 清空未付款详情数据
 	UnpaidDetailsTbaleData.value = [];
@@ -2375,6 +2446,10 @@ const CostDetailsTbaleDatahandleDelete = (index: number) => {
 
 // 款项名称变化时，若需展示付款明细，则按当前供应商和款项类型重新拉取未支付款项详情
 const paymentNameChange = async () => {
+	// 清空关联合同字段，因为款项名称变化可能导致合同列表变化
+	addpaymentrequestform.value.relatedContract = '';
+	contractList.value = [];
+
 	// 业务费用收款单位选项动态获取逻辑
 	if (addpaymentrequestform.value.paymentCategory === '5') { // 业务费用
 		await loadBusinessExpensePayeeOptions();
@@ -2429,7 +2504,7 @@ const PayeeOptionsLoader = {
 				return 3; // 物流公司
 			} else if (currentPaymentNameLabel.includes('海运费') || currentPaymentNameLabel.includes('运杂费')) {
 				return 1; // 货代公司
-			} else if (currentPaymentNameLabel.includes('佣金')) {
+			} else if (currentPaymentNameLabel.includes('佣金') || currentPaymentNameLabel.includes('其它') || currentPaymentNameLabel.includes('其他')) {
 				return 4; // 客户
 			}
 		}
@@ -2686,10 +2761,53 @@ const isDailyExpenseWithCustomerOptions = () => {
 	return currentPaymentNameLabel.includes('客户事宜');
 };
 
+// 判断是否为业务费用且需要关联合同的情况
+const isBusinessExpenseWithContract = () => {
+	// 检查是否为业务费用类别
+	if (addpaymentrequestform.value.paymentCategory !== '5') {
+		return false;
+	}
+
+	// 获取当前选择的款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === addpaymentrequestform.value.paymentName
+	)?.dictLabel || '';
+
+	// 判断是否为其它款项名称
+	return currentPaymentNameLabel.includes('其它') || currentPaymentNameLabel.includes('其他');
+};
+
+// 判断是否需要手动输入银行信息
+const isManualBankInput = () => {
+	// 检查是否为业务费用或日常费用类别
+	if (addpaymentrequestform.value.paymentCategory !== '5' && addpaymentrequestform.value.paymentCategory !== '4') {
+		return false;
+	}
+
+	// 获取当前选择的款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === addpaymentrequestform.value.paymentName
+	)?.dictLabel || '';
+
+	// 业务费用：其它款项名称或佣金
+	if (addpaymentrequestform.value.paymentCategory === '5') {
+		return currentPaymentNameLabel.includes('其它') ||
+			currentPaymentNameLabel.includes('其他') ||
+			currentPaymentNameLabel.includes('佣金');
+	}
+
+	// 日常费用：客户事宜
+	if (addpaymentrequestform.value.paymentCategory === '4') {
+		return currentPaymentNameLabel.includes('客户事宜');
+	}
+
+	return false;
+};
+
 // 处理手动输入收款单位时的逻辑
 const handleManualPayeeInput = () => {
 	// 当手动输入收款单位时，清空相关的银行信息，让用户手动输入
-	if (isDailyExpenseWithManualInput()) {
+	if (isDailyExpenseWithManualInput() || isManualBankInput()) {
 		// 清空银行账号下拉选项
 		supplierBankAccounts.value = [];
 		// 如果用户没有手动输入银行信息，则清空
