@@ -1299,11 +1299,11 @@
           {{ PaymentrequestForm.paymentName }}
         </el-descriptions-item>
 
-        <el-descriptions-item label="收款单位编号">
+        <!-- <el-descriptions-item label="收款单位编号">
           {{ PaymentrequestForm.payeeCode }}
-        </el-descriptions-item>
+        </el-descriptions-item> -->
 
-        <el-descriptions-item label="收款单位名称">
+        <el-descriptions-item label="收款单位">
           {{ PaymentrequestForm.payeeName }}
         </el-descriptions-item>
 
@@ -4223,75 +4223,124 @@ const openSaleContractDialog = (row) => {
       }
     }).then(response => {
       if (response.data != null) {
-        PaymentrequestForm.value.applicant = state.optionss['sql_all_user'].find(item => item.dictValue === response.data.paymentRequest.applicant.toString()).dictLabel;
-        PaymentrequestForm.value.applicationDepartment = state.optionss['sql_hr_dept'].find(item => item.dictValue === response.data.paymentRequest.applicationDepartment.toString()).dictLabel;
+        // 基本信息绑定
+        PaymentrequestForm.value.applicant = state.optionss['sql_all_user'].find(item => item.dictValue === response.data.paymentRequest.applicant.toString())?.dictLabel || '未知';
+        PaymentrequestForm.value.applicationDepartment = state.optionss['sql_hr_dept'].find(item => item.dictValue === response.data.paymentRequest.applicationDepartment.toString())?.dictLabel || '未知';
         PaymentrequestForm.value.applicationDate = formatDate(response.data.paymentRequest.applicationDate);
         PaymentrequestForm.value.applicationNumber = response.data.paymentRequest.applicationNumber;
-        PaymentrequestForm.value.currencyCode = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.paymentRequest.currencyCode.toString()).dictLabel;
+        PaymentrequestForm.value.currencyCode = state.optionss['hr_currency_code'].find(item => item.dictValue === response.data.paymentRequest.currencyCode.toString())?.dictLabel || '未知';
         PaymentrequestForm.value.totalAmount = response.data.paymentRequest.totalAmount;
-        PaymentrequestForm.value.paymentCategory = state.optionss['hr_payment_category'].find(item => item.dictValue === response.data.paymentRequest.paymentCategory.toString()).dictLabel;
-        PaymentrequestForm.value.paymentName = response.data.paymentRequest.paymentName;
-        switch (response.data.paymentRequest.paymentCategory.toString()) {
+        PaymentrequestForm.value.paymentCategory = state.optionss['hr_payment_category'].find(item => item.dictValue === response.data.paymentRequest.paymentCategory.toString())?.dictLabel || '未知';
+
+        // 款项名称处理 - 根据付款类别选择对应的字典
+        const paymentCategory = response.data.paymentRequest.paymentCategory.toString();
+        const paymentName = response.data.paymentRequest.paymentName.toString();
+
+        switch (paymentCategory) {
           case '1':
-            PaymentrequestForm.value.paymentName = state.optionss['hr_factory_payment'].find(item => item.dictValue === response.data.paymentRequest.paymentName.toString()).dictLabel;
+            PaymentrequestForm.value.paymentName = state.optionss['hr_factory_payment'].find(item => item.dictValue === paymentName)?.dictLabel || '未知';
             break;
           case '2':
-            PaymentrequestForm.value.paymentName = state.optionss['hr_domestic_charges'].find(item => item.dictValue === response.data.paymentRequest.paymentName.toString()).dictLabel;
+            PaymentrequestForm.value.paymentName = state.optionss['hr_domestic_charges'].find(item => item.dictValue === paymentName)?.dictLabel || '未知';
             break;
           case '3':
-            PaymentrequestForm.value.paymentName = state.optionss['hr_foreign_charges'].find(item => item.dictValue === response.data.paymentRequest.paymentName.toString()).dictLabel;
+            PaymentrequestForm.value.paymentName = state.optionss['hr_foreign_charges'].find(item => item.dictValue === paymentName)?.dictLabel || '未知';
             break;
           case '4':
-            PaymentrequestForm.value.paymentName = state.optionss['hr_daily_expenses'].find(item => item.dictValue === response.data.paymentRequest.paymentName.toString()).dictLabel;
+            PaymentrequestForm.value.paymentName = state.optionss['hr_daily_expenses'].find(item => item.dictValue === paymentName)?.dictLabel || '未知';
+            break;
+          case '5':
+            PaymentrequestForm.value.paymentName = state.optionss['hr_business_expenses'].find(item => item.dictValue === paymentName)?.dictLabel || '未知';
+            break;
+          default:
+            PaymentrequestForm.value.paymentName = '未知';
             break;
         }
-        PaymentrequestForm.value.payeeCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === response.data.paymentRequest.payeeCode.toString()).dictLabel || '无';
-        PaymentrequestForm.value.payeeName = response.data.paymentRequest.payeeName;
-        PaymentrequestForm.value.bankName = response.data.paymentRequest.bankName;
-        PaymentrequestForm.value.bankAccount = response.data.paymentRequest.bankAccount;
-        PaymentrequestForm.value.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictValue === response.data.paymentRequest.ourCompany.toString()).dictLabel;
-        PaymentrequestForm.value.paidAmount = response.data.paymentRequest.paidAmount;
-        PaymentrequestForm.value.unpaidAmount = response.data.paymentRequest.unpaidAmount;
-        PaymentrequestForm.value.handler = state.optionss['sql_all_user'].find(item => item.dictValue === response.data.paymentRequest.handler.toString()).dictLabel;
-        PaymentrequestForm.value.remarks = response.data.paymentRequest.remarks;
+
+        // 收款单位处理 - 根据付款类别和款项名称确定收款单位类型
+        const payeeCode = response.data.paymentRequest.payeeCode.toString();
+        let payeeLabel = '无';
+
+        // 先尝试从供应商信息中查找
+        const supplierInfo = state.optionss['sql_supplier_info'].find(item => item.dictValue === payeeCode);
+        if (supplierInfo) {
+          payeeLabel = supplierInfo.dictLabel;
+        } else {
+          // 如果是业务费用，可能需要从物流公司等特殊类型中查找
+          if (paymentCategory === '5') {
+            // 业务费用可能需要从物流公司等特殊类型中查找
+            // 这里可以根据实际需要扩展其他类型的查找逻辑
+            payeeLabel = '特殊收款单位';
+          }
+        }
+
+        PaymentrequestForm.value.payeeCode = payeeLabel;
+        PaymentrequestForm.value.payeeName = response.data.paymentRequest.payeeName || '未知';
+        PaymentrequestForm.value.bankName = response.data.paymentRequest.bankName || '未知';
+        PaymentrequestForm.value.bankAccount = response.data.paymentRequest.bankAccount || '未知';
+        PaymentrequestForm.value.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictValue === response.data.paymentRequest.ourCompany.toString())?.dictLabel || '未知';
+        PaymentrequestForm.value.paidAmount = response.data.paymentRequest.paidAmount || '0';
+        PaymentrequestForm.value.unpaidAmount = response.data.paymentRequest.unpaidAmount || '0';
+        PaymentrequestForm.value.handler = state.optionss['sql_all_user'].find(item => item.dictValue === response.data.paymentRequest.handler.toString())?.dictLabel || '未知';
+        PaymentrequestForm.value.remarks = response.data.paymentRequest.remarks || '';
+
+        // 费用明细处理
         CostDetailsTbaleData.value = [];
-        response.data.paymentRequestDetails.forEach(item => {
-          CostDetailsTbaleData.value.push(item);
-        });
-        var OrderType = [];
-        CostDetailsTbaleData.value.forEach(CostDetailsTbaleData => {
-          switch (CostDetailsTbaleData.relatedModules.toString()) {
-            case '1':
-              OrderType = state.optionss['sql_purchase_contract'];
-              break;
-            case '2':
-              OrderType = state.optionss['sql_sale_contracts'];
-              break;
-            default:
-              CostDetailsTbaleData.associatedOrderNumber = '无';
-              break;
-          }
-          CostDetailsTbaleData.associatedOrderNumber = OrderType.find(item => item.dictValue === CostDetailsTbaleData.associatedOrderNumber.toString()).dictLabel;
-          switch (response.data.paymentRequest.paymentCategory.toString()) {
-            case '1':
-              CostDetailsTbaleData.specificPaymentItems = state.optionss['hr_factory_payment'].find(item => item.dictValue === CostDetailsTbaleData.specificPaymentItems.toString()).dictLabel;
-              break;
-            case '2':
-              CostDetailsTbaleData.specificPaymentItems = state.optionss['hr_domestic_charges'].find(item => item.dictValue === CostDetailsTbaleData.specificPaymentItems.toString()).dictLabel;
-              break;
-            case '3':
-              CostDetailsTbaleData.specificPaymentItems = state.optionss['hr_foreign_charges'].find(item => item.dictValue === CostDetailsTbaleData.specificPaymentItems.toString()).dictLabel;
-              break;
-            case '4':
-              CostDetailsTbaleData.specificPaymentItems = state.optionss['hr_daily_expenses'].find(item => item.dictValue === CostDetailsTbaleData.specificPaymentItems.toString()).dictLabel;
-              break;
-          }
-          CostDetailsTbaleData.relatedModules = state.optionss['hr_associated_modules'].find(item => item.dictValue === CostDetailsTbaleData.relatedModules.toString()).dictLabel;
-        });
+        if (response.data.paymentRequestDetails && response.data.paymentRequestDetails.length > 0) {
+          response.data.paymentRequestDetails.forEach(item => {
+            CostDetailsTbaleData.value.push(item);
+          });
+
+          // 处理费用明细的显示标签
+          var OrderType = [];
+          CostDetailsTbaleData.value.forEach(costDetail => {
+            // 关联模块处理
+            switch (costDetail.relatedModules?.toString()) {
+              case '1':
+                OrderType = state.optionss['sql_purchase_contract'];
+                break;
+              case '2':
+                OrderType = state.optionss['sql_sale_contracts'];
+                break;
+              default:
+                costDetail.associatedOrderNumber = '无';
+                break;
+            }
+
+            if (OrderType.length > 0 && costDetail.associatedOrderNumber) {
+              const orderInfo = OrderType.find(item => item.dictValue === costDetail.associatedOrderNumber.toString());
+              costDetail.associatedOrderNumber = orderInfo?.dictLabel || '无';
+            }
+
+            // 具体付款项目处理
+            switch (paymentCategory) {
+              case '1':
+                costDetail.specificPaymentItems = state.optionss['hr_factory_payment'].find(item => item.dictValue === costDetail.specificPaymentItems?.toString())?.dictLabel || '未知';
+                break;
+              case '2':
+                costDetail.specificPaymentItems = state.optionss['hr_domestic_charges'].find(item => item.dictValue === costDetail.specificPaymentItems?.toString())?.dictLabel || '未知';
+                break;
+              case '3':
+                costDetail.specificPaymentItems = state.optionss['hr_foreign_charges'].find(item => item.dictValue === costDetail.specificPaymentItems?.toString())?.dictLabel || '未知';
+                break;
+              case '4':
+                costDetail.specificPaymentItems = state.optionss['hr_daily_expenses'].find(item => item.dictValue === costDetail.specificPaymentItems?.toString())?.dictLabel || '未知';
+                break;
+              case '5':
+                costDetail.specificPaymentItems = state.optionss['hr_business_expenses'].find(item => item.dictValue === costDetail.specificPaymentItems?.toString())?.dictLabel || '未知';
+                break;
+            }
+
+            // 关联模块标签
+            costDetail.relatedModules = state.optionss['hr_associated_modules'].find(item => item.dictValue === costDetail.relatedModules?.toString())?.dictLabel || '未知';
+          });
+        }
+
         PaymentrequestDialog.value = true;
       }
     }).catch(error => {
-      console.error(error);
+      console.error('获取付款申请详情失败:', error);
+      ElMessage.error('获取付款申请详情失败，请重试');
     });
   } else if (row.documentType == "3") {//获取出运发货单详情
     ShippingDeliveryDialog.value = true;
@@ -4829,6 +4878,7 @@ const state = reactive({
     hr_domestic_charges: [],
     hr_foreign_charges: [],
     hr_daily_expenses: [],
+    hr_business_expenses: [],
     hr_associated_modules: [],
     sql_shippingdeliveries: [],
     hr_shipping_status: [],
@@ -4841,6 +4891,7 @@ const state = reactive({
     sql_user_customers: [], // 用户特定的客户数据
     hr_receiving_bank: [],//惠荣收汇银行
     hr_rf_receiving_bank: [],//荣发塑料收汇银行
+    hr_currency_code: [],//付款申请单币种字典
   }
 })
 const { optionss } = toRefs(state)
@@ -4884,6 +4935,7 @@ var dictParams = [
   { dictType: 'hr_domestic_charges' },
   { dictType: 'hr_foreign_charges' },
   { dictType: 'hr_daily_expenses' },
+  { dictType: 'hr_business_expenses' },
   { dictType: 'hr_associated_modules' },
   { dictType: 'sql_shippingdeliveries' },
   { dictType: 'hr_shipping_status' },
@@ -4895,7 +4947,8 @@ var dictParams = [
   { dictType: 'hr_funds_classification' },
   { dictType: 'hr_collection_associated_modules' },
   { dictType: 'hr_receiving_bank' },
-  { dictType: 'hr_rf_receiving_bank' }
+  { dictType: 'hr_rf_receiving_bank' },
+  { dictType: 'hr_currency_code' }
 ]
 // 字典数据加载将在 onMounted 中处理
 

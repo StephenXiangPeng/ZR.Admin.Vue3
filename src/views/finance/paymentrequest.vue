@@ -164,7 +164,13 @@
 						<el-row>
 							<el-col :span="6">
 								<el-form-item label="收款单位" placeholder="请选择收款单位">
-									<el-select filterable allow-create v-model="addpaymentrequestform.payeeCode"
+									<!-- 日常费用且为市场开发、产品开发、其它费用时，使用输入框 -->
+									<el-input v-if="isDailyExpenseWithManualInput()"
+										v-model="addpaymentrequestform.payeeName" style="width: 300px"
+										:disabled="IsDisabled" size="default" placeholder="请输入收款单位名称"
+										@input="handleManualPayeeInput" />
+									<!-- 其他情况使用下拉选择 -->
+									<el-select v-else filterable allow-create v-model="addpaymentrequestform.payeeCode"
 										style="width: 300px" @change="payeeCodeChange()" :disabled="IsDisabled"
 										size="default" clearable>
 										<el-option v-for="supplier in filteredSupplierList" :key="supplier.dictvalue"
@@ -180,13 +186,23 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="开户银行">
-									<el-input v-model="addpaymentrequestform.bankName" style="width: 300px" disabled
-										size="default"></el-input>
+									<!-- 日常费用且为市场开发、产品开发、其它费用时，使用可编辑输入框 -->
+									<el-input v-if="isDailyExpenseWithManualInput()"
+										v-model="addpaymentrequestform.bankName" style="width: 300px"
+										:disabled="IsDisabled" size="default" placeholder="请输入开户银行" />
+									<!-- 其他情况使用只读输入框 -->
+									<el-input v-else v-model="addpaymentrequestform.bankName" style="width: 300px"
+										disabled size="default"></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="银行账号">
-									<el-select v-model="addpaymentrequestform.bankAccount" style="width: 300px"
+									<!-- 日常费用且为市场开发、产品开发、其它费用时，使用输入框 -->
+									<el-input v-if="isDailyExpenseWithManualInput()"
+										v-model="addpaymentrequestform.bankAccount" style="width: 300px"
+										:disabled="IsDisabled" size="default" placeholder="请输入银行账号" />
+									<!-- 其他情况使用下拉选择 -->
+									<el-select v-else v-model="addpaymentrequestform.bankAccount" style="width: 300px"
 										placeholder="请选择银行账号" :disabled="IsDisabled" @change="bankAccountChange"
 										filterable clearable size="default">
 										<el-option v-for="account in supplierBankAccounts" :key="account.id"
@@ -744,24 +760,57 @@ var dictParams = [{ dictType: 'hr_ourcompany' }, { dictType: 'hr_export_currency
 { dictType: 'sql_hr_purchase' }, { dictType: 'sql_hr_finance' }, { dictType: 'sql_hr_dept' }, { dictType: 'hr_associated_modules' }, { dictType: 'sql_purchase_contract' },
 { dictType: 'sql_sale_contracts' }, { dictType: 'sql_payment_requests' }, { dictType: 'hr_payment_contract_type' }, { dictType: 'sql_shippingdeliveries' }, { dictType: 'hr_business_expenses' }, { dictType: 'hr_contract_status' }]
 
+// 统一的API请求处理工具函数
+const ApiRequestHandler = {
+	// 标准化数据结构
+	standardizeData(data) {
+		return data.map(item => ({
+			dictvalue: item.dictvalue || item.dictValue || item.value,
+			dictLabel: item.dictLabel || item.label || item.name
+		}));
+	},
+
+	// 处理API响应
+	handleResponse(response, successCallback, errorCallback) {
+		if (response && response.code === 200) {
+			const data = response.data || [];
+			if (successCallback) {
+				successCallback(data);
+			}
+		} else {
+			console.error('API请求失败:', response?.msg);
+			if (errorCallback) {
+				errorCallback(response?.msg);
+			}
+		}
+	},
+
+	// 处理API错误
+	handleError(error, errorCallback) {
+		console.error('API请求出错:', error);
+		if (errorCallback) {
+			errorCallback(error);
+		}
+	}
+};
+
 // 加载过滤后的供应商列表
 async function loadFilteredSuppliers() {
 	try {
 		const response = await getSupplierList();
-		if (response && response.code === 200) {
-			// 标准化供应商数据结构
-			const data = response.data || [];
-			filteredSupplierList.value = data.map(item => ({
-				dictvalue: item.dictvalue || item.dictValue || item.value,
-				dictLabel: item.dictLabel || item.label || item.name
-			}));
-		} else {
-			console.error('获取过滤后的供应商列表失败:', response?.msg);
-			filteredSupplierList.value = [];
-		}
+		ApiRequestHandler.handleResponse(
+			response,
+			(data) => {
+				filteredSupplierList.value = ApiRequestHandler.standardizeData(data);
+			},
+			() => {
+				filteredSupplierList.value = [];
+			}
+		);
 	} catch (error) {
-		console.error('获取过滤后的供应商列表出错:', error);
-		filteredSupplierList.value = [];
+		ApiRequestHandler.handleError(error, () => {
+			filteredSupplierList.value = [];
+		});
 	}
 }
 
@@ -889,6 +938,9 @@ const relatedmoduleshandleChange = (row) => {
 	}
 }
 const payeeCodeChange = async () => {
+	if (addpaymentrequestform.value.payeeCode === '' || addpaymentrequestform.value.payeeCode === null || addpaymentrequestform.value.payeeCode === undefined) {
+		return;
+	}
 	try {
 		// 1. 取下拉框label作为收款单位名称
 		const selectedSupplier = filteredSupplierList.value.find(
@@ -1046,43 +1098,22 @@ const paymentRequestRequest = reactive({
 	PaymentRequestDetails: []
 });
 
-const SavePaymentRequest = () => {
-	// 只有工厂付款才需要验证金额
-	const isFactoryPayment = addpaymentrequestform.value.paymentCategory === '1';
+// 统一的表单处理工具函数
+const FormHandler = {
+	// 构建付款申请请求数据
+	buildPaymentRequestData(isEdit = false, isSubmit = false) {
+		const isFactoryPayment = addpaymentrequestform.value.paymentCategory === '1';
+		let finalTotalAmount;
 
-	// 如果是工厂付款且验证失败，提示用户
-	if (isFactoryPayment && !validatePaymentAmount()) {
-		ElMessage.error('工厂付款类别需要验证付款明细金额，请检查');
-		return;
-	}
-
-	ElMessageBox.confirm('确定保存付款申请吗?', '提示', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'warning'
-	}).then(() => {
-		paymentRequestRequest.ApplicationNumber = addpaymentrequestform.value.applicationNumber;
-		paymentRequestRequest.ApplicationDate = addpaymentrequestform.value.applicationDate;
-		paymentRequestRequest.PaymentCategory = Number(addpaymentrequestform.value.paymentCategory);
-		paymentRequestRequest.PaymentName = Number(addpaymentrequestform.value.paymentName);
-		paymentRequestRequest.PayeeCode = Number(addpaymentrequestform.value.payeeCode);
-		paymentRequestRequest.PayeeName = addpaymentrequestform.value.payeeName || '';
-		paymentRequestRequest.BankName = addpaymentrequestform.value.bankName;
-		paymentRequestRequest.BankAccount = addpaymentrequestform.value.bankAccount;
-		paymentRequestRequest.OurCompany = Number(addpaymentrequestform.value.ourCompany);
-		paymentRequestRequest.CurrencyCode = Number(addpaymentrequestform.value.currencyCode);
-
-		// 保存草稿时使用用户输入的申请金额，不重新计算
-		paymentRequestRequest.TotalAmount = Number(addpaymentrequestform.value.totalAmount);
-		paymentRequestRequest.PaidAmount = Number(addpaymentrequestform.value.paidAmount);
-		paymentRequestRequest.UnpaidAmount = Number(addpaymentrequestform.value.unpaidAmount);
-		paymentRequestRequest.Applicant = Number(addpaymentrequestform.value.applicant);
-		paymentRequestRequest.ApplicationDepartment = Number(addpaymentrequestform.value.applicationDepartment);
-		paymentRequestRequest.FinancialApproval = Number(addpaymentrequestform.value.financialApproval);
-		paymentRequestRequest.Handler = Number(addpaymentrequestform.value.handler);
-		paymentRequestRequest.Remark = addpaymentrequestform.value.remarks;
-		paymentRequestRequest.IsDelete = 0;
-		paymentRequestRequest.CompanyType = getCurrentCompanyType();
+		if (isFactoryPayment && isSubmit) {
+			// 工厂付款提交时：使用重新计算的总金额，确保与明细金额一致
+			finalTotalAmount = CostDetailsTbaleData.value.reduce((sum, row) => {
+				return sum + (parseFloat(row.currentPaymentAmount) || 0);
+			}, 0);
+		} else {
+			// 其他情况：使用用户输入的申请金额
+			finalTotalAmount = Number(addpaymentrequestform.value.totalAmount);
+		}
 
 		// 转换字段映射，使用新的请求体结构
 		const processedDetails = CostDetailsTbaleData.value.map(detail => ({
@@ -1100,21 +1131,74 @@ const SavePaymentRequest = () => {
 			ExpenseName: detail.expenseName || '',
 			PaymentRequestID: PaymentRequestID.value || 0
 		}));
-		paymentRequestRequest.PaymentRequestDetails = processedDetails;
-		request.post('PaymentRequest/AddPaymentRequest/Add', paymentRequestRequest).then(response => {
-			if (response != null) {
-				ElMessage({
-					message: '付款申请单添加成功！',
-					type: 'success'
-				})
-				addpaymentrequestdialog.value = false;
-				GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);
-			} else {
-				console.error('新增付款申请单出错');
-			}
-		}).catch(error => {
-			console.error('新增付款申请单出错！😔错误内容：', error);
-		})
+
+		return {
+			id: isEdit ? PaymentRequestID.value : 0,
+			ApplicationNumber: addpaymentrequestform.value.applicationNumber,
+			ApplicationDate: addpaymentrequestform.value.applicationDate,
+			PaymentCategory: Number(addpaymentrequestform.value.paymentCategory),
+			PaymentName: Number(addpaymentrequestform.value.paymentName),
+			PayeeCode: Number(addpaymentrequestform.value.payeeCode),
+			PayeeName: addpaymentrequestform.value.payeeName || '',
+			BankName: addpaymentrequestform.value.bankName,
+			BankAccount: addpaymentrequestform.value.bankAccount,
+			OurCompany: Number(addpaymentrequestform.value.ourCompany),
+			CurrencyCode: Number(addpaymentrequestform.value.currencyCode),
+			TotalAmount: finalTotalAmount,
+			PaidAmount: Number(addpaymentrequestform.value.paidAmount),
+			UnpaidAmount: Number(addpaymentrequestform.value.unpaidAmount),
+			Applicant: Number(addpaymentrequestform.value.applicant),
+			ApplicationDepartment: Number(addpaymentrequestform.value.applicationDepartment),
+			FinancialApproval: Number(addpaymentrequestform.value.financialApproval),
+			Handler: Number(addpaymentrequestform.value.handler),
+			Remark: addpaymentrequestform.value.remarks,
+			IsDelete: 0,
+			CompanyType: getCurrentCompanyType(),
+			PaymentRequestDetails: processedDetails
+		};
+	},
+
+	// 处理保存响应
+	handleSaveResponse(response, isEdit = false) {
+		if (response != null) {
+			ElMessage({
+				message: isEdit ? '付款申请单编辑成功！' : '付款申请单添加成功！',
+				type: 'success'
+			});
+			addpaymentrequestdialog.value = false;
+			GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);
+		} else {
+			console.error(isEdit ? '编辑付款申请单出错' : '新增付款申请单出错');
+		}
+	},
+
+	// 处理保存错误
+	handleSaveError(error, isEdit = false) {
+		console.error(isEdit ? '编辑付款申请单出错！😔错误内容：' : '新增付款申请单出错！😔错误内容：', error);
+	}
+};
+
+const SavePaymentRequest = () => {
+	// 只有工厂付款才需要验证金额
+	const isFactoryPayment = addpaymentrequestform.value.paymentCategory === '1';
+
+	// 如果是工厂付款且验证失败，提示用户
+	if (isFactoryPayment && !validatePaymentAmount()) {
+		ElMessage.error('工厂付款类别需要验证付款明细金额，请检查');
+		return;
+	}
+
+	ElMessageBox.confirm('确定保存付款申请吗?', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		const requestData = FormHandler.buildPaymentRequestData(false, false);
+		Object.assign(paymentRequestRequest, requestData);
+
+		request.post('PaymentRequest/AddPaymentRequest/Add', paymentRequestRequest)
+			.then(response => FormHandler.handleSaveResponse(response, false))
+			.catch(error => FormHandler.handleSaveError(error, false));
 	}).catch(() => {
 		ElMessage({
 			type: 'info',
@@ -1246,6 +1330,11 @@ const CheckPaymentRequest = async (row) => {
 			// 等待一个微任务，确保PaymentTypeOptions已经设置
 			await new Promise(resolve => setTimeout(resolve, 0));
 			await loadBusinessExpensePayeeOptionsForViewByPaymentName(addpaymentrequestform.value.paymentName);
+		} else if (addpaymentrequestform.value.paymentCategory == '4') {
+			// 如果是日常费用，根据款项名称加载对应的收款单位选项
+			// 等待一个微任务，确保PaymentTypeOptions已经设置
+			await new Promise(resolve => setTimeout(resolve, 0));
+			await loadDailyExpensePayeeOptionsForViewByPaymentName(addpaymentrequestform.value.paymentName);
 		} else {
 			// 确保供应商列表已加载
 			if (filteredSupplierList.value.length === 0) {
@@ -1551,64 +1640,19 @@ const EditSavePaymentRequest = () => {
 		cancelButtonText: '取消',
 		type: 'warning'
 	}).then(() => {
-		paymentRequestRequest.id = PaymentRequestID.value;
-		paymentRequestRequest.ApplicationNumber = addpaymentrequestform.value.applicationNumber;
-		paymentRequestRequest.ApplicationDate = addpaymentrequestform.value.applicationDate;
-		paymentRequestRequest.PaymentCategory = Number(addpaymentrequestform.value.paymentCategory);
-		paymentRequestRequest.PaymentName = Number(addpaymentrequestform.value.paymentName);
-		paymentRequestRequest.PayeeCode = Number(addpaymentrequestform.value.payeeCode);
-		paymentRequestRequest.PayeeName = addpaymentrequestform.value.payeeName || '';
-		paymentRequestRequest.BankName = addpaymentrequestform.value.bankName;
-		paymentRequestRequest.BankAccount = addpaymentrequestform.value.bankAccount;
-		paymentRequestRequest.OurCompany = Number(addpaymentrequestform.value.ourCompany);
-		paymentRequestRequest.CurrencyCode = Number(addpaymentrequestform.value.currencyCode);
+		const requestData = FormHandler.buildPaymentRequestData(true, false);
+		Object.assign(paymentRequestRequest, requestData);
 
-		// 编辑时保持原有申请金额不变，不重新计算
-		paymentRequestRequest.TotalAmount = Number(addpaymentrequestform.value.totalAmount);
-		paymentRequestRequest.PaidAmount = Number(addpaymentrequestform.value.paidAmount);
-		paymentRequestRequest.UnpaidAmount = Number(addpaymentrequestform.value.unpaidAmount);
-		paymentRequestRequest.Applicant = Number(addpaymentrequestform.value.applicant);
-		paymentRequestRequest.ApplicationDepartment = Number(addpaymentrequestform.value.applicationDepartment);
-		paymentRequestRequest.FinancialApproval = Number(addpaymentrequestform.value.financialApproval);
-		paymentRequestRequest.Handler = Number(addpaymentrequestform.value.handler);
-		paymentRequestRequest.Remark = addpaymentrequestform.value.remarks;
-		paymentRequestRequest.IsDelete = 0;
-		paymentRequestRequest.CompanyType = getCurrentCompanyType();
-
-		// 转换字段映射，使用新的请求体结构
-		const processedDetails = CostDetailsTbaleData.value.map(detail => ({
-			// 基础字段
-			Id: Number(detail.id) || 0,
-			SupplierID: Number(addpaymentrequestform.value.payeeCode) || 0,
-			PaymentType: Number(detail.relatedDocumentType) || Number(detail.relatedmodules) || 0,
-			Currency: Number(addpaymentrequestform.value.currencyCode) || 0,
-			ExchangeRate: 1.0, // 默认汇率，可以根据需要调整
-			Amount: Number(detail.currentPaymentAmount) || 0,
-			IsPaid: 0, // 默认未支付
-			RelatedDocumentType: Number(detail.relatedDocumentType) || Number(detail.relatedmodules) || 0,
-			RelatedDocumentID: Number(detail.relatedDocumentID) || Number(detail.id) || 0,
-			IsDeleted: 0, // 默认未删除
-			ExpenseName: detail.expenseName || '',
-			PaymentRequestID: PaymentRequestID.value || 0
-		}));
-		paymentRequestRequest.PaymentRequestDetails = processedDetails;
-		request.post('PaymentRequest/EditPaymentRequest/Edit', paymentRequestRequest).then(response => {
-			if (response != null) {
-				ElMessage({
-					message: '付款申请单编辑成功！',
-					type: 'success'
-				})
+		request.post('PaymentRequest/EditPaymentRequest/Edit', paymentRequestRequest)
+			.then(response => {
+				FormHandler.handleSaveResponse(response, true);
+				// 编辑成功后的额外处理
 				IsDisabled.value = true;
 				showEditBtn.value = true;
 				isEditSaveBtnShow.value = false;
 				showSubmitReviewBtn.value = true;
-				GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);
-			} else {
-				console.error('编辑付款申请单出错');
-			}
-		}).catch(error => {
-			console.error('编辑付款申请单出错！😔错误内容：', error);
-		})
+			})
+			.catch(error => FormHandler.handleSaveError(error, true));
 	}).catch(() => {
 		ElMessage({
 			type: 'info',
@@ -1774,60 +1818,8 @@ const submitForReview = () => {
 				cancelButtonText: '取消',
 				type: 'warning'
 			}).then(() => {
-				// 根据付款类别决定使用哪个金额
-				const isFactoryPayment = addpaymentrequestform.value.paymentCategory === '1';
-				let finalTotalAmount;
-
-				if (isFactoryPayment) {
-					// 工厂付款：使用重新计算的总金额，确保与明细金额一致
-					finalTotalAmount = CostDetailsTbaleData.value.reduce((sum, row) => {
-						return sum + (parseFloat(row.currentPaymentAmount) || 0);
-					}, 0);
-				} else {
-					// 非工厂付款：使用用户输入的申请金额
-					finalTotalAmount = Number(addpaymentrequestform.value.totalAmount) || 0;
-				}
-
-				// 使用与保存草稿相同的数据结构
-				paymentRequestRequest.id = PaymentRequestID.value || 0; // 新增时为0，更新时为实际ID
-				paymentRequestRequest.ApplicationNumber = addpaymentrequestform.value.applicationNumber;
-				paymentRequestRequest.ApplicationDate = addpaymentrequestform.value.applicationDate;
-				paymentRequestRequest.PaymentCategory = Number(addpaymentrequestform.value.paymentCategory);
-				paymentRequestRequest.PaymentName = Number(addpaymentrequestform.value.paymentName);
-				paymentRequestRequest.PayeeCode = Number(addpaymentrequestform.value.payeeCode);
-				paymentRequestRequest.PayeeName = addpaymentrequestform.value.payeeName || '';
-				paymentRequestRequest.BankName = addpaymentrequestform.value.bankName;
-				paymentRequestRequest.BankAccount = addpaymentrequestform.value.bankAccount;
-				paymentRequestRequest.OurCompany = Number(addpaymentrequestform.value.ourCompany);
-				paymentRequestRequest.CurrencyCode = Number(addpaymentrequestform.value.currencyCode);
-				paymentRequestRequest.TotalAmount = finalTotalAmount; // 根据付款类别使用相应的金额
-				paymentRequestRequest.PaidAmount = Number(addpaymentrequestform.value.paidAmount);
-				paymentRequestRequest.UnpaidAmount = Number(addpaymentrequestform.value.unpaidAmount);
-				paymentRequestRequest.Applicant = Number(addpaymentrequestform.value.applicant);
-				paymentRequestRequest.ApplicationDepartment = Number(addpaymentrequestform.value.applicationDepartment);
-				paymentRequestRequest.FinancialApproval = Number(addpaymentrequestform.value.financialApproval);
-				paymentRequestRequest.Handler = Number(addpaymentrequestform.value.handler);
-				paymentRequestRequest.Remark = addpaymentrequestform.value.remarks;
-				paymentRequestRequest.IsDelete = 0;
-				paymentRequestRequest.CompanyType = getCurrentCompanyType();
-
-				// 转换字段映射，使用新的请求体结构
-				const processedDetails = CostDetailsTbaleData.value.map(detail => ({
-					// 基础字段
-					Id: Number(detail.id) || 0,
-					SupplierID: Number(addpaymentrequestform.value.payeeCode) || 0,
-					PaymentType: Number(detail.relatedDocumentType) || Number(detail.relatedmodules) || 0,
-					Currency: Number(addpaymentrequestform.value.currencyCode) || 0,
-					ExchangeRate: 1.0, // 默认汇率，可以根据需要调整
-					Amount: Number(detail.currentPaymentAmount) || 0,
-					IsPaid: 0, // 默认未支付
-					RelatedDocumentType: Number(detail.relatedDocumentType) || Number(detail.relatedmodules) || 0,
-					RelatedDocumentID: Number(detail.relatedDocumentID) || Number(detail.id) || 0,
-					IsDeleted: 0, // 默认未删除
-					ExpenseName: detail.expenseName || '',
-					PaymentRequestID: PaymentRequestID.value || 0
-				}));
-				paymentRequestRequest.PaymentRequestDetails = processedDetails;
+				const requestData = FormHandler.buildPaymentRequestData(true, true);
+				Object.assign(paymentRequestRequest, requestData);
 
 				// 发送保存并提交审核请求
 				request({
@@ -2050,38 +2042,18 @@ const isIndeterminateUnpaid = computed(() => {
 	return UnpaidDetailsTbaleData.value.length > 0 && CostDetailsTbaleData.value.length > 0;
 });
 
-// 处理未付款项选择事件
-const handleUnpaidItemSelect = (row) => {
-	const isSelected = isUnpaidItemSelected(row);
-
-	if (isSelected) {
-		// 如果已选择，则取消选择
-		selectedUnpaidItemIds.value.delete(row.relatedDocumentID || row.id);
-
-		// 从付款明细中移除
-		const index = CostDetailsTbaleData.value.findIndex(item =>
-			item.expenseName === row.expenseName &&
-			item.relatedDocumentsNo === row.relatedDocumentsNo &&
-			item.relatedDocumentType === row.relatedDocumentType
-		);
-		if (index > -1) {
-			CostDetailsTbaleData.value.splice(index, 1);
-		}
-
-		// 重新添加到未支付款项详情列表
-		UnpaidDetailsTbaleData.value.push(row);
-
-		ElMessage.success('已从付款明细中移除');
-	} else {
-		// 如果未选择，则添加到付款明细
-		const isDepositType = Number(addpaymentrequestform.value.paymentName) === 1;
+// 统一的付款明细处理工具函数
+const PaymentDetailsHandler = {
+	// 创建新的付款明细项
+	createPaymentDetailItem(row) {
 		// 计算今日日期字符串，作为默认的关联日期
-		const _today = new Date();
-		const _y = _today.getFullYear();
-		const _m = String(_today.getMonth() + 1).padStart(2, '0');
-		const _d = String(_today.getDate()).padStart(2, '0');
-		const _todayStr = `${_y}-${_m}-${_d}`;
-		const newDetail = {
+		const today = new Date();
+		const year = today.getFullYear();
+		const month = String(today.getMonth() + 1).padStart(2, '0');
+		const day = String(today.getDate()).padStart(2, '0');
+		const todayStr = `${year}-${month}-${day}`;
+
+		return {
 			id: row.id || 0, // 使用未支付款项的原始ID
 			pcid: row.relatedDocumentID || 0,
 			shippingOrderNumber: row.relatedDocumentsNo || '',
@@ -2099,7 +2071,7 @@ const handleUnpaidItemSelect = (row) => {
 			currentPaymentAmount: row.amount || 0,
 			contractStatus: '',
 			contractStatusOriginal: 0,
-			relevantdates: _todayStr,
+			relevantdates: todayStr,
 			remark: '',
 			// 新增字段
 			expenseName: row.expenseName || '',
@@ -2108,13 +2080,48 @@ const handleUnpaidItemSelect = (row) => {
 			relatedDocumentsNo: row.relatedDocumentsNo || '',
 			amount: row.amount || 0
 		};
+	},
 
-		CostDetailsTbaleData.value.push(newDetail);
+	// 创建原始未付款项
+	createOriginalUnpaidItem(item) {
+		return {
+			id: item.id || Date.now() + Math.random(),
+			pcid: item.pcid || 0,
+			relatedDocumentID: item.id || 0,
+			expenseName: item.expenseName || '',
+			relatedDocumentType: item.relatedDocumentType || 0,
+			relatedDocumentTypeName: item.relatedDocumentTypeName || '',
+			relatedDocumentsNo: item.relatedDocumentsNo || '',
+			amount: item.amount || 0,
+			// 兼容旧字段
+			invoiceNumbers: item.shippingOrderNumber,
+			purchaseContractNumber: item.purchaseContractNumber,
+			totalGoodsValue: item.totalGoodsValue,
+			actualShippingAmount: item.actualShippingAmount || 0,
+			depositPaidAmount: item.depositPaidAmount || 0,
+			depositUnpaidAmount: item.depositUnpaidAmount || 0,
+			goodsPaidAmount: item.goodsPaidAmount || 0,
+			goodsUnpaidAmount: item.goodsUnpaidAmount || 0,
+			contractStatus: item.contractStatus,
+			contractStatusOriginal: item.contractStatusOriginal || item.contractStatus || 0,
+			remark: item.remark
+		};
+	},
 
-		// 标记为已选择 - 使用未支付款项的原始ID
-		selectedUnpaidItemIds.value.add(row.id);
+	// 从付款明细中移除项目
+	removeFromPaymentDetails(row) {
+		const index = CostDetailsTbaleData.value.findIndex(item =>
+			item.expenseName === row.expenseName &&
+			item.relatedDocumentsNo === row.relatedDocumentsNo &&
+			item.relatedDocumentType === row.relatedDocumentType
+		);
+		if (index > -1) {
+			CostDetailsTbaleData.value.splice(index, 1);
+		}
+	},
 
-		// 从未支付款项详情列表中移除该行
+	// 从未支付款项详情中移除项目
+	removeFromUnpaidDetails(row) {
 		const index = UnpaidDetailsTbaleData.value.findIndex(item =>
 			item.expenseName === row.expenseName &&
 			item.relatedDocumentsNo === row.relatedDocumentsNo &&
@@ -2123,8 +2130,34 @@ const handleUnpaidItemSelect = (row) => {
 		if (index > -1) {
 			UnpaidDetailsTbaleData.value.splice(index, 1);
 		}
+	},
 
+	// 添加项目到付款明细
+	addToPaymentDetails(row) {
+		const newDetail = this.createPaymentDetailItem(row);
+		CostDetailsTbaleData.value.push(newDetail);
+		selectedUnpaidItemIds.value.add(row.id);
+		this.removeFromUnpaidDetails(row);
 		ElMessage.success('已添加到付款明细');
+	},
+
+	// 从付款明细中移除项目并添加到未支付款项
+	removeFromPaymentDetailsAndAddToUnpaid(row) {
+		selectedUnpaidItemIds.value.delete(row.relatedDocumentID || row.id);
+		this.removeFromPaymentDetails(row);
+		UnpaidDetailsTbaleData.value.push(row);
+		ElMessage.success('已从付款明细中移除');
+	}
+};
+
+// 处理未付款项选择事件
+const handleUnpaidItemSelect = (row) => {
+	const isSelected = isUnpaidItemSelected(row);
+
+	if (isSelected) {
+		PaymentDetailsHandler.removeFromPaymentDetailsAndAddToUnpaid(row);
+	} else {
+		PaymentDetailsHandler.addToPaymentDetails(row);
 	}
 
 	// 重新计算总金额
@@ -2135,13 +2168,6 @@ const handleUnpaidItemSelect = (row) => {
 const handleSelectAllUnpaid = (checked) => {
 	if (checked) {
 		// 全选：将所有未付款项添加到付款明细（保留现有数据）
-		const isDepositType = Number(addpaymentrequestform.value.paymentName) === 1;
-		// 计算今日日期字符串，作为默认的关联日期
-		const _today = new Date();
-		const _y = _today.getFullYear();
-		const _m = String(_today.getMonth() + 1).padStart(2, '0');
-		const _d = String(_today.getDate()).padStart(2, '0');
-		const _todayStr = `${_y}-${_m}-${_d}`;
 		UnpaidDetailsTbaleData.value.forEach(row => {
 			// 检查是否已经存在于付款明细中
 			const alreadyExists = CostDetailsTbaleData.value.some(selectedItem =>
@@ -2151,32 +2177,7 @@ const handleSelectAllUnpaid = (checked) => {
 			);
 
 			if (!alreadyExists) {
-				const newDetail = {
-					id: row.id || 0, // 使用未支付款项的原始ID
-					pcid: row.relatedDocumentID || 0,
-					shippingOrderNumber: row.relatedDocumentsNo || '',
-					ShippingOrderNumberOptions: [],
-					purchaseContractNumber: row.relatedDocumentsNo || '',
-					PurchaseContractNumberOptions: [],
-					totalGoodsValue: row.amount || 0,
-					actualShippingAmount: row.amount || 0,
-					depositPaidAmount: 0,
-					depositUnpaidAmount: 0,
-					goodsPaidAmount: 0,
-					goodsUnpaidAmount: row.amount || 0,
-					currentPaymentAmount: row.amount || 0,
-					contractStatus: '',
-					contractStatusOriginal: 0,
-					relevantdates: _todayStr,
-					remark: '',
-					// 新增字段
-					expenseName: row.expenseName || '',
-					relatedDocumentType: row.relatedDocumentType || 0,
-					relatedDocumentTypeName: row.relatedDocumentTypeName || '',
-					relatedDocumentsNo: row.relatedDocumentsNo || '',
-					amount: row.amount || 0
-				};
-
+				const newDetail = PaymentDetailsHandler.createPaymentDetailItem(row);
 				CostDetailsTbaleData.value.push(newDetail);
 				selectedUnpaidItemIds.value.add(row.id);
 			}
@@ -2188,33 +2189,9 @@ const handleSelectAllUnpaid = (checked) => {
 		ElMessage.success('已全选所有未付款项');
 	} else {
 		// 取消全选：将所有已选择的项目移回未支付款项详情列表
-		const itemsToMoveBack = [];
-
-		CostDetailsTbaleData.value.forEach(item => {
-			const originalItem = {
-				id: item.id || Date.now() + Math.random(),
-				pcid: item.pcid || 0,
-				relatedDocumentID: item.id || 0,
-				expenseName: item.expenseName || '',
-				relatedDocumentType: item.relatedDocumentType || 0,
-				relatedDocumentTypeName: item.relatedDocumentTypeName || '',
-				relatedDocumentsNo: item.relatedDocumentsNo || '',
-				amount: item.amount || 0,
-				// 兼容旧字段
-				invoiceNumbers: item.shippingOrderNumber,
-				purchaseContractNumber: item.purchaseContractNumber,
-				totalGoodsValue: item.totalGoodsValue,
-				actualShippingAmount: item.actualShippingAmount || 0,
-				depositPaidAmount: item.depositPaidAmount || 0,
-				depositUnpaidAmount: item.depositUnpaidAmount || 0,
-				goodsPaidAmount: item.goodsPaidAmount || 0,
-				goodsUnpaidAmount: item.goodsUnpaidAmount || 0,
-				contractStatus: item.contractStatus,
-				contractStatusOriginal: item.contractStatusOriginal || item.contractStatus || 0,
-				remark: item.remark
-			};
-			itemsToMoveBack.push(originalItem);
-		});
+		const itemsToMoveBack = CostDetailsTbaleData.value.map(item =>
+			PaymentDetailsHandler.createOriginalUnpaidItem(item)
+		);
 
 		// 清空付款明细
 		CostDetailsTbaleData.value = [];
@@ -2230,63 +2207,114 @@ const handleSelectAllUnpaid = (checked) => {
 	CalculatetotalAmount();
 };
 
-// 验证付款金额
-const validatePaymentAmount = () => {
-	// 只有工厂付款(1)才需要验证付款明细合计金额
-	const isFactoryPayment = addpaymentrequestform.value.paymentCategory === '1';
+// 统一的金额验证工具函数
+const PaymentAmountValidator = {
+	// 检查是否为工厂付款
+	isFactoryPayment() {
+		return addpaymentrequestform.value.paymentCategory === '1';
+	},
 
-	if (!isFactoryPayment) {
-		// 非工厂付款类别不需要验证合计金额，直接返回true
-		return true;
-	}
+	// 获取本次付款金额合计
+	getTotalPaymentAmount() {
+		return CostDetailsTbaleData.value.reduce((sum, row) => {
+			return sum + (parseFloat(row.currentPaymentAmount) || 0);
+		}, 0);
+	},
 
-	const totalPaymentAmount = CostDetailsTbaleData.value.reduce((sum, row) => {
-		return sum + (parseFloat(row.currentPaymentAmount) || 0);
-	}, 0);
+	// 获取申请金额
+	getApplicationAmount() {
+		return parseFloat(addpaymentrequestform.value.totalAmount) || 0;
+	},
 
-	const applicationAmount = parseFloat(addpaymentrequestform.value.totalAmount) || 0;
+	// 检查本次付款金额是否超过实际金额
+	isPaymentAmountExceeded(row) {
+		const currentPaymentAmount = parseFloat(row.currentPaymentAmount) || 0;
+		// 优先使用amount字段，如果没有则使用totalGoodsValue，最后使用actualShippingAmount
+		const amount = parseFloat(row.amount) || parseFloat(row.totalGoodsValue) || parseFloat(row.actualShippingAmount) || 0;
+		return currentPaymentAmount > amount;
+	},
 
 	// 检查是否有超过金额的情况
-	const hasExceededAmount = CostDetailsTbaleData.value.some(row => isPaymentAmountExceeded(row));
-	if (hasExceededAmount) {
-		ElMessage.error('存在本次付款金额超过金额的情况，请检查');
-		return false;
-	}
+	hasExceededAmount() {
+		return CostDetailsTbaleData.value.some(row => this.isPaymentAmountExceeded(row));
+	},
 
-	// 本次付款金额合计必须完全等于申请金额
-	if (totalPaymentAmount !== applicationAmount) {
-		ElMessage.error(`付款明细总金额(${totalPaymentAmount.toFixed(2)})与申请金额(${applicationAmount.toFixed(2)})不匹配，必须100%匹配`);
-		return false;
-	}
+	// 验证付款金额（完整验证，包含错误提示）
+	validate() {
+		// 只有工厂付款才需要验证付款明细合计金额
+		if (!this.isFactoryPayment()) {
+			return true;
+		}
 
-	return true;
+		const totalPaymentAmount = this.getTotalPaymentAmount();
+		const applicationAmount = this.getApplicationAmount();
+
+		// 检查是否有超过金额的情况
+		if (this.hasExceededAmount()) {
+			ElMessage.error('存在本次付款金额超过金额的情况，请检查');
+			return false;
+		}
+
+		// 本次付款金额合计必须完全等于申请金额
+		if (totalPaymentAmount !== applicationAmount) {
+			ElMessage.error(`付款明细总金额(${totalPaymentAmount.toFixed(2)})与申请金额(${applicationAmount.toFixed(2)})不匹配，必须100%匹配`);
+			return false;
+		}
+
+		return true;
+	},
+
+	// 检查金额是否匹配（用于控制提交按钮，不显示错误提示）
+	isMatched() {
+		// 只有工厂付款才需要验证付款明细合计金额
+		if (!this.isFactoryPayment()) {
+			return true;
+		}
+
+		const totalPayment = this.getTotalPaymentAmount();
+		const applicationAmount = this.getApplicationAmount();
+
+		// 检查是否有超过金额的情况
+		const hasExceeded = this.hasExceededAmount();
+
+		return totalPayment === applicationAmount && !hasExceeded;
+	},
+
+	// 获取付款金额警告类型
+	getAlertType() {
+		// 只有工厂付款才需要验证付款明细合计金额
+		if (!this.isFactoryPayment()) {
+			return 'info';
+		}
+
+		const totalPayment = this.getTotalPaymentAmount();
+		const applicationAmount = this.getApplicationAmount();
+
+		if (totalPayment === 0) {
+			return 'info';
+		} else if (totalPayment > applicationAmount) {
+			return 'error';
+		} else if (totalPayment < applicationAmount) {
+			return 'warning';
+		} else {
+			return 'success';
+		}
+	}
+};
+
+// 验证付款金额
+const validatePaymentAmount = () => {
+	return PaymentAmountValidator.validate();
 };
 
 // 检查本次付款金额是否超过金额
 const isPaymentAmountExceeded = (row) => {
-	const currentPaymentAmount = parseFloat(row.currentPaymentAmount) || 0;
-	// 优先使用amount字段，如果没有则使用totalGoodsValue，最后使用actualShippingAmount
-	const amount = parseFloat(row.amount) || parseFloat(row.totalGoodsValue) || parseFloat(row.actualShippingAmount) || 0;
-	return currentPaymentAmount > amount;
+	return PaymentAmountValidator.isPaymentAmountExceeded(row);
 };
 
 // 检查金额是否匹配（用于控制提交按钮）
 const isAmountMatched = () => {
-	// 只有工厂付款(1)才需要验证付款明细合计金额
-	const isFactoryPayment = addpaymentrequestform.value.paymentCategory === '1';
-
-	if (!isFactoryPayment) {
-		// 非工厂付款类别不需要验证合计金额，直接返回true
-		return true;
-	}
-
-	const totalPayment = parseFloat(getTotalCurrentPaymentAmount());
-	const applicationAmount = parseFloat(addpaymentrequestform.value.totalAmount) || 0;
-
-	// 检查是否有超过金额的情况
-	const hasExceededAmount = CostDetailsTbaleData.value.some(row => isPaymentAmountExceeded(row));
-
-	return totalPayment === applicationAmount && !hasExceededAmount; // 必须完全匹配且不超过金额
+	return PaymentAmountValidator.isMatched();
 };
 
 
@@ -2308,34 +2336,12 @@ const onCurrentPaymentAmountChange = () => {
 
 // 获取本次付款金额合计
 const getTotalCurrentPaymentAmount = () => {
-	const total = CostDetailsTbaleData.value.reduce((sum, row) => {
-		return sum + (parseFloat(row.currentPaymentAmount) || 0);
-	}, 0);
-	return total.toFixed(2);
+	return PaymentAmountValidator.getTotalPaymentAmount().toFixed(2);
 };
 
 // 获取付款金额警告类型
 const getPaymentAmountAlertType = () => {
-	// 只有工厂付款(1)才需要验证付款明细合计金额
-	const isFactoryPayment = addpaymentrequestform.value.paymentCategory === '1';
-
-	if (!isFactoryPayment) {
-		// 非工厂付款类别不显示警告，返回info
-		return 'info';
-	}
-
-	const totalPayment = parseFloat(getTotalCurrentPaymentAmount());
-	const applicationAmount = parseFloat(addpaymentrequestform.value.totalAmount) || 0;
-
-	if (totalPayment === 0) {
-		return 'info';
-	} else if (totalPayment > applicationAmount) {
-		return 'error';
-	} else if (totalPayment < applicationAmount) {
-		return 'warning'; // 改为warning，表示需要匹配
-	} else {
-		return 'success';
-	}
+	return PaymentAmountValidator.getAlertType();
 };
 
 
@@ -2355,30 +2361,7 @@ const CostDetailsTbaleDatahandleDelete = (index: number) => {
 
 		if (!alreadyExists) {
 			// 重新添加到未支付款项列表中
-			const originalUnpaidItem = {
-				id: deletedItem.id || Date.now(),
-				pcid: deletedItem.pcid || 0,
-				relatedDocumentID: deletedItem.id || 0,
-				expenseName: deletedItem.expenseName || '',
-				relatedDocumentType: deletedItem.relatedDocumentType || 0,
-				relatedDocumentTypeName: deletedItem.relatedDocumentTypeName || '',
-				relatedDocumentsNo: deletedItem.relatedDocumentsNo || '',
-				amount: deletedItem.amount || 0,
-				// 兼容旧字段
-				invoiceNumbers: deletedItem.shippingOrderNumber,
-				purchaseContractNumber: deletedItem.purchaseContractNumber,
-				totalGoodsValue: deletedItem.totalGoodsValue,
-				actualShippingAmount: deletedItem.actualShippingAmount || 0,
-				depositPaidAmount: deletedItem.depositPaidAmount || 0,
-				depositUnpaidAmount: deletedItem.depositUnpaidAmount || 0,
-				goodsPaidAmount: deletedItem.goodsPaidAmount || 0,
-				goodsUnpaidAmount: deletedItem.goodsUnpaidAmount || 0,
-				contractStatus: deletedItem.contractStatus,
-				contractStatusOriginal: deletedItem.contractStatusOriginal || deletedItem.contractStatus || 0,
-				remark: deletedItem.remark
-			};
-
-			// 重新添加到未支付款项列表中
+			const originalUnpaidItem = PaymentDetailsHandler.createOriginalUnpaidItem(deletedItem);
 			UnpaidDetailsTbaleData.value.push(originalUnpaidItem);
 		}
 
@@ -2395,6 +2378,11 @@ const paymentNameChange = async () => {
 	// 业务费用收款单位选项动态获取逻辑
 	if (addpaymentrequestform.value.paymentCategory === '5') { // 业务费用
 		await loadBusinessExpensePayeeOptions();
+	}
+
+	// 日常费用收款单位选项动态获取逻辑
+	if (addpaymentrequestform.value.paymentCategory === '4') { // 日常费用
+		await loadDailyExpensePayeeOptions();
 	}
 
 	if (!showPaymentDetails.value) {
@@ -2424,65 +2412,104 @@ const paymentNameChange = async () => {
 	}
 };
 
+// 统一的收款单位选项加载工具函数
+const PayeeOptionsLoader = {
+	// 根据付款类别和款项名称确定公司类型
+	determineCompanyType(paymentCategory, paymentName) {
+		// 获取当前选择的款项名称标签
+		const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+			option.dictValue === paymentName
+		)?.dictLabel || '';
+
+		// 业务费用
+		if (paymentCategory === '5') {
+			if (currentPaymentNameLabel.includes('快递费') || currentPaymentNameLabel.includes('快递')) {
+				return 2; // 快递公司
+			} else if (currentPaymentNameLabel.includes('运费') && !currentPaymentNameLabel.includes('海运费')) {
+				return 3; // 物流公司
+			} else if (currentPaymentNameLabel.includes('海运费') || currentPaymentNameLabel.includes('运杂费')) {
+				return 1; // 货代公司
+			} else if (currentPaymentNameLabel.includes('佣金')) {
+				return 4; // 客户
+			}
+		}
+		// 日常费用
+		else if (paymentCategory === '4') {
+			if (currentPaymentNameLabel.includes('客户事宜')) {
+				return 4; // 客户
+			}
+		}
+
+		return 0; // 默认收款单位
+	},
+
+	// 加载收款单位选项
+	async loadOptions(paymentCategory, paymentName, isViewMode = false) {
+		const companyType = this.determineCompanyType(paymentCategory, paymentName);
+
+		// 如果不需要特殊处理，加载默认供应商选项
+		if (companyType === 0) {
+			if (!isViewMode) {
+				await loadFilteredSuppliers();
+			}
+			return;
+		}
+
+		try {
+			// 调用API获取对应的收款单位选项
+			const response = await request({
+				url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
+				method: 'GET',
+				params: {
+					companyType: companyType
+				}
+			});
+
+			ApiRequestHandler.handleResponse(
+				response,
+				(data) => {
+					// 更新收款单位选项列表，标准化数据结构
+					filteredSupplierList.value = ApiRequestHandler.standardizeData(data);
+
+					// 如果不是查看模式，清空当前选择的收款单位
+					if (!isViewMode) {
+						addpaymentrequestform.value.payeeCode = '';
+						addpaymentrequestform.value.payeeName = '';
+						addpaymentrequestform.value.bankName = '';
+						addpaymentrequestform.value.bankAccount = '';
+						supplierBankAccounts.value = [];
+
+						ElMessage.success(`已加载${getCompanyTypeName(companyType)}选项`);
+					}
+				},
+				() => {
+					ElMessage.error('获取收款单位选项失败');
+					// 如果获取失败，加载默认供应商选项
+					if (!isViewMode) {
+						loadFilteredSuppliers();
+					}
+				}
+			);
+		} catch (error) {
+			ApiRequestHandler.handleError(error, () => {
+				ElMessage.error('获取收款单位选项失败，请重试');
+				// 如果获取失败，加载默认供应商选项
+				if (!isViewMode) {
+					loadFilteredSuppliers();
+				}
+			});
+		}
+	}
+};
+
 // 业务费用收款单位选项动态获取函数
 const loadBusinessExpensePayeeOptions = async () => {
-	const paymentName = addpaymentrequestform.value.paymentName;
+	await PayeeOptionsLoader.loadOptions('5', addpaymentrequestform.value.paymentName);
+};
 
-	// 获取当前选择的款项名称标签
-	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
-		option.dictValue === paymentName
-	)?.dictLabel || '';
-
-	let companyType = 0; // 默认收款单位
-
-	// 根据款项名称标签确定公司类型
-	if (currentPaymentNameLabel.includes('快递费') || currentPaymentNameLabel.includes('快递')) {
-		companyType = 2; // 快递公司
-	} else if (currentPaymentNameLabel.includes('运费') && !currentPaymentNameLabel.includes('海运费')) {
-		companyType = 3; // 物流公司
-	} else if (currentPaymentNameLabel.includes('海运费') || currentPaymentNameLabel.includes('运杂费')) {
-		companyType = 1; // 货代公司
-	} else if (currentPaymentNameLabel.includes('佣金')) {
-		companyType = 4; // 客户
-	} else {
-		// 其他情况恢复到初始供应商选项
-		await loadFilteredSuppliers();
-		return;
-	}
-
-	try {
-		// 调用API获取对应的收款单位选项
-		const response = await request({
-			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
-			method: 'GET',
-			params: {
-				companyType: companyType
-			}
-		});
-
-		if (response && response.code === 200) {
-			// 更新收款单位选项列表，标准化数据结构
-			const data = response.data || [];
-			filteredSupplierList.value = data.map(item => ({
-				dictvalue: item.dictvalue || item.dictValue || item.value,
-				dictLabel: item.dictLabel || item.label || item.name
-			}));
-
-			// 清空当前选择的收款单位
-			addpaymentrequestform.value.payeeCode = '';
-			addpaymentrequestform.value.payeeName = '';
-			addpaymentrequestform.value.bankName = '';
-			addpaymentrequestform.value.bankAccount = '';
-			supplierBankAccounts.value = [];
-
-			ElMessage.success(`已加载${getCompanyTypeName(companyType)}选项`);
-		} else {
-			ElMessage.error('获取收款单位选项失败');
-		}
-	} catch (error) {
-		console.error('获取收款单位选项失败:', error);
-		ElMessage.error('获取收款单位选项失败，请重试');
-	}
+// 日常费用收款单位选项动态获取函数
+const loadDailyExpensePayeeOptions = async () => {
+	await PayeeOptionsLoader.loadOptions('4', addpaymentrequestform.value.paymentName);
 };
 
 // 获取公司类型名称
@@ -2586,60 +2613,12 @@ const isOtherPaymentNameForView = (paymentName) => {
 
 // 查看详情时根据款项名称加载业务费用收款单位选项
 const loadBusinessExpensePayeeOptionsForViewByPaymentName = async (paymentName) => {
-	try {
-		// 获取款项名称标签
-		const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
-			option.dictValue === paymentName
-		)?.dictLabel || '';
+	await PayeeOptionsLoader.loadOptions('5', paymentName, true);
+};
 
-		let companyType = 0; // 默认收款单位
-
-		// 根据款项名称标签确定公司类型
-		if (currentPaymentNameLabel.includes('快递费') || currentPaymentNameLabel.includes('快递')) {
-			companyType = 2; // 快递公司
-		} else if (currentPaymentNameLabel.includes('运费') && !currentPaymentNameLabel.includes('海运费')) {
-			companyType = 3; // 物流公司
-		} else if (currentPaymentNameLabel.includes('海运费') || currentPaymentNameLabel.includes('运杂费')) {
-			companyType = 1; // 货代公司
-		} else if (currentPaymentNameLabel.includes('佣金')) {
-			companyType = 4; // 客户
-		} else {
-			// 其他情况加载默认供应商选项
-			// 清空当前选项列表，避免重复
-			filteredSupplierList.value = [];
-			await loadFilteredSuppliers();
-			return;
-		}
-
-		// 调用API获取对应的收款单位选项
-		const response = await request({
-			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
-			method: 'GET',
-			params: {
-				companyType: companyType
-			}
-		});
-
-		if (response && response.code === 200) {
-			// 更新收款单位选项列表，标准化数据结构
-			const data = response.data || [];
-			filteredSupplierList.value = data.map(item => ({
-				dictvalue: item.dictvalue || item.dictValue || item.value,
-				dictLabel: item.dictLabel || item.label || item.name
-			}));
-		} else {
-			// 如果获取失败，加载默认供应商选项
-			// 清空当前选项列表，避免重复
-			filteredSupplierList.value = [];
-			await loadFilteredSuppliers();
-		}
-	} catch (error) {
-		console.error('获取收款单位选项失败:', error);
-		// 如果获取失败，加载默认供应商选项
-		// 清空当前选项列表，避免重复
-		filteredSupplierList.value = [];
-		await loadFilteredSuppliers();
-	}
+// 查看详情时根据款项名称加载日常费用收款单位选项
+const loadDailyExpensePayeeOptionsForViewByPaymentName = async (paymentName) => {
+	await PayeeOptionsLoader.loadOptions('4', paymentName, true);
 };
 
 // 查看详情时加载业务费用收款单位选项（保留原函数以兼容其他调用）
@@ -2669,6 +2648,52 @@ const loadBusinessExpensePayeeOptionsForView = async (companyType) => {
 		console.error('获取收款单位选项失败:', error);
 		// 如果获取失败，加载默认供应商选项
 		await loadFilteredSuppliers();
+	}
+};
+
+// 判断是否为日常费用且需要手动输入的情况
+const isDailyExpenseWithManualInput = () => {
+	// 检查是否为日常费用类别
+	if (addpaymentrequestform.value.paymentCategory !== '4') {
+		return false;
+	}
+
+	// 获取当前选择的款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === addpaymentrequestform.value.paymentName
+	)?.dictLabel || '';
+
+	// 判断是否为市场开发、产品开发、其它费用
+	return currentPaymentNameLabel.includes('市场开发') ||
+		currentPaymentNameLabel.includes('产品开发') ||
+		currentPaymentNameLabel.includes('其它费用') ||
+		currentPaymentNameLabel.includes('其他费用');
+};
+
+// 判断是否为日常费用且需要客户选项的情况
+const isDailyExpenseWithCustomerOptions = () => {
+	// 检查是否为日常费用类别
+	if (addpaymentrequestform.value.paymentCategory !== '4') {
+		return false;
+	}
+
+	// 获取当前选择的款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === addpaymentrequestform.value.paymentName
+	)?.dictLabel || '';
+
+	// 判断是否为客户事宜
+	return currentPaymentNameLabel.includes('客户事宜');
+};
+
+// 处理手动输入收款单位时的逻辑
+const handleManualPayeeInput = () => {
+	// 当手动输入收款单位时，清空相关的银行信息，让用户手动输入
+	if (isDailyExpenseWithManualInput()) {
+		// 清空银行账号下拉选项
+		supplierBankAccounts.value = [];
+		// 如果用户没有手动输入银行信息，则清空
+		// 这里不自动清空，让用户自己决定是否输入
 	}
 };
 
