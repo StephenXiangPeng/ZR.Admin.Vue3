@@ -183,83 +183,6 @@
             </el-col>
           </el-row>
           
-          <!-- 第四行：Tinting (保留原有功能) -->
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="Tinting" prop="tinting">
-                <el-select v-model="orderForm.tinting" placeholder="Please select Tinting" style="width: 100%">
-                  <el-option 
-                    v-for="option in tintingOptions" 
-                    :key="option.value" 
-                    :label="option.label" 
-                    :value="option.value">
-                  </el-option>
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="Tint Percentage">
-                <div style="display: flex; gap: 10px;">
-                  <div style="flex: 1;">
-                    <el-input 
-                      v-model="orderForm.tintPercentageTop" 
-                      placeholder="TOP" 
-                      >
-                      <template #append>
-                        <span>%</span>
-                      </template>
-                    </el-input>
-                  </div>
-                  <div style="flex: 1;">
-                    <el-input 
-                      v-model="orderForm.tintPercentageBottom" 
-                      placeholder="BOTTOM" 
-                      >
-                      <template #append>
-                        <span>%</span>
-                      </template>
-                    </el-input>
-                  </div>
-                </div>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          
-          <!-- 第五行：Color 和 Tint Percentage -->
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="Color" prop="color">
-                <el-select v-model="orderForm.color" placeholder="Please select Color" style="width: 100%">
-                  <el-option 
-                    v-for="option in colorOptions" 
-                    :key="option.value" 
-                    :label="option.label" 
-                    :value="option.value">
-                  </el-option>
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12" v-if="shouldShowColorUpload">
-              <el-form-item label="Color Attachment" prop="colorAttachment">
-                <OrderFileUpload
-                ref="colorUploadRef"
-                :limit="5"
-                :fileSize="10"
-                :fileType="['jpg','jpeg','png']"
-                :data="colorUploadData"
-                :autoUpload="false"
-                :drag="false"
-                accept=".jpg,.jpeg,.png"
-                @success="handleColorUploadSuccess">
-                <template #tip>
-                  <div class="el-upload__tip">
-                    JPG format only, please use white background
-                  </div>
-                </template>
-              </OrderFileUpload>
-              </el-form-item>
-            </el-col>
-          </el-row>
           
         </el-card>
 
@@ -419,6 +342,109 @@
           </el-row>
         </el-card>
 
+        <!-- Extra Processing -->
+        <el-card class="form-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>Extra Processing</span>
+            </div>
+          </template>
+          
+          <!-- 第一行：Tinting, Lenticular -->
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="Tinting" prop="tinting">
+                <el-select v-model="orderForm.tinting" placeholder="Please select Tinting" style="width: 100%">
+                  <el-option 
+                    v-for="option in tintingOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="Lenticular" prop="lenticular">
+                <el-select v-model="orderForm.lenticular" placeholder="Please select Lenticular" style="width: 100%">
+                  <el-option 
+                    v-for="option in lenticularOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          
+          <!-- 第二行：Tint Percentage -->
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="Tint Percentage">
+                <div style="display: flex; gap: 10px;">
+                  <div style="flex: 1;">
+                    <el-input 
+                      v-model="orderForm.tintPercentageTop" 
+                      placeholder="TOP" 
+                      >
+                      <template #append>
+                        <span>%</span>
+                      </template>
+                    </el-input>
+                  </div>
+                  <div style="flex: 1;">
+                    <el-input 
+                      v-model="orderForm.tintPercentageBottom" 
+                      placeholder="BOTTOM" 
+                      >
+                      <template #append>
+                        <span>%</span>
+                      </template>
+                    </el-input>
+                  </div>
+                </div>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="Color" prop="color">
+                <el-select v-model="orderForm.color" placeholder="Please select Color" style="width: 100%">
+                  <el-option 
+                    v-for="option in colorOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          
+          <!-- 第三行：Color Attachment (条件显示) -->
+          <el-row :gutter="20" v-if="shouldShowColorUpload">
+            <el-col :span="12">
+              <el-form-item label="Color Attachment" prop="colorAttachment">
+                <OrderFileUpload
+                ref="colorUploadRef"
+                :limit="5"
+                :fileSize="10"
+                :fileType="['jpg','jpeg','png']"
+                :data="colorUploadData"
+                :autoUpload="false"
+                :drag="false"
+                accept=".jpg,.jpeg,.png"
+                @success="handleColorUploadSuccess">
+                <template #tip>
+                  <div class="el-upload__tip">
+                    JPG format only, please use white background
+                  </div>
+                </template>
+              </OrderFileUpload>
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </el-card>
+
         <!-- Remarks Information -->
         <el-card class="form-card" shadow="hover">
           <template #header>
@@ -574,6 +600,7 @@ const channelOptions = ref([])
 const remarksTypeOptions = ref([])
 const colorOptions = ref([])
 const orderStatusOptions = ref([])
+const lenticularOptions = ref([])
 
 // 表单数据
 const orderForm = reactive({
@@ -602,6 +629,7 @@ const orderForm = reactive({
   color: '',
   tintPercentageTop: '',
   tintPercentageBottom: '',
+  lenticular: '',
   
   // 左右眼参数
   leftEye: {
@@ -684,17 +712,18 @@ const rules = {
   orderDate: [{ required: true, message: 'Please generate Date', trigger: 'blur' }],
   
   // Lens information validation
-  dia: [{ required: true, message: 'Please enter Dia', trigger: 'blur' }],
+  dia: [{ required: false, message: 'Please enter Dia', trigger: 'blur' }],
   refractiveIndex: [{ required: true, message: 'Please select Index', trigger: 'change' }],
   designName: [{ required: true, message: 'Please select Design', trigger: 'change' }],
   material: [{ required: true, message: 'Please select Material', trigger: 'change' }],
   channel: [{ required: true, message: 'Please select Corridor', trigger: 'change' }],
   coating: [{ required: true, message: 'Please select Coating', trigger: 'change' }],
-  tinting: [{ required: true, message: 'Please select Tinting', trigger: 'change' }],
+  tinting: [{ required: false, message: 'Please select Tinting', trigger: 'change' }],
   color: [{ required: false, message: 'Please select Color', trigger: 'change' }],
   tintPercentageTop: [{ required: false, message: 'Please enter TOP Tint Percentage', trigger: 'blur' }],
   tintPercentageBottom: [{ required: false, message: 'Please enter BOTTOM Tint Percentage', trigger: 'blur' }],
-  frameType: [{ required: true, message: 'Please select Frame Type', trigger: 'change' }],
+  frameType: [{ required: false, message: 'Please select Frame Type', trigger: 'change' }],
+  lenticular: [{ required: false, message: 'Please select Lenticular', trigger: 'change' }],
   orderStatus: [{ required: false, message: 'Please select Order Status', trigger: 'change' }]
 }
 
@@ -844,6 +873,15 @@ const getDictData = async () => {
         price: item.remark ? parseFloat(item.remark) : 0
       }))
     
+    // Lenticular选项 - optionType为18
+    lenticularOptions.value = allOptions
+      .filter(item => item.optionType === 18)
+      .map(item => ({
+        label: item.optionName,
+        value: item.optionValue,
+        price: item.remark ? parseFloat(item.remark) : 0
+      }))
+    
     ElMessage.success('选项数据加载成功')
   } catch (error) {
     ElMessage.error('Failed to get configuration data')
@@ -867,7 +905,7 @@ onMounted(() => {
 })
 
 // 监听表单变化，自动计算价格和添加备注
-watch([() => orderForm.dia, () => orderForm.refractiveIndex, () => orderForm.designName, () => orderForm.material, () => orderForm.channel, () => orderForm.coating, () => orderForm.tinting, () => orderForm.color, () => orderForm.tintPercentageTop, () => orderForm.tintPercentageBottom], () => {
+watch([() => orderForm.dia, () => orderForm.refractiveIndex, () => orderForm.designName, () => orderForm.material, () => orderForm.channel, () => orderForm.coating, () => orderForm.tinting, () => orderForm.color, () => orderForm.tintPercentageTop, () => orderForm.tintPercentageBottom, () => orderForm.lenticular], () => {
   calculatePrice()
   generateAutoRemarks()
 }, { deep: true })
@@ -892,13 +930,15 @@ const calculatePrice = () => {
   
   const refractiveIndexOption = refractiveIndexOptions.value.find(option => option.value === orderForm.refractiveIndex)
   const colorOption = colorOptions.value.find(option => option.value === orderForm.color)
+  const lenticularOption = lenticularOptions.value.find(option => option.value === orderForm.lenticular)
   
   basePrice = (coatingOption?.price || 0) + 
               (tintingOption?.price || 0) + 
               (designNameOption?.price || 0) + 
               materialPrice + 
               (refractiveIndexOption?.price || 0) +
-              (colorOption?.price || 0)
+              (colorOption?.price || 0) +
+              (lenticularOption?.price || 0)
   
   calculatedPrice.value = basePrice
 }
@@ -1111,6 +1151,8 @@ const submitOrder = async () => {
       colorName: colorOptions.value.find(opt => opt.value === orderForm.color)?.label || '',
       tintPercentageTop: orderForm.tintPercentageTop,
       tintPercentageBottom: orderForm.tintPercentageBottom,
+      lenticular: orderForm.lenticular,
+      lenticularName: lenticularOptions.value.find(opt => opt.value === orderForm.lenticular)?.label || '',
       orderStatus: defaultOrderStatus,
       orderStatusName: defaultOrderStatusName,
       // 文件附件
@@ -1168,6 +1210,8 @@ const submitOrder = async () => {
       colorName: colorOptions.value.find(opt => opt.value === orderForm.color)?.label || '',
       tintPercentageTop: orderForm.tintPercentageTop,
       tintPercentageBottom: orderForm.tintPercentageBottom,
+      lenticular: orderForm.lenticular,
+      lenticularName: lenticularOptions.value.find(opt => opt.value === orderForm.lenticular)?.label || '',
       orderStatus: defaultOrderStatus,
       orderStatusName: defaultOrderStatusName,
       // 文件附件
@@ -1230,7 +1274,7 @@ const submitOrder = async () => {
     
     const response = await createCompleteOrder(completeOrderData)
     
-    if (response.data && response.code == 200) {
+    if (response.data && response.status == 200) {
       const payload = response.data || {}
       const orderId = payload.OrderId || response.data.orderId
       
@@ -1282,6 +1326,7 @@ const previewOrder = () => {
   const coatingLabel = coatingOptions.value.find(option => option.value === orderForm.coating)?.label || orderForm.coating
   const tintingLabel = tintingOptions.value.find(option => option.value === orderForm.tinting)?.label || orderForm.tinting
   const colorLabel = colorOptions.value.find(option => option.value === orderForm.color)?.label || orderForm.color
+  const lenticularLabel = lenticularOptions.value.find(option => option.value === orderForm.lenticular)?.label || orderForm.lenticular
   const tintPercentageLabel = `TOP: ${orderForm.tintPercentageTop}%, BOTTOM: ${orderForm.tintPercentageBottom}%`
   const defaultOrderStatus = orderStatusOptions.value.length > 0 ? orderStatusOptions.value[0].value : 1
   const defaultOrderStatusName = orderStatusOptions.value.length > 0 ? orderStatusOptions.value[0].label : 'ORDER CREATED'
@@ -1303,6 +1348,7 @@ Corridor: ${channelLabel}
 Coating: ${coatingLabel}
 Tinting: ${tintingLabel}
 Color: ${colorLabel}
+Lenticular: ${lenticularLabel}
 Tint Percentage: ${tintPercentageLabel}
 Frame Type: ${orderForm.frameType}
 Left Eye Qty: ${orderForm.leftEye.quantity}

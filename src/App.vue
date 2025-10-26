@@ -20,7 +20,7 @@ const token = computed(() => {
 const lang = computed(() => {
   return useAppStore().lang
 })
-const locale = ref(zhCn)
+const locale = ref(en)
 const size = ref(defaultSettings.defaultSize)
 
 size.value = useAppStore().size

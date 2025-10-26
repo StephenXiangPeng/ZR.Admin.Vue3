@@ -82,6 +82,25 @@
           </el-select>
         </el-form-item>
 
+        <el-form-item label="绑定客户">
+          <el-select 
+            v-model="form.customerId" 
+            placeholder="请选择客户（可选）" 
+            filterable 
+            clearable
+            :loading="loading.customers"
+            style="width: 240px"
+          >
+            <el-option 
+              v-for="customer in options.customers" 
+              :key="customer.dictValue" 
+              :label="customer.dictLabel" 
+              :value="customer.dictValue"
+            />
+          </el-select>
+          <el-link type="primary" class="ml8" @click="loadCustomers" :underline="false">刷新</el-link>
+        </el-form-item>
+
         <el-form-item label="备注">
           <el-input v-model="form.remark" placeholder="可选" type="textarea" :rows="2" style="width: 520px" />
         </el-form-item>
@@ -130,6 +149,11 @@
         <el-table-column prop="basePrice" label="基础价格" width="140">
           <template #default="{ row }">
             <span>{{ row.currency || 'USD' }} {{ formatMoney(row.basePrice) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="customerName" label="绑定客户" width="120">
+          <template #default="{ row }">
+            <span>{{ row.customerName || '无' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
@@ -202,6 +226,11 @@
             <span>{{ row.isIncluded === 1 ? '已包含' : formatMoney(row.surcharge) }}</span>
           </template>
         </el-table-column>
+        <el-table-column prop="customerName" label="绑定客户" width="120">
+          <template #default="{ row }">
+            <span>{{ row.customerName || '无' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="editSurcharge(row)">编辑</el-button>
@@ -241,6 +270,23 @@
           </el-form-item>
           <el-form-item label="附加价">
             <el-input-number v-model="addDlg.form.surcharge" :precision="2" :step="1" :disabled="addDlg.form.isIncluded===1" />
+          </el-form-item>
+          <el-form-item label="绑定客户">
+            <el-select 
+              v-model="addDlg.form.customerId" 
+              placeholder="请选择客户（可选）" 
+              filterable 
+              clearable
+              :loading="loading.customers"
+              style="width: 320px"
+            >
+              <el-option 
+                v-for="customer in options.customers" 
+                :key="customer.dictValue" 
+                :label="customer.dictLabel" 
+                :value="customer.dictValue"
+              />
+            </el-select>
           </el-form-item>
         </el-form>
         <template #footer>
@@ -314,12 +360,14 @@ const loading = reactive({
   surcharge: false,
   refractions: false,
   materials: false,
-  designs: false
+  designs: false,
+  customers: false
 })
 const options = reactive({
   refractions: [] as OptionItem[],
   materials: [] as OptionItem[],
   designs: [] as OptionItem[],
+  customers: [] as { dictValue: number; dictLabel: string }[],
 })
 
 /** 新增/编辑表单 */
@@ -332,6 +380,7 @@ const form = reactive({
   basePrice: '' as string | number,
   currency: 'USD',
   remark: '',
+  customerId: undefined as number | undefined,
 })
 
 // 对话框控制
@@ -390,7 +439,8 @@ import {
   deleteSurcharge,
   batchDeleteSurcharge,
   getSurchargeById,
-  updateSurchargeStatus
+  updateSurchargeStatus,
+  getCustomerUserList
 } from '@/api/DFGX/priceManagement'
 
 // 获取指定类型的选项列表
@@ -573,6 +623,18 @@ async function apiUpdateSurchargeStatus(id: number, status: string) {
   }
 }
 
+// 获取客户用户列表
+async function apiGetCustomerUserList() {
+  try {
+    const response = await getCustomerUserList()
+    return response.data || []
+  } catch (error) {
+    console.error('获取客户用户列表失败:', error)
+    ElMessage.error('获取客户用户列表失败')
+    return []
+  }
+}
+
 // 保存附加价（统一接口）
 async function apiSaveSurcharge(row: SurchargeRow) {
   try {
@@ -595,9 +657,10 @@ function goBack() {
 async function loadBaseOptions() {
   loading.form = true
   try {
-    const [refs, designs] = await Promise.all([
+    const [refs, designs, customers] = await Promise.all([
       loadRefractions(),
       loadDesigns(),
+      loadCustomers(),
     ])
     
     // 加载完选项数据后，重新加载价格列表以显示正确的名称
@@ -636,6 +699,22 @@ async function loadDesigns() {
     return []
   } finally {
     loading.designs = false
+  }
+}
+
+// 加载客户用户列表
+async function loadCustomers() {
+  loading.customers = true
+  try {
+    const customers = await apiGetCustomerUserList()
+    options.customers = customers
+    return customers
+  } catch (error) {
+    console.error('加载客户用户列表失败:', error)
+    ElMessage.error('加载客户用户列表失败')
+    return []
+  } finally {
+    loading.customers = false
   }
 }
 
@@ -689,6 +768,7 @@ function resetForm() {
   form.basePrice = ''
   form.currency = 'USD'
   form.remark = ''
+  form.customerId = undefined
 }
 
 async function handleSave() {
@@ -706,6 +786,7 @@ async function handleSave() {
       currency: form.currency,
       status: 0, // 默认正常状态
       remark: form.remark,
+      customerId: form.customerId,
     }
     await apiSaveVarietyPrice(payload)
     ElMessage.success('保存成功')
@@ -729,6 +810,7 @@ function prefillForm(row: PriceRow) {
   form.basePrice = row.basePrice
   form.currency = row.currency || 'USD'
   form.remark = row.remark || ''
+  form.customerId = (row as any).customerId
   formDlg.visible = true
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -771,6 +853,10 @@ async function loadPriceList() {
       // 获取设计名称
       const design = options.designs.find(d => d.id === row.designId)
       row.designName = design?.optionName || design?.option_name || `设计ID: ${row.designId}`
+      
+      // 获取客户名称
+      const customer = options.customers.find(c => c.dictValue === row.customerId)
+      row.customerName = customer?.dictLabel || null
       
       return row
     })
@@ -834,15 +920,21 @@ async function loadSurchargeList() {
           console.warn(`选项${row.optionId}没有找到名称，响应数据:`, responseData)
         }
         
+        // 获取客户名称
+        const customer = options.customers.find(c => c.dictValue === row.customerId)
+        const customerName = customer?.dictLabel || null
+        
         return {
           ...row,
-          optionName: optionName || `未知选项(${row.optionId})`
+          optionName: optionName || `未知选项(${row.optionId})`,
+          customerName: customerName
         }
       } catch (error) {
         console.error(`获取选项${row.optionId}详情失败:`, error)
         return {
           ...row,
-          optionName: `获取失败(${row.optionId})`
+          optionName: `获取失败(${row.optionId})`,
+          customerName: null
         }
       }
     }))
@@ -888,6 +980,7 @@ function editSurcharge(row: SurchargeRow) {
   addDlg.form.optionId = row.optionId
   addDlg.form.isIncluded = row.isIncluded
   addDlg.form.surcharge = row.surcharge
+  addDlg.form.customerId = (row as any).customerId
   // 标记为编辑模式
   addDlg.form.id = row.id
   loadSurchargeCandidates()
@@ -920,6 +1013,7 @@ const addDlg = reactive({
     optionId: undefined as number | undefined,
     isIncluded: 0,
     surcharge: 0,
+    customerId: undefined as number | undefined,
   }
 })
 
@@ -930,6 +1024,7 @@ function openAddSurcharge() {
   addDlg.form.optionId = undefined
   addDlg.form.isIncluded = 0
   addDlg.form.surcharge = 0
+  addDlg.form.customerId = undefined
   loadSurchargeCandidates()
 }
 
@@ -954,19 +1049,21 @@ function onAddTypeChange() {
   addDlg.form.optionId = undefined
   addDlg.form.isIncluded = 0
   addDlg.form.surcharge = 0
+  addDlg.form.customerId = undefined
   
   // 同步切换列表和候选项
   loadSurchargeList()
   loadSurchargeCandidates()
 }
 
-async function apiCreateSurcharge(payload: { optionId:number; isIncluded:number; surcharge:number }) {
+async function apiCreateSurcharge(payload: { optionId:number; isIncluded:number; surcharge:number; customerId?:number }) {
   try {
     return await addSurcharge({
       optionId: payload.optionId,
       optionType: surcharge.type,
       isIncluded: payload.isIncluded,
       surcharge: payload.surcharge,
+      customerId: payload.customerId,
       status: 0
     })
   } catch (error) {
@@ -988,6 +1085,7 @@ async function saveAddSurcharge() {
       optionType: surcharge.type,
       isIncluded: addDlg.form.isIncluded,
       surcharge: Number(addDlg.form.surcharge) || 0,
+      customerId: addDlg.form.customerId,
       status: 0
     }
     

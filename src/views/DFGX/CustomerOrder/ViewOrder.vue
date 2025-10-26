@@ -229,6 +229,14 @@
           </el-descriptions>
         </div>
         
+        <!-- Extra Processing Information -->
+        <div v-if="selectedOrder.lenticularName || selectedOrder.lenticular" class="extra-processing-section">
+          <h4>Extra Processing</h4>
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="Lenticular">{{ selectedOrder.lenticularName || selectedOrder.lenticular || 'None' }}</el-descriptions-item>
+          </el-descriptions>
+        </div>
+        
         <!-- Eye Parameters -->
         <div v-if="selectedOrder.rightEyeSph || selectedOrder.rightEyeCyl || selectedOrder.leftEyeSph || selectedOrder.leftEyeCyl" class="eye-params-section">
           <h4>Eye Parameters</h4>
@@ -277,6 +285,7 @@
             <el-table-column prop="channelName" label="Corridor" width="100"></el-table-column>
             <el-table-column prop="coatingName" label="Coating" width="120"></el-table-column>
             <el-table-column prop="tintingName" label="Tinting" width="120"></el-table-column>
+            <el-table-column prop="lenticularName" label="Lenticular" width="120"></el-table-column>
             <el-table-column prop="frameType" label="Frame Type" width="100"></el-table-column>
             <el-table-column label="Quantity" width="120" align="center">
               <template #default="{ row }">

@@ -212,3 +212,13 @@ export function updateSurchargeStatus(id, status) {
 		data: { status }
 	})
 }
+
+// ========== 客户管理 ==========
+
+// 获取客户用户列表
+export function getCustomerUserList() {
+	return request({
+		url: 'system/user/GetCustomerUserList',
+		method: 'get'
+	})
+}
