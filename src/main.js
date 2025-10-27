@@ -1,6 +1,16 @@
 import { createApp } from 'vue'
 // import Cookies from 'js-cookie'
 
+// 确保默认语言为英文 - 只在没有设置时才设置默认值
+import cache from '@/plugins/cache'
+// 只在没有语言设置时才设置为英文，不覆盖用户的选择
+if (!cache.local.get('lang')) {
+	cache.local.set('lang', 'en')
+	console.log('🌍 设置默认语言为英文:', cache.local.get('lang'))
+} else {
+	console.log('🌍 使用用户选择的语言:', cache.local.get('lang'))
+}
+
 import ElementPlus from 'element-plus'
 import 'dayjs/locale/en'
 import '@/assets/styles/index.scss' // global css

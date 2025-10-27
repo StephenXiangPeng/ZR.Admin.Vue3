@@ -3,10 +3,12 @@ import { createI18n } from 'vue-i18n'
 import { listLangByLocale } from '@/api/system/commonlang.js'
 import defaultSettings from '@/settings'
 import cache from '@/plugins/cache'
-const language = computed(() => {
-  // return useAppStore().lang
-  return cache.local.get('lang') || defaultSettings.defaultLang
-})
+// 获取当前语言设置
+const getCurrentLanguage = () => {
+  const lang = cache.local.get('lang') || 'en'
+  console.log('🌍 i18n 当前语言设置:', lang)
+  return lang
+}
 
 import zhCn from './lang/zh-cn.json'
 import en from './lang/en.json'
@@ -25,7 +27,7 @@ const i18n = createI18n({
   // 全局注入 $t 函数
   globalInjection: true,
   fallbackLocale: 'en',
-  locale: language.value, //默认选择的语言
+  locale: getCurrentLanguage(), //默认选择的语言
   legacy: false, // 使用 Composition API 模式，则需要将其设置为false
   messages: {
     'zh-cn': {
@@ -48,10 +50,11 @@ const i18n = createI18n({
 })
 
 const loadLocale = () => {
-  listLangByLocale(language.value).then((res) => {
+  const currentLang = getCurrentLanguage()
+  listLangByLocale(currentLang).then((res) => {
     const { code, data } = res
     if (code == 200) {
-      i18n.global.mergeLocaleMessage(language.value, data)
+      i18n.global.mergeLocaleMessage(currentLang, data)
     }
   })
 }

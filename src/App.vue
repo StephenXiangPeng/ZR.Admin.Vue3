@@ -20,7 +20,7 @@ const token = computed(() => {
 const lang = computed(() => {
   return useAppStore().lang
 })
-const locale = ref(en)
+const locale = ref(en) // 默认使用英文
 const size = ref(defaultSettings.defaultSize)
 
 size.value = useAppStore().size
