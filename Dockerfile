@@ -14,7 +14,7 @@ RUN yarn install --frozen-lockfile
 COPY . .
 
 # 设置环境变量
-ENV VITE_APP_TITLE=车房网下单系统
+ENV VITE_APP_TITLE="Order System"
 ENV VITE_APP_VERSION=v20240105
 ENV VITE_APP_BASE_API=/api
 ENV VITE_APP_ROUTER_PREFIX=/

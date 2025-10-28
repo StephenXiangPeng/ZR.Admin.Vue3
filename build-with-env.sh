@@ -5,7 +5,7 @@
 echo "开始构建前端应用..."
 
 # 设置环境变量
-export VITE_APP_TITLE="车房网下单系统"
+export VITE_APP_TITLE="Order System"
 export VITE_APP_VERSION="v20240105"
 export VITE_APP_BASE_API="/api"
 export VITE_APP_ROUTER_PREFIX="/"

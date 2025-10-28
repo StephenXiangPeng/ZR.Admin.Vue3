@@ -2,7 +2,7 @@
 
 ## 问题描述
 
-服务器上运行的应用没有显示标题"车房网下单系统"，而本地运行的应用正常显示。
+服务器上运行的应用没有显示标题"Order System"，而本地运行的应用正常显示。
 
 ## 问题原因
 
@@ -17,7 +17,7 @@
 
 ```dockerfile
 # 设置环境变量
-ENV VITE_APP_TITLE=车房网下单系统
+ENV VITE_APP_TITLE=Order System
 ENV VITE_APP_VERSION=v20240105
 ENV VITE_APP_BASE_API=/api
 ENV VITE_APP_ROUTER_PREFIX=/
@@ -57,7 +57,7 @@ docker-compose --profile backend up -d --build
 
 ```bash
 # 设置环境变量
-export VITE_APP_TITLE="车房网下单系统"
+export VITE_APP_TITLE="Order System"
 export VITE_APP_VERSION="v20240105"
 export VITE_APP_BASE_API="/api"
 
@@ -97,7 +97,7 @@ docker exec -it frontend-container env | grep VITE_APP
 
 ### 3. 检查应用标题
 
-访问应用，确认登录页面显示标题"车房网下单系统"。
+访问应用，确认登录页面显示标题"Order System"。
 
 ## 标题显示位置
 
@@ -122,7 +122,7 @@ docker exec -it frontend-container env | grep VITE_APP
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
-| `VITE_APP_TITLE` | 应用标题 | 车房网下单系统 |
+| `VITE_APP_TITLE` | 应用标题 | Order System |
 | `VITE_APP_VERSION` | 应用版本 | v20240105 |
 | `VITE_APP_BASE_API` | API基础路径 | /api |
 | `VITE_APP_ROUTER_PREFIX` | 路由前缀 | / |

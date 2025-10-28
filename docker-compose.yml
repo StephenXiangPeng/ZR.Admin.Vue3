@@ -13,7 +13,7 @@ services:
     environment:
       - NODE_ENV=production
       - TZ=Asia/Shanghai
-      - VITE_APP_TITLE=车房网下单系统
+      - VITE_APP_TITLE="Order System"
       - VITE_APP_VERSION=v20240105
       - VITE_APP_BASE_API=/api
       - VITE_APP_ROUTER_PREFIX=/

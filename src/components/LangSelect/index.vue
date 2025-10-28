@@ -15,6 +15,7 @@
 
 <script setup>
 import useAppStore from '@/store/modules/app'
+import cache from '@/plugins/cache'
 const appStore = useAppStore()
 const lang = computed(() => useAppStore().lang)
 const props = defineProps({
@@ -32,6 +33,9 @@ const langOptions = ref([
 function handleLanguageChange(lang) {
   proxy.$modal.loading('正在设置语言，请稍候...')
   appStore.setLang(lang)
+  // 标记用户已经主动修改过语言
+  cache.local.set('userModifiedLang', 'true')
+  console.log('🌍 用户主动修改语言为:', lang)
   setTimeout(() => {
     window.location.reload()
   }, 1000)

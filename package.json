@@ -1,7 +1,7 @@
 {
   "name": "zr.admin",
   "version": "v20240105",
-  "description": "车房网下单系统",
+  "description": "Order System",
   "author": "ZR",
   "license": "MIT",
   "type": "module",

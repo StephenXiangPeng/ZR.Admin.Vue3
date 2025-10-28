@@ -1,13 +1,18 @@
 import { createApp } from 'vue'
 // import Cookies from 'js-cookie'
 
-// 确保默认语言为英文 - 只在没有设置时才设置默认值
+// 语言设置逻辑：每次启动强制英文，但允许用户修改
 import cache from '@/plugins/cache'
-// 只在没有语言设置时才设置为英文，不覆盖用户的选择
-if (!cache.local.get('lang')) {
+
+// 检查用户是否已经主动修改过语言
+const userHasModifiedLang = cache.local.get('userModifiedLang') === 'true'
+
+if (!userHasModifiedLang) {
+	// 用户没有修改过语言，强制设置为英文
 	cache.local.set('lang', 'en')
-	console.log('🌍 设置默认语言为英文:', cache.local.get('lang'))
+	console.log('🌍 每次启动强制设置默认语言为英文:', cache.local.get('lang'))
 } else {
+	// 用户已经修改过语言，使用用户的选择
 	console.log('🌍 使用用户选择的语言:', cache.local.get('lang'))
 }
 
