@@ -24,15 +24,15 @@
 							size="default" />
 					</el-col>
 					<el-col :span="4">
-						<el-select v-model="SearchInvoiceNumber" placeholder="选择发票号码" style="width: 100%"
-							size="default">
+						<el-select v-model="SearchInvoiceNumber" placeholder="选择发票号码" style="width: 100%" size="default"
+							clearable>
 							<el-option v-for="dict in optionss.sql_settlement_center_shipping" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue" />
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-select v-model="SearchCustomerID" filterable placeholder="选择客户简称" style="width: 100%"
-							size="default">
+							size="default" clearable>
 							<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue" />
 						</el-select>
@@ -84,7 +84,7 @@
 							<el-col :span="6">
 								<el-form-item label="退税编号">
 									<el-input v-model="addctaxrefundform.taxRefundNumber" placeholder="请输入退税编号"
-										style="width: 300px;" disabled size="default"></el-input>
+										style="width: 300px;" disabled size="default" clearable></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
@@ -97,7 +97,7 @@
 							<el-col :span="6">
 								<el-form-item label="我方公司">
 									<el-select v-model="addctaxrefundform.ourCompany" placeholder="请选择我方公司"
-										style="width: 300px" :disabled=isDisable size="default">
+										style="width: 300px" :disabled=isDisable size="default" clearable>
 										<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -129,7 +129,7 @@
 						</el-table-column>
 						<el-table-column prop="invoiceNumber" label="发票号码">
 							<template #default="{ row }">
-								<el-select v-model="row.InvoiceNumber" placeholder="选择发票号码" size="default"
+								<el-select v-model="row.InvoiceNumber" placeholder="选择发票号码" clearable size="default"
 									@change="invoiceNumberChange(row)" :disabled=isDisable>
 									<el-option v-for="dict in optionss.sql_settlement_center_shipping"
 										:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />
@@ -156,7 +156,7 @@
 						</el-table-column>
 						<el-table-column prop="IsRefunded" label="是否已退">
 							<template #default="{ row }">
-								<el-select v-model="row.IsRefunded" placeholder="选择是否" size="default"
+								<el-select v-model="row.IsRefunded" placeholder="选择是否" size="default" clearable
 									:disabled=isDisable>
 									<el-option v-for="dict in optionss.sys_yes_no" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />

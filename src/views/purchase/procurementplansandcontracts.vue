@@ -148,7 +148,7 @@
 							<el-col :span="6">
 								<el-form-item label="合同状态">
 									<el-select v-model="Addcontractofpurchaseform.contractStatus" placeholder="请选择合同状态"
-										style="width: 300px" disabled size="default">
+										style="width: 300px" disabled size="default" clearable>
 										<el-option v-for="dict in optionss.hr_contract_status" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -163,7 +163,7 @@
 							<el-col :span="6">
 								<el-form-item label="采购币种">
 									<el-select v-model="Addcontractofpurchaseform.purchaseCurrency" style="width: 300px"
-										:disabled="isFormDisabled" size="default">
+										:disabled="isFormDisabled" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -174,7 +174,8 @@
 							<el-col :span="6">
 								<el-form-item label="价格条款">
 									<el-select v-model="Addcontractofpurchaseform.priceTerms" style="width: 300px"
-										:disabled="isFormDisabled" size="default" @change="handlePriceTermsChange">
+										:disabled="isFormDisabled" size="default" @change="handlePriceTermsChange"
+										clearable>
 										<el-option v-for="dict in filteredPriceTermsOptions" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -183,7 +184,7 @@
 							<el-col :span="6">
 								<el-form-item label="付款天数" prop="paymentDays">
 									<el-select v-model="Addcontractofpurchaseform.paymentDays" style="width: 300px"
-										:disabled="isFormDisabled" size="default">
+										:disabled="isFormDisabled" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_purchase_payment_days"
 											:key="dict.dictCode" :label="dict.dictLabel"
 											:value="dict.dictValue"></el-option>
@@ -194,7 +195,7 @@
 								<el-form-item label="销售合同">
 									<el-select v-model="Addcontractofpurchaseform.salesContract" placeholder="请选择销售合同"
 										style="width: 300px" :disabled="isFormDisabled || isSalesContractDisabled"
-										size="default">
+										size="default" clearable>
 										<el-option v-for="dict in optionss.sql_sale_contracts" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -203,7 +204,7 @@
 							<el-col :span="6">
 								<el-form-item label="销售员">
 									<el-select v-model="Addcontractofpurchaseform.salesperson" disabled
-										style="width: 300px" size="default">
+										style="width: 300px" size="default" clearable>
 										<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -214,7 +215,7 @@
 							<el-col :span="6">
 								<el-form-item label="采购员">
 									<el-select disabled v-model="Addcontractofpurchaseform.purchaser"
-										placeholder="请选择采购员" style="width: 300px" size="default">
+										placeholder="请选择采购员" style="width: 300px" size="default" clearable>
 										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -253,7 +254,7 @@
 						<el-table-column prop="supplier" label="供应商" width="210">
 							<template #default="scope">
 								<el-select v-model="scope.row.supplier" placeholder="选择供应商" :disabled="isFormDisabled"
-									@focus="loadProductSuppliers(scope.row)">
+									@focus="loadProductSuppliers(scope.row)" clearable>
 									<el-option v-for="supplier in (productSuppliersMap.get(scope.row.productId) || [])"
 										:key="supplier.dictCode" :label="supplier.dictLabel"
 										:value="supplier.dictValue">
@@ -351,7 +352,7 @@
 						<el-table-column prop="currency" label="币种" width="150">
 							<template #default="{ row }">
 								<el-select v-model="row.currency" placeholder="选择币种" size="default"
-									@change="currencyChange(row)" :disabled="isFormDisabled">
+									@change="currencyChange(row)" :disabled="isFormDisabled" clearable>
 									<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
 								</el-select>

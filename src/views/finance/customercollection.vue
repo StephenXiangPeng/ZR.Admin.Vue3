@@ -18,14 +18,14 @@
 				<el-row :gutter="15" style="margin-bottom: 10px;">
 					<el-col :span="4">
 						<el-select v-model="SearchReceiptNumber" filterable placeholder="选择收款单号" style="width: 100%"
-							size="default">
+							size="default" clearable>
 							<el-option v-for="dict in optionss.sql_customercollections_no" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-select v-model="SearchBank" filterable placeholder="选择收汇银行" style="width: 100%"
-							size="default">
+							size="default" clearable>
 							<el-option v-for="dict in searchBankOptions" :key="dict.dictCode" :label="dict.dictLabel"
 								:value="dict.dictValue"></el-option>
 						</el-select>
@@ -117,7 +117,7 @@
 								<el-form-item label="我方公司">
 									<el-select v-model="addcustomercollectionform.ourCompany" placeholder="请选择我方公司"
 										style="width: 300px" @change="handleOurCompanyChange" :disabled="isReadOnly"
-										size="default">
+										size="default" clearable>
 										<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -127,7 +127,7 @@
 								<el-form-item label="外销币种">
 									<el-select v-model="addcustomercollectionform.foreignCurrency" placeholder="请选择外销币种"
 										style="width: 300px" @change="handleForeignCurrencyChange"
-										:disabled="isReadOnly" size="default">
+										:disabled="isReadOnly" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -140,7 +140,7 @@
 									<el-input v-model="addcustomercollectionform.exchangeRate" placeholder="请输入汇率"
 										style="width: 300px" @input="handleExchangeRateInput"
 										@blur="handleExchangeRateBlur" @change="calculateSettlementAmount"
-										:disabled="isReadOnly" size="default"></el-input>
+										:disabled="isReadOnly" size="default" clearable></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
@@ -163,7 +163,8 @@
 								<el-form-item label="收汇银行">
 									<el-select v-model="addcustomercollectionform.bank" placeholder="请选择收汇银行"
 										style="width: 300px" @focus="handleBankSelectFocus"
-										:disabled="isReadOnly || !addcustomercollectionform.ourCompany" size="default">
+										:disabled="isReadOnly || !addcustomercollectionform.ourCompany" size="default"
+										clearable>
 										<el-option v-for="dict in receivingBankOptions" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -174,7 +175,8 @@
 							<el-col :span="6">
 								<el-form-item label="客户">
 									<el-select v-model="addcustomercollectionform.customerID" style="width: 300px"
-										:disabled="isReadOnly || !addcustomercollectionform.ourCompany" size="default">
+										:disabled="isReadOnly || !addcustomercollectionform.ourCompany" size="default"
+										clearable>
 										<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -183,7 +185,8 @@
 							<el-col :span="6">
 								<el-form-item label="领取人">
 									<el-select v-model="addcustomercollectionform.receivingUser" style="width: 300px"
-										:disabled="isReadOnly || !addcustomercollectionform.ourCompany" size="default">
+										:disabled="isReadOnly || !addcustomercollectionform.ourCompany" size="default"
+										clearable>
 										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>

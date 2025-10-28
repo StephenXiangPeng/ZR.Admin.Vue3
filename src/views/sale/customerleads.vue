@@ -29,14 +29,14 @@
 					</el-col>
 					<el-col :span="4">
 						<el-select filterable v-model="businessSelect" placeholder="请选择涉及业务" style="width: 100%"
-							size="default">
+							size="default" clearable>
 							<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-select filterable v-model="nationSelect" placeholder="请选择国家" style="width: 100%"
-							size="default">
+							size="default" clearable>
 							<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
 								:value="dict.dictValue"></el-option>
 						</el-select>
@@ -45,25 +45,25 @@
 				<el-row :gutter="15">
 					<el-col :span="4">
 						<el-select filterable v-model="customerLevelSelect" placeholder="请选择客户等级" style="width: 100%"
-							size="default">
+							size="default" clearable>
 							<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-select filterable v-model="customerSourceSelect" placeholder="请选择客户来源" style="width: 100%"
-							size="default">
+							size="default" clearable>
 							<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-date-picker v-model="startDate" type="date" placeholder="请选择起始日期" style="width: 100%"
-							size="default" />
+							size="default" clearable />
 					</el-col>
 					<el-col :span="4">
 						<el-date-picker v-model="endDate" type="date" placeholder="请选择结束日期" style="width: 100%"
-							size="default" />
+							size="default" clearable />
 					</el-col>
 					<el-col :span="4">
 						<div style="text-align: left;">
@@ -137,7 +137,7 @@
 								<el-form-item label="客户来源" prop="customerSource">
 									<el-select filterable :disabled="!isEditable"
 										v-model="NewCustomerleadsform.customerSource" placeholder="请选择客户来源"
-										style="width: 300px;" size="default">
+										style="width: 300px;" size="default" clearable>
 										<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -146,7 +146,7 @@
 							<el-col :span="6">
 								<el-form-item label="客户等级">
 									<el-select filterable disabled v-model="NewCustomerleadsform.customerLevel"
-										placeholder="请选择客户等级" style="width: 300px;" size="default">
+										placeholder="请选择客户等级" style="width: 300px;" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -158,7 +158,7 @@
 								<el-form-item label="所属国家" prop="customerNation">
 									<el-select filterable :disabled="!isEditable"
 										v-model="NewCustomerleadsform.customerNation" placeholder="请选择客户所属国家"
-										style="width: 300px;" size="default">
+										style="width: 300px;" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -168,7 +168,7 @@
 								<el-form-item label="涉及业务" prop="involvingBusiness">
 									<el-select filterable :disabled="!isEditable"
 										v-model="NewCustomerleadsform.involvingBusiness" placeholder="请选择客户所涉及的业务"
-										style="width: 300px;" size="default">
+										style="width: 300px;" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -177,7 +177,7 @@
 							<el-col :span="12">
 								<el-form-item label="公司网址">
 									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.compantWebsite"
-										placeholder="请输入公司网址" style="width: 100%;" size="default" />
+										placeholder="请输入公司网址" style="width: 100%;" size="default" clearable />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -186,7 +186,7 @@
 								<el-form-item label="线索备注" prop="clueRemark">
 									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.clueRemark"
 										:autosize="{ minRows: 5, maxRows: 10 }" type="textarea" placeholder="请输入线索备注内容"
-										style="width: 100%;" size="default" />
+										style="width: 100%;" size="default" clearable />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -239,25 +239,25 @@
 							<el-col :span="6">
 								<el-form-item label="联系人名称" prop="contactName">
 									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactName"
-										placeholder="请输入联系人名称" style="width: 300px;" size="default" />
+										placeholder="请输入联系人名称" style="width: 300px;" size="default" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="联系人邮箱" prop="contactEmail">
 									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactEmail"
-										placeholder="请输入联系人邮箱" style="width: 300px;" size="default" />
+										placeholder="请输入联系人邮箱" style="width: 300px;" size="default" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="联系人电话">
 									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactPhone"
-										placeholder="请输入联系人电话" style="width: 300px;" size="default" />
+										placeholder="请输入联系人电话" style="width: 300px;" size="default" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="联系人职位">
 									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactPosition"
-										placeholder="请输入联系人职位" style="width: 300px;" size="default" />
+										placeholder="请输入联系人职位" style="width: 300px;" size="default" clearable />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -266,7 +266,7 @@
 								<el-form-item label="联系人备注">
 									<el-input :disabled="!isEditable" v-model="NewCustomerleadsform.contactRemark"
 										:autosize="{ minRows: 5, maxRows: 10 }" type="textarea" placeholder="请输入联系人备注内容"
-										style="width: 100%;" size="default" />
+										style="width: 100%;" size="default" clearable />
 								</el-form-item>
 							</el-col>
 						</el-row>

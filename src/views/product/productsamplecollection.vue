@@ -103,7 +103,7 @@
 								<el-form-item label="客户/供应商">
 									<el-select v-model="CreateDialogform.recipienttypeexamples" placeholder="请选择供应商或客户"
 										style="width: 300px;" @change="handleRecipientTypeChange"
-										:disabled="!isEditable" size="default">
+										:disabled="!isEditable" size="default" clearable>
 										<el-option v-for="item in optionss.hr_recipient_type_examples"
 											:key="item.dictCode" :label="item.dictLabel" :value="item.dictValue" />
 									</el-select>
@@ -118,7 +118,7 @@
 							<el-col :span="6">
 								<el-form-item label="快递公司">
 									<el-select v-model="CreateDialogform.expressCompany" placeholder="请选择快递公司"
-										style="width: 300px;" :disabled="!isEditable" size="default">
+										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
 										<el-option v-for="item in optionss.hr_express_delivery_company"
 											:key="item.dictCode" :label="item.dictLabel" :value="item.dictValue" />
 									</el-select>
@@ -139,7 +139,7 @@
 							<el-col :span="6">
 								<el-form-item :label="sampleObjectLabel">
 									<el-select v-model="CreateDialogform.sampleObject" filterable placeholder="请选择"
-										style="width: 300px;" :disabled="!isEditable" size="default">
+										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
 										<el-option v-for="item in getObjectOptions" :key="item.dictCode"
 											:label="item.dictLabel" :value="item.dictValue" />
 									</el-select>
@@ -148,7 +148,7 @@
 							<el-col :span="6">
 								<el-form-item label="我方公司">
 									<el-select v-model="CreateDialogform.ourCompany" placeholder="请选择"
-										style="width: 300px;" :disabled="!isEditable" size="default">
+										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
 										<el-option v-for="item in optionss.hr_ourcompany" :key="item.dictCode"
 											:label="item.dictLabel" :value="item.dictValue" />
 									</el-select>
@@ -157,7 +157,7 @@
 							<el-col :span="6">
 								<el-form-item label="业务员">
 									<el-select v-model="CreateDialogform.salesperson" placeholder="请选择"
-										style="width: 300px;" :disabled="!isEditable" size="default">
+										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
 										<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode"
 											:label="item.dictLabel" :value="item.dictValue" />
 									</el-select>
@@ -168,7 +168,7 @@
 							<el-col :span="6">
 								<el-form-item label="付费方式">
 									<el-select v-model="CreateDialogform.paymentMethod" placeholder="请选择快递付费方式"
-										style="width: 300px;" :disabled="!isEditable" size="default">
+										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
 										<el-option v-for="item in optionss.hr_express_payment_method"
 											:key="item.dictCode" :label="item.dictLabel" :value="item.dictValue" />
 									</el-select>

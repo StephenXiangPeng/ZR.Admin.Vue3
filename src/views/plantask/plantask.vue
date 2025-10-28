@@ -229,7 +229,7 @@
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.executor'">
 									<el-select v-model="item.executor" filterable placeholder="选择执行人"
 										style="width: 300px" size="default"
-										@change="handleExecutorChange(stageIndex, itemIndex, item.executor)">
+										@change="handleExecutorChange(stageIndex, itemIndex, item.executor)" clearable>
 										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue">
 										</el-option>
@@ -590,7 +590,8 @@
 					</el-col>
 					<el-col :span="12">
 						<el-form-item label="任务状态" prop="status">
-							<el-select v-model="exchangeRateTaskForm.status" placeholder="选择任务状态" style="width: 100%">
+							<el-select v-model="exchangeRateTaskForm.status" placeholder="选择任务状态" style="width: 100%"
+								clearable>
 								<el-option label="启用" value="1"></el-option>
 								<el-option label="禁用" value="0"></el-option>
 							</el-select>

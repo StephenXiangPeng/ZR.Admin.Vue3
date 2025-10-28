@@ -17,21 +17,21 @@
 				<el-row :gutter="15" style="margin-bottom: 10px;">
 					<el-col :span="4">
 						<el-select v-model="Searchsupplierselect" filterable placeholder="选择供应商（可输入查询）"
-							style="width: 100%" size="default">
+							style="width: 100%" size="default" clearable>
 							<el-option v-for="item in supplierselectoptions" :key="item.value" :label="item.label"
 								:value="item.value" />
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-select v-model="Searchsupplierselect" filterable placeholder="选择供应商等级" style="width: 100%"
-							size="default">
+							size="default" clearable>
 							<el-option v-for="item in supplierselectoptions" :key="item.value" :label="item.label"
 								:value="item.value" />
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-select v-model="Searchproductselect" filterable placeholder="选择业务范围" style="width: 100%"
-							size="default">
+							size="default" clearable>
 							<el-option v-for="item in productselectoptions" :key="item.value" :label="item.label"
 								:value="item.value" />
 						</el-select>
@@ -126,7 +126,7 @@
 								<el-col :span="6">
 									<el-form-item label="所在省份">
 										<el-select v-model="Addsupperinfoform.province" placeholder="请选择所在省份"
-											style="width: 300px" :disabled="isEditable" size="default">
+											style="width: 300px" :disabled="isEditable" size="default" clearable>
 											<el-option v-for="dict in optionss.hr_china_provinces" :key="dict.dictCode"
 												:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 										</el-select>
@@ -163,7 +163,8 @@
 								<el-col :span="6">
 									<el-form-item label="信用等级">
 										<el-select v-model="Addsupperinfoform.creditLevel" filterable
-											placeholder="自动计算信用等级" disabled style="width: 300px;" size="default">
+											placeholder="自动计算信用等级" disabled style="width: 300px;" size="default"
+											clearable>
 											<el-option v-for="dict in optionss.hr_supplier_level" :key="dict.dictCode"
 												:label="dict.dictLabel" :value="dict.dictValue" />
 										</el-select>
@@ -172,7 +173,8 @@
 								<el-col :span="6">
 									<el-form-item label="合作等级">
 										<el-select v-model="Addsupperinfoform.cooperationLevel" filterable
-											placeholder="自动计算合作等级" disabled style="width: 300px;" size="default">
+											placeholder="自动计算合作等级" disabled style="width: 300px;" size="default"
+											clearable>
 											<el-option v-for="dict in optionss.hr_supplier_level" :key="dict.dictCode"
 												:label="dict.dictLabel" :value="dict.dictValue" />
 										</el-select>
@@ -181,7 +183,7 @@
 								<el-col :span="6">
 									<el-form-item label="结算方式">
 										<el-select v-model="Addsupperinfoform.paymentMethod" placeholder="请选择结算方式"
-											:disabled="isEditable" style="width: 300px" size="default">
+											:disabled="isEditable" style="width: 300px" size="default" clearable>
 											<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
 												:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 										</el-select>
@@ -199,13 +201,13 @@
 									<el-form-item label="开发时间">
 										<el-date-picker v-model="Addsupperinfoform.developmentDate" type="date"
 											:disabled="isEditable" placeholder="请选择开发时间" style="width: 300px"
-											size="default" />
+											size="default" clearable />
 									</el-form-item>
 								</el-col>
 								<el-col :span="6">
 									<el-form-item label="最近成交日期">
 										<el-date-picker v-model="Addsupperinfoform.lastTransaction" disabled type="date"
-											placeholder="自动获取" style="width: 300px" size="default" />
+											placeholder="自动获取" style="width: 300px" size="default" clearable />
 									</el-form-item>
 								</el-col>
 								<el-col :span="6">
@@ -272,7 +274,7 @@
 								<el-table-column label="联系人性别" width="120">
 									<template #default="{ row }">
 										<el-select v-model="row.gender" placeholder="联系人性别" :disabled="isEditable"
-											size="default">
+											size="default" clearable>
 											<el-option v-for="dict in optionss.sys_user_sex" :key="dict.dictCode"
 												:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 										</el-select>

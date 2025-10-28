@@ -215,7 +215,7 @@
 				<el-table-column prop="priceTerms" label="价格条款" width="200" align="center">
 					<template #default="{ row }">
 						<el-select v-if="dialogEditMode" v-model="row.priceTerms" filterable placeholder="请选择价格条款"
-							style="width: 100%" size="default">
+							style="width: 100%" size="default" clearable>
 							<el-option
 								v-for="dict in optionss.hr_purchase_pricing_term.filter(option => option.dictValue !== 0)"
 								:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />

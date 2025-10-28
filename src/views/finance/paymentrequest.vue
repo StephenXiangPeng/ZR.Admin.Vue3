@@ -17,14 +17,14 @@
 				<el-row :gutter="15" style="margin-bottom: 10px;">
 					<el-col :span="4">
 						<el-select v-model="SearchPaymentRequsetID" filterable placeholder="选择付款申请单号" size="default"
-							style="width: 100%">
+							style="width: 100%" clearable>
 							<el-option v-for="dict in optionss.sql_payment_requests" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue" />
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-select v-model="SearchSupplierID" filterable placeholder="选择收款单位" size="default"
-							style="width: 100%">
+							style="width: 100%" clearable>
 							<el-option v-for="supplier in filteredSupplierList" :key="supplier.dictvalue"
 								:label="supplier.dictLabel" :value="supplier.dictvalue" />
 						</el-select>

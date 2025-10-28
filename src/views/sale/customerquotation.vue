@@ -152,7 +152,7 @@
 							<el-col :span="6">
 								<el-form-item label="报价状态">
 									<el-select v-model="quotationDialogform.quorationstatus" filterable
-										placeholder="选择报价状态" disabled style="width: 300px;" size="default">
+										placeholder="选择报价状态" disabled style="width: 300px;" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_quotation_status" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -162,7 +162,7 @@
 								<el-form-item label="客户编号" prop="customernum">
 									<el-select v-model="quotationDialogform.customernum" filterable placeholder="选择客户编号"
 										:disabled="isDisabled" style="width: 300px;" @change="handleCustomerSelection"
-										size="default">
+										size="default" clearable>
 										<el-option v-for="dict in optionss.sql_hr_customer" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -172,7 +172,7 @@
 								<el-form-item label="客户简称" prop="customername" data-field="customername">
 									<el-select v-model="quotationDialogform.customername" filterable
 										placeholder="选择客户名称" :disabled="isDisabled" style="width: 300px;"
-										@change="handleCustomerSelection" size="default">
+										@change="handleCustomerSelection" size="default" clearable>
 										<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -182,7 +182,7 @@
 								<el-form-item label="联系人" prop="contactperson" data-field="contactperson">
 									<el-select v-model="quotationDialogform.contactperson" filterable
 										placeholder="选择联系人" :disabled="isDisabled" style="width: 300px;"
-										@change="handleContactpersonSelection" size="default">
+										@change="handleContactpersonSelection" size="default" clearable>
 										<el-option v-for="item in contactpersonSelectOptions" :key="item.value"
 											:label="item.label" :value="item.value" />
 									</el-select>
@@ -199,7 +199,7 @@
 							<el-col :span="6">
 								<el-form-item label="客户等级">
 									<el-select v-model="quotationDialogform.customerlevel" filterable placeholder="自动评级"
-										disabled style="width: 300px;" size="default">
+										disabled style="width: 300px;" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -208,7 +208,7 @@
 							<el-col :span="6">
 								<el-form-item label="我方公司" prop="ourcompany" data-field="ourcompany">
 									<el-select v-model="quotationDialogform.ourcompany" filterable placeholder="请选择我方公司"
-										:disabled="isDisabled" style="width: 300px;" size="default">
+										:disabled="isDisabled" style="width: 300px;" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -217,8 +217,8 @@
 							<el-col :span="6" v-show="false">
 								<el-form-item label="结算类别">
 									<el-select v-model="quotationDialogform.settlementcategory" filterable
-										placeholder="选择结算类别" :disabled="isDisabled" style="width: 300px;"
-										size="default">
+										placeholder="选择结算类别" :disabled="isDisabled" style="width: 300px;" size="default"
+										clearable>
 										<el-option v-for="dict in optionss.hr_settlementcategory" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -228,7 +228,7 @@
 								<el-form-item label="外销币种" prop="exportcurrency" data-field="exportcurrency">
 									<el-select v-model="quotationDialogform.exportcurrency" filterable
 										placeholder="选择外销币种" :disabled="isDisabled" style="width: 300px;"
-										@change="exportcurrencyChange" size="default">
+										@change="exportcurrencyChange" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -237,7 +237,7 @@
 							<el-col :span="6">
 								<el-form-item label="汇率" prop="exchangerate" data-field="exchangerate">
 									<el-input v-model="quotationDialogform.exchangerate" style="width: 300px;"
-										:disabled="isDisabled" @change="calculateTotal" size="default" />
+										:disabled="isDisabled" @change="calculateTotal" size="default" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6" v-if="false">
@@ -251,8 +251,8 @@
 							<el-col :span="6">
 								<el-form-item label="结汇方式" prop="settlementway" data-field="settlementway">
 									<el-select v-model="quotationDialogform.settlementway" filterable
-										placeholder="选择结汇方式" :disabled="isDisabled" style="width: 300px;"
-										size="default">
+										placeholder="选择结汇方式" :disabled="isDisabled" style="width: 300px;" size="default"
+										clearable>
 										<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -261,7 +261,7 @@
 							<el-col :span="6">
 								<el-form-item label="价格条款" prop="pricingterm" data-field="pricingterm">
 									<el-select v-model="quotationDialogform.pricingterm" filterable placeholder="选择价格条款"
-										:disabled="isDisabled" style="width: 300px;" size="default">
+										:disabled="isDisabled" style="width: 300px;" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -270,8 +270,8 @@
 							<el-col :span="6">
 								<el-form-item label="出运口岸" prop="shippingport" data-field="shippingport">
 									<el-select v-model="quotationDialogform.shippingport" filterable
-										placeholder="选择出运口岸" :disabled="isDisabled" style="width: 300px;"
-										size="default">
+										placeholder="选择出运口岸" :disabled="isDisabled" style="width: 300px;" size="default"
+										clearable>
 										<el-option v-for="dict in optionss.hr_transport_port" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -286,8 +286,8 @@
 							<el-col :span="6">
 								<el-form-item label="贸易国别" prop="tradingcountry" data-field="tradingcountry">
 									<el-select v-model="quotationDialogform.tradingcountry" filterable
-										placeholder="选择贸易国别" :disabled="isDisabled" style="width: 300px;"
-										size="default">
+										placeholder="选择贸易国别" :disabled="isDisabled" style="width: 300px;" size="default"
+										clearable>
 										<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -297,8 +297,8 @@
 								<el-form-item label="运输方式" prop="transportationmethod"
 									data-field="transportationmethod">
 									<el-select v-model="quotationDialogform.transportationmethod" filterable
-										placeholder="选择运输方式" :disabled="isDisabled" style="width: 300px;"
-										size="default">
+										placeholder="选择运输方式" :disabled="isDisabled" style="width: 300px;" size="default"
+										clearable>
 										<el-option v-for="dict in optionss.hr_transportation_method"
 											:key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -307,13 +307,13 @@
 							<el-col :span="6">
 								<el-form-item label="佣金比率">
 									<el-input v-model="quotationDialogform.commissionrate" style="width: 300px;"
-										:disabled="isDisabled" size="default" />
+										:disabled="isDisabled" size="default" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="海运费/m³">
 									<el-input v-model="quotationDialogform.oceanFreight" style="width: 300px;"
-										@change="calculateTotal" :disabled="isDisabled" size="default" />
+										@change="calculateTotal" :disabled="isDisabled" size="default" clearable />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -321,14 +321,14 @@
 							<el-col :span="6" v-show="false">
 								<el-form-item label="单位运费">
 									<el-input v-model="quotationDialogform.unitfreight" style="width: 300px;"
-										:disabled="isDisabled" size="default" />
+										:disabled="isDisabled" size="default" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="海运费币种" prop="shippingcurrency">
 									<el-select v-model="quotationDialogform.shippingcurrency" filterable
 										placeholder="选择运费币种" :disabled="isDisabled" style="width: 300px;"
-										@change="shippingcurrencyChange" size="default">
+										@change="shippingcurrencyChange" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -337,19 +337,19 @@
 							<el-col :span="6">
 								<el-form-item label="海运费汇率">
 									<el-input v-model="quotationDialogform.shippingrate" style="width: 300px;"
-										:disabled="isDisabled" @change="calculateTotal" size="default" />
+										:disabled="isDisabled" @change="calculateTotal" size="default" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="港杂费/m³">
 									<el-input v-model="quotationDialogform.portMiscellaneousFees" style="width: 300px;"
-										@change="calculateTotal" :disabled="isDisabled" size="default" />
+										@change="calculateTotal" :disabled="isDisabled" size="default" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="货代报关杂费">
 									<el-input v-model="quotationDialogform.freightForwarderCustomsClearanceFees"
-										style="width: 300px;" :disabled="isDisabled" size="default" />
+										style="width: 300px;" :disabled="isDisabled" size="default" clearable />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -357,7 +357,7 @@
 							<el-col :span="6">
 								<el-form-item label="销售员">
 									<el-select v-model="quotationDialogform.seller" filterable placeholder="选择销售员"
-										disabled style="width: 300px;" size="default">
+										disabled style="width: 300px;" size="default" clearable>
 										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>
@@ -366,14 +366,14 @@
 							<el-col :span="6" v-if="false">
 								<el-form-item label="内陆运费/m³">
 									<el-input v-model="quotationDialogform.inlandFreight" style="width: 300px;"
-										@change="calculateTotal" :disabled="isDisabled" size="default" />
+										@change="calculateTotal" :disabled="isDisabled" size="default" clearable />
 								</el-form-item>
 							</el-col>
 
 							<el-col :span="6" v-if="false">
 								<el-form-item label="单个立方费用">
 									<el-input v-model="quotationDialogform.singleCubicCost" style="width: 300px;"
-										:disabled="isDisabled" size="default" />
+										:disabled="isDisabled" size="default" clearable />
 								</el-form-item>
 							</el-col>
 
@@ -472,7 +472,7 @@
 						<el-table-column prop="unitofmeasurement" label="计量单位" width="100">
 							<template #default="scope">
 								<el-select v-model="scope.row.unitofmeasurement" filterable placeholder="单位"
-									style="width: 100%;" :disabled="scope.row.isImported || isDisabled">
+									style="width: 100%;" :disabled="scope.row.isImported || isDisabled" clearable>
 									<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
 								</el-select>
@@ -481,7 +481,7 @@
 						<el-table-column prop="purchasecurrency" label="采购币种" width="110">
 							<template #default="scope">
 								<el-select v-model="scope.row.purchasecurrency" filterable placeholder="币种"
-									style="width: 100%;" :disabled="isDisabled">
+									style="width: 100%;" :disabled="isDisabled" clearable>
 									<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
 								</el-select>
@@ -530,7 +530,7 @@
 						<el-table-column prop="isInvoicingc" label="是否开票" width="120">
 							<template #default="scope">
 								<el-select v-model="scope.row.isInvoicingc" filterable placeholder="请选择"
-									style="width: 100%;" :disabled="isDisabled">
+									style="width: 100%;" :disabled="isDisabled" clearable>
 									<el-option v-for="dict in optionss.hr_yes_no" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
 								</el-select>
@@ -539,7 +539,7 @@
 						<el-table-column prop="packaging" label="包装方式" width="150">
 							<template #default="scope">
 								<el-select v-model="scope.row.packaging" filterable :disabled="isDisabled"
-									placeholder="请选择" style="width: 100%;">
+									placeholder="请选择" style="width: 100%;" clearable>
 									<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
 								</el-select>
@@ -573,7 +573,7 @@
 						<el-table-column prop="outerboxunit" label="外箱单位" width="150">
 							<template #default="scope">
 								<el-select v-model="scope.row.outerboxunit" filterable placeholder="外箱单位"
-									style="width: 100%;" :disabled="isDisabled">
+									style="width: 100%;" :disabled="isDisabled" clearable>
 									<el-option v-for="dict in optionss.hr_outerbox_unit" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
 								</el-select>

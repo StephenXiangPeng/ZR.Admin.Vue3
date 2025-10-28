@@ -90,7 +90,7 @@
 							<el-col :span="6">
 								<el-form-item label="公司类型" prop="companyType">
 									<el-select v-model="form.companyType" placeholder="请选择公司类型" style="width: 300px"
-										size="default">
+										size="default" clearable>
 										<el-option v-for="dict in state.optionss.hr_logisticscompany_type"
 											:key="dict.dictValue" :label="dict.dictLabel" :value="dict.dictValue" />
 									</el-select>

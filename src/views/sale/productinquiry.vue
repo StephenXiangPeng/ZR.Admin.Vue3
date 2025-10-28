@@ -93,7 +93,7 @@
 					<el-col :span="6">
 						<el-form-item label="询价人员">
 							<el-select filterable v-model="NewprudctInquityDetailsform.Inquirer" placeholder="请选择询价人员"
-								:disabled="true" style="width: 300px" size="default">
+								:disabled="true" style="width: 300px" size="default" clearable>
 								<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -226,7 +226,7 @@
 					<el-table-column prop="priceterms" label="价格条款" width="170" align="center">
 						<template #default="{ row }">
 							<el-select v-if="!isEditable" v-model="row.priceterms" filterable placeholder="选择价格条款"
-								disabled>
+								clearable disabled>
 								<el-option v-for="dict in optionss.
 									hr_purchase_pricing_term" :key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>

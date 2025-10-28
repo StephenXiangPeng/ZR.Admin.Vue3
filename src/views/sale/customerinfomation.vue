@@ -23,7 +23,7 @@
 					</el-col>
 					<el-col :span="4">
 						<el-select v-model="Search_CustomerName_input" placeholder="请选择客户名称" style="width: 100%;"
-							filterable size="default">
+							filterable size="default" clearable>
 							<el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 						</el-select>
@@ -34,21 +34,21 @@
 					</el-col>
 					<el-col :span="4">
 						<el-select v-model="Search_BusinessScope_Select" placeholder="请选择业务范围" style="width: 100%;"
-							filterable size="default">
+							filterable size="default" clearable>
 							<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-select v-model="Search_TradingCountry_Select" placeholder="请选择国家" size="default"
-							style="width: 100%;" filterable>
+							style="width: 100%;" filterable clearable>
 							<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode" :label="dict.dictLabel"
 								:value="dict.dictValue" size="default"></el-option>
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-select filterable v-model="Search_CustomerLevel_Select" placeholder="请选择客户等级" size="default"
-							style="width: 100%;">
+							style="width: 100%;" clearable>
 							<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
 						</el-select>
@@ -57,18 +57,18 @@
 				<el-row :gutter="15">
 					<el-col :span="4">
 						<el-select filterable v-model="Search_CustomerSource_Select" placeholder="请选择客户来源"
-							size="default" style="width: 100%;">
+							size="default" style="width: 100%;" clearable>
 							<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
 						</el-select>
 					</el-col>
 					<el-col :span="4">
 						<el-date-picker v-model="Search_StartDate_Select" type="date" placeholder="请选择起始日期"
-							size="default" style="width: 100%;" />
+							size="default" style="width: 100%;" clearable />
 					</el-col>
 					<el-col :span="4">
 						<el-date-picker v-model="Search_EndDate_Select" type="date" placeholder="请选择结束日期" size="default"
-							style="width: 100%;" />
+							style="width: 100%;" clearable />
 					</el-col>
 					<el-col :span="4">
 						<div style="text-align: left;">
@@ -134,7 +134,7 @@
 							<el-col :span="6">
 								<el-form-item label="客户状态">
 									<el-select filterable v-model="CustomerProfileform.customerStatus"
-										placeholder="选择客户状态" style="width: 100%;" disabled>
+										placeholder="选择客户状态" style="width: 100%;" disabled clearable>
 										<el-option v-for="dict in optionss.hr_customer_status" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -143,7 +143,7 @@
 							<el-col :span="6">
 								<el-form-item label="客户等级">
 									<el-select filterable v-model="CustomerProfileform.customerLevel" placeholder="自动评级"
-										disabled style="width: 100%;">
+										disabled style="width: 100%;" clearable>
 										<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -158,7 +158,7 @@
 							<el-col :span="6">
 								<el-form-item label="客户简称" prop="customerAbbreviation">
 									<el-input v-model="CustomerProfileform.customerAbbreviation" placeholder="输入客户简称"
-										style="width: 100%;" />
+										style="width: 100%;" clearable />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -166,13 +166,13 @@
 							<el-col :span="6">
 								<el-form-item label="客户名称" prop="customerName">
 									<el-input v-model="CustomerProfileform.customerName" placeholder="输入客户名称"
-										style="width: 100%;" />
+										style="width: 100%;" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="贸易国别" prop="tradingCountry">
 									<el-select filterable v-model="CustomerProfileform.tradingCountry"
-										placeholder="选择贸易国别" style="width: 100%;">
+										placeholder="选择贸易国别" style="width: 100%;" clearable>
 										<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -181,13 +181,13 @@
 							<el-col :span="6">
 								<el-form-item label="公司主页">
 									<el-input v-model="CustomerProfileform.compantWebsite" placeholder="输入公司主页地址"
-										style="width: 100%;" />
+										style="width: 100%;" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="客户来源" prop="customerSource">
 									<el-select filterable v-model="CustomerProfileform.customerSource"
-										placeholder="选择客户来源" style="width: 100%;">
+										placeholder="选择客户来源" style="width: 100%;" clearable>
 										<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -198,7 +198,7 @@
 							<el-col :span="6">
 								<el-form-item label="业务范围" prop="businessScope">
 									<el-select filterable v-model="CustomerProfileform.businessScope"
-										placeholder="选择业务范围" style="width: 100%;">
+										placeholder="选择业务范围" style="width: 100%;" clearable>
 										<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -207,7 +207,7 @@
 							<el-col :span="6">
 								<el-form-item label="价格条款">
 									<el-select filterable v-model="CustomerProfileform.pricingTerm" placeholder="选择价格条款"
-										style="width: 100%;">
+										style="width: 100%;" clearable>
 										<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -216,7 +216,7 @@
 							<el-col :span="6">
 								<el-form-item label="结汇方式">
 									<el-select filterable v-model="CustomerProfileform.settlementWay"
-										placeholder="选择结汇方式" style="width: 100%;">
+										placeholder="选择结汇方式" style="width: 100%;" clearable>
 										<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -225,7 +225,7 @@
 							<el-col :span="6">
 								<el-form-item label="收汇期限">
 									<el-input v-model="CustomerProfileform.collectionPeriod" placeholder="输入收汇期限"
-										style="width: 100%;" />
+										style="width: 100%;" clearable />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -233,13 +233,13 @@
 							<el-col :span="6">
 								<el-form-item label="客户税号">
 									<el-input v-model="CustomerProfileform.customerTaxNumber" placeholder="输入客户税号"
-										style="width: 100%;" />
+										style="width: 100%;" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="销售人员" prop="salesPerson">
 									<el-select filterable v-model="CustomerProfileform.salesPerson" placeholder="选择销售员"
-										style="width: 100%;">
+										style="width: 100%;" clearable>
 										<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -248,7 +248,7 @@
 							<el-col :span="12">
 								<el-form-item label="详细地址" prop="address1">
 									<el-input type="textarea" v-model="CustomerProfileform.address1"
-										placeholder="输入详细地址" rows="3" style="width: 100%;" />
+										placeholder="输入详细地址" rows="3" style="width: 100%;" clearable />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -310,7 +310,7 @@
 							<template #default="{ row }">
 								<el-select filterable v-model="row.sex" placeholder="请选择性别" size="default">
 									<el-option v-for="dict in optionss.sys_user_sex" :key="dict.dictCode"
-										:label="dict.dictLabel" :value="dict.dictValue" />
+										:label="dict.dictLabel" :value="dict.dictValue" clearable />
 								</el-select>
 							</template>
 						</el-table-column>
@@ -336,8 +336,8 @@
 						</el-table-column>
 						<el-table-column prop="email" label="电子邮件" width="200" align="left">
 							<template #default="{ row }">
-								<el-input v-model="row.email" type="email" placeholder="输入电子邮件"
-									size="default"></el-input>
+								<el-input v-model="row.email" type="email" placeholder="输入电子邮件" size="default"
+									clearable></el-input>
 							</template>
 						</el-table-column>
 						<el-table-column label="操作" width="100" align="center" fixed="right">
@@ -394,7 +394,7 @@
 							<el-col :span="6">
 								<el-form-item label="客户简称" prop="Cabbreviation">
 									<el-input v-model="CustomerDuplicationCheckform.Cabbreviation" placeholder="输入客户简称"
-										style="width: 100%;" />
+										style="width: 100%;" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
@@ -481,7 +481,7 @@
 							<el-col :span="6">
 								<el-form-item label="客户状态">
 									<el-select filterable v-model="CustomerProfileDetailDialogform.customerStatus"
-										placeholder="选择客户状态" style="width: 100%;" disabled>
+										placeholder="选择客户状态" style="width: 100%;" disabled clearable>
 										<el-option v-for="dict in optionss.hr_customer_status" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -490,7 +490,7 @@
 							<el-col :span="6">
 								<el-form-item label="客户等级">
 									<el-select filterable v-model="CustomerProfileDetailDialogform.customerLevel"
-										placeholder="选择客户等级" style="width: 100%;" disabled>
+										placeholder="选择客户等级" style="width: 100%;" disabled clearable>
 										<el-option v-for="dict in optionss.hr_customer_level" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -519,7 +519,7 @@
 							<el-col :span="6">
 								<el-form-item label="贸易国别">
 									<el-select filterable v-model="CustomerProfileDetailDialogform.tradingCountry"
-										placeholder="选择贸易国别" style="width: 100%;" disabled>
+										placeholder="选择贸易国别" style="width: 100%;" disabled clearable>
 										<el-option v-for="dict in optionss.hr_nation" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -534,7 +534,7 @@
 							<el-col :span="6">
 								<el-form-item label="客户来源">
 									<el-select filterable v-model="CustomerProfileDetailDialogform.customerSource"
-										disabled placeholder="选择客户来源" size="default" style="width: 100%;">
+										disabled placeholder="选择客户来源" size="default" style="width: 100%;" clearable>
 										<el-option v-for="dict in optionss.sys_customer_source" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -545,7 +545,7 @@
 							<el-col :span="6">
 								<el-form-item label="业务范围">
 									<el-select filterable v-model="CustomerProfileDetailDialogform.businessScope"
-										disabled placeholder="选择业务范围" style="width: 100%;">
+										disabled placeholder="选择业务范围" style="width: 100%;" clearable>
 										<el-option v-for="dict in optionss.hr_business_scope" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -554,7 +554,7 @@
 							<el-col :span="6">
 								<el-form-item label="价格条款">
 									<el-select filterable v-model="CustomerProfileDetailDialogform.pricingTerm"
-										placeholder="选择价格条款" style="width: 100%;" disabled>
+										placeholder="选择价格条款" style="width: 100%;" disabled clearable>
 										<el-option v-for="dict in optionss.hr_pricing_term" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -563,7 +563,7 @@
 							<el-col :span="6">
 								<el-form-item label="结汇方式">
 									<el-select filterable v-model="CustomerProfileDetailDialogform.settlementWay"
-										placeholder="选择结汇方式" style="width: 100%;" disabled>
+										placeholder="选择结汇方式" style="width: 100%;" disabled clearable>
 										<el-option v-for="dict in optionss.hr_settlement_way" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -586,7 +586,7 @@
 							<el-col :span="6">
 								<el-form-item label="销售人员">
 									<el-select filterable v-model="CustomerProfileDetailDialogform.salesPerson"
-										placeholder="选择销售员" style="width: 100%;" disabled>
+										placeholder="选择销售员" style="width: 100%;" disabled clearable>
 										<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -822,7 +822,7 @@
 						v-model="contactLogForm.businessOpportunityName" placeholder="请输入商机名称" style="width: 100%;" />
 					<!-- 其他情况显示下拉框 -->
 					<el-select v-else v-model="contactLogForm.businessOpportunityName" filterable placeholder="请选择商机名称"
-						style="width: 100%;">
+						style="width: 100%;" clearable>
 						<el-option v-for="item in businessOpportunityOptions" :key="item.dictValue"
 							:label="item.dictLabel" :value="item.dictValue" />
 					</el-select>
@@ -831,7 +831,7 @@
 					<el-col :span="12">
 						<el-form-item label="联系人" prop="contactPerson">
 							<el-select v-model="contactLogForm.contactPerson" filterable allow-create
-								placeholder="选择联系人" style="width: 100%;">
+								placeholder="选择联系人" style="width: 100%;" clearable>
 								<el-option v-for="item in ContactPersonData" :key="item.id" :label="item.name"
 									:value="item.id" />
 							</el-select>
@@ -840,7 +840,7 @@
 					<el-col :span="12">
 						<el-form-item label="我方人员" prop="ourStaff">
 							<el-select v-model="contactLogForm.ourStaff" filterable placeholder="选择我方人员"
-								style="width: 100%;">
+								style="width: 100%;" clearable>
 								<el-option v-for="item in state.optionss.sql_hr_sale" :key="item.dictValue"
 									:label="item.dictLabel" :value="item.dictValue" />
 							</el-select>
@@ -855,7 +855,7 @@
 						<el-radio :value="3">报价单</el-radio>
 					</el-radio-group>
 					<el-select v-model="contactLogForm.relatedDocumentID" filterable
-						:placeholder="getRelatedDocumentPlaceholder()" style="width: 100%;">
+						:placeholder="getRelatedDocumentPlaceholder()" style="width: 100%;" clearable>
 						<el-option v-for="item in getRelatedDocumentOptions()" :key="item.dictValue"
 							:label="item.dictLabel" :value="item.dictValue" />
 					</el-select>

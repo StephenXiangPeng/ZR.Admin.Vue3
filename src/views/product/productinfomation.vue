@@ -195,7 +195,7 @@
 					<el-col :span="6">
 						<el-form-item label="计量单位" prop="unit" data-field="unit">
 							<el-select v-model="Productform.unit" :disabled="isDisabled" placeholder="请选择计量单位"
-								style="width: 300px;" size="default">
+								style="width: 300px;" size="default" clearable>
 								<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -252,7 +252,7 @@
 					<el-col :span="6">
 						<el-form-item label="商检标志" prop="inspectionMark" data-field="inspectionMark">
 							<el-select v-model="Productform.inspectionMark" :disabled="isDisabled" placeholder="选择商检标志"
-								style="width: 300px;" size="default">
+								style="width: 300px;" size="default" clearable>
 								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -263,7 +263,7 @@
 					<el-col :span="6">
 						<el-form-item label="包装方式" prop="PackingMethod">
 							<el-select v-model="Productform.PackingMethod" :disabled="isDisabled" placeholder="选择包装方式"
-								style="width: 300px;" size="default">
+								style="width: 300px;" size="default" clearable>
 								<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -287,7 +287,7 @@
 					<el-col :span="6">
 						<el-form-item label="开发人员">
 							<el-select v-model="Productform.developmentPersonnel" placeholder="" :disabled="isDisabled"
-								style="width: 300px;" size="default">
+								style="width: 300px;" size="default" clearable>
 								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -345,7 +345,7 @@
 					<el-col :span="8" v-if="false">
 						<el-form-item label="最近报价">
 							<el-select v-model="Productform.recentQuotation" placeholder="" disabled
-								style="width: 300px;">
+								style="width: 300px;" clearable>
 							</el-select>
 						</el-form-item>
 					</el-col>
@@ -561,7 +561,7 @@
 					<el-table-column prop="subunit" label="计量单位" width="150" align="center">
 						<template #default="scope">
 							<el-select v-model="scope.row.subunit" :disabled="isDisabled" placeholder="请选择"
-								style="width: 90px;">
+								style="width: 90px;" clearable>
 								<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
 									:disabled="isDisabled" :label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -593,7 +593,7 @@
 					<el-table-column prop="subinspectionMark" label="商检标志" width="120" align="center" v-if="false">
 						<template #default="scope">
 							<el-select v-model="scope.row.subinspectionMark" :disabled="isDisabled" placeholder="请选择"
-								style="width: 90px;">
+								style="width: 90px;" clearable>
 								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -602,7 +602,7 @@
 					<el-table-column prop="subPackingMethod" label="包装方式" width="130" align="center">
 						<template #default="scope">
 							<el-select v-model="scope.row.subPackingMethod" :disabled="isDisabled" placeholder="请选择"
-								style="width: 100px;">
+								style="width: 100px;" clearable>
 								<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -633,7 +633,7 @@
 						v-if="false">
 						<template #default="scope">
 							<el-select v-model="scope.row.subrecentSampleShipment" disabled placeholder="请选择"
-								style="width: 90px;">
+								style="width: 90px;" clearable>
 								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -641,7 +641,8 @@
 					</el-table-column>
 					<el-table-column prop="subrecentQuotation" label="最近报价" width="150" align="center">
 						<template #default="scope">
-							<el-select v-model="scope.row.subrecentQuotation" placeholder="请选择" style="width: 90px;">
+							<el-select v-model="scope.row.subrecentQuotation" placeholder="请选择" style="width: 90px;"
+								clearable>
 								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
