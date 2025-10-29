@@ -109,7 +109,7 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="totalAmount" label="Total Amount" width="150" align="right">
+        <el-table-column prop="totalAmount" label="Total Amount" width="150" align="right" v-if="false">
           <template #default="{ row }">
             <span class="price">¥{{ row.totalAmount }}</span>
           </template>
@@ -175,7 +175,7 @@
           <el-descriptions-item label="Order No.">{{ selectedOrder.orderNo }}</el-descriptions-item>
           <el-descriptions-item label="Customer Name">{{ selectedOrder.customerName }}</el-descriptions-item>
           <el-descriptions-item label="Order Date">{{ formatDate(selectedOrder.orderDate) }}</el-descriptions-item>
-          <el-descriptions-item label="Total Amount">${{ selectedOrder.totalAmount }}</el-descriptions-item>
+          <el-descriptions-item label="Total Amount" v-if="false">${{ selectedOrder.totalAmount }}</el-descriptions-item>
           <el-descriptions-item label="Order Status">
             <el-tag :type="getStatusType(selectedOrder.status)">
               {{ getStatusName(selectedOrder.status) }}
@@ -296,10 +296,10 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="unitPrice" label="Unit Price" width="100" align="right">
+            <el-table-column prop="unitPrice" label="Unit Price" width="100" align="right" v-if="false">
               <template #default="{ row }">${{ row.unitPrice }}</template>
             </el-table-column>
-            <el-table-column prop="totalPrice" label="Total Price" width="100" align="right">
+            <el-table-column prop="totalPrice" label="Total Price" width="100" align="right" v-if="false" >
               <template #default="{ row }">${{ row.totalPrice }}</template>
             </el-table-column>
           </el-table>

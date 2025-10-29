@@ -123,6 +123,7 @@
         <div class="card-header">
           <span>已维护价格</span>
           <div>
+            <el-button type="success" @click="openExcelImport">Excel导入</el-button>
             <el-button type="primary" @click="openNewPrice">新增品种价格</el-button>
             <el-button :loading="loading.list" @click="loadPriceList">刷新</el-button>
           </div>
@@ -132,7 +133,7 @@
       <el-form :inline="true" class="mb12">
         <el-form-item label="折射率">
           <el-select v-model="query.refractionId" clearable placeholder="全部" style="width: 180px" @change="onQueryChange">
-            <el-option v-for="o in options.refractions" :key="o.id" :label="o.option_name" :value="o.id" />
+            <el-option v-for="o in options.refractions" :key="o.id" :label="o.optionName || o.option_name" :value="o.id" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -294,13 +295,66 @@
           <el-button type="primary" :loading="addDlg.saving" @click="saveAddSurcharge">保 存</el-button>
         </template>
       </el-dialog>
+
+    <!-- ====== Excel导入对话框 ====== -->
+    <el-dialog v-model="excelImportDlg.visible" title="品种价格Excel导入" width="650px" :close-on-click-modal="false">
+      <div class="import-content">
+        <el-alert 
+          title="导入说明" 
+          type="info" 
+          :closable="false" 
+          class="mb16"
+        >
+          <template #default>
+            <div>
+              <p>1. 支持 .xlsx 和 .xls 格式文件</p>
+              <p>2. 必填字段：INDEX(折射率)、DESIGN(设计)、MATERIALS(材质)、PRICE/PIECE(价格)</p>
+              <p>3. 系统会自动去重，重复组合将被跳过</p>
+            </div>
+          </template>
+        </el-alert>
+        
+        
+        <div class="upload-area">
+          <input 
+            ref="fileInputRef"
+            type="file" 
+            accept=".xlsx,.xls" 
+            @change="handleFileSelect"
+            style="display: none"
+          />
+          <div 
+            class="upload-dragger" 
+            @click="triggerFileSelect"
+            @dragover.prevent
+            @drop.prevent="handleFileDrop"
+          >
+            <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+            <div class="upload-text">点击选择文件或拖拽文件到此处</div>
+            <div class="upload-tip">仅允许导入xls、xlsx格式文件</div>
+          </div>
+          <div v-if="excelImportDlg.selectedFile" class="selected-file">
+            <el-icon><document /></el-icon>
+            <span>{{ excelImportDlg.selectedFile.name }}</span>
+            <el-button type="text" @click="clearSelectedFile">移除</el-button>
+          </div>
+        </div>
+      </div>
+      
+      <template #footer>
+        <el-button @click="excelImportDlg.visible = false">取 消</el-button>
+        <el-button type="primary" :loading="excelImportDlg.isUploading" @click="submitImport">开始导入</el-button>
+      </template>
+    </el-dialog>
     </el-card>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { reactive, ref, onMounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { UploadFilled, Document } from '@element-plus/icons-vue'
+import { getToken } from '@/utils/auth'
 
 /** 约定的 option_type 值（与你后端枚举保持一致） */
 const OPTION_TYPE = {
@@ -413,9 +467,9 @@ const canSubmit = computed(() =>
 )
 
 const comboPreview = computed(() => {
-  const rn = options.refractions.find(x => x.id === form.refractionId)?.option_name
-  const mn = options.materials.find(x => x.id === form.materialId)?.option_name
-  const dn = options.designs.find(x => x.id === form.designId)?.option_name
+  const rn = options.refractions.find(x => x.id === form.refractionId)?.optionName || options.refractions.find(x => x.id === form.refractionId)?.option_name
+  const mn = options.materials.find(x => x.id === form.materialId)?.optionName || options.materials.find(x => x.id === form.materialId)?.option_name
+  const dn = options.designs.find(x => x.id === form.designId)?.optionName || options.designs.find(x => x.id === form.designId)?.option_name
   if (rn && mn && dn) {
     return `${rn} × ${mn} × ${dn} → 将保存为一条品种价格`
   }
@@ -440,7 +494,8 @@ import {
   batchDeleteSurcharge,
   getSurchargeById,
   updateSurchargeStatus,
-  getCustomerUserList
+  getCustomerUserList,
+  importVarietyPrice
 } from '@/api/DFGX/priceManagement'
 
 // 获取指定类型的选项列表
@@ -458,7 +513,10 @@ async function apiGetOptions(type: number) {
 // 根据折射率获取关联材质
 async function apiGetMaterialsByRefraction(refractionId: number) {
   try {
-    const materials = await getMaterialsByRefraction(refractionId)
+    const response = await getMaterialsByRefraction(refractionId)
+    console.log('材质API响应:', response)
+    const materials = response.data || response || []
+    console.log('材质数据:', materials)
     return materials
   } catch (error) {
     console.error('获取关联材质失败:', error)
@@ -746,11 +804,11 @@ async function onRefractionChange() {
     const def = materials.find(m => m.is_default === 1)
     if (def) {
       form.materialId = def.id
-      ElMessage.success(`已自动选择默认材质: ${def.option_name || def.optionName}`)
+      ElMessage.success(`已自动选择默认材质: ${def.optionName || def.option_name}`)
     } else if (materials.length === 1) {
       // 如果只有一个材质选项，自动选择
       form.materialId = materials[0].id
-      ElMessage.success(`已自动选择材质: ${materials[0].option_name || materials[0].optionName}`)
+      ElMessage.success(`已自动选择材质: ${materials[0].optionName || materials[0].option_name}`)
     }
   } catch (error) {
     console.error('获取关联材质失败:', error)
@@ -833,6 +891,14 @@ async function removeRow(id: number) {
 async function loadPriceList() {
   loading.list = true
   try {
+    // 确保材质选项已加载
+    if (options.materials.length === 0) {
+      console.log('材质选项未加载，正在加载所有材质选项...')
+      const allMaterials = await apiGetOptions(3) // optionType=3 是材质
+      options.materials = allMaterials
+      console.log('已加载所有材质选项:', allMaterials)
+    }
+    
     const data = await apiListVarietyPrice({
       pageIndex: table.page,
       pageSize: table.pageSize,
@@ -846,9 +912,15 @@ async function loadPriceList() {
       const refraction = options.refractions.find(r => r.id === row.refractionId)
       row.refractionName = refraction?.optionName || refraction?.option_name || `折射率ID: ${row.refractionId}`
       
-      // 获取材质名称
+      // 获取材质名称 - 直接从全局材质选项中查找
       const material = options.materials.find(m => m.id === row.materialId)
-      row.materialName = material?.optionName || material?.option_name || `材质ID: ${row.materialId}`
+      if (material) {
+        row.materialName = material.optionName || material.option_name || `材质ID: ${row.materialId}`
+        console.log(`找到材质 ${row.materialId}: ${row.materialName}`)
+      } else {
+        row.materialName = `材质ID: ${row.materialId}`
+        console.log(`未找到材质ID ${row.materialId} 对应的材质`)
+      }
       
       // 获取设计名称
       const design = options.designs.find(d => d.id === row.designId)
@@ -1017,6 +1089,16 @@ const addDlg = reactive({
   }
 })
 
+/** Excel导入相关 */
+const excelImportDlg = reactive({
+  visible: false,
+  isUploading: false,
+  selectedFile: null as File | null
+})
+
+// 文件输入引用
+const fileInputRef = ref()
+
 function openAddSurcharge() {
   console.log('打开新增附加价对话框')
   addDlg.visible = true
@@ -1111,7 +1193,252 @@ async function saveAddSurcharge() {
 function gotoOptionsPage() {
   // 这里保持简单：返回上一页或根据你的路由跳转到选项管理
   // 例如：router.push('/DFGX/Options')；当前项目未注入 router，这里用历史返回
-  ElMessage.info('请到“镜片选项管理”页面新增选项后再回来设置附加价')
+  ElMessage.info('请到"镜片选项管理"页面新增选项后再回来设置附加价')
+}
+
+/** —— Excel导入功能 —— */
+// 打开品种价格Excel导入
+function openExcelImport() {
+  excelImportDlg.visible = true
+  excelImportDlg.selectedFile = null
+}
+
+// 触发文件选择
+function triggerFileSelect() {
+  fileInputRef.value?.click()
+}
+
+// 处理文件选择
+function handleFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    validateAndSetFile(file)
+  }
+}
+
+// 处理文件拖拽
+function handleFileDrop(event: DragEvent) {
+  const files = event.dataTransfer?.files
+  if (files && files.length > 0) {
+    validateAndSetFile(files[0])
+  }
+}
+
+// 验证并设置文件
+function validateAndSetFile(file: File) {
+  // 验证文件类型
+  const allowedTypes = ['.xlsx', '.xls']
+  const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase()
+  
+  if (!allowedTypes.includes(fileExtension)) {
+    ElMessage.error('只支持 .xlsx 和 .xls 格式的文件')
+    return
+  }
+  
+  // 验证文件大小 (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    ElMessage.error('文件大小不能超过 10MB')
+    return
+  }
+  
+  excelImportDlg.selectedFile = file
+}
+
+// 清除选择的文件
+function clearSelectedFile() {
+  excelImportDlg.selectedFile = null
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
+}
+
+// 文件上传进度
+function handleFileUploadProgress(event: any) {
+  excelImportDlg.isUploading = true
+}
+
+// 品种价格导入成功
+function handlePriceImportSuccess(response: any, file: any) {
+  excelImportDlg.isUploading = false
+  
+  if (response.code === 200) {
+    const data = response.data
+    
+    // 如果有错误信息，显示错误对话框
+    if (data.errors && data.errors.length > 0) {
+      showImportErrorDialog(data.errors, data.Total)
+      return
+    }
+    if (data.inserted == 0) { 
+      ElMessage.error('导入失败! ' + data.message)
+      return;
+    }
+    // 显示成功信息
+    if (data.Inserted !== undefined) {
+      ElMessage.success(`导入完成！总计 ${data.Total} 条，成功导入 ${data.inserted} 条，跳过 ${data.skipped} 条重复数据`)
+      getVarietyPriceById();
+    } else {
+      ElMessage.success(`导入完成！总计 ${data.Total} 条数据`)
+    }
+    
+    if (data.Message) {
+      ElMessage.info(data.Message)
+    }
+    
+    loadPriceList()
+  } else {
+    ElMessage.error('导入失败：' + (response.msg || '未知错误'))
+  }
+}
+
+
+// 文件上传错误
+function handleFileUploadError(error: any) {
+  excelImportDlg.isUploading = false
+  ElMessage.error('文件上传失败：' + error)
+}
+
+// 提交导入
+async function submitImport() {
+  if (!excelImportDlg.selectedFile) {
+    ElMessage.warning('请先选择要导入的文件')
+    return
+  }
+  
+  excelImportDlg.isUploading = true
+  
+  try {
+    const response = await importVarietyPrice(excelImportDlg.selectedFile)
+    
+    if (response.code === 200) {
+      const data = response.data
+      
+      // 如果有错误信息，显示错误对话框
+      if (data.errors && data.errors.length > 0) {
+        showImportErrorDialog(data.errors, data.total)
+        return;
+      }
+      
+      // 显示成功信息
+      if (data.inserted !== 0) {
+        ElMessage.success(`导入完成！总计 ${data.total} 条，成功导入 ${data.inserted} 条，跳过 ${data.skipped} 条重复数据`)
+        await getVarietyPriceById();
+      } else {
+        ElMessage.error(`导入失败！` + data.message)
+        return;
+      }
+      
+    } else {
+
+      ElMessage.error('导入失败：' + (response.data.msg || '未知错误'))
+      return;
+    }
+  } catch (error) {
+    console.error('导入失败:', error)
+    ElMessage.error('导入失败：' + (error.message || '未知错误'))
+    return;
+  } finally {
+    excelImportDlg.isUploading = false
+  }
+}
+
+
+
+// 显示导入错误对话框
+function showImportErrorDialog(errors: string[], total: number) {
+  const errorCount = errors.length
+  
+  // 创建HTML内容，每行错误单独显示
+  const errorListHTML = errors.map((error, index) => 
+    `<div class="error-item">
+      <span class="error-number">${index + 1}.</span>
+      <span class="error-message">${error}</span>
+    </div>`
+  ).join('')
+  
+  const content = `
+    <div class="import-error-content">
+      <div class="error-summary">
+        导入过程中发现 <strong>${errorCount}</strong> 个错误，请修正后重新导入：
+      </div>
+      <div class="error-list" style="height: 300px; overflow-y: scroll; border: 1px solid #e4e7ed; border-radius: 4px; background-color: #fafafa; padding: 8px;">
+        ${errorListHTML}
+      </div>
+    </div>
+  `
+  
+  // 使用 ElMessageBox.confirm 而不是 alert，这样可以更好地控制样式
+  ElMessageBox.confirm(
+    content,
+    '导入错误详情',
+    {
+      confirmButtonText: '我知道了',
+      cancelButtonText: '',
+      showCancelButton: false,
+      type: 'error',
+      dangerouslyUseHTMLString: true,
+      customClass: 'import-error-dialog',
+      showClose: true,
+      closeOnClickModal: false,
+      closeOnPressEscape: true,
+      customStyle: {
+        width: '1000px',
+        maxWidth: '1000px',
+        height: '430px',
+        maxHeight: '80vh'
+      }
+    }
+  ).then(() => {
+    // 对话框关闭后，移除动态添加的样式
+    const styleElement = document.getElementById('import-error-scroll-style')
+    if (styleElement) {
+      styleElement.remove()
+    }
+  }).catch(() => {
+    // 用户点击确认或关闭
+    const styleElement = document.getElementById('import-error-scroll-style')
+    if (styleElement) {
+      styleElement.remove()
+    }
+  })
+  
+  // 动态添加强制滚动条样式
+  setTimeout(() => {
+    const existingStyle = document.getElementById('import-error-scroll-style')
+    if (!existingStyle) {
+      const style = document.createElement('style')
+      style.id = 'import-error-scroll-style'
+      style.textContent = `
+        .import-error-dialog .error-list {
+          height: 300px !important;
+          max-height: 300px !important;
+          overflow-y: scroll !important;
+          overflow-x: hidden !important;
+          border: 1px solid #e4e7ed !important;
+          border-radius: 4px !important;
+          background-color: #fafafa !important;
+          padding: 8px !important;
+        }
+        .import-error-dialog .error-list::-webkit-scrollbar {
+          width: 10px !important;
+        }
+        .import-error-dialog .error-list::-webkit-scrollbar-track {
+          background: #f1f1f1 !important;
+          border-radius: 5px !important;
+        }
+        .import-error-dialog .error-list::-webkit-scrollbar-thumb {
+          background: #409eff !important;
+          border-radius: 5px !important;
+          min-height: 20px !important;
+        }
+        .import-error-dialog .error-list::-webkit-scrollbar-thumb:hover {
+          background: #337ecc !important;
+        }
+      `
+      document.head.appendChild(style)
+    }
+  }, 100)
 }
 
 /** —— 工具 —— */
@@ -1185,5 +1512,293 @@ onMounted(async () => {
 /* 下拉框宽度自适应 */
 .el-select {
   min-width: 200px;
+}
+
+/* Excel导入相关样式 */
+.import-content {
+  padding: 16px 0;
+}
+
+.mb16 {
+  margin-bottom: 16px;
+}
+
+.el-upload__tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.el-upload__tip .el-link {
+  margin-left: 8px;
+}
+
+/* 文件上传区域样式 */
+.upload-area {
+  .upload-dragger {
+    border: 2px dashed #d9d9d9;
+    border-radius: 6px;
+    width: 100%;
+    height: 180px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.3s;
+    
+    &:hover {
+      border-color: #409eff;
+    }
+    
+    .el-icon--upload {
+      font-size: 67px;
+      color: #c0c4cc;
+      margin-bottom: 16px;
+    }
+    
+    .upload-text {
+      color: #606266;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    
+    .upload-tip {
+      color: #909399;
+      font-size: 12px;
+    }
+  }
+  
+  .selected-file {
+    margin-top: 16px;
+    padding: 12px;
+    background-color: #f5f7fa;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    .el-icon {
+      color: #409eff;
+    }
+    
+    span {
+      flex: 1;
+      color: #606266;
+    }
+  }
+}
+
+/* 导入错误对话框样式 - 强制滚动方案 */
+:deep(.import-error-dialog) {
+  .el-message-box {
+    width: 1000px !important;
+    max-width: 1000px !important;
+    height: 600px !important;
+    max-height: 80vh !important;
+    display: block !important;
+    position: relative !important;
+  }
+  
+  .el-message-box__header {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 60px !important;
+    padding: 20px 20px 10px 20px !important;
+    border-bottom: 1px solid #e4e7ed !important;
+    background: white !important;
+    z-index: 10 !important;
+  }
+  
+  .el-message-box__title {
+    color: #f56c6c !important;
+    font-weight: bold !important;
+    font-size: 16px !important;
+  }
+  
+  .el-message-box__content {
+    position: absolute !important;
+    top: 60px !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 80px !important;
+    padding: 20px !important;
+    overflow: hidden !important;
+  }
+  
+  .el-message-box__btns {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 80px !important;
+    padding: 10px 20px 20px 20px !important;
+    border-top: 1px solid #e4e7ed !important;
+    background: white !important;
+    z-index: 10 !important;
+  }
+  
+  .import-error-content {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    
+    .error-summary {
+      flex-shrink: 0 !important;
+      margin-bottom: 12px !important;
+      padding: 12px !important;
+      background-color: #fef0f0 !important;
+      border: 1px solid #fbc4c4 !important;
+      border-radius: 4px !important;
+      color: #f56c6c !important;
+      font-size: 14px !important;
+    }
+    
+    .error-list {
+      flex: 1 !important;
+      height: 300px !important; /* 固定高度 */
+      max-height: 300px !important;
+      overflow-y: scroll !important;
+      overflow-x: hidden !important;
+      border: 1px solid #e4e7ed !important;
+      border-radius: 4px !important;
+      background-color: #fafafa !important;
+      
+      /* 强制显示滚动条 */
+      scrollbar-width: thin !important;
+      scrollbar-color: #409eff #f1f1f1 !important;
+      
+      /* 自定义滚动条样式 */
+      &::-webkit-scrollbar {
+        width: 10px !important;
+        height: 10px !important;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1 !important;
+        border-radius: 5px !important;
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: #409eff !important;
+        border-radius: 5px !important;
+        min-height: 20px !important;
+        
+        &:hover {
+          background: #337ecc !important;
+        }
+      }
+      
+      &::-webkit-scrollbar-corner {
+        background: #f1f1f1 !important;
+      }
+    }
+    
+    .error-item {
+      display: flex !important;
+      align-items: flex-start !important;
+      padding: 8px 12px !important;
+      border-bottom: 1px solid #e4e7ed !important;
+      font-size: 12px !important;
+      line-height: 1.5 !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      
+      &:last-child {
+        border-bottom: none !important;
+      }
+      
+      &:nth-child(even) {
+        background-color: #f8f9fa !important;
+      }
+      
+      .error-number {
+        color: #909399 !important;
+        font-weight: bold !important;
+        margin-right: 8px !important;
+        min-width: 20px !important;
+        flex-shrink: 0 !important;
+        font-size: 11px !important;
+      }
+      
+      .error-message {
+        color: #303133 !important;
+        flex: 1 !important;
+        word-break: break-word !important;
+        font-size: 12px !important;
+        white-space: normal !important;
+      }
+    }
+  }
+  
+  /* 小屏幕适配 */
+  @media (max-height: 700px) {
+    .el-message-box {
+      height: 500px !important;
+      max-height: 90vh !important;
+    }
+    
+    .error-list {
+      height: 250px !important;
+      max-height: 250px !important;
+    }
+  }
+  
+  @media (max-height: 600px) {
+    .el-message-box {
+      height: 450px !important;
+      max-height: 95vh !important;
+    }
+    
+    .error-list {
+      height: 200px !important;
+      max-height: 200px !important;
+    }
+  }
+  
+  @media (max-height: 500px) {
+    .el-message-box {
+      height: 400px !important;
+      max-height: 98vh !important;
+    }
+    
+    .error-list {
+      height: 150px !important;
+      max-height: 150px !important;
+    }
+  }
+}
+
+/* 全局强制滚动条样式 - 针对导入错误对话框 */
+:global(.import-error-dialog .error-list) {
+  overflow-y: scroll !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #409eff #f1f1f1 !important;
+}
+
+:global(.import-error-dialog .error-list::-webkit-scrollbar) {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+:global(.import-error-dialog .error-list::-webkit-scrollbar-track) {
+  background: #f1f1f1 !important;
+  border-radius: 5px !important;
+}
+
+:global(.import-error-dialog .error-list::-webkit-scrollbar-thumb) {
+  background: #409eff !important;
+  border-radius: 5px !important;
+  min-height: 20px !important;
+}
+
+:global(.import-error-dialog .error-list::-webkit-scrollbar-thumb:hover) {
+  background: #337ecc !important;
 }
 </style>

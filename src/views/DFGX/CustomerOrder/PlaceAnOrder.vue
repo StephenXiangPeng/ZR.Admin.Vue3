@@ -261,7 +261,7 @@
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="Quantity" prop="rightEye.quantity">
-                      <el-input-number v-model="orderForm.rightEye.quantity" :min="1" :max="100" style="width: 100%"></el-input-number>
+                      <el-input-number v-model="orderForm.rightEye.quantity" :min="0" :max="100" style="width: 100%"></el-input-number>
                     </el-form-item>
                   </el-col>
                 </el-row>
@@ -333,7 +333,7 @@
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="Quantity" prop="leftEye.quantity">
-                      <el-input-number v-model="orderForm.leftEye.quantity" :min="1" :max="100" style="width: 100%"></el-input-number>
+                      <el-input-number v-model="orderForm.leftEye.quantity" :min="0" :max="100" style="width: 100%"></el-input-number>
                     </el-form-item>
                   </el-col>
                 </el-row>
@@ -527,7 +527,7 @@
         </el-card>
 
         <!-- Price Information -->
-        <el-card class="form-card" shadow="hover">
+        <el-card class="form-card" shadow="hover" v-if="false">
           <template #header>
             <div class="card-header">
               <span>Price Information</span>

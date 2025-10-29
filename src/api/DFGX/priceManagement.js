@@ -222,3 +222,24 @@ export function getCustomerUserList() {
 		method: 'get'
 	})
 }
+
+// ========== Excel导入相关 ==========
+
+// 品种价格Excel导入
+export function importVarietyPrice(file, customerId = null) {
+	const formData = new FormData()
+	formData.append('file', file)
+
+	// 构建查询参数
+	let url = 'DFGXPriceManager/ImportVarietyPrice/ImportVarietyPrice'
+	return request({
+		url: url,
+		method: 'post',
+		data: formData,
+		headers: {
+			'Content-Type': 'multipart/form-data'
+		}
+	})
+}
+
+
