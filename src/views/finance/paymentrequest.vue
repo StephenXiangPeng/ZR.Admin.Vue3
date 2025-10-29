@@ -164,8 +164,9 @@
 						<el-row>
 							<el-col :span="6">
 								<el-form-item label="收款单位" placeholder="请选择收款单位">
-									<!-- 日常费用且为市场开发、产品开发、其它费用时，使用输入框 -->
-									<el-input v-if="isDailyExpenseWithManualInput()"
+									<!-- 日常费用且为市场开发、产品开发、其它费用时，或客户事宜时，使用输入框 -->
+									<el-input
+										v-if="isDailyExpenseWithManualInput() || isCustomerMatterWithManualInput()"
 										v-model="addpaymentrequestform.payeeName" style="width: 300px"
 										:disabled="IsDisabled" size="default" placeholder="请输入收款单位名称"
 										@input="handleManualPayeeInput" />
@@ -187,7 +188,8 @@
 							<el-col :span="6">
 								<el-form-item label="开户银行">
 									<!-- 需要手动输入银行信息时，使用可编辑输入框 -->
-									<el-input v-if="isDailyExpenseWithManualInput() || isManualBankInput()"
+									<el-input
+										v-if="isDailyExpenseWithManualInput() || isManualBankInput() || isCustomerMatterWithManualInput()"
 										v-model="addpaymentrequestform.bankName" style="width: 300px"
 										:disabled="IsDisabled" size="default" placeholder="请输入开户银行" />
 									<!-- 其他情况使用只读输入框 -->
@@ -198,7 +200,8 @@
 							<el-col :span="6">
 								<el-form-item label="银行账号">
 									<!-- 需要手动输入银行信息时，使用输入框 -->
-									<el-input v-if="isDailyExpenseWithManualInput() || isManualBankInput()"
+									<el-input
+										v-if="isDailyExpenseWithManualInput() || isManualBankInput() || isCustomerMatterWithManualInput()"
 										v-model="addpaymentrequestform.bankAccount" style="width: 300px"
 										:disabled="IsDisabled" size="default" placeholder="请输入银行账号" />
 									<!-- 其他情况使用下拉选择 -->
@@ -244,24 +247,32 @@
 										:disabled="IsDisabled" size="default" clearable></el-input>
 								</el-form-item>
 							</el-col>
+							<!-- 关联合同列 - 仅在业务费用且为其它款项名称时显示 -->
+							<el-col :span="6" v-if="isBusinessExpenseWithContract()">
+								<el-form-item label="关联合同">
+									<el-select v-model="addpaymentrequestform.relatedContract" style="width: 300px"
+										:disabled="IsDisabled" size="default" clearable placeholder="请选择关联合同">
+										<el-option v-for="contract in contractList" :key="contract.dictvalue"
+											:label="contract.dictLabel" :value="contract.dictvalue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<!-- 相关客户列 - 仅在日常费用且为客户事宜时显示 -->
+							<el-col :span="6" v-if="isDailyExpenseWithCustomerOptions()">
+								<el-form-item label="相关客户">
+									<el-select v-model="addpaymentrequestform.relatedCustomer" style="width: 300px"
+										:disabled="IsDisabled" size="default" clearable placeholder="请选择相关客户">
+										<el-option v-for="customer in customerOptions" :key="customer.dictvalue"
+											:label="customer.dictLabel" :value="customer.dictvalue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
 							<el-col :span="6">
 								<el-form-item label="申请人">
 									<el-select v-model="addpaymentrequestform.applicant" style="width: 300px"
 										:disabled="IsDisabled" size="default" clearable>
 										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" :disabled="IsDisabled" />
-									</el-select>
-								</el-form-item>
-							</el-col>
-						</el-row>
-						<!-- 关联合同行 - 仅在业务费用且为其它款项名称时显示 -->
-						<el-row v-if="isBusinessExpenseWithContract()">
-							<el-col :span="6">
-								<el-form-item label="关联合同">
-									<el-select v-model="addpaymentrequestform.relatedContract" style="width: 300px"
-										:disabled="IsDisabled" size="default" clearable placeholder="请选择关联合同">
-										<el-option v-for="contract in contractList" :key="contract.dictvalue"
-											:label="contract.dictLabel" :value="contract.dictvalue" />
 									</el-select>
 								</el-form-item>
 							</el-col>
@@ -692,13 +703,16 @@ const addpaymentrequestform = ref({
 	financialApproval: '',
 	handler: '',
 	remarks: '',
-	relatedContract: '' // 关联合同字段
+	relatedContract: '', // 关联合同字段
+	relatedCustomer: '' // 相关客户字段
 })
 
 // 供应商银行账号列表
 const supplierBankAccounts = ref([])
 // 关联合同列表
 const contractList = ref([])
+// 客户选项列表
+const customerOptions = ref([])
 const handleAddRowCostDetails = () => {
 	activeTab.value = 'CostDetailsTab'
 
@@ -1209,6 +1223,7 @@ const FormHandler = {
 			IsDelete: 0,
 			CompanyType: getCurrentCompanyType(),
 			RelatedContract: addpaymentrequestform.value.relatedContract || '', // 关联合同字段
+			RelatedCustomer: addpaymentrequestform.value.relatedCustomer || '', // 相关客户字段
 			PaymentRequestDetails: processedDetails
 		};
 	},
@@ -1390,6 +1405,10 @@ const CheckPaymentRequest = async (row) => {
 			// 等待一个微任务，确保PaymentTypeOptions已经设置
 			await new Promise(resolve => setTimeout(resolve, 0));
 			await loadDailyExpensePayeeOptionsForViewByPaymentName(addpaymentrequestform.value.paymentName);
+			// 如果是客户事宜，加载客户选项
+			if (isDailyExpenseWithCustomerOptions()) {
+				await loadCustomerOptions();
+			}
 		} else {
 			// 确保供应商列表已加载
 			if (filteredSupplierList.value.length === 0) {
@@ -1555,6 +1574,7 @@ const CheckPaymentRequest = async (row) => {
 		addpaymentrequestform.value.handler = response.data.paymentRequest.handler.toString();
 		addpaymentrequestform.value.remarks = response.data.paymentRequest.remark || '';
 		addpaymentrequestform.value.relatedContract = response.data.paymentRequest.relatedContracts || '';
+		addpaymentrequestform.value.relatedCustomer = response.data.paymentRequest.relatedCustomer || '';
 		// 如果是业务费用且为其它款项名称，先加载合同列表，再设置关联合同值
 		if (isBusinessExpenseWithContract()) {
 			await loadContractList(addpaymentrequestform.value.payeeCode);
@@ -2028,7 +2048,8 @@ const resetForm = () => {
 		financialApproval: '',
 		handler: '',
 		remarks: '',
-		relatedContract: '' // 关联合同字段
+		relatedContract: '', // 关联合同字段
+		relatedCustomer: '' // 相关客户字段
 	};
 
 	// 清空费用明细表格数据
@@ -2039,6 +2060,9 @@ const resetForm = () => {
 
 	// 清空合同列表
 	contractList.value = [];
+
+	// 清空客户选项列表
+	customerOptions.value = [];
 
 	// 清空未付款详情数据
 	UnpaidDetailsTbaleData.value = [];
@@ -2458,6 +2482,10 @@ const paymentNameChange = async () => {
 	// 日常费用收款单位选项动态获取逻辑
 	if (addpaymentrequestform.value.paymentCategory === '4') { // 日常费用
 		await loadDailyExpensePayeeOptions();
+		// 如果是客户事宜，加载客户选项
+		if (isDailyExpenseWithCustomerOptions()) {
+			await loadCustomerOptions();
+		}
 	}
 
 	if (!showPaymentDetails.value) {
@@ -2585,6 +2613,35 @@ const loadBusinessExpensePayeeOptions = async () => {
 // 日常费用收款单位选项动态获取函数
 const loadDailyExpensePayeeOptions = async () => {
 	await PayeeOptionsLoader.loadOptions('4', addpaymentrequestform.value.paymentName);
+};
+
+// 加载客户选项
+const loadCustomerOptions = async () => {
+	try {
+		// 调用API获取客户选项
+		const response = await request({
+			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
+			method: 'GET',
+			params: {
+				companyType: 4 // 客户类型
+			}
+		});
+
+		ApiRequestHandler.handleResponse(
+			response,
+			(data) => {
+				// 更新客户选项列表，标准化数据结构
+				customerOptions.value = ApiRequestHandler.standardizeData(data);
+			},
+			() => {
+				customerOptions.value = [];
+			}
+		);
+	} catch (error) {
+		ApiRequestHandler.handleError(error, () => {
+			customerOptions.value = [];
+		});
+	}
 };
 
 // 获取公司类型名称
@@ -2761,6 +2818,22 @@ const isDailyExpenseWithCustomerOptions = () => {
 	return currentPaymentNameLabel.includes('客户事宜');
 };
 
+// 判断是否为客户事宜且需要收款单位输入框的情况
+const isCustomerMatterWithManualInput = () => {
+	// 检查是否为日常费用类别
+	if (addpaymentrequestform.value.paymentCategory !== '4') {
+		return false;
+	}
+
+	// 获取当前选择的款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === addpaymentrequestform.value.paymentName
+	)?.dictLabel || '';
+
+	// 判断是否为客户事宜
+	return currentPaymentNameLabel.includes('客户事宜');
+};
+
 // 判断是否为业务费用且需要关联合同的情况
 const isBusinessExpenseWithContract = () => {
 	// 检查是否为业务费用类别
@@ -2807,7 +2880,7 @@ const isManualBankInput = () => {
 // 处理手动输入收款单位时的逻辑
 const handleManualPayeeInput = () => {
 	// 当手动输入收款单位时，清空相关的银行信息，让用户手动输入
-	if (isDailyExpenseWithManualInput() || isManualBankInput()) {
+	if (isDailyExpenseWithManualInput() || isManualBankInput() || isCustomerMatterWithManualInput()) {
 		// 清空银行账号下拉选项
 		supplierBankAccounts.value = [];
 		// 如果用户没有手动输入银行信息，则清空
