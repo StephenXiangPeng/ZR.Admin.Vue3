@@ -294,8 +294,9 @@
 					</el-col>
 					<el-col :span="6">
 						<el-form-item label="运输方式">
-							<el-select filterable v-model="AddShippingDeliveryform.transportationMethod" disabled
-								placeholder="选择运输方式" style="width: 300px" size="default" clearable>
+							<el-select filterable v-model="AddShippingDeliveryform.transportationMethod"
+								placeholder="选择运输方式" style="width: 300px" size="default" clearable
+								:disabled="IsEditable">
 								<el-option v-for="dict in optionss.hr_transportation_method" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
@@ -349,10 +350,19 @@
 			<el-form label-width="120px">
 				<el-row>
 					<el-col :span="6">
-						<el-form-item label="前程运输">
-							<el-select filterable v-model="AddShippingDeliveryform.preCarriageTransport"
+						<el-form-item label="快递公司">
+							<el-select filterable v-model="AddShippingDeliveryform.courierCompaniesID"
 								style="width: 300px" :disabled="IsEditable" clearable size="default">
-								<el-option v-for="dict in optionss.hr_domestic_transport" :key="dict.dictCode"
+								<el-option v-for="dict in optionss.hr_courier_companies" :key="dict.dictValue"
+									:label="dict.dictLabel" :value="dict.dictValue" />
+							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="6">
+						<el-form-item label="物流公司">
+							<el-select filterable v-model="AddShippingDeliveryform.logisticsCompanyID"
+								style="width: 300px" :disabled="IsEditable" clearable size="default">
+								<el-option v-for="dict in optionss.hr_logistics_companies" :key="dict.dictValue"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
@@ -361,7 +371,7 @@
 						<el-form-item label="船代公司">
 							<el-select filterable v-model="AddShippingDeliveryform.shippingAgent" style="width: 300px"
 								:disabled="IsEditable" clearable size="default">
-								<el-option v-for="dict in optionss.hr_freight_forwarding_company" :key="dict.dictCode"
+								<el-option v-for="dict in optionss.hr_freight_forwarders" :key="dict.dictValue"
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
@@ -684,6 +694,8 @@ const AddShippingDeliveryform = ref({
 	documentClerk: '',
 	isDeposit: 0,
 	preCarriageTransport: '',
+	courierCompaniesID: '',
+	logisticsCompanyID: '',
 	shippingAgent: '',
 	remark: '',
 	shipmentTotalAmount: 0
@@ -708,6 +720,9 @@ const state = reactive({
 		hr_bank: [],
 		hr_domestic_transport: [],
 		hr_freight_forwarding_company: [],
+		hr_freight_forwarders: [],
+		hr_courier_companies: [],
+		hr_logistics_companies: [],
 		hr_calculate_unit: [],
 		hr_outerbox_unit: [],
 		sql_supplier_info: [],
@@ -737,6 +752,25 @@ async function fetchDataAndExecute() {
 	}
 }
 fetchDataAndExecute();
+
+// 加载货代/快递/物流公司下拉
+const loadLogisticsCompanySelects = async () => {
+	try {
+		// companyType: 1=货代公司, 2=快递公司, 3=物流公司
+		const [freightRes, courierRes, logisticsRes] = await Promise.all([
+			request({ url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect', method: 'get', params: { companyType: 1 } }),
+			request({ url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect', method: 'get', params: { companyType: 2 } }),
+			request({ url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect', method: 'get', params: { companyType: 3 } })
+		])
+
+		state.optionss.hr_freight_forwarders = (freightRes.data || []).map(x => ({ dictValue: String(x.dictValue), dictLabel: x.dictLabel }))
+		state.optionss.hr_courier_companies = (courierRes.data || []).map(x => ({ dictValue: String(x.dictValue), dictLabel: x.dictLabel }))
+		state.optionss.hr_logistics_companies = (logisticsRes.data || []).map(x => ({ dictValue: String(x.dictValue), dictLabel: x.dictLabel }))
+	} catch (e) {
+		console.error('加载物流公司下拉失败:', e)
+	}
+}
+loadLogisticsCompanySelects();
 
 //获取特定的客户数据
 const getCustomerData = async () => {
@@ -1092,6 +1126,8 @@ const OpenCreateshippingdeliveryDialog = () => {
 		documentClerk: userId.toString(),  // 默认当前用户
 		isDeposit: 0,
 		preCarriageTransport: '',
+		courierCompaniesID: '',
+		logisticsCompanyID: '',
 		shippingAgent: '',
 		remark: '',
 		shipmentTotalAmount: 0
@@ -1196,6 +1232,10 @@ const SaveClick = async (isDraft) => {
 			IsDeposit: AddShippingDeliveryform.value.isDeposit ? false : true,
 			PreCarriageTransport: AddShippingDeliveryform.value.preCarriageTransport ?
 				Number(AddShippingDeliveryform.value.preCarriageTransport) : null,
+			CourierCompaniesID: AddShippingDeliveryform.value.courierCompaniesID ?
+				Number(AddShippingDeliveryform.value.courierCompaniesID) : null,
+			LogisticsCompanyID: AddShippingDeliveryform.value.logisticsCompanyID ?
+				Number(AddShippingDeliveryform.value.logisticsCompanyID) : null,
 			ShippingAgent: AddShippingDeliveryform.value.shippingAgent ?
 				Number(AddShippingDeliveryform.value.shippingAgent) : null,
 			Remark: AddShippingDeliveryform.value.remark,
@@ -1415,6 +1455,10 @@ const EditSaveClick = (isDraft) => {
 			IsDeposit: AddShippingDeliveryform.value.isDeposit ? true : false,
 			PreCarriageTransport: AddShippingDeliveryform.value.preCarriageTransport ?
 				Number(AddShippingDeliveryform.value.preCarriageTransport) : null,
+			CourierCompaniesID: AddShippingDeliveryform.value.courierCompaniesID ?
+				Number(AddShippingDeliveryform.value.courierCompaniesID) : null,
+			LogisticsCompanyID: AddShippingDeliveryform.value.logisticsCompanyID ?
+				Number(AddShippingDeliveryform.value.logisticsCompanyID) : null,
 			ShippingAgent: AddShippingDeliveryform.value.shippingAgent ?
 				Number(AddShippingDeliveryform.value.shippingAgent) : null,
 			Remark: AddShippingDeliveryform.value.remark || '无备注',
@@ -1694,6 +1738,8 @@ const CheckShipingDelivery = async (row) => {
 			AddShippingDeliveryform.value.isDeposit = response.data.shippingDeliveries.isDeposit;
 			AddShippingDeliveryform.value.preCarriageTransport = response.data.shippingDeliveries.preCarriageTransport ? response.data.shippingDeliveries.preCarriageTransport.toString() : '';
 			AddShippingDeliveryform.value.shippingAgent = response.data.shippingDeliveries.shippingAgent ? response.data.shippingDeliveries.shippingAgent.toString() : '';
+			AddShippingDeliveryform.value.courierCompaniesID = response.data.shippingDeliveries.courierCompaniesID ? response.data.shippingDeliveries.courierCompaniesID.toString() : '';
+			AddShippingDeliveryform.value.logisticsCompanyID = response.data.shippingDeliveries.logisticsCompanyID ? response.data.shippingDeliveries.logisticsCompanyID.toString() : '';
 			AddShippingDeliveryform.value.remark = response.data.shippingDeliveries.remark || '';
 			AddShippingDeliveryform.value.shipmentTotalAmount = response.data.shippingDeliveries.shipmentTotalAmount || 0;
 
@@ -1869,6 +1915,8 @@ const CreateshippingdeliveryDialogClose = async () => {
 	AddShippingDeliveryform.value.documentClerk = '';
 	AddShippingDeliveryform.value.isDeposit = 0;
 	AddShippingDeliveryform.value.preCarriageTransport = '';
+	AddShippingDeliveryform.value.courierCompaniesID = '';
+	AddShippingDeliveryform.value.logisticsCompanyID = '';
 	AddShippingDeliveryform.value.shippingAgent = '';
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];

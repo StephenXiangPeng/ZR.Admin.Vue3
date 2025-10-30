@@ -53,7 +53,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center">
           <el-checkbox v-model="loginForm.rememberMe">{{ $t('login.rememberMe') }}</el-checkbox>
           <span style="font-size: 12px">
-            <router-link class="link-type" :to="'/register'">{{ $t('login.register') }}</router-link>
+            <!-- <router-link class="link-type" :to="'/register'">{{ $t('login.register') }}</router-link> -->
             <span @click="handleForgetPwd()" class="forget-pwd">{{ $t('login.forgotPwd') }}</span>
           </span>
         </div>

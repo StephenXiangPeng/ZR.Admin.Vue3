@@ -885,6 +885,12 @@ const PaymentTypeOptions = ref([]);
 const paymentCategoryChange = async () => {
 	addpaymentrequestform.value.paymentName = '';
 
+	// 若付款类别被清空，需同时清空款项名称选项列表并退出
+	if (!addpaymentrequestform.value.paymentCategory) {
+		PaymentTypeOptions.value = [];
+		return;
+	}
+
 	// 清空收款单位相关字段
 	addpaymentrequestform.value.payeeCode = '';
 	addpaymentrequestform.value.payeeName = '';

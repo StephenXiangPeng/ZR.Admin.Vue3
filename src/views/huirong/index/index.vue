@@ -1514,10 +1514,12 @@
       <el-divider></el-divider>
 
       <el-descriptions :column="3" border>
-        <el-descriptions-item label="前程运输">
-          {{ ShippingDeliveryForm.preCarriageTransport }}
+        <el-descriptions-item label="快递公司">
+          {{ ShippingDeliveryForm.courierCompaniesID }}
         </el-descriptions-item>
-
+        <el-descriptions-item label="物流公司">
+          {{ ShippingDeliveryForm.logisticsCompanyID }}
+        </el-descriptions-item>
         <el-descriptions-item label="船代公司">
           {{ ShippingDeliveryForm.shippingAgent }}
         </el-descriptions-item>
@@ -2827,7 +2829,6 @@ const selectDate = (date) => {
   // 实现日期选择逻辑
   console.log('选择日期:', date);
 };
-
 const handleOpportunityClick = (item) => {
   // 实现商机双击跳转逻辑
   console.log('双击商机:', item);
@@ -3431,7 +3432,6 @@ const claimRules = {
     { required: true, message: '请选择款项类型', trigger: 'change' }
   ]
 }
-
 // 打开领取对话框
 const handleClaim = async (row) => {
   claimForm.id = row.id
@@ -4383,8 +4383,15 @@ const openSaleContractDialog = (row) => {
       ShippingDeliveryForm.value.receivableDate = response.data.shippingDeliveries.receivableDate;
       ShippingDeliveryForm.value.documentClerk = state.optionss['sql_all_user'].find(item => item.dictValue === response.data.shippingDeliveries.documentClerk.toString()).dictLabel;
       ShippingDeliveryForm.value.isDeposit = response.data.shippingDeliveries.isDeposit.toString();
-      ShippingDeliveryForm.value.preCarriageTransport = state.optionss['hr_domestic_transport'].find(item => item.dictValue === response.data.shippingDeliveries.shippingAgent.toString()).dictLabel;
-      ShippingDeliveryForm.value.shippingAgent = state.optionss['hr_freight_forwarding_company'].find(item => item.dictValue === response.data.shippingDeliveries.preCarriageTransport.toString()).dictLabel;
+      // 运输相关字典映射（显示为名称）
+      ShippingDeliveryForm.value.preCarriageTransport = state.optionss['hr_domestic_transport']
+        .find(item => item.dictValue === (response.data.shippingDeliveries.preCarriageTransport ?? '').toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.shippingAgent = state.optionss['hr_freight_forwarders']
+        .find(item => item.dictValue === (response.data.shippingDeliveries.shippingAgent ?? '').toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.courierCompaniesID = state.optionss['hr_courier_companies']
+        .find(item => item.dictValue === (response.data.shippingDeliveries.courierCompaniesID ?? '').toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.logisticsCompanyID = state.optionss['hr_logistics_companies']
+        .find(item => item.dictValue === (response.data.shippingDeliveries.logisticsCompanyID ?? '').toString())?.dictLabel || '';
       ShippingDeliveryForm.value.remark = response.data.shippingDeliveries.remark;
 
       if (response.data.shippingDeliveryProducts.length > 0) {
@@ -4893,6 +4900,9 @@ const state = reactive({
     hr_shipping_status: [],
     hr_domestic_transport: [],
     hr_freight_forwarding_company: [],
+    hr_freight_forwarders: [],
+    hr_courier_companies: [],
+    hr_logistics_companies: [],
     sql_product: [],
     sql_settlement: [],
     hr_payment_contract_type: [],
@@ -4904,6 +4914,22 @@ const state = reactive({
   }
 })
 const { optionss } = toRefs(state)
+// 独立加载 货代/快递/物流 公司下拉（首页）
+const loadLogisticsCompanySelectsForIndex = async () => {
+  try {
+    const [freightRes, courierRes, logisticsRes] = await Promise.all([
+      request({ url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect', method: 'get', params: { companyType: 1 } }),
+      request({ url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect', method: 'get', params: { companyType: 2 } }),
+      request({ url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect', method: 'get', params: { companyType: 3 } })
+    ])
+
+    state.optionss.hr_freight_forwarders = (freightRes.data || []).map(x => ({ dictValue: String(x.dictValue), dictLabel: x.dictLabel }))
+    state.optionss.hr_courier_companies = (courierRes.data || []).map(x => ({ dictValue: String(x.dictValue), dictLabel: x.dictLabel }))
+    state.optionss.hr_logistics_companies = (logisticsRes.data || []).map(x => ({ dictValue: String(x.dictValue), dictLabel: x.dictLabel }))
+  } catch (e) {
+    console.error('加载物流公司下拉失败(index):', e)
+  }
+}
 //从后台读取多个字典数据
 var dictParams = [
   { dictType: 'sql_all_user' },
@@ -5113,7 +5139,6 @@ const options = [
     label: '西七区：盐湖城、丹佛、凤凰城',
   }
 ]
-
 const value2 = ref('')
 
 const options2 = [
@@ -5322,6 +5347,8 @@ const ShippingDeliveryForm = ref({
   documentClerk: '',
   isDeposit: 0,
   preCarriageTransport: '',
+  courierCompaniesID: '',
+  logisticsCompanyID: '',
   shippingAgent: '',
   remark: ''
 })
@@ -5732,7 +5759,6 @@ const getTaskReminderList = (params) => {
     params
   })
 }
-
 const selectedDate = ref('')
 const handleModifyDeliveryDate = (row) => {
   // 重置日期
@@ -6050,6 +6076,8 @@ onMounted(async () => {
     }
 
     await Promise.all(dataPromises);
+    // 加载货代/快递/物流公司下拉
+    await loadLogisticsCompanySelectsForIndex();
 
     // 字典数据加载完成后，初始化汇率填写通知
     initExchangeRateNotification();
@@ -6379,8 +6407,6 @@ const showExchangeRateNotification = () => {
   // 设置定时器，每隔指定时间检查一次
   startExchangeRateNotificationTimer()
 }
-
-
 // 强制初始化表单
 const forceInitForm = () => {
   // 清空现有数据
