@@ -18,6 +18,8 @@
       v-model:file-list="fileList"
       :on-preview="handlePictureCardPreview"
       :style="cssVars"
+      :auto-upload="autoUpload"
+      ref="uploadRef"
       :class="{ hide: fileList.length >= limit }">
       <slot name="icon">
         <el-icon class="avatar-uploader-icon"><uploadFilled /></el-icon>
@@ -96,19 +98,44 @@ const props = defineProps({
   listType: {
     type: String,
     default: 'picture-card'
+  },
+  // 是否自动上传
+  autoUpload: {
+    type: Boolean,
+    default: true
   }
 })
 
 const { proxy } = getCurrentInstance()
-const emit = defineEmits()
+const emit = defineEmits(['success','update:modelValue'])
 const number = ref(0)
 const uploadList = ref([])
 const dialogImageUrl = ref('')
 const dialogVisible = ref(false)
 const baseUrl = import.meta.env.VITE_APP_BASE_API
-const uploadImgUrl = ref(baseUrl + import.meta.env.VITE_APP_UPLOAD_URL) // 上传的图片服务器地址
+const apiHost = import.meta.env.VITE_APP_API_HOST
+const isDev = import.meta.env.DEV
+const apiPrefix = computed(() => {
+  // 与业务接口同前缀：开发环境固定 /dev-api；生产环境用 VITE_APP_BASE_API
+  if (isDev) return '/dev-api'
+  return typeof baseUrl === 'string' ? baseUrl : ''
+})
+const uploadBase = computed(() => {
+  // 本地开发强制使用 /dev-api 以命中 vite 代理
+  if (isDev) return '/dev-api'
+  return baseUrl
+})
+const uploadImgUrl = computed(() => {
+  const prefix = String(uploadBase.value || '')
+  const path = String(import.meta.env.VITE_APP_UPLOAD_URL || '/common/upload')
+  if (!prefix) return path
+  if (prefix.endsWith('/') && path.startsWith('/')) return prefix + path.slice(1)
+  if (!prefix.endsWith('/') && !path.startsWith('/')) return prefix + '/' + path
+  return prefix + path
+}) // 上传的图片服务器地址
 const headers = ref({ Authorization: 'Bearer ' + getToken() })
 const fileList = ref([])
+const uploadRef = ref()
 const showTip = computed(() => props.isShowTip && (props.fileType || props.fileSize))
 const uploadData = computed(() => props.data)
 const cssVars = computed(() => {
@@ -140,7 +167,10 @@ watch(
 
 // 删除图片
 function handleRemove(file, files) {
-  emit('update:modelValue', listToString(fileList.value))
+  // 优先使用回调传入的最新文件列表，避免依赖可能滞后的内部 fileList
+  const current = Array.isArray(files) ? files : fileList.value
+  const value = listToString(current)
+  emit('update:modelValue', value)
 }
 
 // 上传成功回调
@@ -151,12 +181,41 @@ function handleUploadSuccess(res) {
     fileList.value = fileList.value.slice(0, fileList.value.length - 1)
     return
   }
-  uploadList.value.push({ name: res.data.fileName, url: res.data.url })
+  // 兼容后端返回的相对路径，自动补齐与接口一致的前缀（开发：/dev-api；生产：VITE_APP_BASE_API）
+  const rawUrl = (res.data && (res.data.url || res.data.fileUrl || res.data.path)) || ''
+  const name = (res.data && (res.data.fileName || res.data.name)) || (rawUrl ? rawUrl.split('/').pop() : '')
+  let finalUrl = rawUrl
+  if (isDev) {
+    // 开发环境：全部映射到 /dev-api 与接口一致
+    if (/^https?:\/\//i.test(rawUrl)) {
+      try {
+        const u = new URL(rawUrl)
+        finalUrl = apiPrefix.value.replace(/\/$/, '') + u.pathname
+      } catch (e) {
+        finalUrl = apiPrefix.value.replace(/\/$/, '') + (rawUrl.startsWith('/') ? '' : '/') + rawUrl
+      }
+    } else {
+      finalUrl = apiPrefix.value.replace(/\/$/, '') + (rawUrl.startsWith('/') ? '' : '/') + rawUrl
+    }
+  } else {
+    // 生产环境：相对路径拼接 BASE_API；绝对路径保持
+    if (finalUrl && !/^https?:\/\//i.test(finalUrl)) {
+      if (typeof apiHost === 'string' && /^https?:\/\//i.test(apiHost)) {
+        finalUrl = finalUrl.startsWith('/') ? apiHost + finalUrl : apiHost + '/' + finalUrl
+      } else if (typeof baseUrl === 'string' && /^https?:\/\//i.test(baseUrl)) {
+        finalUrl = finalUrl.startsWith('/') ? baseUrl + finalUrl : baseUrl + '/' + finalUrl
+      } else if (typeof baseUrl === 'string' && baseUrl.startsWith('/')) {
+        finalUrl = baseUrl.replace(/\/$/, '') + (finalUrl.startsWith('/') ? '' : '/') + finalUrl
+      }
+    }
+  }
+  uploadList.value.push({ name, url: finalUrl })
   if (uploadList.value.length === number.value) {
     fileList.value = fileList.value.filter((f) => f.url !== undefined).concat(uploadList.value)
     uploadList.value = []
     number.value = 0
     emit('update:modelValue', listToString(fileList.value))
+    emit('success', listToString(fileList.value))
   }
   proxy.$modal.closeLoading()
 }
@@ -223,6 +282,18 @@ function listToString(list, separator) {
 function copySuccess() {
   proxy.$modal.msgSuccess('复制成功')
 }
+
+// 手动提交上传（当 :auto-upload="false" 时可用）
+function submitUpload() {
+  if (uploadRef.value && typeof uploadRef.value.submit === 'function') {
+    uploadRef.value.submit()
+  }
+}
+
+defineExpose({
+  submitUpload,
+  fileList
+})
 </script>
 <style>
 .el-upload--picture-card {

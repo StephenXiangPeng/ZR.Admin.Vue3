@@ -190,12 +190,12 @@
         <!-- Order Status Progress -->
         <div class="order-status-section">
           <h4>Order Status Progress</h4>
-          <el-steps :active="getOrderStatusStep(selectedOrder.orderStatus)" finish-status="success" align-center>
+          <el-steps :active="getFilteredOrderStatusStep(selectedOrder.orderStatus)" finish-status="success" align-center>
             <el-step 
-              v-for="(status, index) in orderStatusOptions" 
+              v-for="(status, index) in filteredOrderStatusOptions" 
               :key="index"
               :title="status.label"
-              :description="getStatusDescription(index, selectedOrder.orderStatus)">
+              :description="getFilteredStatusDescription(index, selectedOrder.orderStatus)">
             </el-step>
           </el-steps>
         </div>
@@ -424,6 +424,12 @@ const orderStatusOptions = ref([
   { value: 6, label: 'SHIPPED' }
 ])
 
+// 仅显示 1、5、6 阶段
+const filteredOrderStatusValues = [1, 5, 6]
+const filteredOrderStatusOptions = computed(() =>
+  orderStatusOptions.value.filter(o => filteredOrderStatusValues.includes(o.value))
+)
+
 // 获取订单列表
 const getOrderList = async () => {
   try {
@@ -581,19 +587,20 @@ const handleCloseDetail = () => {
 }
 
 // 获取订单状态步骤
-const getOrderStatusStep = (orderStatus: string | number) => {
+const getFilteredOrderStatusStep = (orderStatus: string | number) => {
   if (!orderStatus) return 0
   const statusValue = parseInt(orderStatus.toString())
-  return Math.max(0, statusValue - 1)
+  if (statusValue >= 6) return 2 // SHIPPED
+  if (statusValue >= 5) return 1 // FINISHED
+  return 0 // ORDER CREATED（包括 1-4 均视作第一步进行中）
 }
 
 // 获取状态描述
-const getStatusDescription = (index: number, orderStatus: string | number) => {
+const getFilteredStatusDescription = (index: number, orderStatus: string | number) => {
   if (!orderStatus) return ''
-  const statusValue = parseInt(orderStatus.toString())
-  const currentStep = Math.max(0, statusValue - 1)
-  if (index < currentStep) return 'Completed'
-  if (index === currentStep) return 'Current Step'
+  const active = getFilteredOrderStatusStep(orderStatus)
+  if (index < active) return 'Completed'
+  if (index === active) return 'Current Step'
   return 'Pending'
 }
 

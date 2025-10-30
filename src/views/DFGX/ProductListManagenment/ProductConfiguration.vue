@@ -175,6 +175,31 @@
           />
         </el-form-item>
         
+        <!-- 模型图片上传 - 仅当选项类型为model(optionType=8)时显示 -->
+        <el-form-item 
+          label="模型图片" 
+          prop="imageUrl" 
+          v-if="form.optionType === 8"
+        >
+          <UploadImage
+            v-model="form.imageUrl"
+            ref="modelImageRef"
+            :limit="1"
+            :file-size="5"
+            :file-type="['png','jpg','jpeg','webp']"
+            :is-show-tip="true"
+            :style="{ width: '120px' }"
+            list-type="picture-card"
+            :auto-upload="false"
+            @success="onModelImageUploaded"
+          />
+          <div class="form-tip">
+            <el-text type="info" size="small">
+              上传一张模型图片（支持 jpg、png、jpeg、webp，最大 5MB）
+            </el-text>
+          </div>
+        </el-form-item>
+
         <el-row :gutter="12">
           <el-col :span="12">
             <el-form-item label="选项值" prop="optionValue">
@@ -293,6 +318,7 @@ const title = ref('')
 const optionTypeOptions = ref([])
 const materialOptions = ref([])
 const submitLoading = ref(false)
+const modelImageRef = ref(null)
 
 const data = reactive({
   form: {},
@@ -360,7 +386,8 @@ function reset() {
     optionValue: null,
     status: '0',
     remark: '',
-    relatedMaterial: []
+    relatedMaterial: [],
+    imageUrl: ''
   }
   proxy.resetForm('lensOptionRef')
 }
@@ -423,7 +450,8 @@ function handleUpdate(row) {
       optionValue: productConfig.optionValue || productConfig.OptionValue,
       status: productConfig.status || productConfig.Status || '0',
       remark: remark === '无' ? '' : remark, // 如果备注是"无"，则显示为空，让用户可以重新输入
-      relatedMaterial: relatedMaterial
+      relatedMaterial: relatedMaterial,
+      imageUrl: productConfig.imageUrl || productConfig.ImageUrl || ''
     }
     console.log('格式化后的表单数据:', form.value) // 调试信息
     open.value = true
@@ -439,61 +467,104 @@ function submitForm() {
   proxy.$refs['lensOptionRef'].validate(valid => {
     if (valid) {
       submitLoading.value = true
-      
+
       // 处理备注字段：如果为空或null，设置为"无"
       const remark = form.value.remark && form.value.remark.trim() ? form.value.remark.trim() : '无'
-      
-      if (form.value.id != null) {
-        // 编辑时构建符合后端接口的数据格式
-        const requestData = {
-          ID: form.value.id,
-          OptionType: form.value.optionType,
-          OptionName: form.value.optionName,
-          OptionValue: form.value.optionValue,
-          Status: form.value.status,
-          Remarks: remark,
-          RelatedMaterial: form.value.relatedMaterial && form.value.relatedMaterial.length > 0 ? form.value.relatedMaterial : null
-        }
-        console.log('修改请求数据:', requestData) // 调试信息
-        updateLensOption(requestData).then(response => {
-          console.log('修改响应:', response) // 调试信息
-          proxy.$modal.msgSuccess('修改成功')
-          open.value = false
-          getList()
-        }).catch(error => {
-          console.error('修改失败:', error) // 调试信息
-          proxy.$modal.msgError('修改失败: ' + (error.message || '未知错误'))
-        }).finally(() => {
-          submitLoading.value = false
+
+      // 判断是否需要先上传模型图片：
+      // 情况1：imageUrl 是本地 blob
+      // 情况2：imageUrl 为空，但上传组件里存在未上传的本地文件（ready/raw/blob 预览）
+      const hasPendingUploadFile = (() => {
+        const comp = modelImageRef?.value
+        const files = comp && comp.fileList ? comp.fileList : []
+        if (!Array.isArray(files) || files.length === 0) return false
+        return files.some(f => {
+          const url = f && f.url ? String(f.url) : ''
+          return (url.startsWith('blob:')) || (f.status === 'ready') || !!f.raw
         })
+      })()
+
+      const needUploadModelImage = form.value.optionType === 8 && (
+        (typeof form.value.imageUrl === 'string' && form.value.imageUrl.startsWith('blob:')) ||
+        (!form.value.imageUrl && hasPendingUploadFile)
+      )
+
+      const proceed = () => {
+        if (form.value.id != null) {
+          // 编辑时构建符合后端接口的数据格式
+          const requestData = {
+            ID: form.value.id,
+            OptionType: form.value.optionType,
+            OptionName: form.value.optionName,
+            OptionValue: form.value.optionValue,
+            Status: form.value.status,
+            Remarks: remark,
+            RelatedMaterial: form.value.relatedMaterial && form.value.relatedMaterial.length > 0 ? form.value.relatedMaterial : null,
+            ImageUrl: form.value.optionType === 8 ? (form.value.imageUrl || '') : null
+          }
+          console.log('修改请求数据:', requestData) // 调试信息
+          updateLensOption(requestData).then(response => {
+            console.log('修改响应:', response) // 调试信息
+            proxy.$modal.msgSuccess('修改成功')
+            open.value = false
+            getList()
+          }).catch(error => {
+            console.error('修改失败:', error) // 调试信息
+            proxy.$modal.msgError('修改失败: ' + (error.message || '未知错误'))
+          }).finally(() => {
+            submitLoading.value = false
+          })
+        } else {
+          // 新增时构建符合后端接口的数据格式
+          const requestData = {
+            OptionType: form.value.optionType,
+            OptionName: form.value.optionName,
+            OptionValue: form.value.optionValue,
+            Status: form.value.status,
+            Remarks: remark,
+            RelatedMaterial: form.value.relatedMaterial && form.value.relatedMaterial.length > 0 ? form.value.relatedMaterial : null,
+            ImageUrl: form.value.optionType === 8 ? (form.value.imageUrl || '') : null
+          }
+          console.log('新增请求数据:', requestData) // 调试信息
+          addLensOption(requestData).then(response => {
+            console.log('新增响应:', response) // 调试信息
+            proxy.$modal.msgSuccess('新增成功')
+            open.value = false
+            getList()
+          }).catch(error => {
+            console.error('新增失败:', error) // 调试信息
+            proxy.$modal.msgError('新增失败: ' + (error.message || '未知错误'))
+          }).finally(() => {
+            submitLoading.value = false
+          })
+        }
+      }
+
+      if (needUploadModelImage && modelImageRef.value && typeof modelImageRef.value.submitUpload === 'function') {
+        // 触发上传，等回调成功后继续提交
+        pendingSubmitCallback = proceed
+        modelImageRef.value.submitUpload()
       } else {
-        // 新增时构建符合后端接口的数据格式
-        const requestData = {
-          OptionType: form.value.optionType,
-          OptionName: form.value.optionName,
-          OptionValue: form.value.optionValue,
-          Status: form.value.status,
-          Remarks: remark,
-          RelatedMaterial: form.value.relatedMaterial && form.value.relatedMaterial.length > 0 ? form.value.relatedMaterial : null
-        }
-        console.log('新增请求数据:', requestData) // 调试信息
-        addLensOption(requestData).then(response => {
-          console.log('新增响应:', response) // 调试信息
-          proxy.$modal.msgSuccess('新增成功')
-          open.value = false
-          getList()
-        }).catch(error => {
-          console.error('新增失败:', error) // 调试信息
-          proxy.$modal.msgError('新增失败: ' + (error.message || '未知错误'))
-        }).finally(() => {
-          submitLoading.value = false
-        })
+        proceed()
       }
     } else {
       console.log('表单验证失败')
       proxy.$modal.msgError('请检查表单填写是否正确')
     }
   })
+}
+
+// 上传成功后的回调：设置表单 imageUrl 并继续提交
+let pendingSubmitCallback = null
+function onModelImageUploaded(urls) {
+  if (typeof urls === 'string') {
+    form.value.imageUrl = urls.split(',')[0] || ''
+  }
+  if (pendingSubmitCallback) {
+    const cb = pendingSubmitCallback
+    pendingSubmitCallback = null
+    cb()
+  }
 }
 
 /** 删除按钮操作 */

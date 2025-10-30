@@ -90,6 +90,21 @@
               </el-form-item>
             </el-col>
           </el-row>
+
+          <!-- Frame Model Image Preview -->
+          <el-row v-if="hasModelImage" style="margin-top: 10px;">
+            <el-col :span="24">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <span style="width:140px; color:#606266; font-weight:bold;">Model Image</span>
+                <el-image
+                  :src="modelImageUrl"
+                  :preview-src-list="[modelImageUrl]"
+                  fit="contain"
+                  style="width: 120px; height: 120px; border:1px solid #ebeef5; border-radius:6px; background:#fff;"
+                />
+              </div>
+            </el-col>
+          </el-row>
         </el-card>
 
         <!-- Lens Information -->
@@ -733,6 +748,19 @@ const totalPrice = computed(() => {
   return calculatedPrice.value * (orderForm.leftEye.quantity + orderForm.rightEye.quantity)
 })
 
+const hasModelImage = computed(() => {
+  const url = modelImageUrl.value
+  return !!(url && url.trim())
+})
+// 当前所选模型的图片地址（有值则显示预览）
+const modelImageUrl = computed(() => {
+  const selected = frameModelOptions.value.find(opt => opt.value === orderForm.frameModel)
+  const url = selected && typeof selected.imageUrl === 'string' ? selected.imageUrl.trim() : ''
+  return url ? url : ''
+})
+
+
+
 // 计算是否显示文件上传组件
 const shouldShowColorUpload = computed(() => {
   if (!orderForm.color) return false
@@ -840,7 +868,8 @@ const getDictData = async () => {
       .map(item => ({
         label: item.optionName,
         value: item.optionValue,
-        price: item.remark ? parseFloat(item.remark) : 0
+        // Use remark as imageUrl if backend stores URL here for model
+        imageUrl: item.imageUrl || item.image || item.url || item.remark || ''
       }))
     
     // ED/EDA、sizeA-DBL-sizeA、sizeB 现在是文本输入框，不需要选项数据
