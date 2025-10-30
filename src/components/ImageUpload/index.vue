@@ -198,14 +198,36 @@ function handleUploadSuccess(res) {
       finalUrl = apiPrefix.value.replace(/\/$/, '') + (rawUrl.startsWith('/') ? '' : '/') + rawUrl
     }
   } else {
-    // 生产环境：相对路径拼接 BASE_API；绝对路径保持
-    if (finalUrl && !/^https?:\/\//i.test(finalUrl)) {
-      if (typeof apiHost === 'string' && /^https?:\/\//i.test(apiHost)) {
-        finalUrl = finalUrl.startsWith('/') ? apiHost + finalUrl : apiHost + '/' + finalUrl
-      } else if (typeof baseUrl === 'string' && /^https?:\/\//i.test(baseUrl)) {
-        finalUrl = finalUrl.startsWith('/') ? baseUrl + finalUrl : baseUrl + '/' + finalUrl
-      } else if (typeof baseUrl === 'string' && baseUrl.startsWith('/')) {
-        finalUrl = baseUrl.replace(/\/$/, '') + (finalUrl.startsWith('/') ? '' : '/') + finalUrl
+    // 生产环境：
+    // 1) 相对路径 -> 拼接 BASE_API 或 API_HOST
+    // 2) 绝对路径：若为 localhost/127.0.0.1 则重写为当前站点主机 + :8887
+    if (finalUrl) {
+      if (!/^https?:\/\//i.test(finalUrl)) {
+        // 相对路径
+        if (typeof apiHost === 'string' && /^https?:\/\//i.test(apiHost)) {
+          finalUrl = finalUrl.startsWith('/') ? apiHost + finalUrl : apiHost + '/' + finalUrl
+        } else if (typeof baseUrl === 'string' && /^https?:\/\//i.test(baseUrl)) {
+          finalUrl = finalUrl.startsWith('/') ? baseUrl + finalUrl : baseUrl + '/' + finalUrl
+        } else if (typeof baseUrl === 'string' && baseUrl.startsWith('/')) {
+          finalUrl = baseUrl.replace(/\/$/, '') + (finalUrl.startsWith('/') ? '' : '/') + finalUrl
+        }
+      } else {
+        // 绝对路径：当后端返回 localhost 时，替换为当前域名 + 8887 端口
+        try {
+          const u = new URL(finalUrl)
+          const isLocal = u.hostname === 'localhost' || u.hostname === '127.0.0.1'
+          if (isLocal) {
+            const targetOrigin = (() => {
+              const cfg = import.meta.env.VITE_APP_FILE_HOST
+              if (typeof cfg === 'string' && /^https?:\/\//i.test(cfg)) return cfg.replace(/\/$/, '')
+              const { protocol, hostname } = window.location
+              return `${protocol}//${hostname}:8887`
+            })()
+            finalUrl = targetOrigin + u.pathname
+          }
+        } catch (e) {
+          // 忽略 URL 解析错误，沿用原始 absolute 链接
+        }
       }
     }
   }
