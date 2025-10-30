@@ -212,18 +212,27 @@ function handleUploadSuccess(res) {
           finalUrl = baseUrl.replace(/\/$/, '') + (finalUrl.startsWith('/') ? '' : '/') + finalUrl
         }
       } else {
-        // 绝对路径：当后端返回 localhost 时，替换为当前域名 + 8887 端口
+        // 绝对路径：当后端返回 localhost/127.0.0.1 时，替换为当前站点 + 配置的 API 前缀（生产为 /api），不加端口
         try {
           const u = new URL(finalUrl)
           const isLocal = u.hostname === 'localhost' || u.hostname === '127.0.0.1'
           if (isLocal) {
-            const targetOrigin = (() => {
-              const cfg = import.meta.env.VITE_APP_FILE_HOST
-              if (typeof cfg === 'string' && /^https?:\/\//i.test(cfg)) return cfg.replace(/\/$/, '')
-              const { protocol, hostname } = window.location
-              return `${protocol}//${hostname}:8887`
-            })()
-            finalUrl = targetOrigin + u.pathname
+            const fileHost = import.meta.env.VITE_APP_FILE_HOST
+            const base = import.meta.env.VITE_APP_BASE_API
+            // 优先使用显式文件主机；否则用 BASE_API（若为相对路径，以当前 origin 拼接）
+            let targetPrefix = ''
+            if (typeof fileHost === 'string' && /^https?:\/\//i.test(fileHost)) {
+              targetPrefix = fileHost.replace(/\/$/, '')
+            } else if (typeof base === 'string' && /^https?:\/\//i.test(base)) {
+              targetPrefix = base.replace(/\/$/, '')
+            } else {
+              // 生产默认 BASE_API=/api
+              const apiPrefix = typeof base === 'string' ? base : '/api'
+              const origin = window.location.origin.replace(/\/$/, '')
+              targetPrefix = origin + (apiPrefix.startsWith('/') ? apiPrefix : '/' + apiPrefix)
+              targetPrefix = targetPrefix.replace(/\/$/, '')
+            }
+            finalUrl = targetPrefix + u.pathname
           }
         } catch (e) {
           // 忽略 URL 解析错误，沿用原始 absolute 链接
