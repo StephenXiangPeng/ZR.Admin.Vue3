@@ -290,6 +290,204 @@
 				</el-collapse-item>
 			</el-collapse>
 
+			<el-collapse v-model="selectedSampleCollectionCollapseActive" style="margin-bottom: 20px;"
+				v-show="showSelectedSampleCollection">
+				<el-collapse-item title="已选择收寄样单据" name="selectedSampleCollection">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">已选择收寄样单据</span>
+					</template>
+					<!-- 筛选条件区域 -->
+					<div style="margin-bottom: 10px; padding: 10px; background: #f5f7fa; border-radius: 4px;">
+						<el-row :gutter="15">
+							<el-col :span="6">
+								<el-select v-model="filterSelectedCustomerSupplier" filterable placeholder="选择客户/供应商"
+									size="default" style="width: 100%" clearable>
+									<el-option label="客户" value="客户" />
+									<el-option label="供应商" value="供应商" />
+								</el-select>
+							</el-col>
+							<el-col :span="6">
+								<el-select v-model="filterSelectedOurCompany" filterable placeholder="选择我方公司"
+									size="default" style="width: 100%" clearable>
+									<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictLabel" />
+								</el-select>
+							</el-col>
+						</el-row>
+					</div>
+					<el-table :data="paginatedSelectedSampleCollectionData" style="width: 100%;" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table-column prop="type" label="寄样/收样" width="100">
+							<template #default="{ row }">
+								<span>{{ row.type || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="110">
+							<template #default="{ row }">
+								<span>{{ row.customer_or_Supplier || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="customer_ID" label="寄样对象" width="150">
+							<template #default="{ row }">
+								<span>{{ row.customer_ID || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="waybill_Number" label="运单号" width="130">
+							<template #default="{ row }">
+								<span>{{ row.waybill_Number || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="express_Company" label="快件公司" width="150">
+							<template #default="{ row }">
+								<span>{{ row.express_Company || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="sample_Date" label="登记日期" width="110">
+							<template #default="{ row }">
+								<span>{{ row.sample_Date || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="payment_Method" label="付费方式" width="90">
+							<template #default="{ row }">
+								<span>{{ row.payment_Method || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="company_ID" label="我方公司" width="130">
+							<template #default="{ row }">
+								<span>{{ row.company_ID || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="paid_Express_Fee" label="已付快件费" width="110">
+							<template #default="{ row }">
+								<el-input v-model="row.paid_Express_Fee" :disabled="IsDisabled" size="small"
+									@blur="handlePaidExpressFeeChange(row)"
+									@input="(value) => handlePaidExpressFeeInput(row, value)" placeholder="0.00"
+									style="width: 100%" />
+							</template>
+						</el-table-column>
+						<el-table-column prop="relatedContractNumber" label="关联合同号" width="150">
+							<template #default="{ row }">
+								<el-select v-model="row.relatedContractNumber" :disabled="IsDisabled" filterable
+									clearable placeholder="请选择关联合同号" size="small" style="width: 100%">
+									<el-option v-for="contract in applicantSaleContracts" :key="contract.dictvalue"
+										:label="contract.dictLabel" :value="contract.dictLabel" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="relatedShippingNumber" label="关联运编号" width="150">
+							<template #default="{ row }">
+								<el-select v-model="row.relatedShippingNumber" :disabled="IsDisabled" filterable
+									clearable placeholder="请选择关联运编号" size="small" style="width: 100%">
+									<el-option v-for="shipping in applicantShippingContracts" :key="shipping.dictvalue"
+										:label="shipping.dictLabel" :value="shipping.dictLabel" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column fixed="right" label="操作" width="100">
+							<template #default="{ row }">
+								<el-button type="text" size="large" @click="handleRemoveSelectedSampleCollection(row)"
+									:disabled="IsDisabled">删除</el-button>
+							</template>
+						</el-table-column>
+					</el-table>
+					<el-pagination @current-change="selectedSampleCollectionHandlePageChange"
+						:current-page="selectedSampleCollectionCurrentPage"
+						:page-size="selectedSampleCollectionPageSize" :total="selectedSampleCollectionTotalItems"
+						background layout="prev, pager, next" style="margin-top: 5px;" />
+				</el-collapse-item>
+			</el-collapse>
+			<el-collapse v-model="sampleCollectionCollapseActive" style="margin-bottom: 20px;"
+				v-show="showSampleCollection">
+				<el-collapse-item title="待支付款项收寄样单据" name="sampleCollection">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">待支付款项收寄样单据</span>
+					</template>
+					<!-- 筛选条件区域 -->
+					<div style="margin-bottom: 10px; padding: 10px; background: #f5f7fa; border-radius: 4px;">
+						<el-row :gutter="15">
+							<el-col :span="6">
+								<el-select v-model="filterSampleCustomerSupplier" filterable placeholder="选择客户/供应商"
+									size="default" style="width: 100%" clearable>
+									<el-option label="客户" value="客户" />
+									<el-option label="供应商" value="供应商" />
+								</el-select>
+							</el-col>
+							<el-col :span="6">
+								<el-select v-model="filterSampleOurCompany" filterable placeholder="选择我方公司"
+									size="default" style="width: 100%" clearable>
+									<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictLabel" />
+								</el-select>
+							</el-col>
+						</el-row>
+					</div>
+					<el-table :data="paginatedSampleCollectionData" style="width: 100%;" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table-column prop="type" label="寄样/收样" width="100">
+							<template #default="{ row }">
+								<span>{{ row.type || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="110">
+							<template #default="{ row }">
+								<span>{{ row.customer_or_Supplier || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="customer_ID" label="寄样对象" width="150">
+							<template #default="{ row }">
+								<span>{{ row.customer_ID || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="waybill_Number" label="运单号" width="130">
+							<template #default="{ row }">
+								<span>{{ row.waybill_Number || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="express_Company" label="快件公司" width="150">
+							<template #default="{ row }">
+								<span>{{ row.express_Company || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="sample_Date" label="登记日期" width="110">
+							<template #default="{ row }">
+								<span>{{ row.sample_Date || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="payment_Method" label="付费方式" width="90">
+							<template #default="{ row }">
+								<span>{{ row.payment_Method || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="company_ID" label="我方公司" width="130">
+							<template #default="{ row }">
+								<span>{{ row.company_ID || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="paid_Express_Fee" label="已付快件费" width="110">
+							<template #default="{ row }">
+								<span>{{ row.paid_Express_Fee || '0.00' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column fixed="right" label="操作" width="100">
+							<template #default="{ row }">
+								<el-button type="primary" size="small" @click="handleSelectSampleCollection(row)"
+									:disabled="IsDisabled">
+									选择
+								</el-button>
+							</template>
+						</el-table-column>
+					</el-table>
+					<el-pagination @current-change="sampleCollectionHandlePageChange"
+						:current-page="sampleCollectionCurrentPage" :page-size="sampleCollectionPageSize"
+						:total="sampleCollectionTotalItems" background layout="prev, pager, next"
+						style="margin-top: 5px;" />
+				</el-collapse-item>
+			</el-collapse>
+
+
+
 			<el-collapse v-model="paymentDetailsCollapseActive" style="margin-bottom: 20px;"
 				v-show="showPaymentDetails">
 				<el-collapse-item title="付款明细" name="paymentDetails">
@@ -421,7 +619,7 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { createApp, getCurrentInstance, reactive, toRefs, ref, computed } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, computed, watch } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 import { number } from 'echarts';
@@ -675,13 +873,86 @@ const addpaymentrequestdialog = ref(false)//付款申请Dialog
 const basicInfoCollapseActive = ref(['basicInfo']);//基本信息折叠面板
 const paymentDetailsCollapseActive = ref(['paymentDetails']);//付款明细折叠面板
 const unpaidDetailsCollapseActive = ref(['unpaidDetails']);//未支付款项详情折叠面板
+const sampleCollectionCollapseActive = ref(['sampleCollection']);//收寄样列表折叠面板
+const selectedSampleCollectionCollapseActive = ref(['selectedSampleCollection']);//已选择收寄样列表折叠面板
 // 控制付款明细和未支付款项详情的显示
 const showPaymentDetails = ref(true);
+// 控制收寄样列表的显示
+const showSampleCollection = ref(false);
+// 控制已选择收寄样列表的显示
+const showSelectedSampleCollection = ref(false);
+
+// 筛选条件变量
+const filterSampleCustomerSupplier = ref(''); // 待支付列表的客户/供应商筛选
+const filterSampleOurCompany = ref(''); // 待支付列表的我方公司筛选
+const filterSelectedCustomerSupplier = ref(''); // 已选择列表的客户/供应商筛选
+const filterSelectedOurCompany = ref(''); // 已选择列表的我方公司筛选
+
 // 是否为定金（款项名称 dictValue == 1）
 const isDepositType = computed(() => Number(addpaymentrequestform.value.paymentName) === 1);
 const paymentrequesttableData = ref([])//付款申请列表Table
 const CostDetailsTbaleData = ref([])//费用明细Table
 const UnpaidDetailsTbaleData = ref([])//未支付款项详情Table
+const sampleCollectionTableData = ref([])//收寄样列表Table（全部数据）
+const selectedSampleCollectionTableData = ref([])//已选择收寄样列表Table（全部数据）
+
+// 待支付款项收寄样单据分页相关
+const sampleCollectionCurrentPage = ref(1);
+const sampleCollectionPageSize = ref(10);
+const sampleCollectionTotalItems = ref(0);
+
+// 已选择收寄样单据分页相关
+const selectedSampleCollectionCurrentPage = ref(1);
+const selectedSampleCollectionPageSize = ref(10);
+const selectedSampleCollectionTotalItems = ref(0);
+
+// 计算属性：待支付款项收寄样单据筛选后的数据
+const filteredSampleCollectionData = computed(() => {
+	let filtered = sampleCollectionTableData.value;
+
+	// 根据客户/供应商筛选
+	if (filterSampleCustomerSupplier.value) {
+		filtered = filtered.filter(item => item.customer_or_Supplier === filterSampleCustomerSupplier.value);
+	}
+
+	// 根据我方公司筛选
+	if (filterSampleOurCompany.value) {
+		filtered = filtered.filter(item => item.company_ID === filterSampleOurCompany.value);
+	}
+
+	return filtered;
+});
+
+// 计算属性：待支付款项收寄样单据分页后的数据
+const paginatedSampleCollectionData = computed(() => {
+	const start = (sampleCollectionCurrentPage.value - 1) * sampleCollectionPageSize.value;
+	const end = start + sampleCollectionPageSize.value;
+	return filteredSampleCollectionData.value.slice(start, end);
+});
+
+// 计算属性：已选择收寄样单据筛选后的数据
+const filteredSelectedSampleCollectionData = computed(() => {
+	let filtered = selectedSampleCollectionTableData.value;
+
+	// 根据客户/供应商筛选
+	if (filterSelectedCustomerSupplier.value) {
+		filtered = filtered.filter(item => item.customer_or_Supplier === filterSelectedCustomerSupplier.value);
+	}
+
+	// 根据我方公司筛选
+	if (filterSelectedOurCompany.value) {
+		filtered = filtered.filter(item => item.company_ID === filterSelectedOurCompany.value);
+	}
+
+	return filtered;
+});
+
+// 计算属性：已选择收寄样单据分页后的数据
+const paginatedSelectedSampleCollectionData = computed(() => {
+	const start = (selectedSampleCollectionCurrentPage.value - 1) * selectedSampleCollectionPageSize.value;
+	const end = start + selectedSampleCollectionPageSize.value;
+	return filteredSelectedSampleCollectionData.value.slice(start, end);
+});
 const addpaymentrequestform = ref({
 	paymentContractType: '',
 	paymentContractID: 0,
@@ -713,6 +984,10 @@ const supplierBankAccounts = ref([])
 const contractList = ref([])
 // 客户选项列表
 const customerOptions = ref([])
+// 与申请人关联的销售合同列表（用于关联合同号下拉框）
+const applicantSaleContracts = ref([])
+// 与申请人关联的出运合同列表（用于关联运编号下拉框）
+const applicantShippingContracts = ref([])
 const handleAddRowCostDetails = () => {
 	activeTab.value = 'CostDetailsTab'
 
@@ -779,7 +1054,10 @@ const state = reactive({
 		hr_payment_contract_type: [],
 		sql_shippingdeliveries: [],
 		hr_business_expenses: [],
-		hr_contract_status: []
+		hr_contract_status: [],
+		sql_hr_customer_abbreviation: [],
+		hr_express_delivery_company: [],
+		hr_express_payment_method: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -787,7 +1065,8 @@ var dictParams = [{ dictType: 'hr_ourcompany' }, { dictType: 'hr_export_currency
 { dictType: 'hr_payment_category' }, { dictType: 'hr_factory_payment' }, { dictType: 'hr_domestic_charges' }, { dictType: 'hr_foreign_charges' },
 { dictType: 'hr_daily_expenses' }, { dictType: 'sql_supplier_info' }, { dictType: 'hr_currency_code' }, { dictType: 'sql_all_user' }, { dictType: 'sql_hr_sale' },
 { dictType: 'sql_hr_purchase' }, { dictType: 'sql_hr_finance' }, { dictType: 'sql_hr_dept' }, { dictType: 'hr_associated_modules' }, { dictType: 'sql_purchase_contract' },
-{ dictType: 'sql_sale_contracts' }, { dictType: 'sql_payment_requests' }, { dictType: 'hr_payment_contract_type' }, { dictType: 'sql_shippingdeliveries' }, { dictType: 'hr_business_expenses' }, { dictType: 'hr_contract_status' }]
+{ dictType: 'sql_sale_contracts' }, { dictType: 'sql_payment_requests' }, { dictType: 'hr_payment_contract_type' }, { dictType: 'sql_shippingdeliveries' }, { dictType: 'hr_business_expenses' }, { dictType: 'hr_contract_status' },
+{ dictType: 'sql_hr_customer_abbreviation' }, { dictType: 'hr_express_payment_method' }]
 
 // 统一的API请求处理工具函数
 const ApiRequestHandler = {
@@ -863,6 +1142,81 @@ async function loadContractList(customerId) {
 	}
 }
 
+// 加载与申请人关联的销售合同列表
+const loadApplicantSaleContracts = async (applicantId) => {
+	if (!applicantId) {
+		applicantSaleContracts.value = [];
+		return;
+	}
+	try {
+		const response = await request({
+			url: 'SaleContract/GetSaleContractListByApplicantID/GetList',
+			method: 'GET',
+			params: {
+				ApplicantID: applicantId
+			}
+		});
+		if (response && response.code === 200) {
+			applicantSaleContracts.value = (response.data || []).map(item => ({
+				dictvalue: item.dictvalue || item.dictValue || item.id || item.ID,
+				dictLabel: item.dictLabel || item.dictLabel || item.contractNumber || item.contract_Number || item.name
+			}));
+		} else {
+			applicantSaleContracts.value = [];
+		}
+	} catch (error) {
+		console.error('获取销售合同列表失败:', error);
+		applicantSaleContracts.value = [];
+	}
+};
+
+// 加载与申请人关联的出运合同列表
+const loadApplicantShippingContracts = async (applicantId) => {
+	if (!applicantId) {
+		applicantShippingContracts.value = [];
+		return;
+	}
+	try {
+		const response = await request({
+			url: 'ShippingDelivery/GetShippingDeliveryListByApplicantID/GetList',
+			method: 'GET',
+			params: {
+				ApplicantID: applicantId
+			}
+		});
+		if (response && response.code === 200) {
+			applicantShippingContracts.value = (response.data || []).map(item => ({
+				dictvalue: item.dictvalue || item.dictValue || item.id || item.ID,
+				dictLabel: item.dictLabel || item.dictLabel || item.shippingNumber || item.shipping_Number || item.name
+			}));
+		} else {
+			applicantShippingContracts.value = [];
+		}
+	} catch (error) {
+		console.error('获取出运合同列表失败:', error);
+		applicantShippingContracts.value = [];
+	}
+};
+
+// 加载快递公司下拉选项
+const loadLogisticsCompanySelect = async () => {
+	try {
+		const response = await request({
+			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
+			method: 'get',
+			params: { companyType: 2 }
+		});
+		if (response.code === 200) {
+			state.optionss.hr_express_delivery_company = (response.data || []).map(x => ({
+				dictValue: String(x.dictValue),
+				dictLabel: x.dictLabel
+			}));
+		}
+	} catch (error) {
+		console.error('加载快递公司下拉失败:', error);
+	}
+};
+
 async function fetchDataAndExecute() {
 	try {
 		const response = await proxy.getDicts(dictParams);
@@ -872,6 +1226,9 @@ async function fetchDataAndExecute() {
 
 		// 加载过滤后的供应商列表
 		await loadFilteredSuppliers();
+
+		// 加载快递公司字典
+		await loadLogisticsCompanySelect();
 
 		/*获取当前页面列表函数放在下方*/
 		await GetPaymentRequestList(paymentrequesttableDataCurrentPage.value, paymentrequesttableDataPageSize.value);  // 现在可以安全执行
@@ -902,30 +1259,35 @@ const paymentCategoryChange = async () => {
 		case '1':
 			PaymentTypeOptions.value = state.optionss.hr_factory_payment
 			showPaymentDetails.value = true; // 工厂付款显示付款明细和未支付款项详情
+			showSampleCollection.value = false; // 隐藏收寄样列表
 			// 加载默认供应商选项
 			await loadFilteredSuppliers();
 			break;
 		case '2':
 			PaymentTypeOptions.value = state.optionss.hr_domestic_charges
 			showPaymentDetails.value = true; // 国内费用显示付款明细和未支付款项详情
+			showSampleCollection.value = false; // 隐藏收寄样列表
 			// 加载默认供应商选项
 			await loadFilteredSuppliers();
 			break;
 		case '3':
 			PaymentTypeOptions.value = state.optionss.hr_foreign_charges
 			showPaymentDetails.value = true; // 国外费用显示付款明细和未支付款项详情
+			showSampleCollection.value = false; // 隐藏收寄样列表
 			// 加载默认供应商选项
 			await loadFilteredSuppliers();
 			break;
 		case '4':
 			PaymentTypeOptions.value = state.optionss.hr_daily_expenses
 			showPaymentDetails.value = false; // 日常费用隐藏付款明细和未支付款项详情
+			showSampleCollection.value = false; // 隐藏收寄样列表
 			// 加载默认供应商选项
 			await loadFilteredSuppliers();
 			break;
 		case '5':
 			PaymentTypeOptions.value = state.optionss.hr_business_expenses
 			showPaymentDetails.value = false; // 业务费用隐藏付款明细和未支付款项详情
+			showSampleCollection.value = false; // 默认隐藏收寄样列表，选择快递费后根据收款单位显示
 			// 业务费用默认加载供应商选项，等选择款项名称后再动态更新
 			// 在查看详情时，不要在这里加载供应商选项，而是在后面根据款项名称加载
 			if (!isCheckAndEdit.value) {
@@ -934,6 +1296,7 @@ const paymentCategoryChange = async () => {
 			break;
 		default:
 			showPaymentDetails.value = true;
+			showSampleCollection.value = false; // 隐藏收寄样列表
 			// 加载默认供应商选项
 			await loadFilteredSuppliers();
 			break;
@@ -1119,6 +1482,21 @@ const payeeCodeChange = async () => {
 			contractList.value = [];
 			addpaymentrequestform.value.relatedContract = '';
 		}
+
+		// 如果是业务费用且款项名称是快递费，获取收寄样列表
+		if (isBusinessExpenseWithExpressFee()) {
+			await loadSampleCollectionList(addpaymentrequestform.value.payeeCode);
+		} else {
+			// 如果不是业务费用或不是快递费，清空收寄样列表
+			sampleCollectionTableData.value = [];
+			showSampleCollection.value = false;
+			sampleCollectionTotalItems.value = 0;
+			sampleCollectionCurrentPage.value = 1;
+			selectedSampleCollectionTableData.value = [];
+			showSelectedSampleCollection.value = false;
+			selectedSampleCollectionTotalItems.value = 0;
+			selectedSampleCollectionCurrentPage.value = 1;
+		}
 	} catch (error) {
 		console.error('获取供应商信息失败:', error);
 		ElMessage({
@@ -1133,6 +1511,14 @@ const payeeCodeChange = async () => {
 		supplierBankAccounts.value = [];
 		UnpaidDetailsTbaleData.value = [];
 		contractList.value = [];
+		sampleCollectionTableData.value = [];
+		showSampleCollection.value = false;
+		sampleCollectionTotalItems.value = 0;
+		sampleCollectionCurrentPage.value = 1;
+		selectedSampleCollectionTableData.value = [];
+		showSelectedSampleCollection.value = false;
+		selectedSampleCollectionTotalItems.value = 0;
+		selectedSampleCollectionCurrentPage.value = 1;
 	}
 }
 
@@ -1299,6 +1685,60 @@ const paymentrequesttableDataHandlePageChange = async (newPage) => {
 	const end = paymentrequesttableDataPageSize.value;
 	const newData = await GetPaymentRequestList(start, end);
 };
+
+// 待支付款项收寄样单据分页处理
+const sampleCollectionHandlePageChange = (newPage) => {
+	sampleCollectionCurrentPage.value = newPage;
+};
+
+// 已选择收寄样单据分页处理
+const selectedSampleCollectionHandlePageChange = (newPage) => {
+	selectedSampleCollectionCurrentPage.value = newPage;
+};
+
+// 监听筛选后的数据变化，自动更新总数
+watch(filteredSampleCollectionData, (newVal) => {
+	sampleCollectionTotalItems.value = newVal.length;
+	// 如果当前页超出范围，调整到最后一页
+	const maxPage = Math.ceil(newVal.length / sampleCollectionPageSize.value);
+	if (sampleCollectionCurrentPage.value > maxPage && maxPage > 0) {
+		sampleCollectionCurrentPage.value = maxPage;
+	} else if (newVal.length === 0) {
+		sampleCollectionCurrentPage.value = 1;
+	}
+}, { deep: true });
+
+watch(filteredSelectedSampleCollectionData, (newVal) => {
+	selectedSampleCollectionTotalItems.value = newVal.length;
+	// 如果当前页超出范围，调整到最后一页
+	const maxPage = Math.ceil(newVal.length / selectedSampleCollectionPageSize.value);
+	if (selectedSampleCollectionCurrentPage.value > maxPage && maxPage > 0) {
+		selectedSampleCollectionCurrentPage.value = maxPage;
+	} else if (newVal.length === 0) {
+		selectedSampleCollectionCurrentPage.value = 1;
+	}
+}, { deep: true });
+
+// 监听筛选条件变化，重置分页
+watch([filterSampleCustomerSupplier, filterSampleOurCompany], () => {
+	sampleCollectionCurrentPage.value = 1;
+});
+
+watch([filterSelectedCustomerSupplier, filterSelectedOurCompany], () => {
+	selectedSampleCollectionCurrentPage.value = 1;
+});
+
+// 监听申请人变化，自动加载关联的合同列表
+watch(() => addpaymentrequestform.value.applicant, async (newApplicantId) => {
+	if (newApplicantId) {
+		await loadApplicantSaleContracts(newApplicantId);
+		await loadApplicantShippingContracts(newApplicantId);
+	} else {
+		applicantSaleContracts.value = [];
+		applicantShippingContracts.value = [];
+	}
+});
+
 function GetPaymentRequestList(start, end) {
 	return new Promise((resolve, reject) => {
 		request({
@@ -1581,6 +2021,12 @@ const CheckPaymentRequest = async (row) => {
 		addpaymentrequestform.value.remarks = response.data.paymentRequest.remark || '';
 		addpaymentrequestform.value.relatedContract = response.data.paymentRequest.relatedContracts || '';
 		addpaymentrequestform.value.relatedCustomer = response.data.paymentRequest.relatedCustomer || '';
+
+		// 加载与申请人关联的合同列表
+		if (addpaymentrequestform.value.applicant) {
+			await loadApplicantSaleContracts(addpaymentrequestform.value.applicant);
+			await loadApplicantShippingContracts(addpaymentrequestform.value.applicant);
+		}
 		// 如果是业务费用且为其它款项名称，先加载合同列表，再设置关联合同值
 		if (isBusinessExpenseWithContract()) {
 			await loadContractList(addpaymentrequestform.value.payeeCode);
@@ -1590,6 +2036,20 @@ const CheckPaymentRequest = async (row) => {
 			// 如果不是业务费用或不是其它款项名称，清空合同列表
 			contractList.value = [];
 			addpaymentrequestform.value.relatedContract = response.data.paymentRequest.relatedContracts || '';
+		}
+
+		// 如果是业务费用且款项名称是快递费，加载收寄样列表
+		if (isBusinessExpenseWithExpressFee() && addpaymentrequestform.value.payeeCode) {
+			await loadSampleCollectionList(addpaymentrequestform.value.payeeCode);
+		} else {
+			sampleCollectionTableData.value = [];
+			showSampleCollection.value = false;
+			sampleCollectionTotalItems.value = 0;
+			sampleCollectionCurrentPage.value = 1;
+			selectedSampleCollectionTableData.value = [];
+			showSelectedSampleCollection.value = false;
+			selectedSampleCollectionTotalItems.value = 0;
+			selectedSampleCollectionCurrentPage.value = 1;
 		}
 
 		// 清空已选择的未付款项
@@ -1874,6 +2334,12 @@ const AddPaymentDialog = async () => {
 	}
 	addpaymentrequestform.value.applicant = state.optionss.sql_all_user.find((item) => item.dictValue == userInfo.userId.toString()).dictValue;
 
+	// 加载与申请人关联的合同列表
+	if (addpaymentrequestform.value.applicant) {
+		await loadApplicantSaleContracts(addpaymentrequestform.value.applicant);
+		await loadApplicantShippingContracts(addpaymentrequestform.value.applicant);
+	}
+
 	// 如果是工厂付款，初始化申请金额为0
 	if (addpaymentrequestform.value.paymentCategory === '1') {
 		addpaymentrequestform.value.totalAmount = '0.00';
@@ -2070,11 +2536,33 @@ const resetForm = () => {
 	// 清空客户选项列表
 	customerOptions.value = [];
 
+	// 清空与申请人关联的合同列表
+	applicantSaleContracts.value = [];
+	applicantShippingContracts.value = [];
+
 	// 清空未付款详情数据
 	UnpaidDetailsTbaleData.value = [];
 
 	// 清空已选择的未付款项
 	selectedUnpaidItemIds.value.clear();
+
+	// 清空收寄样列表
+	sampleCollectionTableData.value = [];
+	showSampleCollection.value = false;
+	sampleCollectionTotalItems.value = 0;
+	sampleCollectionCurrentPage.value = 1;
+
+	// 清空已选择收寄样列表
+	selectedSampleCollectionTableData.value = [];
+	showSelectedSampleCollection.value = false;
+	selectedSampleCollectionTotalItems.value = 0;
+	selectedSampleCollectionCurrentPage.value = 1;
+
+	// 清空筛选条件
+	filterSampleCustomerSupplier.value = '';
+	filterSampleOurCompany.value = '';
+	filterSelectedCustomerSupplier.value = '';
+	filterSelectedOurCompany.value = '';
 };
 
 const CalculatetotalAmount = () => {
@@ -2480,9 +2968,25 @@ const paymentNameChange = async () => {
 	addpaymentrequestform.value.relatedContract = '';
 	contractList.value = [];
 
+	// 清空收寄样列表
+	sampleCollectionTableData.value = [];
+	showSampleCollection.value = false;
+	sampleCollectionTotalItems.value = 0;
+	sampleCollectionCurrentPage.value = 1;
+
+	// 清空已选择收寄样列表
+	selectedSampleCollectionTableData.value = [];
+	showSelectedSampleCollection.value = false;
+	selectedSampleCollectionTotalItems.value = 0;
+	selectedSampleCollectionCurrentPage.value = 1;
+
 	// 业务费用收款单位选项动态获取逻辑
 	if (addpaymentrequestform.value.paymentCategory === '5') { // 业务费用
 		await loadBusinessExpensePayeeOptions();
+		// 如果是业务费用且款项名称是快递费，且已选择收款单位，则加载收寄样列表
+		if (isBusinessExpenseWithExpressFee() && addpaymentrequestform.value.payeeCode) {
+			await loadSampleCollectionList(addpaymentrequestform.value.payeeCode);
+		}
 	}
 
 	// 日常费用收款单位选项动态获取逻辑
@@ -2647,6 +3151,138 @@ const loadCustomerOptions = async () => {
 		ApiRequestHandler.handleError(error, () => {
 			customerOptions.value = [];
 		});
+	}
+};
+
+// 格式化日期
+const formatDate = (dateString) => {
+	if (!dateString) return '';
+	try {
+		const date = new Date(dateString);
+		const year = date.getFullYear();
+		const month = String(date.getMonth() + 1).padStart(2, '0');
+		const day = String(date.getDate()).padStart(2, '0');
+		return `${year}-${month}-${day}`;
+	} catch (error) {
+		return dateString;
+	}
+};
+
+// 加载收寄样列表
+const loadSampleCollectionList = async (expressCompanyId) => {
+	if (!expressCompanyId) {
+		sampleCollectionTableData.value = [];
+		showSampleCollection.value = false;
+		return;
+	}
+
+	try {
+		const response = await request({
+			url: 'ProductSample/GetProductSampleSpecialList/GetList',
+			method: 'GET',
+			params: {
+				PageNum: 1,
+				PageSize: 1000, // 获取所有收寄样记录
+				ExpressCompany: expressCompanyId // 根据快递公司ID过滤
+			}
+		});
+
+		if (response && response.code === 200) {
+			// 处理收寄样列表数据
+			let data = response.data.result || [];
+
+			// 如果后端不支持ExpressCompany参数，则在前端过滤
+			if (data.length > 0 && data.some(item => item.express_Company != expressCompanyId)) {
+				data = data.filter(item => item.express_Company == expressCompanyId);
+			}
+			sampleCollectionTableData.value = data.map(item => {
+				// 转换寄样/收样类型
+				const type = item.type === 1 ? '寄样' : '收样';
+				// 转换客户/供应商类型
+				const customerOrSupplier = item.customer_or_Supplier === 1 ? '客户' : '供应商';
+				// 转换客户ID为名称（如果存在）
+				let customerIdLabel = '';
+				if (item.customer_ID && item.customer_ID !== 0) {
+					const customer = state.optionss.sql_hr_customer_abbreviation?.find(
+						c => c.dictValue === item.customer_ID.toString()
+					);
+					customerIdLabel = customer ? customer.dictLabel : item.customer_ID.toString();
+				}
+				// 转换快递公司ID为名称（如果存在）
+				let expressCompanyLabel = '';
+				if (item.express_Company && item.express_Company !== 0) {
+					const company = state.optionss.hr_express_delivery_company?.find(
+						c => c.dictValue === item.express_Company.toString()
+					);
+					expressCompanyLabel = company ? company.dictLabel : item.express_Company.toString();
+				}
+				// 转换付费方式
+				let paymentMethodLabel = '';
+				if (item.payment_Method && item.payment_Method !== 0) {
+					const method = state.optionss.hr_express_payment_method?.find(
+						m => m.dictValue === item.payment_Method.toString()
+					);
+					paymentMethodLabel = method ? method.dictLabel : '';
+				}
+				// 转换我方公司
+				let companyIdLabel = '';
+				if (item.company_ID && item.company_ID !== 0) {
+					const company = state.optionss.hr_ourcompany?.find(
+						c => c.dictValue === item.company_ID.toString()
+					);
+					companyIdLabel = company ? company.dictLabel : '';
+				}
+
+				return {
+					type: type,
+					customer_or_Supplier: customerOrSupplier,
+					customer_ID: customerIdLabel,
+					waybill_Number: item.waybill_Number || '',
+					express_Company: expressCompanyLabel,
+					sample_Date: formatDate(item.sample_Date),
+					payment_Method: paymentMethodLabel,
+					company_ID: companyIdLabel,
+					paid_Express_Fee: (item.paid_Express_Fee || 0).toFixed(2),
+					relatedContractNumber: item.relatedContractNumber || item.contractNumber || item.contract_Number || '',
+					relatedShippingNumber: item.relatedShippingNumber || item.shippingNumber || item.shipping_Number || ''
+				};
+			});
+
+			// 过滤掉已选择的收寄样记录
+			if (selectedSampleCollectionTableData.value.length > 0) {
+				sampleCollectionTableData.value = sampleCollectionTableData.value.filter(item => {
+					return !selectedSampleCollectionTableData.value.some(selected =>
+						selected.waybill_Number === item.waybill_Number &&
+						selected.customer_ID === item.customer_ID &&
+						selected.sample_Date === item.sample_Date
+					);
+				});
+			}
+
+			// watch会自动更新总数和分页，这里只需要确保数据正确
+
+			// 如果有数据，显示收寄样列表
+			showSampleCollection.value = sampleCollectionTableData.value.length > 0;
+		} else {
+			sampleCollectionTableData.value = [];
+			showSampleCollection.value = false;
+			sampleCollectionTotalItems.value = 0;
+			sampleCollectionCurrentPage.value = 1;
+			selectedSampleCollectionTableData.value = [];
+			showSelectedSampleCollection.value = false;
+			selectedSampleCollectionTotalItems.value = 0;
+			selectedSampleCollectionCurrentPage.value = 1;
+		}
+	} catch (error) {
+		console.error('获取收寄样列表失败:', error);
+		sampleCollectionTableData.value = [];
+		showSampleCollection.value = false;
+		sampleCollectionTotalItems.value = 0;
+		sampleCollectionCurrentPage.value = 1;
+		selectedSampleCollectionTableData.value = [];
+		showSelectedSampleCollection.value = false;
+		selectedSampleCollectionTotalItems.value = 0;
+		selectedSampleCollectionCurrentPage.value = 1;
 	}
 };
 
@@ -2881,6 +3517,158 @@ const isManualBankInput = () => {
 	}
 
 	return false;
+};
+
+// 判断是否为业务费用且款项名称是快递费
+const isBusinessExpenseWithExpressFee = () => {
+	// 检查是否为业务费用类别
+	if (addpaymentrequestform.value.paymentCategory !== '5') {
+		return false;
+	}
+
+	// 获取当前选择的款项名称标签
+	const currentPaymentNameLabel = PaymentTypeOptions.value.find(option =>
+		option.dictValue === addpaymentrequestform.value.paymentName
+	)?.dictLabel || '';
+
+	// 判断是否为快递费
+	return currentPaymentNameLabel.includes('快递费') || currentPaymentNameLabel.includes('快递');
+};
+
+// 处理选择收寄样
+const handleSelectSampleCollection = (row) => {
+	// 检查是否已经存在于已选择列表中
+	const alreadyExists = selectedSampleCollectionTableData.value.some(item =>
+		item.waybill_Number === row.waybill_Number &&
+		item.customer_ID === row.customer_ID &&
+		item.sample_Date === row.sample_Date
+	);
+
+	if (alreadyExists) {
+		ElMessage.warning('该收寄样记录已存在，不能重复选择');
+		return;
+	}
+
+	// 添加到已选择列表，确保已付快件费有默认值，并保存原始值
+	const selectedRow = { ...row };
+	// 保存原始的已付快件费值，用于删除时恢复（如果不存在才保存）
+	if (selectedRow.originalPaidExpressFee === undefined) {
+		selectedRow.originalPaidExpressFee = selectedRow.paid_Express_Fee || '0.00';
+	}
+
+	if (!selectedRow.paid_Express_Fee || selectedRow.paid_Express_Fee === '') {
+		selectedRow.paid_Express_Fee = '0.00';
+	} else {
+		// 格式化已付快件费为两位小数
+		const feeValue = parseFloat(selectedRow.paid_Express_Fee) || 0;
+		selectedRow.paid_Express_Fee = feeValue.toFixed(2);
+	}
+	selectedSampleCollectionTableData.value.push(selectedRow);
+
+	// 从未支付收寄样列表中移除（watch会自动更新总数和分页）
+	const index = sampleCollectionTableData.value.findIndex(item =>
+		item.waybill_Number === row.waybill_Number &&
+		item.customer_ID === row.customer_ID &&
+		item.sample_Date === row.sample_Date
+	);
+	if (index > -1) {
+		sampleCollectionTableData.value.splice(index, 1);
+	}
+
+	// 显示已选择收寄样列表
+	if (selectedSampleCollectionTableData.value.length > 0) {
+		showSelectedSampleCollection.value = true;
+	}
+
+	// 重新计算申请金额
+	calculateTotalPaidExpressFee();
+
+	ElMessage.success('已添加到已选择收寄样列表');
+};
+
+// 处理移除已选择的收寄样
+const handleRemoveSelectedSampleCollection = (row) => {
+	// 从已选择列表中移除
+	const index = selectedSampleCollectionTableData.value.findIndex(item =>
+		item.waybill_Number === row.waybill_Number &&
+		item.customer_ID === row.customer_ID &&
+		item.sample_Date === row.sample_Date
+	);
+	if (index > -1) {
+		selectedSampleCollectionTableData.value.splice(index, 1);
+
+		// 恢复记录到未支付收寄样列表，恢复原始的已付快件费值
+		const restoredRow = { ...row };
+		// 如果有保存的原始值，则使用原始值；否则使用当前值
+		if (restoredRow.originalPaidExpressFee !== undefined) {
+			restoredRow.paid_Express_Fee = restoredRow.originalPaidExpressFee;
+		}
+		// 移除临时保存的原始值字段
+		delete restoredRow.originalPaidExpressFee;
+		sampleCollectionTableData.value.push(restoredRow);
+
+		// 如果已选择列表为空，隐藏折叠面板
+		if (selectedSampleCollectionTableData.value.length === 0) {
+			showSelectedSampleCollection.value = false;
+		}
+
+		// 重新计算申请金额
+		calculateTotalPaidExpressFee();
+
+		ElMessage.success('已从已选择收寄样列表中移除');
+	}
+};
+
+// 处理已付快件费输入（只允许数字和小数点，不允许负数）
+const handlePaidExpressFeeInput = (row, value) => {
+	// 只允许数字和小数点（不允许负数）
+	const regex = /^\d*\.?\d*$/;
+	if (value === '' || regex.test(value)) {
+		// 限制小数点后最多两位
+		const parts = value.split('.');
+		if (parts.length > 1 && parts[1].length > 2) {
+			row.paid_Express_Fee = parts[0] + '.' + parts[1].substring(0, 2);
+		} else {
+			row.paid_Express_Fee = value;
+		}
+	} else {
+		// 如果输入不合法，恢复为上一个合法值
+		const lastValidValue = parseFloat(row.paid_Express_Fee);
+		if (isNaN(lastValidValue) || lastValidValue < 0) {
+			row.paid_Express_Fee = '0.00';
+		} else {
+			row.paid_Express_Fee = lastValidValue.toFixed(2);
+		}
+	}
+};
+
+// 处理已付快件费失焦（格式化并计算总和）
+const handlePaidExpressFeeChange = (row) => {
+	// 格式化数值，保留两位小数
+	const value = parseFloat(row.paid_Express_Fee);
+	if (isNaN(value) || value < 0) {
+		row.paid_Express_Fee = '0.00';
+	} else {
+		row.paid_Express_Fee = value.toFixed(2);
+	}
+	// 重新计算申请金额
+	calculateTotalPaidExpressFee();
+};
+
+// 计算已选择收寄样单据中已付快件费的总和并更新申请金额
+const calculateTotalPaidExpressFee = () => {
+	let total = 0;
+	selectedSampleCollectionTableData.value.forEach(row => {
+		// 确保字段值有效，如果无效则设为0
+		let fee = parseFloat(row.paid_Express_Fee);
+		if (isNaN(fee) || fee < 0) {
+			fee = 0;
+			row.paid_Express_Fee = '0.00';
+		}
+		total += fee;
+	});
+	// 更新申请金额，保留两位小数
+	addpaymentrequestform.value.totalAmount = total.toFixed(2);
 };
 
 // 处理手动输入收款单位时的逻辑

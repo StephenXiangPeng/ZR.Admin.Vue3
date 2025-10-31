@@ -100,7 +100,7 @@
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item label="客户/供应商">
+								<el-form-item label="客户/供应商" required>
 									<el-select v-model="CreateDialogform.recipienttypeexamples" placeholder="请选择供应商或客户"
 										style="width: 300px;" @change="handleRecipientTypeChange"
 										:disabled="!isEditable" size="default" clearable>
@@ -116,7 +116,7 @@
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item label="快递公司">
+								<el-form-item label="快递公司" required>
 									<el-select v-model="CreateDialogform.expressCompany" placeholder="请选择快递公司"
 										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
 										<el-option v-for="item in optionss.hr_express_delivery_company"
@@ -127,17 +127,17 @@
 						</el-row>
 						<el-row>
 							<el-col :span="6">
-								<el-form-item v-if="radioValue === '1'" label="寄样日期">
+								<el-form-item v-if="radioValue === '1'" label="寄样日期" required>
 									<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
 										style="width: 300px;" :disabled="!isEditable" size="default"></el-date-picker>
 								</el-form-item>
-								<el-form-item v-else-if="radioValue === '2'" label="收样日期">
+								<el-form-item v-else-if="radioValue === '2'" label="收样日期" required>
 									<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
 										style="width: 300px;" :disabled="!isEditable" size="default"></el-date-picker>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item :label="sampleObjectLabel">
+								<el-form-item :label="sampleObjectLabel" required>
 									<el-select v-model="CreateDialogform.sampleObject" filterable placeholder="请选择"
 										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
 										<el-option v-for="item in getObjectOptions" :key="item.dictCode"
@@ -146,7 +146,7 @@
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item label="我方公司">
+								<el-form-item label="我方公司" required>
 									<el-select v-model="CreateDialogform.ourCompany" placeholder="请选择"
 										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
 										<el-option v-for="item in optionss.hr_ourcompany" :key="item.dictCode"
@@ -166,7 +166,7 @@
 						</el-row>
 						<el-row>
 							<el-col :span="6">
-								<el-form-item label="付费方式">
+								<el-form-item label="付费方式" required>
 									<el-select v-model="CreateDialogform.paymentMethod" placeholder="请选择快递付费方式"
 										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
 										<el-option v-for="item in optionss.hr_express_payment_method"
@@ -178,6 +178,26 @@
 								<el-form-item label="已付快递费">
 									<el-input v-model="CreateDialogform.paidExpressCost" style="width: 300px;"
 										:disabled="!isExpressFeeRequired || !isEditable" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="销售合同">
+									<el-select v-model="CreateDialogform.relatedContractID" filterable
+										placeholder="请选择销售合同" style="width: 300px;" :disabled="!isEditable"
+										size="default" clearable>
+										<el-option v-for="item in saleContractsOptions" :key="item.dictValue"
+											:label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="出运合同">
+									<el-select v-model="CreateDialogform.relatedShippingContractsID" filterable
+										placeholder="请选择出运合同" style="width: 300px;" :disabled="!isEditable"
+										size="default" clearable>
+										<el-option v-for="item in shippingContractsOptions" :key="item.dictValue"
+											:label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -293,7 +313,7 @@
 </template>
 
 <script setup lang="ts">
-import { createApp, ref, reactive, onMounted, getCurrentInstance, computed } from 'vue'
+import { createApp, ref, reactive, onMounted, getCurrentInstance, computed, toRefs, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer,
@@ -417,6 +437,12 @@ const handleCreate = () => {
 	isEditSubmitBtnShow.value = false;
 	isSubmitBtnShow.value = true;
 	CreateDialogform.value.salesperson = useUserStore().userId ? useUserStore().userId.toString() : '';
+	// 加载销售合同列表
+	loadSaleContracts();
+	// 如果有业务员，加载出运合同列表
+	if (CreateDialogform.value.salesperson) {
+		loadShippingContracts(CreateDialogform.value.salesperson);
+	}
 	dialogVisible.value = true;     // 打开对话框
 };
 
@@ -450,11 +476,20 @@ const handleView = async (id) => {
 				salesperson: (sample?.salesperson_ID ?? '').toString(),
 				paymentMethod: (sample?.payment_Method ?? '').toString(),
 				paidExpressCost: (sample?.paid_Express_Fee ?? 0).toString(),
+				relatedContractID: (sample?.RelatedContractID ?? '').toString(),
+				relatedShippingContractsID: (sample?.RelatedShippingContractsID ?? '').toString(),
 				photos: sample?.photos ?? []
 			};
 
 			// 设置寄样/收样类型
 			radioValue.value = (sample?.type ?? 1).toString();
+
+			// 加载销售合同列表
+			loadSaleContracts();
+			// 如果有业务员，加载出运合同列表
+			if (CreateDialogform.value.salesperson) {
+				loadShippingContracts(CreateDialogform.value.salesperson);
+			}
 
 			// 填充样品明细数据
 			SampleProductData.value = (details || []).map(detail => {
@@ -516,7 +551,6 @@ var dictParams = [
 	{ dictType: 'sql_hr_customer_abbreviation' },
 	{ dictType: 'sql_supplier_info' },
 	{ dictType: 'hr_ourcompany' },
-	{ dictType: 'hr_express_delivery_company' },
 	{ dictType: 'hr_express_payment_method' },
 	{ dictType: 'sql_product_name' },
 	{ dictType: 'sql_waybill_number' }
@@ -534,6 +568,84 @@ async function fetchDataAndExecute() {
 	}
 }
 fetchDataAndExecute();
+
+// 加载快递公司下拉选项
+const loadLogisticsCompanySelect = async () => {
+	try {
+		const response = await request({
+			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
+			method: 'get',
+			params: { companyType: 2 }
+		});
+		if (response.code === 200) {
+			state.optionss.hr_express_delivery_company = (response.data || []).map(x => ({
+				dictValue: String(x.dictValue),
+				dictLabel: x.dictLabel
+			}));
+		}
+	} catch (error) {
+		console.error('加载快递公司下拉失败:', error);
+	}
+};
+loadLogisticsCompanySelect();
+
+// 销售合同列表
+const saleContractsOptions = ref([]);
+// 出运合同列表
+const shippingContractsOptions = ref([]);
+
+// 加载销售合同列表（根据当前用户）
+const loadSaleContracts = async () => {
+	try {
+		const response = await request({
+			url: 'Contracts/GetContractListByUser/GetContractList',
+			method: 'GET'
+		});
+		if (response.code === 200) {
+			saleContractsOptions.value = (response.data || []).map(item => ({
+				dictValue: String(item.id || item.Id),
+				dictLabel: item.contractNumber || item.ContractNumber
+			}));
+		} else {
+			saleContractsOptions.value = [];
+			ElMessage.error(response.msg || '获取销售合同列表失败');
+		}
+	} catch (error) {
+		console.error('加载销售合同列表失败:', error);
+		saleContractsOptions.value = [];
+		ElMessage.error('获取销售合同列表失败');
+	}
+};
+
+// 加载出运合同列表（根据业务员ID）
+const loadShippingContracts = async (salePersonID) => {
+	if (!salePersonID) {
+		shippingContractsOptions.value = [];
+		return;
+	}
+	try {
+		const response = await request({
+			url: 'ShippingDeliveries/GetShippingContractSelectList/GetSelectList',
+			method: 'GET',
+			params: {
+				SalespersonID: parseInt(salePersonID)
+			}
+		});
+		if (response.code === 200) {
+			shippingContractsOptions.value = (response.data || []).map(item => ({
+				dictValue: String(item.dictValue || item.id || item.Id),
+				dictLabel: item.dictLabel || item.invoiceNumber || item.InvoiceNumber
+			}));
+		} else {
+			shippingContractsOptions.value = [];
+			// 不显示错误消息，因为业务员可能没有出运合同
+		}
+	} catch (error) {
+		console.error('加载出运合同列表失败:', error);
+		shippingContractsOptions.value = [];
+	}
+};
+
 /*动态下拉框end*/
 
 
@@ -668,6 +780,8 @@ const CreateDialogform = ref({
 	salesperson: '',
 	paymentMethod: '',
 	paidExpressCost: '',
+	relatedContractID: '',
+	relatedShippingContractsID: '',
 	photos: [],
 });
 
@@ -704,6 +818,8 @@ const handleSave = async () => {
 		salesperson_ID: parseInt(CreateDialogform.value.salesperson),
 		payment_Method: parseInt(CreateDialogform.value.paymentMethod),
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
+		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
+		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
 		isDelete: 0,
 		isDraft: 0,
 		details: SampleProductData.value.map(item => ({
@@ -776,20 +892,28 @@ const isExpressFeeRequired = computed(() => {
 });
 // 表单验证
 const validateForm = (data) => {
+	if (!data.customer_or_Supplier) {
+		ElMessage.warning('请选择客户/供应商');
+		return false;
+	}
 	if (!data.express_Company) {
 		ElMessage.warning('请选择快递公司');
 		return false;
 	}
 	if (!data.sample_Date) {
-		ElMessage.warning('请选择日期');
+		ElMessage.warning('请选择寄样日期');
 		return false;
 	}
 	if (!data.customer_ID) {
-		ElMessage.warning('请选择客户/供应商');
+		ElMessage.warning('请选择客户或供应商');
 		return false;
 	}
 	if (!data.company_ID) {
 		ElMessage.warning('请选择我方公司');
+		return false;
+	}
+	if (!data.payment_Method) {
+		ElMessage.warning('请选择付费方式');
 		return false;
 	}
 	if (!data.salesperson_ID) {
@@ -799,12 +923,11 @@ const validateForm = (data) => {
 
 	// 寄样和收样的快递费验证
 	if (data.type === 1 && data.payment_Method === 1 && !data.paid_Express_Fee) { // 寄样且预付
-		ElMessage.warning('选择预付时，已付快递费为必填项');
-		return false;
+		data.paid_Express_Fee = 0;
+
 	}
 	if (data.type === 2 && data.payment_Method === 2 && !data.paid_Express_Fee) { // 收样且到付
-		ElMessage.warning('选择到付时，已付快递费为必填项');
-		return false;
+		data.paid_Express_Fee = 0;
 	}
 
 	if (data.details.length === 0) {
@@ -842,12 +965,17 @@ const resetForm = () => {
 		salesperson: useUserStore().userId ? useUserStore().userId.toString() : '', // 这里设置默认业务员,
 		paymentMethod: '',
 		paidExpressCost: '',
+		relatedContractID: '',
+		relatedShippingContractsID: '',
 		photos: [],
 	};
 	// 重置寄样/收样选择
 	radioValue.value = '1';
 	// 清空样品列表数据
 	SampleProductData.value = [];
+	// 清空合同选项
+	saleContractsOptions.value = [];
+	shippingContractsOptions.value = [];
 	// 重置编辑状态
 	isEditable.value = false;
 };
@@ -875,6 +1003,8 @@ const handleEditSave = async () => {
 		salesperson_ID: parseInt(CreateDialogform.value.salesperson),
 		payment_Method: parseInt(CreateDialogform.value.paymentMethod),
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
+		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
+		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
 		isDelete: 0,
 		isDraft: 0,
 		details: SampleProductData.value.map(item => ({
@@ -1056,6 +1186,8 @@ const handleSaveDraft = async () => {
 		salesperson_ID: parseInt(CreateDialogform.value.salesperson) || null,
 		payment_Method: parseInt(CreateDialogform.value.paymentMethod) || null,
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
+		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
+		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
 		isDelete: 0,
 		isDraft: 1,  // 标记为草稿
 		details: SampleProductData.value.map(item => ({
@@ -1131,6 +1263,20 @@ watch(() => CreateDialogform.value.paymentMethod, (newValue) => {
 	// 如果选择到付，自动设置已付快递费为0
 	if (newValue === '2') { // 假设'2'代表到付
 		CreateDialogform.value.paidExpressCost = '0';
+	}
+});
+
+// 监听业务员变化，动态加载出运合同列表
+watch(() => CreateDialogform.value.salesperson, (newValue) => {
+	if (newValue) {
+		// 清空当前选择的出运合同
+		CreateDialogform.value.relatedShippingContractsID = '';
+		// 加载新的出运合同列表
+		loadShippingContracts(newValue);
+	} else {
+		// 如果业务员为空，清空出运合同列表
+		shippingContractsOptions.value = [];
+		CreateDialogform.value.relatedShippingContractsID = '';
 	}
 });
 

@@ -516,7 +516,7 @@
 				</el-table-column>
 				<el-table-column prop="exchangeRate" label="汇率" width="150">
 					<template #default="{ row }">
-						<el-input v-model="row.exchangeRate" :disabled="IsEditable" placeholder="输入汇率"
+						<el-input v-model="row.exchangeRate" disabled placeholder="输入汇率"
 							@change="handleExpenseChange(row)" size="small"></el-input>
 					</template>
 				</el-table-column>

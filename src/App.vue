@@ -81,8 +81,5 @@ eventBus.on('notification-navigate', ({ path, data, action, contactId }) => {
   }
 });
 
-console.log('🎉源码地址: https://gitee.com/izory/ZrAdminNetCore')
-console.log('📖官方文档：http://www.izhaorui.cn/doc')
-console.log('💰打赏作者：http://www.izhaorui.cn/doc/support.html')
-console.log('📱移动端体验：http://www.izhaorui.cn/h5')
+
 </script>

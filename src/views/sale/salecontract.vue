@@ -328,7 +328,7 @@
 							<el-col :span="6">
 								<el-form-item label="汇率" prop="exchangeRate">
 									<el-input v-model="Newcontractform.exchangeRate" style="width: 300px"
-										:placeholder="'请输入汇率'" :disabled="isDisabled" @blur="formatExchangeRate"
+										:placeholder="'请输入汇率'" disabled @blur="formatExchangeRate"
 										size="default"></el-input>
 								</el-form-item>
 							</el-col>
@@ -854,7 +854,7 @@
 						<el-table-column prop="exchangeRate" label="汇率" width="150">
 							<template #default="{ row }">
 								<el-input v-model="row.exchangeRate" placeholder="输入汇率" size="small"
-									:disabled="isDisabled"></el-input>
+									disabled></el-input>
 							</template>
 						</el-table-column>
 						<el-table-column prop="expense" label="费用" width="150">

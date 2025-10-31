@@ -236,8 +236,8 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="汇率" prop="exchangerate" data-field="exchangerate">
-									<el-input v-model="quotationDialogform.exchangerate" style="width: 300px;"
-										:disabled="isDisabled" @change="calculateTotal" size="default" clearable />
+									<el-input v-model="quotationDialogform.exchangerate" style="width: 300px;" disabled
+										@change="calculateTotal" size="default" clearable />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6" v-if="false">
