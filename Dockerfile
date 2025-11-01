@@ -63,21 +63,11 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-XSS-Protection "1; mode=block" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self';" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self';" always;
     }
 
-    # 静态资源缓存和压缩
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        add_header Vary "Accept-Encoding";
-        
-        # 启用压缩
-        gzip_static on;
-    }
-
-    # API代理配置
-    location /api/ {
+    # API代理配置（使用 ^~ 强制前缀匹配优先级，防止被正则匹配拦截）
+    location ^~ /api/ {
         # 代理到后端容器服务
         proxy_pass http://backend-container:8888/;
         proxy_set_header Host \$host;
@@ -89,10 +79,17 @@ server {
         proxy_connect_timeout 30s;
         proxy_send_timeout 30s;
         proxy_read_timeout 30s;
+        
+        # 允许大文件上传和下载
+        client_max_body_size 50M;
+        proxy_buffering off;
+        
+        # 禁用缓存（API 响应不应被缓存）
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
     }
     
     # 处理 /prod-api 路径（如果后端使用此路径）
-    location /prod-api/ {
+    location ^~ /prod-api/ {
         proxy_pass http://backend-container:8888/;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -103,6 +100,21 @@ server {
         proxy_connect_timeout 30s;
         proxy_send_timeout 30s;
         proxy_read_timeout 30s;
+        
+        # 允许大文件上传和下载
+        client_max_body_size 50M;
+        proxy_buffering off;
+    }
+
+    # 静态资源缓存和压缩（排除 /api/ 路径下的文件）
+    # 注意：前缀匹配 /api/ 优先级高于正则匹配，所以 /api/ 路径不会被此规则捕获
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header Vary "Accept-Encoding";
+        
+        # 启用压缩
+        gzip_static on;
     }
 
     # 健康检查端点

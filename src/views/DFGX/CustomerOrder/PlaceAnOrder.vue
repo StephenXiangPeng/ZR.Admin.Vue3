@@ -25,7 +25,7 @@
             </el-col>
             <el-col :span="8">
               <el-form-item label="Customer" prop="customerName">
-                <el-input v-model="orderForm.customerName" placeholder="Please enter Customer Name" readonly></el-input>
+                <el-input v-model="orderForm.customerName" placeholder="Please enter Customer Name" clearable></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="8">
@@ -49,7 +49,7 @@
           <el-row :gutter="20">
             <el-col :span="8">
               <el-form-item label="Frame Type" prop="frameType">
-                <el-select v-model="orderForm.frameType" placeholder="Please select Frame Type" style="width: 100%">
+                <el-select v-model="orderForm.frameType" placeholder="Please select Frame Type" style="width: 100%" clearable>
                   <el-option 
                     v-for="option in frameTypeOptions" 
                     :key="option.value" 
@@ -61,7 +61,7 @@
             </el-col>
             <el-col :span="8">
               <el-form-item label="Model" prop="frameModel">
-                <el-select v-model="orderForm.frameModel" placeholder="Please select Model" style="width: 100%">
+                <el-select v-model="orderForm.frameModel" placeholder="Please select Model" style="width: 100%" clearable>
                   <el-option 
                     v-for="option in frameModelOptions" 
                     :key="option.value" 
@@ -73,7 +73,7 @@
             </el-col>
             <el-col :span="8">
               <el-form-item label="ED/EDA" prop="edEda">
-                <el-input v-model="orderForm.edEda" placeholder="Please enter ED/EDA"></el-input>
+                <el-input v-model="orderForm.edEda" placeholder="Please enter ED/EDA" clearable></el-input>
               </el-form-item>
             </el-col>
           </el-row>
@@ -81,12 +81,12 @@
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="sizeA-DBL-sizeA" prop="sizeA">
-                <el-input v-model="orderForm.sizeA" placeholder="Please enter sizeA-DBL-sizeA"></el-input>
+                <el-input v-model="orderForm.sizeA" placeholder="Please enter sizeA-DBL-sizeA" clearable></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="sizeB" prop="sizeB">
-                <el-input v-model="orderForm.sizeB" placeholder="Please enter sizeB"></el-input>
+                <el-input v-model="orderForm.sizeB" placeholder="Please enter sizeB" clearable></el-input>
               </el-form-item>
             </el-col>
           </el-row>
@@ -119,12 +119,12 @@
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="Dia" prop="dia">
-                <el-input v-model="orderForm.dia" placeholder="Please enter Dia"></el-input>
+                <el-input v-model="orderForm.dia" placeholder="Please enter Dia" clearable></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="Index" prop="refractiveIndex">
-                <el-select v-model="orderForm.refractiveIndex" placeholder="Please select Index" style="width: 100%">
+                <el-select v-model="orderForm.refractiveIndex" placeholder="Please select Index" style="width: 100%" clearable>
                   <el-option 
                     v-for="option in refractiveIndexOptions" 
                     :key="option.value" 
@@ -140,7 +140,7 @@
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="Design" prop="designName">
-                <el-select v-model="orderForm.designName" placeholder="Please select Design" style="width: 100%">
+                <el-select v-model="orderForm.designName" placeholder="Please select Design" style="width: 100%" clearable>
                   <el-option 
                     v-for="option in designNameOptions" 
                     :key="option.value" 
@@ -156,6 +156,7 @@
                   v-model="orderForm.material" 
                   placeholder="Please select Material" 
                   style="width: 100%"
+                  clearable
                   multiple
                   collapse-tags
                   collapse-tags-tooltip>
@@ -174,7 +175,7 @@
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="Corridor" prop="channel">
-                <el-select v-model="orderForm.channel" placeholder="Please select Corridor" style="width: 100%">
+                <el-select v-model="orderForm.channel" placeholder="Please select Corridor" style="width: 100%" clearable>
                   <el-option 
                     v-for="option in channelOptions" 
                     :key="option.value" 
@@ -186,7 +187,7 @@
             </el-col>
             <el-col :span="12">
               <el-form-item label="Coating" prop="coating">
-                <el-select v-model="orderForm.coating" placeholder="Please select Coating" style="width: 100%">
+                <el-select v-model="orderForm.coating" placeholder="Please select Coating" style="width: 100%" clearable>
                   <el-option 
                     v-for="option in coatingOptions" 
                     :key="option.value" 
@@ -216,60 +217,60 @@
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="SPH" prop="rightEye.sph">
-                      <el-input v-model="orderForm.rightEye.sph" placeholder="Sphere"></el-input>
+                      <el-input v-model="orderForm.rightEye.sph" placeholder="Sphere" clearable></el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="CYL" prop="rightEye.cyl">
-                      <el-input v-model="orderForm.rightEye.cyl" placeholder="Cylinder"></el-input>
+                      <el-input v-model="orderForm.rightEye.cyl" placeholder="Cylinder" clearable></el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="Axis" prop="rightEye.axis">
-                      <el-input v-model="orderForm.rightEye.axis" placeholder="Axis"></el-input>
+                      <el-input v-model="orderForm.rightEye.axis" placeholder="Axis" clearable></el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="ADD" prop="rightEye.add">
-                      <el-input v-model="orderForm.rightEye.add" placeholder="Addition"></el-input>
+                      <el-input v-model="orderForm.rightEye.add" placeholder="Addition" clearable></el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="Prism" prop="rightEye.prism">
-                      <el-input v-model="orderForm.rightEye.prism" placeholder="Prism"></el-input>
+                      <el-input v-model="orderForm.rightEye.prism" placeholder="Prism" clearable></el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="Direction" prop="rightEye.prismDirection">
-                      <el-input v-model="orderForm.rightEye.prismDirection" placeholder="Direction"></el-input>
+                      <el-input v-model="orderForm.rightEye.prismDirection" placeholder="Direction" clearable></el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="Base" prop="rightEye.base">
-                      <el-input v-model="orderForm.rightEye.base" placeholder="Base"></el-input>
+                      <el-input v-model="orderForm.rightEye.base" placeholder="Base" clearable></el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="PH" prop="rightEye.ph">
-                      <el-input v-model="orderForm.rightEye.ph" placeholder="PH"></el-input>
+                      <el-input v-model="orderForm.rightEye.ph" placeholder="PH" clearable></el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="Near PD" prop="rightEye.nearPd">
-                      <el-input v-model="orderForm.rightEye.nearPd" placeholder="Near PD"></el-input>
+                      <el-input v-model="orderForm.rightEye.nearPd" placeholder="Near PD" clearable></el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="Distance PD" prop="rightEye.distancePd">
-                      <el-input v-model="orderForm.rightEye.distancePd" placeholder="Distance PD"></el-input>
+                      <el-input v-model="orderForm.rightEye.distancePd" placeholder="Distance PD" clearable></el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
@@ -288,60 +289,60 @@
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="SPH" prop="leftEye.sph">
-                      <el-input v-model="orderForm.leftEye.sph" placeholder="Sphere"></el-input>
+                      <el-input v-model="orderForm.leftEye.sph" placeholder="Sphere" clearable></el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="CYL" prop="leftEye.cyl">
-                      <el-input v-model="orderForm.leftEye.cyl" placeholder="Cylinder"></el-input>
+                      <el-input v-model="orderForm.leftEye.cyl" placeholder="Cylinder" clearable></el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="Axis" prop="leftEye.axis">
-                      <el-input v-model="orderForm.leftEye.axis" placeholder="Axis"></el-input>
+                      <el-input v-model="orderForm.leftEye.axis" placeholder="Axis" clearable></el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="ADD" prop="leftEye.add">
-                      <el-input v-model="orderForm.leftEye.add" placeholder="Addition"></el-input>
+                      <el-input v-model="orderForm.leftEye.add" placeholder="Addition" clearable></el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="Prism" prop="leftEye.prism">
-                      <el-input v-model="orderForm.leftEye.prism" placeholder="Prism"></el-input>
+                      <el-input v-model="orderForm.leftEye.prism" placeholder="Prism" clearable></el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="Direction" prop="leftEye.prismDirection">
-                      <el-input v-model="orderForm.leftEye.prismDirection" placeholder="Direction"></el-input>
+                      <el-input v-model="orderForm.leftEye.prismDirection" placeholder="Direction" clearable></el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="Base" prop="leftEye.base">
-                      <el-input v-model="orderForm.leftEye.base" placeholder="Base"></el-input>
+                      <el-input v-model="orderForm.leftEye.base" placeholder="Base" clearable></el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="PH" prop="leftEye.ph">
-                      <el-input v-model="orderForm.leftEye.ph" placeholder="PH"></el-input>
+                      <el-input v-model="orderForm.leftEye.ph" placeholder="PH" clearable></el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
                 <el-row :gutter="15">
                   <el-col :span="12">
                     <el-form-item label="Near PD" prop="leftEye.nearPd">
-                      <el-input v-model="orderForm.leftEye.nearPd" placeholder="Near PD"></el-input>
+                      <el-input v-model="orderForm.leftEye.nearPd" placeholder="Near PD" clearable></el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="Distance PD" prop="leftEye.distancePd">
-                      <el-input v-model="orderForm.leftEye.distancePd" placeholder="Distance PD"></el-input>
+                      <el-input v-model="orderForm.leftEye.distancePd" placeholder="Distance PD" clearable></el-input>
                     </el-form-item>
                   </el-col>
                 </el-row>
@@ -369,7 +370,7 @@
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="Tinting" prop="tinting">
-                <el-select v-model="orderForm.tinting" placeholder="Please select Tinting" style="width: 100%">
+                <el-select v-model="orderForm.tinting" placeholder="Please select Tinting" style="width: 100%" clearable>
                   <el-option 
                     v-for="option in tintingOptions" 
                     :key="option.value" 
@@ -381,7 +382,7 @@
             </el-col>
             <el-col :span="12">
               <el-form-item label="Lenticular" prop="lenticular">
-                <el-select v-model="orderForm.lenticular" placeholder="Please select Lenticular" style="width: 100%">
+                <el-select v-model="orderForm.lenticular" placeholder="Please select Lenticular" style="width: 100%" clearable>
                   <el-option 
                     v-for="option in lenticularOptions" 
                     :key="option.value" 
@@ -423,7 +424,7 @@
             </el-col>
             <el-col :span="12">
               <el-form-item label="Color" prop="color">
-                <el-select v-model="orderForm.color" placeholder="Please select Color" style="width: 100%">
+                <el-select v-model="orderForm.color" placeholder="Please select Color" style="width: 100%" clearable>
                   <el-option 
                     v-for="option in colorOptions" 
                     :key="option.value" 
@@ -475,6 +476,7 @@
                   v-model="orderForm.remarksType" 
                   placeholder="Please select Remarks Type" 
                   style="width: 100%"
+                  clearable
                   multiple
                   collapse-tags
                   collapse-tags-tooltip>
@@ -1303,7 +1305,7 @@ const submitOrder = async () => {
     
     const response = await createCompleteOrder(completeOrderData)
     
-    if (response.data && response.status == 200) {
+    if (response.data && response.code == 200) {
       const payload = response.data || {}
       const orderId = payload.OrderId || response.data.orderId
       

@@ -7,6 +7,7 @@
       :list-type="listType"
       :on-success="handleUploadSuccess"
       :before-upload="handleBeforeUpload"
+      :on-change="handleFileChange"
       :limit="limit"
       :on-error="handleUploadError"
       :on-exceed="handleExceed"
@@ -39,12 +40,23 @@
       </template>
     </el-upload>
 
-    <el-dialog v-model="dialogVisible" append-to-body>
+    <el-dialog v-model="dialogVisible" append-to-body @close="handleDialogClose">
       <el-form label-width="100px">
         <el-form-item label="预览">
-          <el-image style="display: block; max-width: 50%" :src="dialogImageUrl">
+          <el-image 
+            style="display: block; max-width: 50%" 
+            :src="dialogImageUrl"
+            :preview-src-list="dialogImageUrl ? [dialogImageUrl] : []"
+            fit="contain"
+            @error="handleImageError"
+            @load="handleImageLoad"
+          >
             <template #error>
-              <div class="image-slot">加载失败</div>
+              <div class="image-slot">
+                <div>加载失败</div>
+                <div style="font-size: 12px; color: #999; margin-top: 8px;">URL: {{ dialogImageUrl }}</div>
+                <div style="font-size: 11px; color: #f56c6c; margin-top: 4px;">请查看浏览器控制台获取详细错误信息</div>
+              </div>
             </template>
           </el-image>
         </el-form-item>
@@ -61,6 +73,7 @@
 </template>
 
 <script setup>
+import { onBeforeUnmount } from 'vue'
 import { getToken } from '@/utils/auth'
 
 const props = defineProps({
@@ -112,6 +125,8 @@ const number = ref(0)
 const uploadList = ref([])
 const dialogImageUrl = ref('')
 const dialogVisible = ref(false)
+const createdBlobUrl = ref(null) // 记录手动创建的 blob URL，用于清理
+const blobUrlMap = ref(new Map()) // 存储文件 UID 到 blob URL 的映射
 const baseUrl = import.meta.env.VITE_APP_BASE_API
 const apiHost = import.meta.env.VITE_APP_API_HOST
 const isDev = import.meta.env.DEV
@@ -167,6 +182,11 @@ watch(
 
 // 删除图片
 function handleRemove(file, files) {
+  // 清理 blob URL
+  if (file.uid && blobUrlMap.value.has(file.uid)) {
+    URL.revokeObjectURL(blobUrlMap.value.get(file.uid))
+    blobUrlMap.value.delete(file.uid)
+  }
   // 优先使用回调传入的最新文件列表，避免依赖可能滞后的内部 fileList
   const current = Array.isArray(files) ? files : fileList.value
   const value = listToString(current)
@@ -251,6 +271,35 @@ function handleUploadSuccess(res) {
   proxy.$modal.closeLoading()
 }
 
+// 文件选择变化处理（auto-upload=false 时，确保创建有效的 blob URL）
+function handleFileChange(file, fileList) {
+  console.log('=== 文件选择变化 ===')
+  console.log('file:', file)
+  console.log('file.status:', file.status)
+  console.log('file.url:', file.url)
+  console.log('file.raw:', file.raw)
+  console.log('file.uid:', file.uid)
+  
+  // 如果是新文件且未上传，确保有有效的 blob URL
+  if (file.raw && file.status === 'ready' && !file.url) {
+    // 为文件创建 blob URL
+    const blobUrl = URL.createObjectURL(file.raw)
+    console.log('创建新的 blob URL:', blobUrl)
+    blobUrlMap.value.set(file.uid, blobUrl)
+    file.url = blobUrl
+  } else if (file.raw && file.status === 'ready' && file.url && file.url.startsWith('blob:')) {
+    // 如果已有 blob URL 但可能失效，重新创建
+    if (blobUrlMap.value.has(file.uid)) {
+      URL.revokeObjectURL(blobUrlMap.value.get(file.uid))
+    }
+    const blobUrl = URL.createObjectURL(file.raw)
+    console.log('重新创建 blob URL:', blobUrl)
+    blobUrlMap.value.set(file.uid, blobUrl)
+    file.url = blobUrl
+  }
+  console.log('===================')
+}
+
 // 上传前loading加载
 function handleBeforeUpload(file) {
   let isImg = false
@@ -295,8 +344,101 @@ function handleUploadError() {
 
 // 预览
 function handlePictureCardPreview(file) {
-  dialogImageUrl.value = file.url
+  // 调试信息
+  console.log('=== 预览调试信息 ===')
+  console.log('file 对象:', file)
+  console.log('file.url:', file.url)
+  console.log('file.raw:', file.raw)
+  console.log('file.uid:', file.uid)
+  console.log('file.status:', file.status)
+  console.log('blobUrlMap 中有该文件:', blobUrlMap.value.has(file.uid))
+  
+  // 清理之前手动创建的 blob URL（非映射中的）
+  if (createdBlobUrl.value) {
+    URL.revokeObjectURL(createdBlobUrl.value)
+    createdBlobUrl.value = null
+  }
+  
+  let previewUrl = ''
+  
+  // 优先使用 file.url
+  if (file.url) {
+    // 如果 file.url 是 http/https URL，直接使用
+    if (file.url.startsWith('http://') || file.url.startsWith('https://')) {
+      previewUrl = file.url
+      console.log('使用 http/https URL:', previewUrl)
+    } 
+    // 如果是 blob URL，检查是否需要重新创建
+    else if (file.url.startsWith('blob:')) {
+      // 如果文件还在映射中，使用映射的 URL（通常更可靠）
+      if (file.uid && blobUrlMap.value.has(file.uid)) {
+        previewUrl = blobUrlMap.value.get(file.uid)
+        console.log('使用映射中的 blob URL:', previewUrl)
+      } else if (file.raw) {
+        // 如果映射中没有，从 file.raw 重新创建
+        previewUrl = URL.createObjectURL(file.raw)
+        console.log('重新创建 blob URL:', previewUrl)
+        if (file.uid) {
+          blobUrlMap.value.set(file.uid, previewUrl)
+        }
+      } else {
+        // 使用原有的 blob URL
+        previewUrl = file.url
+        console.log('使用原有 blob URL:', previewUrl)
+      }
+    } 
+    // 相对路径
+    else {
+      previewUrl = file.url
+      console.log('使用相对路径:', previewUrl)
+    }
+  } 
+  // 如果没有 url，从 file.raw 创建
+  else if (file.raw) {
+    previewUrl = URL.createObjectURL(file.raw)
+    console.log('从 file.raw 创建 blob URL:', previewUrl)
+    if (file.uid) {
+      blobUrlMap.value.set(file.uid, previewUrl)
+    } else {
+      createdBlobUrl.value = previewUrl
+    }
+  }
+  // 检查映射中的 URL
+  else if (file.uid && blobUrlMap.value.has(file.uid)) {
+    previewUrl = blobUrlMap.value.get(file.uid)
+    console.log('从映射获取 URL:', previewUrl)
+  }
+  
+  console.log('最终 previewUrl:', previewUrl)
+  console.log('==================')
+  
+  dialogImageUrl.value = previewUrl || ''
   dialogVisible.value = true
+}
+
+// 对话框关闭时清理 blob URL
+function handleDialogClose() {
+  if (createdBlobUrl.value) {
+    URL.revokeObjectURL(createdBlobUrl.value)
+    createdBlobUrl.value = null
+  }
+}
+
+// 图片加载错误
+function handleImageError(event) {
+  console.error('=== 图片加载错误 ===')
+  console.error('错误事件:', event)
+  console.error('图片 URL:', dialogImageUrl.value)
+  console.error('错误类型:', event.type)
+  console.error('目标元素:', event.target)
+  console.error('==================')
+}
+
+// 图片加载成功
+function handleImageLoad(event) {
+  console.log('=== 图片加载成功 ===')
+  console.log('图片 URL:', dialogImageUrl.value)
+  console.log('==================')
 }
 
 // 对象转成指定字符串分隔
@@ -320,6 +462,20 @@ function submitUpload() {
     uploadRef.value.submit()
   }
 }
+
+// 组件卸载时清理所有 blob URL
+onBeforeUnmount(() => {
+  // 清理所有映射的 blob URL
+  blobUrlMap.value.forEach((url) => {
+    URL.revokeObjectURL(url)
+  })
+  blobUrlMap.value.clear()
+  // 清理手动创建的 blob URL
+  if (createdBlobUrl.value) {
+    URL.revokeObjectURL(createdBlobUrl.value)
+    createdBlobUrl.value = null
+  }
+})
 
 defineExpose({
   submitUpload,
