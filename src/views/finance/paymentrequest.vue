@@ -1150,10 +1150,10 @@ const loadApplicantSaleContracts = async (applicantId) => {
 	}
 	try {
 		const response = await request({
-			url: 'SaleContract/GetSaleContractListByApplicantID/GetList',
+			url: 'Contracts/GetVisibleContractSelectList/GetVisibleContractSelectList',
 			method: 'GET',
 			params: {
-				ApplicantID: applicantId
+				CustomerID: applicantId
 			}
 		});
 		if (response && response.code === 200) {
@@ -1178,7 +1178,7 @@ const loadApplicantShippingContracts = async (applicantId) => {
 	}
 	try {
 		const response = await request({
-			url: 'ShippingDelivery/GetShippingDeliveryListByApplicantID/GetList',
+			url: 'ShippingDeliveries/GetShippingContractSelectList/GetSelectList',
 			method: 'GET',
 			params: {
 				ApplicantID: applicantId
