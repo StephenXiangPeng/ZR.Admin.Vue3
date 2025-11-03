@@ -64,11 +64,13 @@
 				<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="110"></el-table-column>
 				<el-table-column prop="customer_ID" label="寄样对象" width="150"></el-table-column>
 				<el-table-column prop="waybill_Number" label="运单号" width="130"></el-table-column>
-				<el-table-column prop="express_Company" label="快件公司" width="100"></el-table-column>
+				<el-table-column prop="express_Company" label="快件公司" width="130"></el-table-column>
 				<el-table-column prop="sample_Date" label="登记日期" width="110"></el-table-column>
 				<el-table-column prop="payment_Method" label="付费方式" width="90"></el-table-column>
-				<el-table-column prop="company_ID" label="我方公司" width="90"></el-table-column>
+				<el-table-column prop="company_ID" label="我方公司" width="110"></el-table-column>
 				<el-table-column prop="paid_Express_Fee" label="已付快件费" width="110"></el-table-column>
+				<el-table-column prop="relatedContractID" label="销售合同" width="130"></el-table-column>
+				<el-table-column prop="relatedShippingContractsID" label="出运合同" width="130"></el-table-column>
 				<el-table-column fixed="right" prop="operate" label="操作" width="200">
 					<template v-slot:default="scope">
 						<el-button type="text" size="small" @click="handleView(scope.row.id)">查看/编辑</el-button>
@@ -366,9 +368,12 @@ const SearchHandleSearch = () => {
 	GetProductSampleList(currentPage.value, pageSize.value);
 }
 //表格数据
-const GetProductSampleList = (start, end) => {
-	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
-		request({
+const GetProductSampleList = async (start, end) => {
+	try {
+		// 先加载销售合同列表（用于显示）
+		await loadSaleContracts();
+
+		const response = await request({
 			url: 'ProductSample/GetProductSampleList/GetList',
 			method: 'GET',
 			params: {
@@ -380,41 +385,92 @@ const GetProductSampleList = (start, end) => {
 				StartDate: SearchStartDate.value,
 				EndDate: SearchEndDate.value,
 			}
-		}).then(response => {
-			if (response.code === 200) {
-				// 更新表格数据
-				ProductSampleTableData.value = response.data.result;
-				ProductSampleTableData.value.forEach(item => {
-					item.type = item.type === 1 ? '寄样' : '收样';
-					item.customer_or_Supplier = item.customer_or_Supplier === 1 ? '客户' : '供应商';
-					if (item.customer_ID != 0 && item.customer_ID != null) {
-						item.customer_ID = optionss.value.sql_hr_customer_abbreviation.find(customer => customer.dictValue === item.customer_ID.toString())?.dictLabel || '未知';
-					}
-					if (item.express_Company != 0 && item.express_Company != null) {
-						item.express_Company = optionss.value.hr_express_delivery_company.find(company => company.dictValue === item.express_Company.toString())?.dictLabel || '未知';
-					}
-					item.paid_Express_Fee = item.paid_Express_Fee.toFixed(2);
-					if (item.payment_Method != 0 && item.payment_Method != null) {
-						item.payment_Method = optionss.value.hr_express_payment_method.find(method => method.dictValue === item.payment_Method.toString())?.dictLabel || '未知';
-					}
-					if (item.company_ID != 0 && item.company_ID != null) {
-						item.company_ID = optionss.value.hr_ourcompany.find(company => company.dictValue === item.company_ID.toString())?.dictLabel || '未知';
-					}
-					item.sample_Date = formatDate(item.sample_Date);
-				});
-				// 更新分页信息
-				totalItems.value = response.data.totalNum;
-				// 解决 Promise
-				resolve(response.data);
-			} else {
-				ElMessage.error(response.msg || '获取数据失败');
-				reject(new Error(response.msg));
-			}
-		}).catch(error => {
-			ElMessage.error('获取数据失败');
-			reject(error);
 		});
-	})
+
+		if (response.code === 200) {
+			// 更新表格数据
+			ProductSampleTableData.value = response.data.result;
+
+			// 收集所有不同的业务员ID，用于批量加载出运合同
+			const uniqueSalespersonIds = Array.from(new Set(
+				ProductSampleTableData.value
+					.filter(item => item.salesperson_ID && item.salesperson_ID !== 0)
+					.map(item => item.salesperson_ID.toString())
+			));
+
+			// 为每个业务员加载出运合同列表（用于显示）
+			const shippingContractMap = new Map();
+			for (const salespersonId of uniqueSalespersonIds) {
+				try {
+					const shippingResponse = await request({
+						url: 'ShippingDeliveries/GetShippingContractSelectList/GetSelectList',
+						method: 'GET',
+						params: {
+							SalespersonID: parseInt(salespersonId)
+						}
+					});
+					if (shippingResponse.code === 200) {
+						const contracts = (shippingResponse.data || []).map(item => ({
+							dictValue: String(item.dictValue || item.id || item.Id),
+							dictLabel: item.dictLabel || item.invoiceNumber || item.InvoiceNumber
+						}));
+						shippingContractMap.set(salespersonId, contracts);
+					}
+				} catch (error) {
+					console.error(`加载业务员 ${salespersonId} 的出运合同列表失败:`, error);
+				}
+			}
+
+			// 处理列表数据
+			ProductSampleTableData.value.forEach((item) => {
+				item.type = item.type === 1 ? '寄样' : '收样';
+				item.customer_or_Supplier = item.customer_or_Supplier === 1 ? '客户' : '供应商';
+				if (item.customer_ID != 0 && item.customer_ID != null) {
+					item.customer_ID = optionss.value.sql_hr_customer_abbreviation.find(customer => customer.dictValue === item.customer_ID.toString())?.dictLabel || '未知';
+				}
+				if (item.express_Company != 0 && item.express_Company != null) {
+					item.express_Company = optionss.value.hr_express_delivery_company.find(company => company.dictValue === item.express_Company.toString())?.dictLabel || '未知';
+				}
+				item.paid_Express_Fee = item.paid_Express_Fee.toFixed(2);
+				if (item.payment_Method != 0 && item.payment_Method != null) {
+					item.payment_Method = optionss.value.hr_express_payment_method.find(method => method.dictValue === item.payment_Method.toString())?.dictLabel || '未知';
+				}
+				if (item.company_ID != 0 && item.company_ID != null) {
+					item.company_ID = optionss.value.hr_ourcompany.find(company => company.dictValue === item.company_ID.toString())?.dictLabel || '未知';
+				}
+				item.sample_Date = formatDate(item.sample_Date);
+
+				// 处理销售合同显示
+				if (item.relatedContractID != 0 && item.relatedContractID != null) {
+					const contract = saleContractsOptions.value.find(c => c.dictValue === item.relatedContractID.toString());
+					item.relatedContractID = contract ? contract.dictLabel : (item.relatedContractNumber || item.relatedContractID || '');
+				} else {
+					item.relatedContractID = '';
+				}
+
+				// 处理出运合同显示
+				if (item.relatedShippingContractsID != 0 && item.relatedShippingContractsID != null) {
+					const salespersonId = item.salesperson_ID ? item.salesperson_ID.toString() : '';
+					const shippingContracts = shippingContractMap.get(salespersonId) || [];
+					const shippingContract = shippingContracts.find(c => c.dictValue === item.relatedShippingContractsID.toString());
+					item.relatedShippingContractsID = shippingContract ? shippingContract.dictLabel : (item.relatedShippingNumber || item.relatedShippingContractsID || '');
+				} else {
+					item.relatedShippingContractsID = '';
+				}
+			});
+
+			// 更新分页信息
+			totalItems.value = response.data.totalNum;
+			return response.data;
+		} else {
+			ElMessage.error(response.msg || '获取数据失败');
+			throw new Error(response.msg);
+		}
+	} catch (error) {
+		console.error('获取数据失败:', error);
+		ElMessage.error('获取数据失败');
+		throw error;
+	}
 }
 
 const formatDate = (dateString) => {
@@ -464,7 +520,27 @@ const handleView = async (id) => {
 
 		if (response.code === 200) {
 			const { sample, details } = response.data;
-			// 填充主表数据
+			// 保存paymentRequestID
+			currentPaymentRequestID.value = sample?.paymentRequestID ?? null;
+
+			// 根据paymentRequestID判断是否允许编辑
+			// 如果paymentRequestID等于0或者为null，可以编辑；如果不等于0，则不允许编辑
+			const canEdit = !currentPaymentRequestID.value || currentPaymentRequestID.value === 0;
+
+			// 保存销售合同和出运合同的ID（在选项加载完成前先保存）
+			const relatedContractIDValue = sample?.relatedContractID ? sample.relatedContractID.toString() : '';
+			const relatedShippingContractsIDValue = sample?.relatedShippingContractsID ? sample.relatedShippingContractsID.toString() : '';
+			const salespersonID = sample?.salesperson_ID ? sample.salesperson_ID.toString() : '';
+
+			// 先加载销售合同列表（等待加载完成）
+			await loadSaleContracts();
+
+			// 如果有业务员，加载出运合同列表（等待加载完成）
+			if (salespersonID) {
+				await loadShippingContracts(salespersonID);
+			}
+
+			// 填充主表数据（在选项加载完成后再赋值，确保下拉框能正确显示）
 			CreateDialogform.value = {
 				recipienttypeexamples: (sample?.customer_or_Supplier ?? 1).toString(),
 				waybillNumber: sample?.waybill_Number ?? '',
@@ -473,22 +549,22 @@ const handleView = async (id) => {
 				sampleObject: (sample?.customer_ID ?? '').toString(),
 				partnerAbbreviation: sample?.abbreviation ?? '',
 				ourCompany: (sample?.company_ID ?? '').toString(),
-				salesperson: (sample?.salesperson_ID ?? '').toString(),
+				salesperson: salespersonID,
 				paymentMethod: (sample?.payment_Method ?? '').toString(),
 				paidExpressCost: (sample?.paid_Express_Fee ?? 0).toString(),
-				relatedContractID: (sample?.RelatedContractID ?? '').toString(),
-				relatedShippingContractsID: (sample?.RelatedShippingContractsID ?? '').toString(),
+				relatedContractID: relatedContractIDValue,
+				relatedShippingContractsID: relatedShippingContractsIDValue,
 				photos: sample?.photos ?? []
 			};
 
 			// 设置寄样/收样类型
 			radioValue.value = (sample?.type ?? 1).toString();
 
-			// 加载销售合同列表
-			loadSaleContracts();
-			// 如果有业务员，加载出运合同列表
-			if (CreateDialogform.value.salesperson) {
-				loadShippingContracts(CreateDialogform.value.salesperson);
+			// 根据paymentRequestID设置编辑按钮显示
+			if (!canEdit) {
+				// 如果已关联付款申请，不允许编辑，只显示查看按钮
+				isEditBtnShow.value = false;
+				isEditable.value = false;
 			}
 
 			// 填充样品明细数据
@@ -522,6 +598,12 @@ const handleView = async (id) => {
 
 // 编辑按钮点击事件
 const handleEdit = () => {
+	// 检查paymentRequestID，如果不为0且不为null，则不允许编辑
+	if (currentPaymentRequestID.value && currentPaymentRequestID.value !== 0) {
+		ElMessage.warning('该记录已关联付款申请，不允许编辑');
+		return;
+	}
+
 	isEditable.value = true;        // 切换到可编辑状态
 	isEditBtnShow.value = false;
 	isSaveDraftBtnShow.value = true;
@@ -805,6 +887,13 @@ const uploadProductPhoto = async (file) => {
 //确定保存方法
 const handleSave = async () => {
 	if (loading.value) return;
+
+	// 检查paymentRequestID，如果不为0且不为null，则不允许保存
+	if (currentPaymentRequestID.value && currentPaymentRequestID.value !== 0) {
+		ElMessage.warning('该记录已关联付款申请，不允许保存');
+		return;
+	}
+
 	// 1. 构建基础请求数据用于验证
 	const requestData = {
 		type: parseInt(radioValue.value),
@@ -953,6 +1042,7 @@ const validateForm = (data) => {
 // 重置表单
 const resetForm = () => {
 	currentEditId.value = null;
+	currentPaymentRequestID.value = null;
 	// 重置基本表单数据
 	CreateDialogform.value = {
 		recipienttypeexamples: '1',
@@ -989,6 +1079,17 @@ const handleDialogClosed = () => {
 // 编辑保存方法
 // ... existing code ...
 const handleEditSave = async () => {
+	// 检查paymentRequestID，如果不为0且不为null，则不允许保存
+	if (currentPaymentRequestID.value && currentPaymentRequestID.value !== 0) {
+		ElMessage.warning('该记录已关联付款申请，不允许保存');
+		isEditable.value = false; // 恢复到不可编辑状态
+		isEditBtnShow.value = true;
+		isSaveDraftBtnShow.value = false;
+		isEditSubmitBtnShow.value = false;
+		isSubmitBtnShow.value = false;
+		return;
+	}
+
 	// 1. 构建请求数据
 	const requestData = {
 		ID: currentEditId.value,
@@ -1080,6 +1181,8 @@ const handleEditSave = async () => {
 
 // 添加存储当前编辑记录ID的变量
 const currentEditId = ref(null);
+// 添加存储当前记录的paymentRequestID的变量
+const currentPaymentRequestID = ref(null);
 
 // 处理样品编号变化
 // 处理样品编号变化
@@ -1172,6 +1275,13 @@ const addSampleRow = () => {
 
 const handleSaveDraft = async () => {
 	if (loading.value) return;
+
+	// 检查paymentRequestID，如果不为0且不为null，则不允许保存草稿
+	if (currentPaymentRequestID.value && currentPaymentRequestID.value !== 0) {
+		ElMessage.warning('该记录已关联付款申请，不允许保存草稿');
+		return;
+	}
+
 	// 1. 构建请求数据
 	const requestData = {
 		ID: currentEditId.value || 0,  // 如果是编辑模式，使用当前ID

@@ -368,8 +368,9 @@
 						</el-table-column>
 						<el-table-column prop="relatedContractNumber" label="关联合同号" width="150">
 							<template #default="{ row }">
-								<el-select v-model="row.relatedContractNumber" :disabled="IsDisabled" filterable
-									clearable placeholder="请选择关联合同号" size="small" style="width: 100%">
+								<el-select v-model="row.relatedContractNumber"
+									:disabled="IsDisabled || row.hasExistingContract === true" filterable clearable
+									placeholder="请选择关联合同号" size="small" style="width: 100%">
 									<el-option v-for="contract in applicantSaleContracts" :key="contract.dictvalue"
 										:label="contract.dictLabel" :value="contract.dictLabel" />
 								</el-select>
@@ -377,8 +378,9 @@
 						</el-table-column>
 						<el-table-column prop="relatedShippingNumber" label="关联运编号" width="150">
 							<template #default="{ row }">
-								<el-select v-model="row.relatedShippingNumber" :disabled="IsDisabled" filterable
-									clearable placeholder="请选择关联运编号" size="small" style="width: 100%">
+								<el-select v-model="row.relatedShippingNumber"
+									:disabled="IsDisabled || row.hasExistingShipping === true" filterable clearable
+									placeholder="请选择关联运编号" size="small" style="width: 100%">
 									<el-option v-for="shipping in applicantShippingContracts" :key="shipping.dictvalue"
 										:label="shipping.dictLabel" :value="shipping.dictLabel" />
 								</el-select>
@@ -468,6 +470,16 @@
 						<el-table-column prop="paid_Express_Fee" label="已付快件费" width="110">
 							<template #default="{ row }">
 								<span>{{ row.paid_Express_Fee || '0.00' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="relatedContractID" label="销售合同" width="130">
+							<template #default="{ row }">
+								<span>{{ row.relatedContractID || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="relatedShippingContractsID" label="出运合同" width="130">
+							<template #default="{ row }">
+								<span>{{ row.relatedShippingContractsID || '' }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column fixed="right" label="操作" width="100">
@@ -806,7 +818,7 @@ const ApproveReject = async () => {
 		// 设置审批参数
 		ApproveDocumentRequest.ApproveStatus = false;
 		ApproveDocumentRequest.DocumentID = 0;
-		ApproveDocumentRequest.ApproverID = 0;
+		ApproveDocumentRequest.ApproverID = userId;
 
 		// 从审批流程中获取当前步骤信息
 		const currentStep = approvalSteps.value.find(step => step.status === 0);
@@ -1150,16 +1162,13 @@ const loadApplicantSaleContracts = async (applicantId) => {
 	}
 	try {
 		const response = await request({
-			url: 'Contracts/GetVisibleContractSelectList/GetVisibleContractSelectList',
-			method: 'GET',
-			params: {
-				CustomerID: applicantId
-			}
+			url: 'Contracts/GetContractListByUser/GetContractList',
+			method: 'GET'
 		});
 		if (response && response.code === 200) {
 			applicantSaleContracts.value = (response.data || []).map(item => ({
-				dictvalue: item.dictvalue || item.dictValue || item.id || item.ID,
-				dictLabel: item.dictLabel || item.dictLabel || item.contractNumber || item.contract_Number || item.name
+				dictvalue: String(item.id || item.Id || item.ID),
+				dictLabel: item.contractNumber || item.ContractNumber || item.contract_Number
 			}));
 		} else {
 			applicantSaleContracts.value = [];
@@ -1181,13 +1190,13 @@ const loadApplicantShippingContracts = async (applicantId) => {
 			url: 'ShippingDeliveries/GetShippingContractSelectList/GetSelectList',
 			method: 'GET',
 			params: {
-				ApplicantID: applicantId
+				SalespersonID: parseInt(applicantId)
 			}
 		});
 		if (response && response.code === 200) {
 			applicantShippingContracts.value = (response.data || []).map(item => ({
-				dictvalue: item.dictvalue || item.dictValue || item.id || item.ID,
-				dictLabel: item.dictLabel || item.dictLabel || item.shippingNumber || item.shipping_Number || item.name
+				dictvalue: String(item.dictValue || item.id || item.Id || item.ID),
+				dictLabel: item.dictLabel || item.invoiceNumber || item.InvoiceNumber || item.shippingNumber || item.shipping_Number
 			}));
 		} else {
 			applicantShippingContracts.value = [];
@@ -1555,7 +1564,8 @@ const paymentRequestRequest = reactive({
 	Remark: '',
 	IsDelete: 0,
 	CompanyType: 0, // 新增公司类型字段
-	PaymentRequestDetails: []
+	PaymentRequestDetails: [],
+	SampleReceipts: [] // 已选择的样品收据
 });
 
 // 统一的表单处理工具函数
@@ -1592,6 +1602,41 @@ const FormHandler = {
 			PaymentRequestID: PaymentRequestID.value || 0
 		}));
 
+		// 构建SampleReceipts数组
+		const sampleReceipts = selectedSampleCollectionTableData.value.map(row => {
+			// 获取销售合同ID：如果有已有数据，使用原始ID；否则从下拉框选择的值转换
+			let relatedContractIDValue = null;
+			if (row.hasExistingContract && row.relatedContractIDOriginal) {
+				// 如果有已有数据，使用原始ID
+				relatedContractIDValue = Number(row.relatedContractIDOriginal);
+			} else if (row.relatedContractNumber && row.relatedContractNumber !== '') {
+				// 从下拉框选择的值（合同编号）转换为ID
+				const contract = applicantSaleContracts.value.find(
+					c => c.dictLabel === row.relatedContractNumber
+				);
+				relatedContractIDValue = contract ? Number(contract.dictvalue) : null;
+			}
+
+			// 获取出运合同ID：如果有已有数据，使用原始ID；否则从下拉框选择的值转换
+			let relatedShippingContractsIDValue = null;
+			if (row.hasExistingShipping && row.relatedShippingContractsIDOriginal) {
+				// 如果有已有数据，使用原始ID
+				relatedShippingContractsIDValue = Number(row.relatedShippingContractsIDOriginal);
+			} else if (row.relatedShippingNumber && row.relatedShippingNumber !== '') {
+				// 从下拉框选择的值（运编号）转换为ID
+				const shipping = applicantShippingContracts.value.find(
+					s => s.dictLabel === row.relatedShippingNumber
+				);
+				relatedShippingContractsIDValue = shipping ? Number(shipping.dictvalue) : null;
+			}
+
+			return {
+				SampleID: Number(row.sampleID) || 0,
+				RelatedContractID: relatedContractIDValue,
+				RelatedShippingContractsID: relatedShippingContractsIDValue
+			};
+		});
+
 		return {
 			id: isEdit ? PaymentRequestID.value : 0,
 			ApplicationNumber: addpaymentrequestform.value.applicationNumber,
@@ -1615,8 +1660,9 @@ const FormHandler = {
 			IsDelete: 0,
 			CompanyType: getCurrentCompanyType(),
 			RelatedContract: addpaymentrequestform.value.relatedContract || '', // 关联合同字段
-			RelatedCustomer: addpaymentrequestform.value.relatedCustomer || '', // 相关客户字段
-			PaymentRequestDetails: processedDetails
+			RelatedCustomer: addpaymentrequestform.value.relatedCustomer ? Number(addpaymentrequestform.value.relatedCustomer) : null, // 相关客户字段（可空整数）
+			PaymentRequestDetails: processedDetails,
+			SampleReceipts: sampleReceipts
 		};
 	},
 
@@ -2041,6 +2087,104 @@ const CheckPaymentRequest = async (row) => {
 		// 如果是业务费用且款项名称是快递费，加载收寄样列表
 		if (isBusinessExpenseWithExpressFee() && addpaymentrequestform.value.payeeCode) {
 			await loadSampleCollectionList(addpaymentrequestform.value.payeeCode);
+
+			// 处理后端返回的已选择收寄样单据（sampleReceipt数组）
+			if (response.data.sampleReceipt && response.data.sampleReceipt.length > 0) {
+				selectedSampleCollectionTableData.value = response.data.sampleReceipt.map(item => {
+					// 转换寄样/收样类型
+					const type = item.type === 1 ? '寄样' : '收样';
+					// 转换客户/供应商类型
+					const customerOrSupplier = item.customer_or_Supplier === 1 ? '客户' : '供应商';
+					// 转换客户ID为名称
+					let customerIdLabel = '';
+					if (item.customer_ID && item.customer_ID !== 0) {
+						const customer = state.optionss.sql_hr_customer_abbreviation?.find(
+							c => c.dictValue === item.customer_ID.toString()
+						);
+						customerIdLabel = customer ? customer.dictLabel : item.customer_ID.toString();
+					}
+					// 转换快递公司ID为名称
+					let expressCompanyLabel = '';
+					if (item.express_Company && item.express_Company !== 0) {
+						const company = state.optionss.hr_express_delivery_company?.find(
+							c => c.dictValue === item.express_Company.toString()
+						);
+						expressCompanyLabel = company ? company.dictLabel : item.express_Company.toString();
+					}
+					// 转换付费方式
+					let paymentMethodLabel = '';
+					if (item.payment_Method && item.payment_Method !== 0) {
+						const method = state.optionss.hr_express_payment_method?.find(
+							m => m.dictValue === item.payment_Method.toString()
+						);
+						paymentMethodLabel = method ? method.dictLabel : '';
+					}
+					// 转换我方公司
+					let companyIdLabel = '';
+					if (item.company_ID && item.company_ID !== 0) {
+						const company = state.optionss.hr_ourcompany?.find(
+							c => c.dictValue === item.company_ID.toString()
+						);
+						companyIdLabel = company ? company.dictLabel : '';
+					}
+					// 转换销售合同ID为合同编号
+					let relatedContractNumber = '';
+					if (item.relatedContractID && item.relatedContractID !== 0) {
+						const contract = state.optionss.sql_sale_contracts?.find(
+							c => c.dictValue === item.relatedContractID.toString()
+						);
+						relatedContractNumber = contract ? contract.dictLabel : '';
+					}
+					// 转换出运合同ID为合同编号
+					let relatedShippingNumber = '';
+					if (item.relatedShippingContractsID && item.relatedShippingContractsID !== 0) {
+						const shipping = state.optionss.sql_shippingdeliveries?.find(
+							s => s.dictValue === item.relatedShippingContractsID.toString()
+						);
+						relatedShippingNumber = shipping ? shipping.dictLabel : '';
+					}
+
+					return {
+						sampleID: item.id || 0,
+						type: type,
+						customer_or_Supplier: customerOrSupplier,
+						customer_ID: customerIdLabel,
+						waybill_Number: item.waybill_Number || '',
+						express_Company: expressCompanyLabel,
+						sample_Date: formatDate(item.sample_Date),
+						payment_Method: paymentMethodLabel,
+						company_ID: companyIdLabel,
+						paid_Express_Fee: (item.paid_Express_Fee || 0).toFixed(2),
+						relatedContractID: relatedContractNumber, // 显示用合同编号
+						relatedShippingContractsID: relatedShippingNumber, // 显示用运编号
+						relatedContractIDOriginal: item.relatedContractID || null, // 保存原始合同ID
+						relatedShippingContractsIDOriginal: item.relatedShippingContractsID || null, // 保存原始出运合同ID
+						relatedContractNumber: relatedContractNumber || '', // 关联合同号下拉框值
+						relatedShippingNumber: relatedShippingNumber || '', // 关联运编号下拉框值
+						hasExistingContract: !!(item.relatedContractID && item.relatedContractID !== 0), // 是否有已有合同
+						hasExistingShipping: !!(item.relatedShippingContractsID && item.relatedShippingContractsID !== 0) // 是否有已有出运合同
+					};
+				});
+
+				// 显示已选择收寄样列表
+				if (selectedSampleCollectionTableData.value.length > 0) {
+					showSelectedSampleCollection.value = true;
+
+					// 从待支付收寄样列表中过滤掉已选择的记录
+					if (sampleCollectionTableData.value.length > 0) {
+						sampleCollectionTableData.value = sampleCollectionTableData.value.filter(item => {
+							return !selectedSampleCollectionTableData.value.some(selected =>
+								selected.waybill_Number === item.waybill_Number &&
+								selected.customer_ID === item.customer_ID &&
+								selected.sample_Date === item.sample_Date
+							);
+						});
+					}
+				}
+
+				// 重新计算已付快件费总额
+				calculateTotalPaidExpressFee();
+			}
 		} else {
 			sampleCollectionTableData.value = [];
 			showSampleCollection.value = false;
@@ -3232,8 +3376,25 @@ const loadSampleCollectionList = async (expressCompanyId) => {
 					);
 					companyIdLabel = company ? company.dictLabel : '';
 				}
+				// 转换销售合同ID为合同编号
+				let relatedContractNumber = '';
+				if (item.relatedContractID && item.relatedContractID !== 0) {
+					const contract = state.optionss.sql_sale_contracts?.find(
+						c => c.dictValue === item.relatedContractID.toString()
+					);
+					relatedContractNumber = contract ? contract.dictLabel : '';
+				}
+				// 转换出运合同ID为合同编号
+				let relatedShippingNumber = '';
+				if (item.relatedShippingContractsID && item.relatedShippingContractsID !== 0) {
+					const shipping = state.optionss.sql_shippingdeliveries?.find(
+						s => s.dictValue === item.relatedShippingContractsID.toString()
+					);
+					relatedShippingNumber = shipping ? shipping.dictLabel : '';
+				}
 
 				return {
+					sampleID: item.id || item.ID || item.sampleID || 0, // 保存原始的样品ID
 					type: type,
 					customer_or_Supplier: customerOrSupplier,
 					customer_ID: customerIdLabel,
@@ -3243,8 +3404,10 @@ const loadSampleCollectionList = async (expressCompanyId) => {
 					payment_Method: paymentMethodLabel,
 					company_ID: companyIdLabel,
 					paid_Express_Fee: (item.paid_Express_Fee || 0).toFixed(2),
-					relatedContractNumber: item.relatedContractNumber || item.contractNumber || item.contract_Number || '',
-					relatedShippingNumber: item.relatedShippingNumber || item.shippingNumber || item.shipping_Number || ''
+					relatedContractID: relatedContractNumber, // 保存合同编号（用于显示）
+					relatedShippingContractsID: relatedShippingNumber, // 保存运编号（用于显示）
+					relatedContractIDOriginal: item.relatedContractID || item.relatedContractId || null, // 保存原始的合同ID
+					relatedShippingContractsIDOriginal: item.relatedShippingContractsID || item.relatedShippingContractsId || null // 保存原始的出运合同ID
 				};
 			});
 
@@ -3563,6 +3726,24 @@ const handleSelectSampleCollection = (row) => {
 		const feeValue = parseFloat(selectedRow.paid_Express_Fee) || 0;
 		selectedRow.paid_Express_Fee = feeValue.toFixed(2);
 	}
+
+	// 处理关联合同号和关联运编号：如果有已有数据，则赋值并标记为不可编辑
+	if (selectedRow.relatedContractID && selectedRow.relatedContractID !== '') {
+		selectedRow.relatedContractNumber = selectedRow.relatedContractID; // 使用合同编号显示
+		selectedRow.hasExistingContract = true;
+	} else {
+		selectedRow.relatedContractNumber = '';
+		selectedRow.hasExistingContract = false;
+	}
+
+	if (selectedRow.relatedShippingContractsID && selectedRow.relatedShippingContractsID !== '') {
+		selectedRow.relatedShippingNumber = selectedRow.relatedShippingContractsID; // 使用运编号显示
+		selectedRow.hasExistingShipping = true;
+	} else {
+		selectedRow.relatedShippingNumber = '';
+		selectedRow.hasExistingShipping = false;
+	}
+
 	selectedSampleCollectionTableData.value.push(selectedRow);
 
 	// 从未支付收寄样列表中移除（watch会自动更新总数和分页）

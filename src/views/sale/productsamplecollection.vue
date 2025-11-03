@@ -137,7 +137,7 @@
 					<el-col :span="8">
 						<el-form-item label="业务员">
 							<el-select v-model="CreateDialogform.salesperson" placeholder="请选择" style="width: 300px;"
-								:disabled="IsEditDisabled">
+								:disabled="IsEditDisabled" @change="handleSalespersonChange">
 								<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode"
 									:label="item.dictLabel" :value="item.dictValue" />
 							</el-select>
@@ -156,6 +156,26 @@
 						<el-form-item label="已付快递费">
 							<el-input v-model="CreateDialogform.paidExpressCost" style="width: 300px;"
 								:disabled="!isExpressFeeRequired || IsEditDisabled"></el-input>
+						</el-form-item>
+					</el-col>
+				</el-row>
+				<el-row>
+					<el-col :span="8">
+						<el-form-item label="销售合同">
+							<el-select v-model="CreateDialogform.relatedContractID" filterable placeholder="请选择销售合同"
+								style="width: 300px;" :disabled="IsEditDisabled" clearable>
+								<el-option v-for="item in saleContractsOptions" :key="item.dictValue"
+									:label="item.dictLabel" :value="item.dictValue" />
+							</el-select>
+						</el-form-item>
+					</el-col>
+					<el-col :span="8">
+						<el-form-item label="出运合同">
+							<el-select v-model="CreateDialogform.relatedShippingContractsID" filterable
+								placeholder="请选择出运合同" style="width: 300px;" :disabled="IsEditDisabled" clearable>
+								<el-option v-for="item in shippingContractsOptions" :key="item.dictValue"
+									:label="item.dictLabel" :value="item.dictValue" />
+							</el-select>
 						</el-form-item>
 					</el-col>
 				</el-row>
@@ -374,7 +394,21 @@ const handleView = async (id) => {
 
 		if (response.code === 200) {
 			const { sample, details } = response.data;
-			// 填充主表数据
+			// 保存销售合同和出运合同的ID（在选项加载完成前先保存）
+			// 使用大写开头的字段名，与 product 目录下的实现保持一致
+			const relatedContractIDValue = sample.RelatedContractID ? sample.RelatedContractID.toString() : '';
+			const relatedShippingContractsIDValue = sample.RelatedShippingContractsID ? sample.RelatedShippingContractsID.toString() : '';
+
+			// 先加载销售合同列表（等待加载完成）
+			await loadSaleContracts();
+
+			// 如果有业务员，加载出运合同列表（等待加载完成）
+			const salespersonID = sample.salesperson_ID ? sample.salesperson_ID.toString() : '';
+			if (salespersonID) {
+				await loadShippingContracts(salespersonID);
+			}
+
+			// 填充主表数据（在选项加载完成后再赋值，确保下拉框能正确显示）
 			CreateDialogform.value = {
 				recipienttypeexamples: sample.customer_or_Supplier.toString(),
 				waybillNumber: sample.waybill_Number,
@@ -383,9 +417,12 @@ const handleView = async (id) => {
 				sampleObject: sample.customer_ID.toString(),
 				partnerAbbreviation: sample.abbreviation,
 				ourCompany: sample.company_ID.toString(),
-				salesperson: sample.salesperson_ID.toString(),
+				salesperson: salespersonID,
 				paymentMethod: sample.payment_Method.toString(),
-				paidExpressCost: sample.paid_Express_Fee.toString()
+				paidExpressCost: sample.paid_Express_Fee.toString(),
+				relatedContractID: relatedContractIDValue,
+				relatedShippingContractsID: relatedShippingContractsIDValue,
+				photos: sample.photos || []
 			};
 			// 设置寄样/收样类型
 			radioValue.value = sample.type.toString();
@@ -457,10 +494,78 @@ async function fetchDataAndExecute() {
 fetchDataAndExecute();
 /*动态下拉框end*/
 
+// 销售合同列表
+const saleContractsOptions = ref([]);
+// 出运合同列表
+const shippingContractsOptions = ref([]);
+
+// 加载销售合同列表（根据当前用户）
+const loadSaleContracts = async () => {
+	try {
+		const response = await request({
+			url: 'Contracts/GetContractListByUser/GetContractList',
+			method: 'GET'
+		});
+		if (response.code === 200) {
+			saleContractsOptions.value = (response.data || []).map(item => ({
+				dictValue: String(item.id || item.Id),
+				dictLabel: item.contractNumber || item.ContractNumber
+			}));
+		} else {
+			saleContractsOptions.value = [];
+			ElMessage.error(response.msg || '获取销售合同列表失败');
+		}
+	} catch (error) {
+		console.error('加载销售合同列表失败:', error);
+		saleContractsOptions.value = [];
+		ElMessage.error('获取销售合同列表失败');
+	}
+};
+
+// 加载出运合同列表（根据业务员ID）
+const loadShippingContracts = async (salePersonID) => {
+	if (!salePersonID) {
+		shippingContractsOptions.value = [];
+		return;
+	}
+	try {
+		const response = await request({
+			url: 'ShippingDeliveries/GetShippingContractSelectList/GetSelectList',
+			method: 'GET',
+			params: {
+				SalespersonID: parseInt(salePersonID)
+			}
+		});
+		if (response.code === 200) {
+			shippingContractsOptions.value = (response.data || []).map(item => ({
+				dictValue: String(item.dictValue || item.id || item.Id),
+				dictLabel: item.dictLabel || item.invoiceNumber || item.InvoiceNumber
+			}));
+		} else {
+			shippingContractsOptions.value = [];
+			// 不显示错误消息，因为业务员可能没有出运合同
+		}
+	} catch (error) {
+		console.error('加载出运合同列表失败:', error);
+		shippingContractsOptions.value = [];
+	}
+};
 
 // 处理寄收样对象类型变化
 const handleRecipientTypeChange = () => {
 	CreateDialogform.value.sampleObject = ''; // 清空选择的寄样对象
+};
+
+// 处理业务员变化
+const handleSalespersonChange = (value) => {
+	// 清空出运合同选择
+	CreateDialogform.value.relatedShippingContractsID = '';
+	// 如果有业务员，重新加载出运合同列表
+	if (value) {
+		loadShippingContracts(value);
+	} else {
+		shippingContractsOptions.value = [];
+	}
 };
 const sampleObjectLabel = computed(() => {
 	// 根据recipienttypeexamples的值来决定使用哪个数据源
@@ -589,6 +694,8 @@ const CreateDialogform = ref({
 	salesperson: '',
 	paymentMethod: '',
 	paidExpressCost: '',
+	relatedContractID: '',
+	relatedShippingContractsID: '',
 	photos: [],
 });
 
@@ -626,6 +733,8 @@ const handleSave = async () => {
 		salesperson_ID: parseInt(CreateDialogform.value.salesperson),
 		payment_Method: parseInt(CreateDialogform.value.paymentMethod),
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
+		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
+		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
 		isDelete: 0,
 		details: SampleProductData.value.map(item => ({
 			sample_Code: item.productNumber,
@@ -763,6 +872,8 @@ const resetForm = () => {
 		salesperson: '',
 		paymentMethod: '',
 		paidExpressCost: '',
+		relatedContractID: '',
+		relatedShippingContractsID: '',
 		photos: [],
 	};
 	// 重置寄样/收样选择
@@ -796,6 +907,8 @@ const handleEditSave = async () => {
 		salesperson_ID: parseInt(CreateDialogform.value.salesperson),
 		payment_Method: parseInt(CreateDialogform.value.paymentMethod),
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
+		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
+		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
 		isDelete: 0,
 		details: SampleProductData.value.map(item => ({
 			ID: item.id || 0,
