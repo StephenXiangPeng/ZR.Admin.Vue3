@@ -1,0 +1,245 @@
+﻿option_type,dictlabel,option_name,option_value
+1,镜片类型,SINGLE VISION,1
+1,镜片类型,BIFOCAL,2
+1,镜片类型,PROGRESSIVE,3
+2,膜层,UC,1
+2,膜层,HC,2
+2,膜层,HMC,3
+2,膜层,BACK HMC,4
+2,膜层,SHMC,5
+2,膜层,BACK SHMC,6
+2,膜层,A1,7
+2,膜层,A3,8
+2,膜层,A4,9
+2,膜层,X6,10
+2,膜层,X9,11
+3,材质,HARD RESIN,1
+3,材质,玻璃材质,2
+3,材质,BLUE CUT,2
+3,材质,PHOTOGREY,3
+3,材质,PHOTOBROWN,5
+3,材质,PHOTOBLUE,6
+3,材质,PHOTOGREEN,26
+3,材质,PHOTOGREEN,27
+3,材质,PHOTOPURPLE,28
+3,材质,PHOTOPINK,18
+3,材质,POLAR-GREY,29
+3,材质,POLAR-BROWN,30
+3,材质,POLAR-GREEN,31
+3,材质,TRANSITION 8 GREY,32
+3,材质,TRANSITION 8 BROWN,26
+3,材质,TRANSITION 8 BLUE,33
+3,材质,TRANSITION 8 ORANGE,1
+3,材质,TRANSITION 8 RED,34
+3,材质,TRANSITION XTR GREY,35
+3,材质,TRANSITION XTR BROWN,26
+3,材质,TRANSITION XTP GREY,36
+3,材质,SILVER MIRROR COATING(only photo and tint),26
+3,材质,GOLD MIRROR COATING(only photo and tint),37
+3,材质,ORANGE MIRROR COATING(only photo and tint),38
+3,材质,BLUE MIRROR COATING(only photo and tint),39
+3,材质,GREEN MIRROR COATING(only photo and tint),40
+3,材质,PINK MIRROR COATING(only photo and tint),4
+3,材质,WHITE MIRROR COATING(only polar),41
+3,材质,PINK MIRROR COATING(only polar),42
+3,材质,ICE BLUE MIRROR COATING(only polar),43
+3,材质,BLUE MIRROR COATING(only polar),44
+3,材质,LENTICULAR,45
+3,材质,TAC POLAR GREY,46
+3,材质,TAC POLAR BROWN,47
+3,材质,NuPOLARIZED GREY,48
+3,材质,NuPOLARIZED BROWN,49
+3,材质,NuPOLARIZED GREEN,50
+3,材质,TRANSITION XTP BROWN,51
+3,材质,Drive Wear,52
+3,材质,TRIVEX,53
+3,材质,SPIN-COATING PHOTOGREY,54
+3,材质,SPIN-COATING PHOTOBROWN,55
+3,材质,SPIN-COATING PHOTOBLUE,56
+3,材质,SPIN-COATING PHOTOPINK,57
+3,材质,SPIN-COATING PHOTOGREEN,58
+3,材质,SPIN-COATING PHOTOPURPLE,59
+3,材质,SPIN-COATING PHOTO BLUE CUT,60
+3,材质,PC lens,61
+3,材质,ARCRYLIC,62
+3,材质,MR8,63
+3,材质,Tribrid,64
+3,材质,BLUE CUT(ACR),65
+3,材质,BLUE CUT(MR8),66
+3,材质,MR8 TRANSITION 8 GREY,67
+3,材质,MR8 TRANSITION 8 BROWN,68
+3,材质,MR8 TRANSITION 8 ORANGE,69
+3,材质,MR8 TRANSITION 8 RED,70
+3,材质,MR8 TRANSITION 8 BLUE,71
+3,材质,MR8 TRANSITION 8 GREEN,72
+3,材质,MR8 TRANSITION 8 PURPLE,73
+3,材质,MR8 TRANSITION XTR GREY,74
+3,材质,MR8 TRANSITION XTR BROWN,75
+3,材质,MR8 TRANSITION XTP GREY,76
+3,材质,MR8 TRANSITION XTP BROWN,77
+3,材质,MR7,78
+3,材质,TRANSITION S GREY,79
+3,材质,TRANSITION S BROWN,80
+3,材质,TRANSITION S ORANGE,81
+3,材质,TRANSITION S RED,82
+3,材质,TRANSITION S BLUE,83
+3,材质,TRANSITION S GREEN,84
+3,材质,TRANSITION S PURPLE,12
+3,材质,MR174,85
+4,设计名称,SV,1
+4,设计名称,FT-28,2
+4,设计名称,运动设计,3
+4,设计名称,FT-35(only 1.6),3
+4,设计名称,RT-28(only 1.5),4
+4,设计名称,INVISIBLE ROUND TOP,5
+4,设计名称,OPTO PROGRESSIVE,6
+4,设计名称,IOT AH45 PROGRESSIVE,7
+4,设计名称,IOT BH40 PROGRESSIVE,8
+4,设计名称,NATURAL ACCURACY,9
+4,设计名称,PROFESSIONAL ACCURACY,10
+4,设计名称,ENDLESS STEADY PRGRESSIVE,11
+4,设计名称,ENDLESS SV,12
+4,设计名称,ENDLESS OFFICE 1.3M,13
+4,设计名称,ENDLESS OFFICE 2M,14
+4,设计名称,ENDLESS OFFICE 4M,15
+4,设计名称,ENDLESS OFFICE 6M,16
+4,设计名称,ANTI-FATIGUE corridor 9,17
+4,设计名称,ANTI-FATIGUE corridor13,18
+4,设计名称,IOT OFFICE  1.3M,19
+4,设计名称,IOT OFFICE 2M,20
+4,设计名称,IOT OFFICE 4M,21
+4,设计名称,IOT OFFICE 6M,22
+4,设计名称,MYOPIA CONTROL CONCENTRIC CIRCLES,23
+4,设计名称,MYOPIA CONTROL HONEYCOMB,24
+4,设计名称,MYOPIA CONTROL SHELL,25
+4,设计名称,OPTO SV,26
+4,设计名称,IOT SV,27
+4,设计名称,IOT I-Venure SV,28
+4,设计名称,IOT Sporthin SV,29
+4,设计名称,IOT SV Toric,30
+4,设计名称,RT-40,31
+4,设计名称,B-Free Bifocal,32
+4,设计名称,IOT Alpha mobile,33
+4,设计名称,IOT Alpha H25,34
+4,设计名称,IOT Alpha H65,35
+4,设计名称,IOT Alpha S35,36
+4,设计名称,IOT Alpha S45,37
+4,设计名称,IOT Ultra short,38
+4,设计名称,IOT Basic H20,39
+4,设计名称,IOT Basic H60,40
+4,设计名称,IOT Basic S35,1
+4,设计名称,IOT Basic S40,1
+4,设计名称,SCOPUS,41
+4,设计名称,IOT Office Reader,42
+4,设计名称,IOT Pure Office II,43
+4,设计名称,IOT Sport Progressive,44
+4,设计名称,IOT Sporthin PAL,45
+4,设计名称,IOT Drive Progressive,46
+4,设计名称,IOT YSIAN,47
+4,设计名称,Camber Steady,48
+4,设计名称,IOT ENDLESS drive progressive,49
+4,设计名称,IOT Endless Steady EasyFit Progressive,50
+4,设计名称,IOT e-Endless Steady,51
+4,设计名称,IOT Endless Anti-fatigue,52
+4,设计名称,IOT Camber Steady Plus,53
+4,设计名称,IOT Essential Steady,54
+4,设计名称,IOT Endless Sport,55
+4,设计名称,IOT Endless Pilot,56
+4,设计名称,IOT Endless Bifocal,57
+4,设计名称,IOT Endless Anti-fatigue SV,58
+4,设计名称,IOT Endless Drive SV,59
+4,设计名称,OPTO Office 0.8M,60
+4,设计名称,OPTO Office 1M,61
+4,设计名称,OPTO Office 1.3M,62
+4,设计名称,OPTO Office 2M,63
+4,设计名称,OPTO Office 4M,64
+4,设计名称,OPTO Office 6M,65
+4,设计名称,OPTO 4K,66
+4,设计名称,OPTO 8K,67
+4,设计名称,OPTO HD,68
+4,设计名称,OPTO HD2,69
+4,设计名称,OPTO MD,70
+4,设计名称,OPTO MD2,71
+4,设计名称,OPTO SD,72
+4,设计名称,OPTO SD2,73
+4,设计名称,OPTO Extended IXL,74
+4,设计名称,OPTO Extended IXL 4K,75
+4,设计名称,OPTO VARIOfocal,76
+4,设计名称,OPTO Office 14,77
+4,设计名称,OPTO Mild ADD,78
+4,设计名称,OPTO VARIO III,79
+4,设计名称,OPTO VARIO III,80
+4,设计名称,OPTO Atorical Optimization,81
+4,设计名称,OPTO Blended Design,82
+4,设计名称,SND SV Accuracy,83
+4,设计名称,SND SV Perfection,84
+4,设计名称,SND SV Sport Perfection,85
+4,设计名称,SND SV Perfection,86
+4,设计名称,SND Natural Perfection,87
+4,设计名称,SND Professional Perfection,88
+4,设计名称,SND Office Accuracy,89
+4,设计名称,SND Tablet Perfection,90
+4,设计名称,IOT ENDLESS endless office,91
+4,设计名称,OPTO Sport Optics,92
+5,折射率,1.50,1
+5,折射率,1.56,2
+5,折射率,1.60,3
+5,折射率,1.67,4
+5,折射率,1.74,5
+5,折射率,1.50,6
+5,折射率,1.53,7
+5,折射率,1.56,8
+5,折射率,1.59,9
+5,折射率,1.60,10
+5,折射率,1.67,11
+5,折射率,1.74,12
+6,通道,SV,1
+6,通道,FT-28,2
+6,通道,FT-35(only 1.6),3
+6,通道,RT-28,4
+6,通道,INV-28,5
+6,通道,5,6
+6,通道,7,7
+6,通道,9,8
+6,通道,9,11
+6,通道,11,12
+6,通道,13,13
+6,通道,14,14
+6,通道,15,15
+6,通道,16,16
+6,通道,18,17
+6,通道,FT-28,2
+6,通道,FT-35,3
+7,frame type,Metal,1
+7,frame type,Plastic,2
+7,frame type,Nylon,3
+7,frame type,Semi-rim,4
+7,frame type,Rimless,5
+7,frame type,Drill,6
+8,model,001,1
+8,model,002,2
+8,model,003,3
+8,model,004,7
+8,model,005,8
+8,model,006,9
+8,model,007,10
+8,model,008,11
+12,备注,需要不干胶标贴,1
+12,备注,RUSH,2
+12,备注,KNIFE EDGE,3
+12,备注,AS THIN AS POSSIBLE,4
+12,备注,SPECIFY EDGE THICKNESS,5
+12,备注,SPECIFY CENTER THICKNESS,6
+12,备注,Need to be cut,7
+13,Tinting,RED,1
+13,Tinting,SOLID TINT,2
+13,Tinting,GRADIENT TINT,3
+14,Color,Attach tint sample image(please use white background),4
+14,Color,GREY,1
+14,Color,BROWN,2
+16,Order Status,ORDER CREATED,1
+16,Order Status,CALCULATION,2
+16,Order Status,CALCULATION,3
+16,Order Status,QUALITY INSPECTION,4
+16,Order Status,FINISHED,5
+16,Order Status,FINISHED,6
