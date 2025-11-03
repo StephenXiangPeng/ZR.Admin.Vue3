@@ -2086,7 +2086,21 @@ const CheckPaymentRequest = async (row) => {
 
 		// 如果是业务费用且款项名称是快递费，加载收寄样列表
 		if (isBusinessExpenseWithExpressFee() && addpaymentrequestform.value.payeeCode) {
-			await loadSampleCollectionList(addpaymentrequestform.value.payeeCode);
+			// 判断是否是待审批或已审批通过状态
+			const isPendingOrApproved = (row.reviewStatus == "0" || row.reviewStatus == "3" || row.reviewStatusStr === '已批准' || row.reviewStatus == "2");
+
+			// 如果不是待审批或已审批通过状态，才加载待支付收寄样列表
+			if (!isPendingOrApproved) {
+				await loadSampleCollectionList(addpaymentrequestform.value.payeeCode);
+			}
+
+			// 如果是待审批或已审批通过状态，隐藏待支付收寄样列表
+			if (isPendingOrApproved) {
+				showSampleCollection.value = false;
+				sampleCollectionTableData.value = [];
+				sampleCollectionTotalItems.value = 0;
+				sampleCollectionCurrentPage.value = 1;
+			}
 
 			// 处理后端返回的已选择收寄样单据（sampleReceipt数组）
 			if (response.data.sampleReceipt && response.data.sampleReceipt.length > 0) {
@@ -2169,21 +2183,27 @@ const CheckPaymentRequest = async (row) => {
 				// 显示已选择收寄样列表
 				if (selectedSampleCollectionTableData.value.length > 0) {
 					showSelectedSampleCollection.value = true;
+				}
 
-					// 从待支付收寄样列表中过滤掉已选择的记录
-					if (sampleCollectionTableData.value.length > 0) {
-						sampleCollectionTableData.value = sampleCollectionTableData.value.filter(item => {
-							return !selectedSampleCollectionTableData.value.some(selected =>
-								selected.waybill_Number === item.waybill_Number &&
-								selected.customer_ID === item.customer_ID &&
-								selected.sample_Date === item.sample_Date
-							);
-						});
-					}
+				// 如果不是待审批或已审批通过状态，从待支付收寄样列表中过滤掉已选择的记录
+				if (!isPendingOrApproved && sampleCollectionTableData.value.length > 0) {
+					sampleCollectionTableData.value = sampleCollectionTableData.value.filter(item => {
+						return !selectedSampleCollectionTableData.value.some(selected =>
+							selected.waybill_Number === item.waybill_Number &&
+							selected.customer_ID === item.customer_ID &&
+							selected.sample_Date === item.sample_Date
+						);
+					});
 				}
 
 				// 重新计算已付快件费总额
 				calculateTotalPaidExpressFee();
+			} else {
+				// 如果没有已选择的收寄样单据数据，清空已选择收寄样列表
+				selectedSampleCollectionTableData.value = [];
+				showSelectedSampleCollection.value = false;
+				selectedSampleCollectionTotalItems.value = 0;
+				selectedSampleCollectionCurrentPage.value = 1;
 			}
 		} else {
 			sampleCollectionTableData.value = [];
