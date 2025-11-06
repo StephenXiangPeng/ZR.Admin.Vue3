@@ -183,11 +183,11 @@
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item label="销售合同">
+								<el-form-item :label="contractLabel">
 									<el-select v-model="CreateDialogform.relatedContractID" filterable
-										placeholder="请选择销售合同" style="width: 300px;" :disabled="!isEditable"
+										:placeholder="contractPlaceholder" style="width: 300px;" :disabled="!isEditable"
 										size="default" clearable>
-										<el-option v-for="item in saleContractsOptions" :key="item.dictValue"
+										<el-option v-for="item in contractOptions" :key="item.dictValue"
 											:label="item.dictLabel" :value="item.dictValue" />
 									</el-select>
 								</el-form-item>
@@ -200,6 +200,15 @@
 										<el-option v-for="item in shippingContractsOptions" :key="item.dictValue"
 											:label="item.dictLabel" :value="item.dictValue" />
 									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="24">
+								<el-form-item label="备注">
+									<el-input v-model="CreateDialogform.remark" type="textarea" :rows="3"
+										placeholder="请输入备注信息" style="width: 100%;" :disabled="!isEditable"
+										size="default"></el-input>
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -370,9 +379,6 @@ const SearchHandleSearch = () => {
 //表格数据
 const GetProductSampleList = async (start, end) => {
 	try {
-		// 先加载销售合同列表（用于显示）
-		await loadSaleContracts();
-
 		const response = await request({
 			url: 'ProductSample/GetProductSampleList/GetList',
 			method: 'GET',
@@ -403,10 +409,10 @@ const GetProductSampleList = async (start, end) => {
 			for (const salespersonId of uniqueSalespersonIds) {
 				try {
 					const shippingResponse = await request({
-						url: 'ShippingDeliveries/GetShippingContractSelectList/GetSelectList',
+						url: 'ShippingDeliveries/GetShippingContractSelectListByCustomerID/GetSelectList',
 						method: 'GET',
 						params: {
-							SalespersonID: parseInt(salespersonId)
+							CustomerID: parseInt(salespersonId)
 						}
 					});
 					if (shippingResponse.code === 200) {
@@ -440,10 +446,9 @@ const GetProductSampleList = async (start, end) => {
 				}
 				item.sample_Date = formatDate(item.sample_Date);
 
-				// 处理销售合同显示
+				// 处理销售合同/采购合同显示（优先使用后端返回的合同编号）
 				if (item.relatedContractID != 0 && item.relatedContractID != null) {
-					const contract = saleContractsOptions.value.find(c => c.dictValue === item.relatedContractID.toString());
-					item.relatedContractID = contract ? contract.dictLabel : (item.relatedContractNumber || item.relatedContractID || '');
+					item.relatedContractID = item.relatedContractNumber || item.relatedContractID.toString() || '';
 				} else {
 					item.relatedContractID = '';
 				}
@@ -493,12 +498,10 @@ const handleCreate = () => {
 	isEditSubmitBtnShow.value = false;
 	isSubmitBtnShow.value = true;
 	CreateDialogform.value.salesperson = useUserStore().userId ? useUserStore().userId.toString() : '';
-	// 加载销售合同列表
-	loadSaleContracts();
-	// 如果有业务员，加载出运合同列表
-	if (CreateDialogform.value.salesperson) {
-		loadShippingContracts(CreateDialogform.value.salesperson);
-	}
+	// 清空合同选项（等待选择客户/供应商后再加载）
+	saleContractsOptions.value = [];
+	purchaseContractsOptions.value = [];
+	shippingContractsOptions.value = [];
 	dialogVisible.value = true;     // 打开对话框
 };
 
@@ -531,22 +534,16 @@ const handleView = async (id) => {
 			const relatedContractIDValue = sample?.relatedContractID ? sample.relatedContractID.toString() : '';
 			const relatedShippingContractsIDValue = sample?.relatedShippingContractsID ? sample.relatedShippingContractsID.toString() : '';
 			const salespersonID = sample?.salesperson_ID ? sample.salesperson_ID.toString() : '';
+			const customerID = (sample?.customer_ID ?? '').toString();
+			const recipientType = (sample?.customer_or_Supplier ?? 1).toString();
 
-			// 先加载销售合同列表（等待加载完成）
-			await loadSaleContracts();
-
-			// 如果有业务员，加载出运合同列表（等待加载完成）
-			if (salespersonID) {
-				await loadShippingContracts(salespersonID);
-			}
-
-			// 填充主表数据（在选项加载完成后再赋值，确保下拉框能正确显示）
+			// 填充主表数据（先填充，这样loadContractsByType才能获取到正确的值）
 			CreateDialogform.value = {
-				recipienttypeexamples: (sample?.customer_or_Supplier ?? 1).toString(),
+				recipienttypeexamples: recipientType,
 				waybillNumber: sample?.waybill_Number ?? '',
 				expressCompany: (sample?.express_Company ?? '').toString(),
 				sampleDate: sample?.sample_Date ? sample.sample_Date.split(' ')[0] : '',
-				sampleObject: (sample?.customer_ID ?? '').toString(),
+				sampleObject: customerID,
 				partnerAbbreviation: sample?.abbreviation ?? '',
 				ourCompany: (sample?.company_ID ?? '').toString(),
 				salesperson: salespersonID,
@@ -554,8 +551,18 @@ const handleView = async (id) => {
 				paidExpressCost: (sample?.paid_Express_Fee ?? 0).toString(),
 				relatedContractID: relatedContractIDValue,
 				relatedShippingContractsID: relatedShippingContractsIDValue,
-				photos: sample?.photos ?? []
+				photos: sample?.photos ?? [],
+				remark: sample?.remark ?? ''
 			};
+
+			// 根据客户/供应商类型和ID加载对应的合同列表（等待加载完成后再赋值合同ID，确保下拉框能正确显示）
+			if (customerID) {
+				await loadContractsByType();
+			}
+
+			// 重新赋值合同ID（在选项加载完成后，确保下拉框能正确显示）
+			CreateDialogform.value.relatedContractID = relatedContractIDValue;
+			CreateDialogform.value.relatedShippingContractsID = relatedShippingContractsIDValue;
 
 			// 设置寄样/收样类型
 			radioValue.value = (sample?.type ?? 1).toString();
@@ -673,15 +680,24 @@ loadLogisticsCompanySelect();
 
 // 销售合同列表
 const saleContractsOptions = ref([]);
+// 采购合同列表
+const purchaseContractsOptions = ref([]);
 // 出运合同列表
 const shippingContractsOptions = ref([]);
 
-// 加载销售合同列表（根据当前用户）
-const loadSaleContracts = async () => {
+// 加载销售合同列表（根据客户ID）
+const loadSaleContracts = async (customerID) => {
+	if (!customerID) {
+		saleContractsOptions.value = [];
+		return;
+	}
 	try {
 		const response = await request({
-			url: 'Contracts/GetContractListByUser/GetContractList',
-			method: 'GET'
+			url: 'Contracts/GetContractListByCustomerID/GetContractListByCustomerIDList',
+			method: 'GET',
+			params: {
+				CustomerID: parseInt(customerID)
+			}
 		});
 		if (response.code === 200) {
 			saleContractsOptions.value = (response.data || []).map(item => ({
@@ -699,18 +715,48 @@ const loadSaleContracts = async () => {
 	}
 };
 
-// 加载出运合同列表（根据业务员ID）
-const loadShippingContracts = async (salePersonID) => {
-	if (!salePersonID) {
+// 加载采购合同列表（根据供应商ID）
+const loadPurchaseContracts = async (supplierID) => {
+	if (!supplierID) {
+		purchaseContractsOptions.value = [];
+		return;
+	}
+	try {
+		const response = await request({
+			url: 'PurchaseContracts/GetContractListBySupplierID/GetContractListBySupplierIDList',
+			method: 'GET',
+			params: {
+				supplierID: parseInt(supplierID)
+			}
+		});
+		if (response.code === 200) {
+			purchaseContractsOptions.value = (response.data || []).map(item => ({
+				dictValue: String(item.dictValue || item.id),
+				dictLabel: item.dictLabel || item.PurchaseContractNumber || ''
+			}));
+		} else {
+			purchaseContractsOptions.value = [];
+			// 不显示错误消息，因为供应商可能没有采购合同
+		}
+	} catch (error) {
+		console.error('加载采购合同列表失败:', error);
+		purchaseContractsOptions.value = [];
+	}
+};
+
+// 加载出运合同列表（根据合同类型和合同ID）
+const loadShippingContracts = async (documentType, documentID) => {
+	if (!documentID) {
 		shippingContractsOptions.value = [];
 		return;
 	}
 	try {
 		const response = await request({
-			url: 'ShippingDeliveries/GetShippingContractSelectList/GetSelectList',
+			url: 'ShippingDeliveries/GetShippingContractSelectListByDocumentType/GetSelectListByDocumentType',
 			method: 'GET',
 			params: {
-				SalespersonID: parseInt(salePersonID)
+				DocumentType: parseInt(documentType),
+				DocumentID: parseInt(documentID)
 			}
 		});
 		if (response.code === 200) {
@@ -720,11 +766,39 @@ const loadShippingContracts = async (salePersonID) => {
 			}));
 		} else {
 			shippingContractsOptions.value = [];
-			// 不显示错误消息，因为业务员可能没有出运合同
+			// 不显示错误消息，因为合同可能没有出运合同
 		}
 	} catch (error) {
 		console.error('加载出运合同列表失败:', error);
 		shippingContractsOptions.value = [];
+	}
+};
+
+// 根据客户/供应商类型和选择的客户/供应商ID加载对应的合同
+const loadContractsByType = async () => {
+	const recipientType = CreateDialogform.value.recipienttypeexamples;
+	const sampleObject = CreateDialogform.value.sampleObject;
+
+	// 清空所有合同选项
+	saleContractsOptions.value = [];
+	purchaseContractsOptions.value = [];
+	shippingContractsOptions.value = [];
+
+	// 清空当前选择的合同
+	CreateDialogform.value.relatedContractID = '';
+	CreateDialogform.value.relatedShippingContractsID = '';
+
+	if (!sampleObject) {
+		return;
+	}
+
+	// 如果是客户，只加载销售合同（出运合同将在选择销售合同后加载）
+	if (recipientType === '1') {
+		await loadSaleContracts(sampleObject);
+	}
+	// 如果是供应商，只加载采购合同（出运合同将在选择采购合同后加载）
+	else if (recipientType === '2') {
+		await loadPurchaseContracts(sampleObject);
 	}
 };
 
@@ -734,6 +808,12 @@ const loadShippingContracts = async (salePersonID) => {
 // 处理寄收样对象类型变化
 const handleRecipientTypeChange = () => {
 	CreateDialogform.value.sampleObject = ''; // 清空选择的寄样对象
+	// 清空合同选项
+	saleContractsOptions.value = [];
+	purchaseContractsOptions.value = [];
+	shippingContractsOptions.value = [];
+	CreateDialogform.value.relatedContractID = '';
+	CreateDialogform.value.relatedShippingContractsID = '';
 };
 const sampleObjectLabel = computed(() => {
 	// 根据recipienttypeexamples的值来决定使用哪个数据源
@@ -754,6 +834,28 @@ const getObjectOptions = computed(() => {
 		return optionss.value.sql_hr_customer_abbreviation;
 	}
 	return []; // 默认返回空数组
+});
+
+// 计算属性：根据客户/供应商类型决定合同标签和选项
+const contractLabel = computed(() => {
+	if (CreateDialogform.value.recipienttypeexamples === '2') {
+		return '采购合同';
+	}
+	return '销售合同';
+});
+
+const contractOptions = computed(() => {
+	if (CreateDialogform.value.recipienttypeexamples === '2') {
+		return purchaseContractsOptions.value;
+	}
+	return saleContractsOptions.value;
+});
+
+const contractPlaceholder = computed(() => {
+	if (CreateDialogform.value.recipienttypeexamples === '2') {
+		return '请选择采购合同';
+	}
+	return '请选择销售合同';
 });
 
 //样品产品数据
@@ -865,6 +967,7 @@ const CreateDialogform = ref({
 	relatedContractID: '',
 	relatedShippingContractsID: '',
 	photos: [],
+	remark: '',
 });
 
 const radioValue = ref('1');
@@ -909,6 +1012,7 @@ const handleSave = async () => {
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
 		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
 		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
+		remark: CreateDialogform.value.remark || '',
 		isDelete: 0,
 		isDraft: 0,
 		details: SampleProductData.value.map(item => ({
@@ -1058,6 +1162,7 @@ const resetForm = () => {
 		relatedContractID: '',
 		relatedShippingContractsID: '',
 		photos: [],
+		remark: '',
 	};
 	// 重置寄样/收样选择
 	radioValue.value = '1';
@@ -1065,6 +1170,7 @@ const resetForm = () => {
 	SampleProductData.value = [];
 	// 清空合同选项
 	saleContractsOptions.value = [];
+	purchaseContractsOptions.value = [];
 	shippingContractsOptions.value = [];
 	// 重置编辑状态
 	isEditable.value = false;
@@ -1106,6 +1212,7 @@ const handleEditSave = async () => {
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
 		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
 		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
+		remark: CreateDialogform.value.remark || '',
 		isDelete: 0,
 		isDraft: 0,
 		details: SampleProductData.value.map(item => ({
@@ -1185,8 +1292,7 @@ const currentEditId = ref(null);
 const currentPaymentRequestID = ref(null);
 
 // 处理样品编号变化
-// 处理样品编号变化
-const handleProductNumberChange = async (value, rowIndex, event) => {
+const handleProductNumberChange = async (value, rowIndex) => {
 	if (rowIndex === undefined) {
 		console.error('Row index is undefined!');
 		return;
@@ -1298,6 +1404,7 @@ const handleSaveDraft = async () => {
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
 		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
 		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
+		remark: CreateDialogform.value.remark || '',
 		isDelete: 0,
 		isDraft: 1,  // 标记为草稿
 		details: SampleProductData.value.map(item => ({
@@ -1376,15 +1483,31 @@ watch(() => CreateDialogform.value.paymentMethod, (newValue) => {
 	}
 });
 
-// 监听业务员变化，动态加载出运合同列表
-watch(() => CreateDialogform.value.salesperson, (newValue) => {
+// 监听客户/供应商选择变化，动态加载对应的合同列表
+watch(() => CreateDialogform.value.sampleObject, (newValue) => {
 	if (newValue) {
-		// 清空当前选择的出运合同
-		CreateDialogform.value.relatedShippingContractsID = '';
-		// 加载新的出运合同列表
-		loadShippingContracts(newValue);
+		// 根据客户/供应商类型加载对应的合同
+		loadContractsByType();
 	} else {
-		// 如果业务员为空，清空出运合同列表
+		// 如果客户/供应商为空，清空所有合同列表
+		saleContractsOptions.value = [];
+		purchaseContractsOptions.value = [];
+		shippingContractsOptions.value = [];
+		CreateDialogform.value.relatedContractID = '';
+		CreateDialogform.value.relatedShippingContractsID = '';
+	}
+});
+
+// 监听销售合同/采购合同选择变化，动态加载对应的出运合同列表
+watch(() => CreateDialogform.value.relatedContractID, (newValue) => {
+	if (newValue) {
+		// 当选择了销售合同或采购合同时，根据客户/供应商类型加载对应的出运合同
+		const recipientType = CreateDialogform.value.recipienttypeexamples;
+		// 1-销售合同，2-采购合同
+		const documentType = recipientType === '1' ? 1 : 2;
+		loadShippingContracts(documentType, newValue);
+	} else {
+		// 如果合同为空，清空出运合同列表和选择
 		shippingContractsOptions.value = [];
 		CreateDialogform.value.relatedShippingContractsID = '';
 	}

@@ -358,7 +358,7 @@
 								<span>{{ row.company_ID || '' }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="paid_Express_Fee" label="已付快件费" width="110">
+						<el-table-column prop="paid_Express_Fee" label="快件费" width="110">
 							<template #default="{ row }">
 								<el-input v-model="row.paid_Express_Fee" :disabled="IsDisabled" size="small"
 									@blur="handlePaidExpressFeeChange(row)"
@@ -370,7 +370,8 @@
 							<template #default="{ row }">
 								<el-select v-model="row.relatedContractNumber"
 									:disabled="IsDisabled || row.hasExistingContract === true" filterable clearable
-									placeholder="请选择关联合同号" size="small" style="width: 100%">
+									placeholder="请选择关联合同号" size="small" style="width: 100%"
+									@change="(value) => handleRelatedContractNumberChange(row, value)">
 									<el-option v-for="contract in applicantSaleContracts" :key="contract.dictvalue"
 										:label="contract.dictLabel" :value="contract.dictLabel" />
 								</el-select>
@@ -381,8 +382,9 @@
 								<el-select v-model="row.relatedShippingNumber"
 									:disabled="IsDisabled || row.hasExistingShipping === true" filterable clearable
 									placeholder="请选择关联运编号" size="small" style="width: 100%">
-									<el-option v-for="shipping in applicantShippingContracts" :key="shipping.dictvalue"
-										:label="shipping.dictLabel" :value="shipping.dictLabel" />
+									<el-option v-for="shipping in (row.shippingContractOptions || [])"
+										:key="shipping.dictvalue" :label="shipping.dictLabel"
+										:value="shipping.dictLabel" />
 								</el-select>
 							</template>
 						</el-table-column>
@@ -467,7 +469,7 @@
 								<span>{{ row.company_ID || '' }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="paid_Express_Fee" label="已付快件费" width="110">
+						<el-table-column prop="paid_Express_Fee" label="快件费" width="110">
 							<template #default="{ row }">
 								<span>{{ row.paid_Express_Fee || '0.00' }}</span>
 							</template>
@@ -2176,9 +2178,21 @@ const CheckPaymentRequest = async (row) => {
 						relatedContractNumber: relatedContractNumber || '', // 关联合同号下拉框值
 						relatedShippingNumber: relatedShippingNumber || '', // 关联运编号下拉框值
 						hasExistingContract: !!(item.relatedContractID && item.relatedContractID !== 0), // 是否有已有合同
-						hasExistingShipping: !!(item.relatedShippingContractsID && item.relatedShippingContractsID !== 0) // 是否有已有出运合同
+						hasExistingShipping: !!(item.relatedShippingContractsID && item.relatedShippingContractsID !== 0), // 是否有已有出运合同
+						shippingContractOptions: [] // 初始化出运合同选项列表
 					};
 				});
+
+				// 为每个有关联合同号的行加载对应的出运合同列表（仅在非已有合同的情况下）
+				for (const row of selectedSampleCollectionTableData.value) {
+					if (row.relatedContractNumber && !row.hasExistingContract) {
+						await loadShippingContractsByContractNumber(
+							row,
+							row.relatedContractNumber,
+							row.customer_or_Supplier
+						);
+					}
+				}
 
 				// 显示已选择收寄样列表
 				if (selectedSampleCollectionTableData.value.length > 0) {
@@ -3764,6 +3778,18 @@ const handleSelectSampleCollection = (row) => {
 		selectedRow.hasExistingShipping = false;
 	}
 
+	// 初始化出运合同选项列表
+	selectedRow.shippingContractOptions = [];
+
+	// 如果有关联合同号，加载对应的出运合同列表
+	if (selectedRow.relatedContractNumber && !selectedRow.hasExistingContract) {
+		loadShippingContractsByContractNumber(
+			selectedRow,
+			selectedRow.relatedContractNumber,
+			selectedRow.customer_or_Supplier
+		);
+	}
+
 	selectedSampleCollectionTableData.value.push(selectedRow);
 
 	// 从未支付收寄样列表中移除（watch会自动更新总数和分页）
@@ -3881,6 +3907,85 @@ const handleManualPayeeInput = () => {
 		// 如果用户没有手动输入银行信息，则清空
 		// 这里不自动清空，让用户自己决定是否输入
 	}
+};
+
+// 根据关联合同号和客户/供应商类型加载出运合同列表
+const loadShippingContractsByContractNumber = async (row, contractNumber, customerOrSupplier) => {
+	if (!contractNumber || contractNumber === '') {
+		// 如果关联合同号为空，清空出运合同列表
+		row.shippingContractOptions = [];
+		row.relatedShippingNumber = '';
+		return;
+	}
+
+	// 根据客户/供应商类型确定单据类型
+	// 客户 -> 销售合同 (DocumentType = 1)
+	// 供应商 -> 采购合同 (DocumentType = 2)
+	const documentType = customerOrSupplier === '客户' ? 1 : 2;
+
+	// 从合同编号找到对应的合同ID
+	let contractId = null;
+	if (documentType === 1) {
+		// 销售合同：从applicantSaleContracts中查找
+		const contract = applicantSaleContracts.value.find(c => c.dictLabel === contractNumber);
+		contractId = contract ? Number(contract.dictvalue) : null;
+	} else {
+		// 采购合同：从采购合同字典中查找
+		const contract = state.optionss.sql_purchase_contract?.find(c =>
+			c.dictLabel === contractNumber || c.dictlabel === contractNumber
+		);
+		contractId = contract ? Number(contract.dictValue || contract.dictvalue) : null;
+
+		// 如果从字典中找不到，尝试从applicantSaleContracts中查找（兼容处理）
+		if (!contractId) {
+			const contractFromApplicant = applicantSaleContracts.value.find(c => c.dictLabel === contractNumber);
+			contractId = contractFromApplicant ? Number(contractFromApplicant.dictvalue) : null;
+		}
+	}
+
+	if (!contractId) {
+		ElMessage.warning('未找到对应的合同ID');
+		row.shippingContractOptions = [];
+		return;
+	}
+
+	try {
+		const response = await request({
+			url: 'ShippingDeliveries/GetSelectListByDocumentType/GetShippingContractSelectListByDocumentType',
+			method: 'GET',
+			params: {
+				DocumentType: documentType,
+				DocumentID: contractId
+			}
+		});
+
+		if (response && response.code === 200) {
+			// 标准化数据结构
+			row.shippingContractOptions = (response.data || []).map(item => ({
+				dictvalue: String(item.dictValue || item.dictvalue || item.id || item.Id || item.ID),
+				dictLabel: item.dictLabel || item.dictlabel || item.invoiceNumber || item.InvoiceNumber || ''
+			}));
+		} else {
+			row.shippingContractOptions = [];
+			ElMessage.warning('获取出运合同列表失败');
+		}
+	} catch (error) {
+		console.error('获取出运合同列表失败:', error);
+		row.shippingContractOptions = [];
+		ElMessage.error('获取出运合同列表失败，请重试');
+	}
+};
+
+// 处理关联合同号变化
+const handleRelatedContractNumberChange = async (row, contractNumber) => {
+	// 获取客户/供应商类型
+	const customerOrSupplier = row.customer_or_Supplier || '';
+
+	// 清空关联运编号
+	row.relatedShippingNumber = '';
+
+	// 加载对应的出运合同列表
+	await loadShippingContractsByContractNumber(row, contractNumber, customerOrSupplier);
 };
 
 const DeleteCustomerProfile = (row) => {
