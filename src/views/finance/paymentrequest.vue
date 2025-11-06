@@ -306,13 +306,6 @@
 									<el-option label="供应商" value="供应商" />
 								</el-select>
 							</el-col>
-							<el-col :span="6">
-								<el-select v-model="filterSelectedOurCompany" filterable placeholder="选择我方公司"
-									size="default" style="width: 100%" clearable>
-									<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
-										:label="dict.dictLabel" :value="dict.dictLabel" />
-								</el-select>
-							</el-col>
 						</el-row>
 					</div>
 					<el-table :data="paginatedSelectedSampleCollectionData" style="width: 100%;" stripe
@@ -415,13 +408,6 @@
 									size="default" style="width: 100%" clearable>
 									<el-option label="客户" value="客户" />
 									<el-option label="供应商" value="供应商" />
-								</el-select>
-							</el-col>
-							<el-col :span="6">
-								<el-select v-model="filterSampleOurCompany" filterable placeholder="选择我方公司"
-									size="default" style="width: 100%" clearable>
-									<el-option v-for="dict in optionss.hr_ourcompany" :key="dict.dictCode"
-										:label="dict.dictLabel" :value="dict.dictLabel" />
 								</el-select>
 							</el-col>
 						</el-row>
@@ -741,7 +727,7 @@ const getStatusType = (status: string) => {
 	switch (status) {
 		case '待提审': return 'warning'
 		case '审核中': return 'wait'
-		case '已批准': return 'success'
+		case '待付款': return 'success'
 		case '已拒绝': return 'error'
 		default: return 'info'
 	}
