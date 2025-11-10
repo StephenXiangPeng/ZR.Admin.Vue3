@@ -491,6 +491,23 @@
 					</template>
 				</el-table-column>
 			</el-table>
+			<br><span style="font-size: 20px; font-weight: bold;">采购其它费用</span>
+			<el-divider></el-divider>
+			<el-table :data="shippingDeliveryPurchaseExpensesTableData"
+				style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="expenseName" label="费用名称" width="150"></el-table-column>
+				<el-table-column prop="currency" label="币种" width="150">
+					<template #default="scope">
+						<span>{{ getCurrencyLabel(scope.row.currency) }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="exchangeRate" label="汇率" width="150"></el-table-column>
+				<el-table-column prop="expense" label="费用" width="150"></el-table-column>
+				<el-table-column prop="amount" label="金额" width="150"></el-table-column>
+				<el-table-column prop="remark" label="备注" width="150"></el-table-column>
+			</el-table>
 			<br><span style="font-size: 20px; font-weight: bold;">其它费用</span>
 			<el-divider></el-divider>
 			<el-button class="mt-4" type="primary" @click="handleAddRow" style="margin-bottom: 10px;"
@@ -508,7 +525,7 @@
 				<el-table-column prop="currency" label="币种" width="150">
 					<template #default="{ row }">
 						<el-select filterable v-model="row.currency" :disabled="IsEditable" placeholder="选择币种"
-							size="small" clearable>
+							size="small" clearable @change="handleCurrencyChange(row)">
 							<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 								:label="dict.dictLabel" :value="dict.dictValue" />
 						</el-select>
@@ -595,6 +612,7 @@ import Supperinfomation from '../purchase/supperinfomation.vue';
 import dayjs from 'dayjs';
 import useUserStore from "@/store/modules/user";
 import { useRoute } from 'vue-router'
+import exchangeRateService from '@/utils/exchangeRateService';
 
 const route = useRoute()
 // 添加onMounted钩子
@@ -831,6 +849,8 @@ const shippingDeliveryPurchaseDetailsTableData = ref([])
 const shippingDeliveryOtherexpensesTableData = ref([]);
 // 客户其他费用
 const shippingDeliveryCustomerExpensesTableData = ref([]);
+// 采购其它费用
+const shippingDeliveryPurchaseExpensesTableData = ref([]);
 
 // 获取采购表格数据的函数
 const getPurchaseTableData = () => {
@@ -876,6 +896,62 @@ const loadCustomerExpensesData = async (contractId) => {
 	}
 };
 
+// 加载采购其它费用数据
+const loadPurchaseExpensesData = async (purchaseContractIds) => {
+	try {
+		// 清空现有数据
+		shippingDeliveryPurchaseExpensesTableData.value = [];
+
+		// 如果没有采购合同ID，直接返回
+		if (!purchaseContractIds || purchaseContractIds.length === 0) {
+			return;
+		}
+
+		// 获取所有采购合同的其它费用（去重合并）
+		const allExpenses = [];
+		const processedExpenses = new Set(); // 用于去重
+
+		for (const purchaseContractId of purchaseContractIds) {
+			try {
+				const response = await request({
+					url: 'PurchaseContracts/GetPurchaseContractDetailsById/GetPurchaseContractDetails',
+					method: 'GET',
+					params: {
+						PurchaseContracID: purchaseContractId
+					}
+				});
+
+				if (response.data && response.data.purchaseContractVendorExpenses && response.data.purchaseContractVendorExpenses.length > 0) {
+					response.data.purchaseContractVendorExpenses.forEach(item => {
+						// 使用费用名称+币种+费用金额作为唯一标识去重
+						const uniqueKey = `${item.expenseName}_${item.currency}_${item.expense}`;
+						if (!processedExpenses.has(uniqueKey)) {
+							processedExpenses.add(uniqueKey);
+							allExpenses.push({
+								expenseName: item.expenseName || '',
+								currency: item.currency || '',
+								exchangeRate: item.exchangeRate || 0,
+								expense: item.expense || 0,
+								amount: (item.expense || 0) * (item.exchangeRate || 0),
+								remark: item.remark || ''
+							});
+						}
+					});
+				}
+			} catch (error) {
+				console.error(`获取采购合同 ${purchaseContractId} 的其它费用失败:`, error);
+				// 继续处理其他采购合同
+			}
+		}
+
+		// 设置到表格中
+		shippingDeliveryPurchaseExpensesTableData.value = allExpenses;
+	} catch (error) {
+		console.error('获取采购其它费用数据失败:', error);
+		// 不显示错误消息，因为可能没有采购其它费用数据
+	}
+};
+
 //客户编号改变
 const customerNumberChange = () => {
 	if (AddShippingDeliveryform.value.customerNumber != null && AddShippingDeliveryform.value.customerNumber != undefined && AddShippingDeliveryform.value.customerNumber != '') {
@@ -904,6 +980,7 @@ const customerNumberChange = () => {
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];
 	shippingDeliveryCustomerExpensesTableData.value = [];
+	shippingDeliveryPurchaseExpensesTableData.value = [];
 	AddShippingDeliveryform.value.referenceContractNumber = '';
 	AddShippingDeliveryform.value.salesContractNumber = '';
 	AddShippingDeliveryform.value.customerContractNumber = '';
@@ -917,6 +994,7 @@ const referenceContractNumberChange = async () => {
 		shippingDeliveryContrctProductTableData.value = [];
 		shippingDeliveryPurchaseDetailsTableData.value = [];
 		shippingDeliveryCustomerExpensesTableData.value = [];
+		shippingDeliveryPurchaseExpensesTableData.value = [];
 		return;
 	}
 
@@ -947,6 +1025,7 @@ const referenceContractNumberChange = async () => {
 			shippingDeliveryContrctProductTableData.value = [];
 			shippingDeliveryPurchaseDetailsTableData.value = [];
 			shippingDeliveryCustomerExpensesTableData.value = [];
+			shippingDeliveryPurchaseExpensesTableData.value = [];
 			return;
 		}
 
@@ -1075,6 +1154,10 @@ const referenceContractNumberChange = async () => {
 
 		// 加载客户其他费用数据
 		await loadCustomerExpensesData(SaleContractID);
+
+		// 加载采购其它费用数据
+		const purchaseContractIds = Array.from(new Set(purchaseResponse.data.map(item => item.purchaseContractID)));
+		await loadPurchaseExpensesData(purchaseContractIds);
 	}).catch(error => {
 		console.error('获取采购合同信息失败:', error);
 		ElMessage.error('获取采购合同信息失败，请稍后重试');
@@ -1138,6 +1221,7 @@ const OpenCreateshippingdeliveryDialog = () => {
 	shippingDeliveryPurchaseDetailsTableData.value = [];
 	shippingDeliveryOtherexpensesTableData.value = [];
 	shippingDeliveryCustomerExpensesTableData.value = [];
+	shippingDeliveryPurchaseExpensesTableData.value = [];
 	OriginalShipmentQuantity.value = [];
 
 	// 获取新的发票号码
@@ -1385,6 +1469,7 @@ const resetForm = () => {
 	shippingDeliveryPurchaseDetailsTableData.value = [];
 	shippingDeliveryOtherexpensesTableData.value = [];
 	shippingDeliveryCustomerExpensesTableData.value = [];
+	shippingDeliveryPurchaseExpensesTableData.value = [];
 };
 
 const IsEditShippingDeliveryID = ref(0)
@@ -1710,7 +1795,7 @@ const CheckShipingDelivery = async (row) => {
 		params: {
 			ShippingDeliveriesId: row.id
 		}
-	}).then(response => {
+	}).then(async response => {
 		if (response.data && response.data.shippingDeliveries) {
 			IsEditShippingDeliveryID.value = response.data.shippingDeliveries.id;
 			AddShippingDeliveryform.value.invoiceNumber = response.data.shippingDeliveries.invoiceNumber || '';
@@ -1857,6 +1942,15 @@ const CheckShipingDelivery = async (row) => {
 				item.amount = item.expense && item.exchangeRate ? (item.expense * item.exchangeRate).toFixed(2) : '0.00';
 			});
 		}
+		// 加载采购其它费用数据
+		if (response.data.shippingDeliveryPurchaseDetails && response.data.shippingDeliveryPurchaseDetails.length > 0) {
+			const purchaseContractIds = Array.from(new Set(response.data.shippingDeliveryPurchaseDetails.map(item => item.purchaseContractID)));
+			await loadPurchaseExpensesData(purchaseContractIds);
+		}
+		// 加载客户其他费用数据
+		if (response.data.shippingDeliveries && response.data.shippingDeliveries.referenceContractNumber) {
+			await loadCustomerExpensesData(response.data.shippingDeliveries.referenceContractNumber);
+		}
 		GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
 
 		getApprovalFlow(row.id).then(() => {
@@ -1921,6 +2015,7 @@ const CreateshippingdeliveryDialogClose = async () => {
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];
 	shippingDeliveryCustomerExpensesTableData.value = [];
+	shippingDeliveryPurchaseExpensesTableData.value = [];
 }
 
 // 获取下一个出运发货单编号
@@ -2164,6 +2259,42 @@ const handleExpenseChange = (row) => {
 	const rate = Number(row.exchangeRate) || 0
 	const expense = Number(row.expense) || 0
 	row.amount = (rate * expense).toFixed(3)
+}
+
+// 处理币种改变，自动获取汇率
+const handleCurrencyChange = async (row) => {
+	if (!row.currency) {
+		row.exchangeRate = '';
+		row.amount = '';
+		return;
+	}
+
+	try {
+		// 获取最新汇率
+		const latestRate = await exchangeRateService.getLatestExchangeRate(row.currency);
+
+		if (latestRate !== null) {
+			// 格式化汇率并设置
+			row.exchangeRate = exchangeRateService.formatExchangeRate(latestRate);
+			// 重新计算金额
+			handleExpenseChange(row);
+		} else {
+			// 如果获取不到汇率，使用默认汇率
+			const defaultRate = exchangeRateService.getDefaultExchangeRate(row.currency);
+			row.exchangeRate = exchangeRateService.formatExchangeRate(defaultRate);
+			// 重新计算金额
+			handleExpenseChange(row);
+			ElMessage.warning(`未找到${exchangeRateService.getCurrencyName(row.currency, state.optionss.hr_export_currency)}的最新汇率，已使用默认汇率`);
+		}
+	} catch (error) {
+		console.error('获取汇率失败:', error);
+		// 获取失败时使用默认汇率
+		const defaultRate = exchangeRateService.getDefaultExchangeRate(row.currency);
+		row.exchangeRate = exchangeRateService.formatExchangeRate(defaultRate);
+		// 重新计算金额
+		handleExpenseChange(row);
+		ElMessage.warning(`获取汇率失败，已使用默认汇率`);
+	}
 }
 
 // 检查当前用户是否是当前审批人

@@ -6,11 +6,7 @@
 			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
 				<el-row :gutter="15" style="margin-bottom: 10px;">
 					<el-col :span="4">
-						<el-select v-model="searchForm.paymentName" filterable placeholder="选择款项名称" size="default"
-							style="width: 100%" clearable>
-							<el-option v-for="dict in optionss.hr_factory_payment" :key="dict.dictCode"
-								:label="dict.dictLabel" :value="dict.dictValue" />
-						</el-select>
+						<el-input v-model="searchForm.paymentName" placeholder="款项名称" size="default" clearable />
 					</el-col>
 					<el-col :span="4">
 						<el-input v-model="searchForm.payeeName" placeholder="收款单位" size="default" clearable />
@@ -30,12 +26,13 @@
 						<el-date-picker v-model="searchForm.applicationDateEnd" type="date" placeholder="申请日期止"
 							size="default" style="width: 100%" />
 					</el-col>
-				</el-row>
-				<el-row :gutter="15">
-					<el-col :span="24" style="text-align: right;">
+					<el-col :span="4" style="text-align: right;">
 						<el-button type="primary" plain @click="handleSearch()" size="default">查询</el-button>
 						<el-button @click="handleReset()" size="default">重置</el-button>
 					</el-col>
+				</el-row>
+				<el-row :gutter="15">
+
 				</el-row>
 			</div>
 
@@ -48,8 +45,9 @@
 						{{ formatDate(scope.row.applicationDate) }}
 					</template>
 				</el-table-column>
-				<el-table-column prop="saleContract" label="销售合同" width="150" align="left"></el-table-column>
-				<el-table-column prop="shippingContract" label="出运编号" width="150" align="left"></el-table-column>
+				<el-table-column prop="relatedContracts" label="销售合同" width="150" align="left"></el-table-column>
+				<el-table-column prop="relatedShippingContracts" label="出运编号" width="150"
+					align="left"></el-table-column>
 				<el-table-column prop="payeeName" label="收款单位" width="180" align="left"></el-table-column>
 				<el-table-column prop="paymentName" label="款项名称" width="120" align="left">
 					<template #default="scope">
@@ -86,7 +84,7 @@
 		</div>
 
 		<!-- 查看详情 Dialog -->
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="viewDialogVisible" title="工厂付款详情"
+		<el-dialog :modal="false" :modal-penetrable="true" v-model="viewDialogVisible" title="业务费用付款详情"
 			:close-on-click-modal="false" style="width: 75%;" @close="closeViewDialog">
 			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
 				<el-collapse-item title="基本信息" name="basicInfo">
@@ -139,6 +137,74 @@
 				</el-collapse-item>
 			</el-collapse>
 
+			<!-- 单据信息 -->
+			<el-collapse v-model="sampleReceiptCollapseActive" style="margin-bottom: 20px;" v-show="showSampleReceipt">
+				<el-collapse-item title="单据信息" name="sampleReceipt">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">单据信息</span>
+					</template>
+					<el-table :data="sampleReceiptData" style="width: 100%;" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table-column prop="type" label="寄样/收样" width="100" align="center">
+							<template #default="{ row }">
+								<span>{{ row.type || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="110" align="center">
+							<template #default="{ row }">
+								<span>{{ row.customer_or_Supplier || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="customer_ID" label="寄样对象" width="150" align="left">
+							<template #default="{ row }">
+								<span>{{ row.customer_ID || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="waybill_Number" label="运单号" width="130" align="left">
+							<template #default="{ row }">
+								<span>{{ row.waybill_Number || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="express_Company" label="快件公司" width="150" align="left">
+							<template #default="{ row }">
+								<span>{{ row.express_Company || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="sample_Date" label="登记日期" width="110" align="center">
+							<template #default="{ row }">
+								<span>{{ formatDate(row.sample_Date) || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="payment_Method" label="付费方式" width="90" align="center">
+							<template #default="{ row }">
+								<span>{{ row.payment_Method || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="company_ID" label="我方公司" width="130" align="left">
+							<template #default="{ row }">
+								<span>{{ row.company_ID || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="paid_Express_Fee" label="快件费" width="110" align="right">
+							<template #default="{ row }">
+								<span>{{ formatAmount(row.paid_Express_Fee) || '0.00' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="relatedContractNumber" label="销售合同" width="150" align="left">
+							<template #default="{ row }">
+								<span>{{ row.relatedContractNumber || '' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="relatedShippingNumber" label="出运编号" width="150" align="left">
+							<template #default="{ row }">
+								<span>{{ row.relatedShippingNumber || '' }}</span>
+							</template>
+						</el-table-column>
+					</el-table>
+				</el-collapse-item>
+			</el-collapse>
+
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button @click="closeViewDialog">关闭</el-button>
@@ -164,9 +230,14 @@ const state = reactive({
 	optionss: {
 		hr_payment_category: [], // 付款类别
 		hr_ourcompany: [], // 我方公司
-		hr_factory_payment: [], // 工厂付款款项名称
+		hr_business_expenses: [], // 业务费用款项名称
 		sql_all_user: [], // 申请人
-		hr_currency_code: [] // 币种
+		hr_currency_code: [], // 币种
+		hr_express_delivery_company: [], // 快递公司
+		hr_express_payment_method: [], // 快递付费方式
+		sql_hr_customer_abbreviation: [], // 客户简称
+		sql_sale_contracts: [], // 销售合同
+		sql_shippingdeliveries: [] // 出运编号
 	}
 })
 const { optionss } = toRefs(state)
@@ -174,7 +245,10 @@ const { optionss } = toRefs(state)
 // Dialog 相关
 const viewDialogVisible = ref(false)
 const basicInfoCollapseActive = ref(['basicInfo'])
+const sampleReceiptCollapseActive = ref(['sampleReceipt'])
 const currentPaymentRequestId = ref(0)
+const showSampleReceipt = ref(false)
+const sampleReceiptData = ref<any[]>([])
 
 // 查看表单数据
 const viewForm = reactive({
@@ -266,7 +340,7 @@ const loadData = async () => {
 			params: {
 				PageNum: currentPage.value,
 				PageSize: pageSize.value,
-				PaymentCategory: 1 // 固定为1，表示工厂付款
+				PaymentCategory: 5 // 固定为5，表示业务费用付款
 			}
 		})
 
@@ -278,7 +352,7 @@ const loadData = async () => {
 			totalItems.value = result.totalNum || 0
 
 			// 处理字典数据映射
-			if (tableData.value.length > 0 && optionss.value.hr_payment_category && optionss.value.hr_ourcompany && optionss.value.hr_factory_payment && optionss.value.sql_all_user) {
+			if (tableData.value.length > 0 && optionss.value.hr_payment_category && optionss.value.hr_ourcompany && optionss.value.hr_business_expenses && optionss.value.sql_all_user) {
 				tableData.value.forEach((element: any) => {
 					// 映射付款类别
 					if (element.paymentCategory) {
@@ -289,7 +363,7 @@ const loadData = async () => {
 					}
 					// 映射款项名称
 					if (element.paymentName) {
-						const paymentName = optionss.value.hr_factory_payment.find((item: any) => item.dictValue == element.paymentName.toString())
+						const paymentName = optionss.value.hr_business_expenses.find((item: any) => item.dictValue == element.paymentName.toString())
 						if (paymentName) {
 							element.paymentNameLabel = paymentName.dictLabel
 						}
@@ -362,10 +436,10 @@ const handleView = async (row: any) => {
 			viewForm.bankAccount = data.bankAccount || ''
 			viewForm.ourCompany = data.ourCompany?.toString() || ''
 			viewForm.currencyCode = data.currencyCode?.toString() || ''
-			viewForm.totalAmount = data.totalAmount || data.pendingAmount || ''
-			viewForm.relatedContracts = data.relatedContracts || data.saleContract || ''
+			viewForm.totalAmount = data.totalAmount || ''
+			viewForm.relatedContracts = data.relatedContracts || ''
 			viewForm.applicant = data.applicant?.toString() || ''
-			viewForm.remarks = data.remark || data.remarks || ''
+			viewForm.remarks = data.remark || ''
 			viewForm.reviewStatus = data.reviewStatus || ''
 
 			// 映射字典标签
@@ -377,7 +451,7 @@ const handleView = async (row: any) => {
 			}
 
 			if (viewForm.paymentName) {
-				const paymentName = optionss.value.hr_factory_payment.find(
+				const paymentName = optionss.value.hr_business_expenses.find(
 					(item: any) => item.dictValue == viewForm.paymentName
 				)
 				viewForm.paymentNameLabel = paymentName?.dictLabel || ''
@@ -404,6 +478,82 @@ const handleView = async (row: any) => {
 				viewForm.applicantLabel = applicant?.dictLabel || ''
 			}
 
+			// 处理收寄样单据数据
+			if ((response as any).data.sampleReceipt && (response as any).data.sampleReceipt.length > 0) {
+				sampleReceiptData.value = (response as any).data.sampleReceipt.map((item: any) => {
+					// 转换寄样/收样类型
+					const type = item.type === 1 ? '寄样' : '收样'
+					// 转换客户/供应商类型
+					const customerOrSupplier = item.customer_or_Supplier === 1 ? '客户' : '供应商'
+					// 转换客户ID为名称
+					let customerIdLabel = ''
+					if (item.customer_ID && item.customer_ID !== 0) {
+						const customer = optionss.value.sql_hr_customer_abbreviation?.find(
+							(c: any) => c.dictValue === item.customer_ID.toString()
+						)
+						customerIdLabel = customer ? customer.dictLabel : item.customer_ID.toString()
+					}
+					// 转换快递公司ID为名称（使用字典标签）
+					let expressCompanyLabel = ''
+					if (item.express_Company && item.express_Company !== 0) {
+						const company = optionss.value.hr_express_delivery_company?.find(
+							(c: any) => c.dictValue === item.express_Company.toString()
+						)
+						expressCompanyLabel = company ? company.dictLabel : ''
+					}
+					// 转换付费方式
+					let paymentMethodLabel = ''
+					if (item.payment_Method && item.payment_Method !== 0) {
+						const method = optionss.value.hr_express_payment_method?.find(
+							(m: any) => m.dictValue === item.payment_Method.toString()
+						)
+						paymentMethodLabel = method ? method.dictLabel : ''
+					}
+					// 转换我方公司
+					let companyIdLabel = ''
+					if (item.company_ID && item.company_ID !== 0) {
+						const company = optionss.value.hr_ourcompany?.find(
+							(c: any) => c.dictValue === item.company_ID.toString()
+						)
+						companyIdLabel = company ? company.dictLabel : ''
+					}
+					// 转换销售合同ID为合同编号（使用字典标签）
+					let relatedContractNumber = ''
+					if (item.relatedContractID && item.relatedContractID !== 0) {
+						const contract = optionss.value.sql_sale_contracts?.find(
+							(c: any) => c.dictValue === item.relatedContractID.toString()
+						)
+						relatedContractNumber = contract ? contract.dictLabel : (item.relatedContractNumber || '')
+					}
+					// 转换出运合同ID为合同编号（使用字典标签）
+					let relatedShippingNumber = ''
+					if (item.relatedShippingContractsID && item.relatedShippingContractsID !== 0) {
+						const shipping = optionss.value.sql_shippingdeliveries?.find(
+							(s: any) => s.dictValue === item.relatedShippingContractsID.toString()
+						)
+						relatedShippingNumber = shipping ? shipping.dictLabel : (item.relatedShippingNumber || '')
+					}
+
+					return {
+						type,
+						customer_or_Supplier: customerOrSupplier,
+						customer_ID: customerIdLabel,
+						waybill_Number: item.waybill_Number || '',
+						express_Company: expressCompanyLabel,
+						sample_Date: item.sample_Date || '',
+						payment_Method: paymentMethodLabel,
+						company_ID: companyIdLabel,
+						paid_Express_Fee: item.paid_Express_Fee || 0,
+						relatedContractNumber,
+						relatedShippingNumber
+					}
+				})
+				showSampleReceipt.value = true
+			} else {
+				sampleReceiptData.value = []
+				showSampleReceipt.value = false
+			}
+
 			viewDialogVisible.value = true
 		} else {
 			ElMessage.error((response as any)?.msg || '加载详情失败')
@@ -418,6 +568,8 @@ const handleView = async (row: any) => {
 const closeViewDialog = () => {
 	viewDialogVisible.value = false
 	currentPaymentRequestId.value = 0
+	showSampleReceipt.value = false
+	sampleReceiptData.value = []
 	// 重置表单
 	Object.keys(viewForm).forEach(key => {
 		if (typeof viewForm[key as keyof typeof viewForm] === 'string') {
@@ -468,9 +620,14 @@ const loadDictData = async () => {
 		const dictParams = [
 			{ dictType: 'hr_payment_category' },
 			{ dictType: 'hr_ourcompany' },
-			{ dictType: 'hr_factory_payment' },
+			{ dictType: 'hr_business_expenses' },
 			{ dictType: 'sql_all_user' },
-			{ dictType: 'hr_currency_code' }
+			{ dictType: 'hr_currency_code' },
+			{ dictType: 'hr_express_delivery_company' },
+			{ dictType: 'hr_express_payment_method' },
+			{ dictType: 'sql_hr_customer_abbreviation' },
+			{ dictType: 'sql_sale_contracts' },
+			{ dictType: 'sql_shippingdeliveries' }
 		]
 		if (proxy) {
 			const response = await (proxy as any).getDicts(dictParams)

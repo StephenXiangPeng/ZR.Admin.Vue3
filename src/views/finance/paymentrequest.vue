@@ -63,8 +63,9 @@
 						<template v-if="row.id"> <!-- 有ID才显示popover -->
 							<el-popover placement="right" :width="400" trigger="click">
 								<template #reference>
-									<el-tag :type="getStatusType(row.reviewStatusStr)" @click="getApprovalFlow(row.id)"
-										style="cursor: pointer">
+									<el-tag :type="getStatusType(row.reviewStatusStr)"
+										:style="{ ...getStatusStyle(row.reviewStatusStr), cursor: 'pointer' }"
+										@click="getApprovalFlow(row.id)">
 										{{ row.reviewStatusStr }}
 									</el-tag>
 								</template>
@@ -85,7 +86,8 @@
 
 						<!-- 没有ID时只显示tag -->
 						<template v-else>
-							<el-tag :type="getStatusType(row.contractReviewStatusStr)">
+							<el-tag :type="getStatusType(row.contractReviewStatusStr)"
+								:style="getStatusStyle(row.contractReviewStatusStr)">
 								{{ row.contractReviewStatusStr }}
 							</el-tag>
 						</template>
@@ -237,7 +239,7 @@
 							<el-col :span="6">
 								<el-form-item label="申请金额">
 									<el-input v-model="addpaymentrequestform.totalAmount" style="width: 300px"
-										:disabled="IsDisabled || addpaymentrequestform.paymentCategory === '1'"
+										:disabled="IsDisabled || addpaymentrequestform.paymentCategory === '1' || addpaymentrequestform.paymentCategory === '5'"
 										size="default" clearable></el-input>
 								</el-form-item>
 							</el-col>
@@ -359,22 +361,22 @@
 									style="width: 100%" />
 							</template>
 						</el-table-column>
-						<el-table-column prop="relatedContractNumber" label="关联合同号" width="150">
+						<el-table-column prop="relatedContractNumber" label="销售合同" width="150">
 							<template #default="{ row }">
 								<el-select v-model="row.relatedContractNumber"
 									:disabled="IsDisabled || row.hasExistingContract === true" filterable clearable
-									placeholder="请选择关联合同号" size="small" style="width: 100%"
+									placeholder="请选择销售合同" size="small" style="width: 100%"
 									@change="(value) => handleRelatedContractNumberChange(row, value)">
 									<el-option v-for="contract in applicantSaleContracts" :key="contract.dictvalue"
 										:label="contract.dictLabel" :value="contract.dictLabel" />
 								</el-select>
 							</template>
 						</el-table-column>
-						<el-table-column prop="relatedShippingNumber" label="关联运编号" width="150">
+						<el-table-column prop="relatedShippingNumber" label="出运编号" width="150">
 							<template #default="{ row }">
 								<el-select v-model="row.relatedShippingNumber"
 									:disabled="IsDisabled || row.hasExistingShipping === true" filterable clearable
-									placeholder="请选择关联运编号" size="small" style="width: 100%">
+									placeholder="请选择出运编号" size="small" style="width: 100%">
 									<el-option v-for="shipping in (row.shippingContractOptions || [])"
 										:key="shipping.dictvalue" :label="shipping.dictLabel"
 										:value="shipping.dictLabel" />
@@ -465,7 +467,7 @@
 								<span>{{ row.relatedContractID || '' }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column prop="relatedShippingContractsID" label="出运合同" width="130">
+						<el-table-column prop="relatedShippingContractsID" label="出运编号" width="130">
 							<template #default="{ row }">
 								<span>{{ row.relatedShippingContractsID || '' }}</span>
 							</template>
@@ -727,9 +729,31 @@ const getStatusType = (status: string) => {
 	switch (status) {
 		case '待提审': return 'warning'
 		case '审核中': return 'wait'
-		case '待付款': return 'success'
+		case '已批准': return 'success'
 		case '已拒绝': return 'error'
+		case '已付款': return '' // 使用自定义样式，不设置type
+		case '已归帐': return 'info'
 		default: return 'info'
+	}
+}
+
+// 获取状态标签的自定义颜色样式
+const getStatusStyle = (status: string) => {
+	switch (status) {
+		case '已付款':
+			return {
+				color: '#13CE66',
+				backgroundColor: '#E8F8F5',
+				borderColor: '#A8E6CF'
+			} // 青绿色系，与已批准区分
+		case '已归帐':
+			return {
+				color: '#606266',
+				backgroundColor: '#F4F4F5',
+				borderColor: '#D3D4D6'
+			} // 深灰色系
+		default:
+			return {} // 其他状态使用默认type样式
 	}
 }
 
@@ -1190,7 +1214,7 @@ const loadApplicantShippingContracts = async (applicantId) => {
 			applicantShippingContracts.value = [];
 		}
 	} catch (error) {
-		console.error('获取出运合同列表失败:', error);
+		console.error('获取出运编号列表失败:', error);
 		applicantShippingContracts.value = [];
 	}
 };
@@ -1707,7 +1731,9 @@ const reviewStatusMap = {
 	'0': '待提审',
 	'1': '审核中',
 	'2': '已批准',
-	'3': '已拒绝'
+	'3': '已拒绝',
+	'4': '已付款',
+	'5': '已归帐'
 }
 ///付款申请单表格数据
 const paymentrequesttableDataTotalItems = ref(0);
@@ -3719,7 +3745,7 @@ const isBusinessExpenseWithExpressFee = () => {
 };
 
 // 处理选择收寄样
-const handleSelectSampleCollection = (row) => {
+const handleSelectSampleCollection = async (row) => {
 	// 检查是否已经存在于已选择列表中
 	const alreadyExists = selectedSampleCollectionTableData.value.some(item =>
 		item.waybill_Number === row.waybill_Number &&
@@ -3767,8 +3793,17 @@ const handleSelectSampleCollection = (row) => {
 	// 初始化出运合同选项列表
 	selectedRow.shippingContractOptions = [];
 
-	// 如果有关联合同号，加载对应的出运合同列表
-	if (selectedRow.relatedContractNumber && !selectedRow.hasExistingContract) {
+	// 如果单据有销售合同（relatedContractIDOriginal存在），自动加载对应的出运编号列表
+	if (selectedRow.relatedContractIDOriginal && selectedRow.relatedContractIDOriginal !== 0 && selectedRow.relatedContractIDOriginal !== null) {
+		// 使用合同ID直接加载出运编号列表
+		await loadShippingContractsByContractId(
+			selectedRow,
+			selectedRow.relatedContractIDOriginal,
+			selectedRow.customer_or_Supplier
+		);
+	}
+	// 如果有关联合同号但没有已有合同，加载对应的出运合同列表
+	else if (selectedRow.relatedContractNumber && !selectedRow.hasExistingContract) {
 		loadShippingContractsByContractNumber(
 			selectedRow,
 			selectedRow.relatedContractNumber,
@@ -3895,6 +3930,45 @@ const handleManualPayeeInput = () => {
 	}
 };
 
+// 根据合同ID和客户/供应商类型加载出运合同列表
+const loadShippingContractsByContractId = async (row, contractId, customerOrSupplier) => {
+	if (!contractId || contractId === 0) {
+		// 如果合同ID为空，清空出运合同列表
+		row.shippingContractOptions = [];
+		row.relatedShippingNumber = '';
+		return;
+	}
+
+	// 根据客户/供应商类型确定单据类型
+	// 客户 -> 销售合同 (DocumentType = 1)
+	// 供应商 -> 采购合同 (DocumentType = 2)
+	const documentType = customerOrSupplier === '客户' ? 1 : 2;
+
+	try {
+		const response = await request({
+			url: 'ShippingDeliveries/GetShippingContractSelectListByDocumentType/GetSelectListByDocumentType',
+			method: 'GET',
+			params: {
+				DocumentType: documentType,
+				DocumentID: Number(contractId)
+			}
+		});
+
+		if (response && response.code === 200) {
+			// 标准化数据结构
+			row.shippingContractOptions = (response.data || []).map(item => ({
+				dictvalue: String(item.dictValue || item.dictvalue || item.id || item.Id || item.ID),
+				dictLabel: item.dictLabel || item.dictlabel || item.invoiceNumber || item.InvoiceNumber || ''
+			}));
+		} else {
+			row.shippingContractOptions = [];
+		}
+	} catch (error) {
+		console.error('获取出运编号列表失败:', error);
+		row.shippingContractOptions = [];
+	}
+};
+
 // 根据关联合同号和客户/供应商类型加载出运合同列表
 const loadShippingContractsByContractNumber = async (row, contractNumber, customerOrSupplier) => {
 	if (!contractNumber || contractNumber === '') {
@@ -3937,7 +4011,7 @@ const loadShippingContractsByContractNumber = async (row, contractNumber, custom
 
 	try {
 		const response = await request({
-			url: 'ShippingDeliveries/GetSelectListByDocumentType/GetShippingContractSelectListByDocumentType',
+			url: 'ShippingDeliveries/GetShippingContractSelectListByDocumentType/GetSelectListByDocumentType',
 			method: 'GET',
 			params: {
 				DocumentType: documentType,
@@ -3953,12 +4027,12 @@ const loadShippingContractsByContractNumber = async (row, contractNumber, custom
 			}));
 		} else {
 			row.shippingContractOptions = [];
-			ElMessage.warning('获取出运合同列表失败');
+			ElMessage.warning('获取出运编号列表失败');
 		}
 	} catch (error) {
-		console.error('获取出运合同列表失败:', error);
+		console.error('获取出运编号列表失败:', error);
 		row.shippingContractOptions = [];
-		ElMessage.error('获取出运合同列表失败，请重试');
+		ElMessage.error('获取出运编号列表失败，请重试');
 	}
 };
 

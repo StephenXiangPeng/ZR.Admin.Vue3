@@ -1349,7 +1349,7 @@ const quotationDialogformRules = reactive<FormRules<quotationDialogform>>({
 	shippingcurrency: [{ required: true, message: '请选择运费币种', trigger: ['blur', 'change'] }]
 })
 
-const OpenQuotationDialog = () => {
+const OpenQuotationDialog = async () => {
 	GetNextQuotationNo();
 	const currentDate = new Date();
 	const formattedDate = currentDate.toISOString().split('T')[0];
@@ -1365,8 +1365,10 @@ const OpenQuotationDialog = () => {
 	quotationDialogform.inquirydate = formattedDate;
 	quotationDialogform.realquotationdate = formattedDate;
 	quotationDialogform.quorationstatus = state.optionss.hr_quotation_status[0].dictValue;
-	quotationDialogform.exportcurrency = state.optionss.hr_export_currency[0].dictValue;//默认美元
-	quotationDialogform.exchangerate = 7.2;//默认汇率7.2
+	const defaultCurrency = state.optionss.hr_export_currency[0].dictValue;//默认美元
+	quotationDialogform.exportcurrency = defaultCurrency;
+	// 自动获取最新汇率
+	await exportcurrencyChange(defaultCurrency);
 	quotationDialogform.shippingcurrency = state.optionss.hr_export_currency[2].dictValue;//默认人民币
 	quotationDialogform.shippingrate = 1;//默认1
 	quotationDialogform.seller = state.optionss.sql_all_user.find(item => item.dictValue == userId).dictValue;
