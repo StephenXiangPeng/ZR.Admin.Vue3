@@ -30,9 +30,7 @@
 						<el-date-picker v-model="searchForm.applicationDateEnd" type="date" placeholder="申请日期止"
 							size="default" style="width: 100%" />
 					</el-col>
-				</el-row>
-				<el-row :gutter="15">
-					<el-col :span="24" style="text-align: right;">
+					<el-col :span="4" style="text-align: left;">
 						<el-button type="primary" plain @click="handleSearch()" size="default">查询</el-button>
 						<el-button @click="handleReset()" size="default">重置</el-button>
 					</el-col>

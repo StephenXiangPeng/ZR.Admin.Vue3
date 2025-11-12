@@ -96,14 +96,14 @@
 				<el-table-column prop="paymentCategory" label="付款类别" width="100"></el-table-column>
 				<el-table-column prop="paymentName" label="款项名称" width="100"></el-table-column>
 				<el-table-column prop="payeeName" label="收款单位名称" width="200"></el-table-column>
-				<el-table-column prop="bankName" label="开户银行" width="130"></el-table-column>
+				<el-table-column prop="bankName" label="开户银行" width="150"></el-table-column>
 				<el-table-column prop="bankAccount" label="银行账号" width="200"></el-table-column>
 				<el-table-column prop="ourCompany" label="我方公司" width="110"></el-table-column>
 				<el-table-column prop="currencyCode" label="货币代码" width="90"></el-table-column>
 				<el-table-column prop="totalAmount" label="申请总额" width="90"></el-table-column>
 				<el-table-column prop="paidAmount" label="已付金额" width="90" v-if="false"></el-table-column>
 				<el-table-column prop="unpaidAmount" label="未付金额" width="90" v-if="false"></el-table-column>
-				<el-table-column prop="applicant" label="申请人" width="90"></el-table-column>
+				<el-table-column prop="applicant" label="申请人" width="120"></el-table-column>
 				<el-table-column prop="applicationDepartment" label="申请部门" width="110"></el-table-column>
 				<el-table-column prop="handler" label="经手人" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="applicationDate" label="申请日期" width="110"></el-table-column>
@@ -2080,7 +2080,49 @@ const CheckPaymentRequest = async (row) => {
 		addpaymentrequestform.value.handler = response.data.paymentRequest.handler.toString();
 		addpaymentrequestform.value.remarks = response.data.paymentRequest.remark || '';
 		addpaymentrequestform.value.relatedContract = response.data.paymentRequest.relatedContracts || '';
-		addpaymentrequestform.value.relatedCustomer = response.data.paymentRequest.relatedCustomer || '';
+
+		// 如果是日常费用且为客户事宜，确保客户选项已加载后再设置相关客户值
+		// 直接检查条件，不依赖isDailyExpenseWithCustomerOptions()，因为PaymentTypeOptions可能还没设置好
+		const isDailyExpense = addpaymentrequestform.value.paymentCategory === '4';
+		const paymentNameValue = addpaymentrequestform.value.paymentName;
+		// 检查是否为客户事宜：从字典中查找对应的标签
+		let isCustomerMatter = false;
+		if (isDailyExpense && paymentNameValue) {
+			const paymentNameOption = state.optionss.hr_daily_expenses?.find(
+				item => item.dictValue == paymentNameValue || item.dictValue === paymentNameValue.toString()
+			);
+			isCustomerMatter = paymentNameOption?.dictLabel?.includes('客户事宜') || false;
+		}
+
+		if (isDailyExpense && isCustomerMatter) {
+			// 确保客户选项已加载（无论是否已加载，都重新加载以确保数据最新）
+			await loadCustomerOptions();
+
+			// 设置相关客户值，确保格式匹配
+			const relatedCustomerValue = response.data.paymentRequest.relatedCustomer;
+
+			if (relatedCustomerValue !== null && relatedCustomerValue !== undefined && relatedCustomerValue !== '') {
+				// 尝试在客户选项列表中查找匹配的客户（支持多种格式匹配）
+				const matchedCustomer = customerOptions.value.find(item => {
+					// 使用宽松比较，支持字符串和数字类型匹配
+					return String(item.dictvalue) === String(relatedCustomerValue) ||
+						Number(item.dictvalue) === Number(relatedCustomerValue) ||
+						item.dictvalue == relatedCustomerValue;
+				});
+
+				if (matchedCustomer) {
+					// 使用匹配到的客户的dictvalue（保持原始格式，确保与el-select的value匹配）
+					addpaymentrequestform.value.relatedCustomer = matchedCustomer.dictvalue;
+				} else {
+					// 如果没有找到匹配的，使用原始值
+					addpaymentrequestform.value.relatedCustomer = relatedCustomerValue;
+				}
+			} else {
+				addpaymentrequestform.value.relatedCustomer = '';
+			}
+		} else {
+			addpaymentrequestform.value.relatedCustomer = response.data.paymentRequest.relatedCustomer || '';
+		}
 
 		// 加载与申请人关联的合同列表
 		if (addpaymentrequestform.value.applicant) {
@@ -3318,7 +3360,15 @@ const loadDailyExpensePayeeOptions = async () => {
 // 加载客户选项
 const loadCustomerOptions = async () => {
 	try {
-		// 调用API获取客户选项
+		// 使用字典数据 sql_hr_customer_abbreviation 作为客户选项
+		// 因为 LogisticsCompany API 的 companyType: 4 返回空数组
+		if (state.optionss.sql_hr_customer_abbreviation && state.optionss.sql_hr_customer_abbreviation.length > 0) {
+			// 标准化字典数据结构
+			customerOptions.value = ApiRequestHandler.standardizeData(state.optionss.sql_hr_customer_abbreviation);
+			return Promise.resolve(customerOptions.value);
+		}
+
+		// 如果字典数据还没有加载，尝试从 API 获取
 		const response = await request({
 			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
 			method: 'GET',
@@ -3327,20 +3377,44 @@ const loadCustomerOptions = async () => {
 			}
 		});
 
-		ApiRequestHandler.handleResponse(
-			response,
-			(data) => {
-				// 更新客户选项列表，标准化数据结构
-				customerOptions.value = ApiRequestHandler.standardizeData(data);
-			},
-			() => {
-				customerOptions.value = [];
+		// 返回Promise，确保数据设置完成后再resolve
+		return new Promise((resolve, reject) => {
+			if (response && response.code === 200) {
+				const data = response.data || [];
+
+				if (data.length > 0) {
+					// 更新客户选项列表，标准化数据结构
+					customerOptions.value = ApiRequestHandler.standardizeData(data);
+					resolve(customerOptions.value);
+				} else {
+					// API 返回空数组，尝试使用字典数据作为备选
+					if (state.optionss.sql_hr_customer_abbreviation && state.optionss.sql_hr_customer_abbreviation.length > 0) {
+						customerOptions.value = ApiRequestHandler.standardizeData(state.optionss.sql_hr_customer_abbreviation);
+						resolve(customerOptions.value);
+					} else {
+						customerOptions.value = [];
+						resolve(customerOptions.value);
+					}
+				}
+			} else {
+				// API 失败时，尝试使用字典数据作为备选
+				if (state.optionss.sql_hr_customer_abbreviation && state.optionss.sql_hr_customer_abbreviation.length > 0) {
+					customerOptions.value = ApiRequestHandler.standardizeData(state.optionss.sql_hr_customer_abbreviation);
+					resolve(customerOptions.value);
+				} else {
+					customerOptions.value = [];
+					reject(response?.msg || 'API请求失败');
+				}
 			}
-		);
-	} catch (error) {
-		ApiRequestHandler.handleError(error, () => {
-			customerOptions.value = [];
 		});
+	} catch (error) {
+		// 出错时，尝试使用字典数据作为备选
+		if (state.optionss.sql_hr_customer_abbreviation && state.optionss.sql_hr_customer_abbreviation.length > 0) {
+			customerOptions.value = ApiRequestHandler.standardizeData(state.optionss.sql_hr_customer_abbreviation);
+			return Promise.resolve(customerOptions.value);
+		}
+		customerOptions.value = [];
+		throw error;
 	}
 };
 
