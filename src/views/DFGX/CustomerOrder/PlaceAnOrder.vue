@@ -140,7 +140,7 @@
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="Design" prop="designName">
-                <el-select v-model="orderForm.designName" placeholder="Please select Design" style="width: 100%" clearable>
+                <el-select v-model="orderForm.designName" placeholder="Please select Design" style="width: 100%" clearable filterable>
                   <el-option 
                     v-for="option in designNameOptions" 
                     :key="option.value" 
@@ -159,7 +159,7 @@
                   clearable
                   multiple
                   collapse-tags
-                  collapse-tags-tooltip>
+                  collapse-tags-tooltip filterable>
                   <el-option 
                     v-for="option in materialOptions" 
                     :key="option.value" 
