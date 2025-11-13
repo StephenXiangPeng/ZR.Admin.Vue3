@@ -1800,9 +1800,39 @@ const exportcurrencyChange = async (value) => {
 		quotationDialogform.exchangerate = null;
 	}
 }
-const shippingcurrencyChange = (value) => {
+const shippingcurrencyChange = async (value) => {
 	if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 3) {
 		quotationDialogform.shippingrate = 1;
+	} else if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 2) {
+		// 欧元，获取最新汇率
+		try {
+			const latestRate = await exchangeRateService.getLatestExchangeRate(value);
+			if (latestRate !== null) {
+				quotationDialogform.shippingrate = latestRate;
+			} else {
+				quotationDialogform.shippingrate = exchangeRateService.getDefaultExchangeRate(value);
+				ElMessage.warning(`未找到欧元的最新汇率，已使用默认汇率`);
+			}
+		} catch (error) {
+			console.error('获取汇率失败:', error);
+			quotationDialogform.shippingrate = exchangeRateService.getDefaultExchangeRate(value);
+			ElMessage.warning(`获取汇率失败，已使用默认汇率`);
+		}
+	} else if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 1) {
+		// 美元，获取最新汇率
+		try {
+			const latestRate = await exchangeRateService.getLatestExchangeRate(value);
+			if (latestRate !== null) {
+				quotationDialogform.shippingrate = latestRate;
+			} else {
+				quotationDialogform.shippingrate = exchangeRateService.getDefaultExchangeRate(value);
+				ElMessage.warning(`未找到美元的最新汇率，已使用默认汇率`);
+			}
+		} catch (error) {
+			console.error('获取汇率失败:', error);
+			quotationDialogform.shippingrate = exchangeRateService.getDefaultExchangeRate(value);
+			ElMessage.warning(`获取汇率失败，已使用默认汇率`);
+		}
 	} else {
 		quotationDialogform.shippingrate = null;
 	}
@@ -2554,7 +2584,12 @@ const ChcekDetails = async (row) => {
 	quotationDialogform.tradingcountry = state.optionss.hr_nation.find(item => item.dictValue == row.tradingCountry)?.dictValue;
 	quotationDialogform.transportationmethod = state.optionss.hr_transportation_method.find(item => item.dictValue == row.transportationMethod)?.dictValue;
 	quotationDialogform.shippingcurrency = state.optionss.hr_export_currency.find(item => item.dictValue == row.shippingCurrency)?.dictValue;
-	quotationDialogform.shippingrate = row.shippingRate;
+	// 自动获取最新汇率
+	if (quotationDialogform.shippingcurrency) {
+		await shippingcurrencyChange(quotationDialogform.shippingcurrency);
+	} else {
+		quotationDialogform.shippingrate = row.shippingRate;
+	}
 	quotationDialogform.unitfreight = row.unitFreight;
 	quotationDialogform.commissionrate = row.commissionRate;
 	quotationDialogform.seller = state.optionss.sql_all_user.find(item => item.dictValue == row.seller)?.dictValue;
