@@ -103,3 +103,12 @@ export function getAllLensOptions() {
 		method: 'get'
 	})
 }
+
+// 获取指定类型的选项列表
+export function getLensOptionsByType(optionType) {
+	return request({
+		url: 'ProductConfiguration/GetLensOptionsByTypeList/GetLensOptionsByType',
+		method: 'get',
+		params: { optionType: optionType }
+	})
+}

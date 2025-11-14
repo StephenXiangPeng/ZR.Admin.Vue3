@@ -346,7 +346,7 @@
 </template>
 
 <script setup name="LensOptions">
-import { listLensOptions, getLensOption, delLensOption, delLensOptions, addLensOption, updateLensOption, changeLensOptionStatus, getNextOptionValue } from '@/api/DFGX/lensOptions'
+import { listLensOptions, getLensOption, delLensOption, delLensOptions, addLensOption, updateLensOption, changeLensOptionStatus, getNextOptionValue, getLensOptionsByType } from '@/api/DFGX/lensOptions'
 import { parseTime } from '@/utils/ruoyi'
 
 const { proxy } = getCurrentInstance()
@@ -744,9 +744,10 @@ function getOptionTypeOptions() {
 
 // 获取材质选项数据
 function getMaterialOptions() {
-  // 从所有选项数据中筛选出材质选项（optionType = 3）
-  listLensOptions({ optionType: 3, status: '0' }).then(response => {
-    materialOptions.value = response.data.result.map(item => ({
+  // 使用新接口获取材质选项（optionType = 3）
+  getLensOptionsByType(3).then(response => {
+    const result = response.data || []
+    materialOptions.value = result.map(item => ({
       label: item.optionName,
       value: item.id  // 使用id作为value，对应material_id
     }))
@@ -758,9 +759,10 @@ function getMaterialOptions() {
 
 // 获取设计选项数据
 function getDesignOptions() {
-  // 从所有选项数据中筛选出设计名称选项（optionType = 4）
-  listLensOptions({ optionType: 4, status: '0' }).then(response => {
-    designOptions.value = response.data.result.map(item => ({
+  // 使用新接口获取设计名称选项（optionType = 4）
+  getLensOptionsByType(4).then(response => {
+    const result = response.data || []
+    designOptions.value = result.map(item => ({
       label: item.optionName,
       value: item.id  // 使用id作为value，对应design_id
     }))
