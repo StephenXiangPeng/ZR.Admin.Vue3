@@ -247,7 +247,7 @@ export function importVarietyPrice(file, customerId = null) {
 // 根据折射率ID获取材质选项
 export function getMaterialByIndexID(IndexID) {
 	return request({
-		url: 'ProductConfiguration/GetMaterialByIndexID',
+		url: 'ProductConfiguration/GetMaterialByIndexID/GetMaterialByIndexID',
 		method: 'get',
 		params: { IndexID }
 	})
@@ -256,7 +256,7 @@ export function getMaterialByIndexID(IndexID) {
 // 根据材质ID获取设计选项
 export function getDesignByMaterialID(MaterialID) {
 	return request({
-		url: 'ProductConfiguration/GetDesignByMaterialID',
+		url: 'ProductConfiguration/GetDesignByMaterialID/GetDesignByMaterialID',
 		method: 'get',
 		params: { MaterialID }
 	})
@@ -265,7 +265,7 @@ export function getDesignByMaterialID(MaterialID) {
 // 根据设计ID获取镜片型号选项（膜层）
 export function getModelByDesignID(designID) {
 	return request({
-		url: 'ProductConfiguration/GetModelByDesignID',
+		url: 'ProductConfiguration/GetModelByDesignID/GetModelByDesignID',
 		method: 'get',
 		params: { designID }
 	})
