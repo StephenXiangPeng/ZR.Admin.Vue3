@@ -253,12 +253,19 @@ export function getMaterialByIndexID(IndexID) {
 	})
 }
 
-// 根据材质ID获取设计选项
-export function getDesignByMaterialID(MaterialID) {
+// 根据材质ID获取设计选项（支持多个材质ID）
+export function getDesignByMaterialID(MaterialIDs) {
+	// 确保 MaterialIDs 是数组
+	const ids = Array.isArray(MaterialIDs) ? MaterialIDs : [MaterialIDs]
+
+	// 手动构建查询字符串，确保数组参数格式为 MaterialIDs=1&MaterialIDs=2
+	// ASP.NET Core 期望多个同名参数，而不是 MaterialIDs[]=1&MaterialIDs[]=2
+	const queryString = ids.map(id => `MaterialIDs=${encodeURIComponent(id)}`).join('&')
+	const url = `ProductConfiguration/GetDesignByMaterialID/GetDesignByMaterialID?${queryString}`
+
 	return request({
-		url: 'ProductConfiguration/GetDesignByMaterialID/GetDesignByMaterialID',
-		method: 'get',
-		params: { MaterialID }
+		url: url,
+		method: 'get'
 	})
 }
 

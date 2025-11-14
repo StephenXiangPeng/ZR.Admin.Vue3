@@ -153,16 +153,19 @@
             <el-col :span="12">
               <el-form-item label="Material" prop="material">
                 <el-select 
+                  :key="`material-select-${materialSelectKey}`"
                   v-model="orderForm.material" 
                   placeholder="Please select Material" 
                   style="width: 100%"
                   clearable
                   multiple
                   collapse-tags
-                  collapse-tags-tooltip filterable>
+                  collapse-tags-tooltip 
+                  filterable
+                  :loading="loadingOptions">
                   <el-option 
-                    v-for="option in materialOptions" 
-                    :key="option.value" 
+                    v-for="(option, index) in materialOptions" 
+                    :key="`material-${option.value}-${index}`" 
                     :label="option.label" 
                     :value="option.value">
                   </el-option>
@@ -587,7 +590,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { View } from '@element-plus/icons-vue'
@@ -619,6 +622,9 @@ const remarksTypeOptions = ref([])
 const colorOptions = ref([])
 const orderStatusOptions = ref([])
 const lenticularOptions = ref([])
+
+// Material select 的 key，用于强制重新渲染
+const materialSelectKey = ref(0)
 
 // 表单数据
 const orderForm = reactive({
@@ -951,38 +957,113 @@ const loadMaterialsByIndex = async (indexID) => {
   
   try {
     const response = await getMaterialByIndexID(indexID)
-    const result = response.data?.result || response.data || []
     
-    materialOptions.value = result.map(item => ({
-      label: item.optionName,
-      value: item.optionValue,
-      price: item.remark ? parseFloat(item.remark) : 0
-    }))
+    // 响应拦截器返回 res.data，所以 response 是 { code, msg, data: [...] }
+    let result = []
+    
+    // 情况1: response 本身就是数组（不太可能，但兼容处理）
+    if (Array.isArray(response)) {
+      result = response
+    }
+    // 情况2: response.data 是数组（标准情况）
+    else if (Array.isArray(response.data)) {
+      result = response.data
+    }
+    // 情况3: response.data 是对象，包含 data 字段
+    else if (response.data && typeof response.data === 'object') {
+      if (Array.isArray(response.data.data)) {
+        result = response.data.data
+      } else if (Array.isArray(response.data.result)) {
+        result = response.data.result
+      }
+    }
+    // 情况4: response 是对象，直接包含数组字段
+    else if (response && typeof response === 'object') {
+      // 尝试查找数组字段
+      const arrayFields = ['data', 'result', 'list', 'items']
+      for (const field of arrayFields) {
+        if (Array.isArray(response[field])) {
+          result = response[field]
+          break
+        }
+      }
+    }
+    
+    if (result.length === 0) {
+      ElMessage.warning('未找到材质选项数据')
+    }
+    
+    const mappedOptions = result.map(item => {
+      // 安全地解析价格，处理非数字字符串
+      let price = 0
+      if (item.remark) {
+        const parsedPrice = parseFloat(item.remark)
+        price = isNaN(parsedPrice) ? 0 : parsedPrice
+      }
+      
+      return {
+        label: item.optionName,
+        value: item.optionValue,
+        price: price
+      }
+    })
+    
+    // 先清空再设置，确保响应式更新
+    materialOptions.value = []
+    await nextTick()
+    
+    // 设置新选项
+    materialOptions.value = mappedOptions
+    // 更新 key 强制重新渲染 el-select
+    materialSelectKey.value++
+    await nextTick()
   } catch (error) {
-    console.error('获取材质选项失败:', error)
     ElMessage.error('获取材质选项失败')
     materialOptions.value = []
   }
 }
 
-// 加载联动设计选项（根据材质）
-const loadDesignsByMaterial = async (materialID) => {
-  if (!materialID) {
+// 加载联动设计选项（根据材质，支持多个材质ID）
+const loadDesignsByMaterial = async (materialIDs) => {
+  // 确保 materialIDs 是数组
+  const ids = Array.isArray(materialIDs) ? materialIDs : (materialIDs ? [materialIDs] : [])
+  
+  if (ids.length === 0) {
     designNameOptions.value = []
     return
   }
   
   try {
-    const response = await getDesignByMaterialID(materialID)
-    const result = response.data?.result || response.data || []
+    const response = await getDesignByMaterialID(ids)
     
-    designNameOptions.value = result.map(item => ({
-      label: item.design_name || item.optionName || item.name || item.designName || `设计ID: ${item.id || item.design_id}`,
-      value: item.id || item.design_id || item.value || item.designId,
-      price: item.remark ? parseFloat(item.remark) : 0
-    }))
+    // 根据实际返回数据结构处理：response.data 可能是数组，也可能是 { code, msg, data: [...] }
+    let result = []
+    if (Array.isArray(response.data)) {
+      result = response.data
+    } else if (response.data?.data && Array.isArray(response.data.data)) {
+      result = response.data.data
+    } else if (response.data?.result && Array.isArray(response.data.result)) {
+      result = response.data.result
+    }
+    
+    const mappedOptions = result.map(item => {
+      // 安全地解析价格
+      let price = 0
+      if (item.remark) {
+        const parsedPrice = parseFloat(item.remark)
+        price = isNaN(parsedPrice) ? 0 : parsedPrice
+      }
+      
+      return {
+        label: item.design_name || item.optionName || item.name || item.designName || `设计ID: ${item.id || item.design_id}`,
+        value: item.id || item.design_id || item.value || item.designId,
+        price: price
+      }
+    })
+    
+    await nextTick()
+    designNameOptions.value = mappedOptions
   } catch (error) {
-    console.error('获取设计选项失败:', error)
     ElMessage.error('获取设计选项失败')
     designNameOptions.value = []
   }
@@ -997,7 +1078,15 @@ const loadCoatingByDesign = async (designID) => {
   
   try {
     const response = await getModelByDesignID(designID)
-    const result = response.data?.result || response.data || []
+    // 根据实际返回数据结构处理：response.data 可能是数组，也可能是 { code, msg, data: [...] }
+    let result = []
+    if (Array.isArray(response.data)) {
+      result = response.data
+    } else if (response.data?.data && Array.isArray(response.data.data)) {
+      result = response.data.data
+    } else if (response.data?.result && Array.isArray(response.data.result)) {
+      result = response.data.result
+    }
     
     coatingOptions.value = result.map(item => ({
       label: item.option_name || item.optionName || item.name || `膜层ID: ${item.id || item.optionValue}`,
@@ -1005,7 +1094,6 @@ const loadCoatingByDesign = async (designID) => {
       price: item.remark ? parseFloat(item.remark) : 0
     }))
   } catch (error) {
-    console.error('获取膜层选项失败:', error)
     ElMessage.error('获取膜层选项失败')
     coatingOptions.value = []
   }
@@ -1036,21 +1124,23 @@ watch(() => orderForm.refractiveIndex, async (newIndex, oldIndex) => {
   }
 })
 
-// 监听材质变化，更新设计选项
+// 监听材质变化，更新设计选项（支持多选）
 watch(() => orderForm.material, async (newMaterials, oldMaterials) => {
-  // 如果材质是多选，需要根据所有选中的材质来获取设计选项
-  // 但根据后端接口，GetDesignByMaterialID只接受单个MaterialID
-  // 所以这里取第一个选中的材质
+  // 如果材质是多选，根据所有选中的材质来获取设计选项
   if (Array.isArray(newMaterials) && newMaterials.length > 0) {
-    const firstMaterial = newMaterials[0]
-    if (firstMaterial && (!oldMaterials || !oldMaterials.includes(firstMaterial))) {
+    // 检查是否有变化（新增或删除材质）
+    const hasChanged = !oldMaterials || 
+      newMaterials.length !== oldMaterials.length ||
+      !newMaterials.every(m => oldMaterials.includes(m))
+    
+    if (hasChanged) {
       // 清空设计和膜层选项和值
       orderForm.designName = ''
       orderForm.coating = ''
       coatingOptions.value = []
       
-      // 加载对应的设计选项
-      await loadDesignsByMaterial(firstMaterial)
+      // 传递所有选中的材质ID数组
+      await loadDesignsByMaterial(newMaterials)
     }
   } else if (!newMaterials || (Array.isArray(newMaterials) && newMaterials.length === 0)) {
     // 如果材质被清空，清空设计和膜层，恢复为所有设计选项
