@@ -254,6 +254,48 @@
           </div>
         </el-form-item>
         
+        <!-- 关联设计下拉框 - 仅当选项类型为材质时显示 -->
+        <el-form-item 
+          label="关联设计" 
+          prop="relatedDesign" 
+          v-if="form.optionType === 3"
+        >
+          <el-select 
+            v-model="form.relatedDesign" 
+            placeholder="请选择关联设计（支持多选）"
+            style="width: 100%"
+            clearable
+            filterable
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            :max-collapse-tags="2"
+          >
+            <el-option 
+              v-for="design in designOptions" 
+              :key="design.value" 
+              :label="design.label" 
+              :value="design.value"
+            />
+          </el-select>
+          <div class="form-tip">
+            <el-text type="info" size="small">
+              提示：可以选择多个设计，系统会以数组格式保存
+            </el-text>
+          </div>
+        </el-form-item>
+        
+        <!-- 车房类型复选框 - 仅当选项类型为材质、膜层或设计时显示 -->
+        <el-form-item 
+          label="车房类型" 
+          v-if="form.optionType === 2 || form.optionType === 3 || form.optionType === 4"
+        >
+          <el-checkbox-group v-model="form.workshopTypes">
+            <el-checkbox label="newWorkshop">新车房</el-checkbox>
+            <el-checkbox label="oldWorkshop">老车房</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        
         <el-form-item label="备注" prop="remark">
           <el-input 
             v-model="form.remark" 
@@ -277,6 +319,9 @@
             <span class="preview-value" v-if="form.optionValue">(值: {{ form.optionValue }})</span>
             <span class="preview-material" v-if="form.optionType === 5 && form.relatedMaterial && form.relatedMaterial.length > 0">
               (关联材质: {{ getMaterialNames(form.relatedMaterial) }})
+            </span>
+            <span class="preview-design" v-if="form.optionType === 3 && form.relatedDesign && form.relatedDesign.length > 0">
+              (关联设计: {{ getDesignNames(form.relatedDesign) }})
             </span>
           </div>
         </el-form-item>
@@ -317,6 +362,7 @@ const total = ref(0)
 const title = ref('')
 const optionTypeOptions = ref([])
 const materialOptions = ref([])
+const designOptions = ref([])
 const submitLoading = ref(false)
 const modelImageRef = ref(null)
 
@@ -355,6 +401,18 @@ const data = reactive({
         }, 
         trigger: 'change' 
       }
+    ],
+    relatedDesign: [
+      { 
+        validator: (rule, value, callback) => {
+          if (form.value.optionType === 3 && (!value || value.length === 0)) {
+            callback(new Error('材质选项必须选择关联设计'))
+          } else {
+            callback()
+          }
+        }, 
+        trigger: 'change' 
+      }
     ]
   }
 })
@@ -387,7 +445,9 @@ function reset() {
     status: '0',
     remark: '',
     relatedMaterial: [],
-    imageUrl: ''
+    relatedDesign: [],
+    imageUrl: '',
+    workshopTypes: []
   }
   proxy.resetForm('lensOptionRef')
 }
@@ -433,6 +493,7 @@ function handleUpdate(row) {
     // 处理新的接口结构
     const productConfig = response.data.productConfiguration || response.data
     const relatedMaterials = response.data.relatedMaterials || []
+    const relatedDesigns = response.data.relatedDesigns || []
     
     // 确保数据格式正确，处理备注字段
     const remark = productConfig.remark || productConfig.Remarks || ''
@@ -443,6 +504,23 @@ function handleUpdate(row) {
       relatedMaterial = relatedMaterials.map(item => item.material_id).filter(id => id != null)
     }
     
+    // 从relatedDesigns数组中提取design_id
+    let relatedDesign = []
+    if (Array.isArray(relatedDesigns) && relatedDesigns.length > 0) {
+      relatedDesign = relatedDesigns.map(item => item.design_id || item.id).filter(id => id != null)
+    }
+    
+    // 处理车房类型（后端返回的是整数：0=否，1=是）
+    let workshopTypes = []
+    const newWorkshopValue = productConfig.newWorkshop ?? productConfig.NewWorkshop
+    const oldWorkshopValue = productConfig.oldWorkshop ?? productConfig.OldWorkshop
+    if (newWorkshopValue === 1 || newWorkshopValue === true) {
+      workshopTypes.push('newWorkshop')
+    }
+    if (oldWorkshopValue === 1 || oldWorkshopValue === true) {
+      workshopTypes.push('oldWorkshop')
+    }
+    
     form.value = {
       id: productConfig.id || productConfig.ID,
       optionType: productConfig.optionType || productConfig.OptionType,
@@ -451,7 +529,9 @@ function handleUpdate(row) {
       status: productConfig.status || productConfig.Status || '0',
       remark: remark === '无' ? '' : remark, // 如果备注是"无"，则显示为空，让用户可以重新输入
       relatedMaterial: relatedMaterial,
-      imageUrl: productConfig.imageUrl || productConfig.ImageUrl || ''
+      relatedDesign: relatedDesign,
+      imageUrl: productConfig.imageUrl || productConfig.ImageUrl || '',
+      workshopTypes: workshopTypes
     }
     console.log('格式化后的表单数据:', form.value) // 调试信息
     open.value = true
@@ -490,6 +570,23 @@ function submitForm() {
       )
 
       const proceed = () => {
+        // 处理车房类型（在材质、膜层或设计时）
+        // 将布尔值转换为整数：true -> 1, false -> 0
+        const newWorkshopBool = (form.value.optionType === 2 || form.value.optionType === 3 || form.value.optionType === 4) && 
+                                form.value.workshopTypes && 
+                                form.value.workshopTypes.includes('newWorkshop')
+        const oldWorkshopBool = (form.value.optionType === 2 || form.value.optionType === 3 || form.value.optionType === 4) && 
+                               form.value.workshopTypes && 
+                               form.value.workshopTypes.includes('oldWorkshop')
+        
+        // 转换为整数：true -> 1, false -> 0, null -> null
+        const newWorkshop = (form.value.optionType === 2 || form.value.optionType === 3 || form.value.optionType === 4) 
+                          ? (newWorkshopBool ? 1 : 0) 
+                          : null
+        const oldWorkshop = (form.value.optionType === 2 || form.value.optionType === 3 || form.value.optionType === 4) 
+                          ? (oldWorkshopBool ? 1 : 0) 
+                          : null
+        
         if (form.value.id != null) {
           // 编辑时构建符合后端接口的数据格式
           const requestData = {
@@ -500,7 +597,10 @@ function submitForm() {
             Status: form.value.status,
             Remarks: remark,
             RelatedMaterial: form.value.relatedMaterial && form.value.relatedMaterial.length > 0 ? form.value.relatedMaterial : null,
-            ImageUrl: form.value.optionType === 8 ? (form.value.imageUrl || '') : null
+            RelatedDesign: form.value.relatedDesign && form.value.relatedDesign.length > 0 ? form.value.relatedDesign : null,
+            ImageUrl: form.value.optionType === 8 ? (form.value.imageUrl || '') : null,
+            NewWorkshop: newWorkshop,
+            OldWorkshop: oldWorkshop
           }
           console.log('修改请求数据:', requestData) // 调试信息
           updateLensOption(requestData).then(response => {
@@ -523,7 +623,10 @@ function submitForm() {
             Status: form.value.status,
             Remarks: remark,
             RelatedMaterial: form.value.relatedMaterial && form.value.relatedMaterial.length > 0 ? form.value.relatedMaterial : null,
-            ImageUrl: form.value.optionType === 8 ? (form.value.imageUrl || '') : null
+            RelatedDesign: form.value.relatedDesign && form.value.relatedDesign.length > 0 ? form.value.relatedDesign : null,
+            ImageUrl: form.value.optionType === 8 ? (form.value.imageUrl || '') : null,
+            NewWorkshop: newWorkshop,
+            OldWorkshop: oldWorkshop
           }
           console.log('新增请求数据:', requestData) // 调试信息
           addLensOption(requestData).then(response => {
@@ -653,6 +756,20 @@ function getMaterialOptions() {
   })
 }
 
+// 获取设计选项数据
+function getDesignOptions() {
+  // 从所有选项数据中筛选出设计名称选项（optionType = 4）
+  listLensOptions({ optionType: 4, status: '0' }).then(response => {
+    designOptions.value = response.data.result.map(item => ({
+      label: item.optionName,
+      value: item.id  // 使用id作为value，对应design_id
+    }))
+  }).catch(error => {
+    console.error('获取设计选项失败:', error)
+    designOptions.value = []
+  })
+}
+
 // 获取标签类型
 function getTagType(optionType) {
   const typeMap = {
@@ -696,10 +813,29 @@ function getMaterialNames(materialValues) {
   return materialValues.map(value => getMaterialName(value)).filter(name => name).join(', ')
 }
 
+// 获取设计名称
+function getDesignName(designValue) {
+  const design = designOptions.value.find(item => item.value === designValue)
+  return design ? design.label : designValue
+}
+
+// 获取多个设计名称
+function getDesignNames(designValues) {
+  if (!Array.isArray(designValues) || designValues.length === 0) {
+    return ''
+  }
+  return designValues.map(value => getDesignName(value)).filter(name => name).join(', ')
+}
+
 // 处理选项类型变化
 function handleOptionTypeChange(value) {
-  // 清空关联材质字段
+  // 清空关联材质和关联设计字段
   form.value.relatedMaterial = []
+  form.value.relatedDesign = []
+  // 清空车房类型（如果切换到的类型不是材质、膜层或设计）
+  if (value !== 2 && value !== 3 && value !== 4) {
+    form.value.workshopTypes = []
+  }
   
   if (value && !form.value.id) { // 只在新增时获取
     getNextOptionValue(value).then(response => {
@@ -716,6 +852,7 @@ onMounted(() => {
   getList()
   getOptionTypeOptions()
   getMaterialOptions()
+  getDesignOptions()
 })
 </script>
 
@@ -771,6 +908,13 @@ onMounted(() => {
   margin-left: 6px;
   font-size: 11px;
   color: #67c23a;
+  font-weight: 500;
+}
+
+.preview-design {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #409eff;
   font-weight: 500;
 }
 

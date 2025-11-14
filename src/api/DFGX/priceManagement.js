@@ -242,4 +242,33 @@ export function importVarietyPrice(file, customerId = null) {
 	})
 }
 
+// ========== 下拉框联动相关 ==========
+
+// 根据折射率ID获取材质选项
+export function getMaterialByIndexID(IndexID) {
+	return request({
+		url: 'ProductConfiguration/GetMaterialByIndexID',
+		method: 'get',
+		params: { IndexID }
+	})
+}
+
+// 根据材质ID获取设计选项
+export function getDesignByMaterialID(MaterialID) {
+	return request({
+		url: 'ProductConfiguration/GetDesignByMaterialID',
+		method: 'get',
+		params: { MaterialID }
+	})
+}
+
+// 根据设计ID获取镜片型号选项（膜层）
+export function getModelByDesignID(designID) {
+	return request({
+		url: 'ProductConfiguration/GetModelByDesignID',
+		method: 'get',
+		params: { designID }
+	})
+}
+
 

@@ -597,6 +597,7 @@ import { addCustomerOrder, checkOrderNoUnique as checkOrderNoUniqueAPI } from '@
 import { addOrderDetails } from '@/api/DFGX/orderDetails'
 import { recordOrderStatusChange } from '@/api/DFGX/orderStatusHistory'
 import { createCompleteOrder } from '@/api/DFGX/orderManagement'
+import { getMaterialByIndexID, getDesignByMaterialID, getModelByDesignID } from '@/api/DFGX/priceManagement'
 import useUserStore from '@/store/modules/user'
 import OrderFileUpload from '@/components/OrderFileUpload/index.vue'
 
@@ -815,6 +816,8 @@ const getDictData = async () => {
         value: item.optionValue,
         price: item.remark ? parseFloat(item.remark) : 0
       }))
+    // 保存所有膜层选项的副本
+    allCoatingOptions.value = [...coatingOptions.value]
     
     tintingOptions.value = allOptions
       .filter(item => item.optionType === 13)
@@ -831,6 +834,8 @@ const getDictData = async () => {
         value: item.optionValue,
         price: item.remark ? parseFloat(item.remark) : 0
       }))
+    // 保存所有材质选项的副本
+    allMaterialOptions.value = [...materialOptions.value]
     
     designNameOptions.value = allOptions
       .filter(item => item.optionType === 4)
@@ -839,6 +844,8 @@ const getDictData = async () => {
         value: item.optionValue,
         price: item.remark ? parseFloat(item.remark) : 0
       }))
+    // 保存所有设计选项的副本
+    allDesignOptions.value = [...designNameOptions.value]
     
     // 折射率选项从字典获取
     refractiveIndexOptions.value = allOptions
@@ -932,6 +939,141 @@ onMounted(() => {
   } else {
     // 如果无法获取用户信息，设置默认值
     orderForm.customerName = 'Current User'
+  }
+})
+
+// 加载联动材质选项（根据折射率）
+const loadMaterialsByIndex = async (indexID) => {
+  if (!indexID) {
+    materialOptions.value = []
+    return
+  }
+  
+  try {
+    const response = await getMaterialByIndexID(indexID)
+    const result = response.data?.result || response.data || []
+    
+    materialOptions.value = result.map(item => ({
+      label: item.optionName,
+      value: item.optionValue,
+      price: item.remark ? parseFloat(item.remark) : 0
+    }))
+  } catch (error) {
+    console.error('获取材质选项失败:', error)
+    ElMessage.error('获取材质选项失败')
+    materialOptions.value = []
+  }
+}
+
+// 加载联动设计选项（根据材质）
+const loadDesignsByMaterial = async (materialID) => {
+  if (!materialID) {
+    designNameOptions.value = []
+    return
+  }
+  
+  try {
+    const response = await getDesignByMaterialID(materialID)
+    const result = response.data?.result || response.data || []
+    
+    designNameOptions.value = result.map(item => ({
+      label: item.design_name || item.optionName || item.name || item.designName || `设计ID: ${item.id || item.design_id}`,
+      value: item.id || item.design_id || item.value || item.designId,
+      price: item.remark ? parseFloat(item.remark) : 0
+    }))
+  } catch (error) {
+    console.error('获取设计选项失败:', error)
+    ElMessage.error('获取设计选项失败')
+    designNameOptions.value = []
+  }
+}
+
+// 加载联动膜层选项（根据设计）
+const loadCoatingByDesign = async (designID) => {
+  if (!designID) {
+    coatingOptions.value = []
+    return
+  }
+  
+  try {
+    const response = await getModelByDesignID(designID)
+    const result = response.data?.result || response.data || []
+    
+    coatingOptions.value = result.map(item => ({
+      label: item.option_name || item.optionName || item.name || `膜层ID: ${item.id || item.optionValue}`,
+      value: item.id || item.option_value || item.optionValue || item.value,
+      price: item.remark ? parseFloat(item.remark) : 0
+    }))
+  } catch (error) {
+    console.error('获取膜层选项失败:', error)
+    ElMessage.error('获取膜层选项失败')
+    coatingOptions.value = []
+  }
+}
+
+// 保存初始加载的所有材质、设计、膜层选项（用于恢复）
+const allMaterialOptions = ref([])
+const allDesignOptions = ref([])
+const allCoatingOptions = ref([])
+
+// 监听折射率变化，更新材质选项
+watch(() => orderForm.refractiveIndex, async (newIndex, oldIndex) => {
+  if (newIndex !== oldIndex) {
+    // 清空材质、设计、膜层选项和值
+    orderForm.material = []
+    orderForm.designName = ''
+    orderForm.coating = ''
+    designNameOptions.value = []
+    coatingOptions.value = []
+    
+    // 加载对应的材质选项
+    if (newIndex) {
+      await loadMaterialsByIndex(newIndex)
+    } else {
+      // 如果清空折射率，恢复为所有材质选项
+      materialOptions.value = [...allMaterialOptions.value]
+    }
+  }
+})
+
+// 监听材质变化，更新设计选项
+watch(() => orderForm.material, async (newMaterials, oldMaterials) => {
+  // 如果材质是多选，需要根据所有选中的材质来获取设计选项
+  // 但根据后端接口，GetDesignByMaterialID只接受单个MaterialID
+  // 所以这里取第一个选中的材质
+  if (Array.isArray(newMaterials) && newMaterials.length > 0) {
+    const firstMaterial = newMaterials[0]
+    if (firstMaterial && (!oldMaterials || !oldMaterials.includes(firstMaterial))) {
+      // 清空设计和膜层选项和值
+      orderForm.designName = ''
+      orderForm.coating = ''
+      coatingOptions.value = []
+      
+      // 加载对应的设计选项
+      await loadDesignsByMaterial(firstMaterial)
+    }
+  } else if (!newMaterials || (Array.isArray(newMaterials) && newMaterials.length === 0)) {
+    // 如果材质被清空，清空设计和膜层，恢复为所有设计选项
+    orderForm.designName = ''
+    orderForm.coating = ''
+    designNameOptions.value = [...allDesignOptions.value]
+    coatingOptions.value = []
+  }
+}, { deep: true })
+
+// 监听设计变化，更新膜层选项
+watch(() => orderForm.designName, async (newDesign, oldDesign) => {
+  if (newDesign !== oldDesign) {
+    // 清空膜层选项和值
+    orderForm.coating = ''
+    
+    // 加载对应的膜层选项
+    if (newDesign) {
+      await loadCoatingByDesign(newDesign)
+    } else {
+      // 如果清空设计，恢复为所有膜层选项
+      coatingOptions.value = [...allCoatingOptions.value]
+    }
   }
 })
 
