@@ -349,6 +349,15 @@
 									:disabled="isFormDisabled" style="width: 100%"></el-input>
 							</template>
 						</el-table-column>
+						<el-table-column prop="supplier" label="供应商" width="200">
+							<template #default="{ row }">
+								<el-select v-model="row.supplier" placeholder="选择供应商" size="default"
+									:disabled="isFormDisabled" clearable>
+									<el-option v-for="supplier in selectedSuppliers" :key="supplier.dictCode"
+										:label="supplier.dictLabel" :value="supplier.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
 						<el-table-column prop="currency" label="币种" width="150">
 							<template #default="{ row }">
 								<el-select v-model="row.currency" placeholder="选择币种" size="default"
@@ -1185,6 +1194,7 @@ const addNewExpense = () => {
 	const newExpense = {
 		id: 0,
 		expenseName: '',
+		supplier: '', // 供应商
 		currency: '3', // 默认人民币
 		exchangeRate: 1, // 默认汇率1
 		expense: 0,
@@ -1245,6 +1255,28 @@ const filteredPriceTermsOptions = computed(() => {
 	else {
 		return optionss.value.hr_purchase_pricing_term;
 	}
+});
+
+// 获取产品资料列表中已选择的供应商（去重）
+const selectedSuppliers = computed(() => {
+	if (!productinfotableData.value || productinfotableData.value.length === 0) {
+		return [];
+	}
+
+	// 收集所有已选择的供应商ID（去重）
+	const supplierIds = new Set();
+	productinfotableData.value.forEach(product => {
+		if (product.supplier && product.supplier !== null && product.supplier !== '') {
+			supplierIds.add(product.supplier.toString());
+		}
+	});
+
+	// 根据供应商ID从字典中获取供应商信息
+	const suppliers = Array.from(supplierIds)
+		.map(id => state.optionss.sql_supplier_info.find(item => item.dictValue === id))
+		.filter(Boolean); // 过滤掉未找到的供应商
+
+	return suppliers;
 });
 
 // 处理价格条款变化
@@ -1341,6 +1373,7 @@ const submitPurchaseContract = () => {
 		id: expense.id || 0,
 		purchaseContractID: 0, // 新增时为0
 		expenseName: expense.expenseName,
+		supplierID: expense.supplier ? parseInt(expense.supplier) : 0, // 供应商ID
 		currency: parseInt(expense.currency),
 		exchangeRate: parseFloat(expense.exchangeRate),
 		expense: parseFloat(expense.expense),
@@ -1484,6 +1517,7 @@ const saveEditContractData = async () => {
 		id: expense.id || 0,
 		PurchaseContractID: currentContractId.value,
 		expenseName: expense.expenseName,
+		SupplierID: expense.supplier ? parseInt(expense.supplier) : 0, // 供应商ID
 		currency: parseInt(expense.currency),
 		exchangeRate: parseFloat(expense.exchangeRate),
 		expense: parseFloat(expense.expense),
@@ -1625,6 +1659,7 @@ const submitForReview = () => {
 					id: expense.id || 0,
 					purchaseContractID: 0, // 新增时为0
 					expenseName: expense.expenseName,
+					supplierID: expense.supplier ? parseInt(expense.supplier) : 0, // 供应商ID
 					currency: parseInt(expense.currency),
 					exchangeRate: parseFloat(expense.exchangeRate),
 					expense: parseFloat(expense.expense),
@@ -2130,6 +2165,8 @@ const CheckDetails = async (row) => {
 				CustomerRelaterExoensesTableData.value.forEach(element => {
 					element.currency = optionss.value.hr_export_currency.find(item => item.dictValue === element.currency.toString())?.dictValue;
 					element.amount = element.expense * element.exchangeRate;
+					// 加载供应商字段
+					element.supplier = element.supplierID ? element.supplierID.toString() : '';
 					// 费用名称现在是手动输入的文本，不需要从字典中查找
 				});
 			}
