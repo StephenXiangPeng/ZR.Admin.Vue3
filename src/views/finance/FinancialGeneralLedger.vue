@@ -7,8 +7,8 @@
 				</div>
 			</template>
 
-			<el-table :data="paginatedData" border stripe :summary-method="getSummaries" show-summary
-				class="ledger-table" :cell-style="cellStyle" :header-cell-style="headerCellStyle">
+			<el-table v-loading="loading" :data="paginatedData" border stripe :summary-method="getSummaries"
+				show-summary class="ledger-table" :cell-style="cellStyle" :header-cell-style="headerCellStyle">
 				<el-table-column prop="date" label="日期" width="130" align="left" />
 				<el-table-column prop="summary" label="摘要/事项" width="350" align="left" />
 
@@ -51,10 +51,13 @@
 					</el-table-column>
 				</el-table-column>
 
-				<el-table-column prop="remarks" label="备注" width="200" align="left">
+				<el-table-column label="备注" width="200" align="left">
 					<template #default="scope">
-						<div v-if="scope.row.remarks.primary">{{ scope.row.remarks.primary }}</div>
-						<div v-if="scope.row.remarks.secondary">{{ scope.row.remarks.secondary }}</div>
+						<div v-if="scope.row.remarks && scope.row.remarks.primary">{{ scope.row.remarks.primary }}</div>
+						<div v-if="scope.row.remarks && scope.row.remarks.secondary">{{ scope.row.remarks.secondary }}
+						</div>
+						<span
+							v-if="!scope.row.remarks || (!scope.row.remarks.primary && !scope.row.remarks.secondary)">-</span>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -70,8 +73,9 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
-import { ElTable, ElTableColumn, ElCard, ElPagination } from 'element-plus'
+import { ref, computed, onMounted } from 'vue'
+import { ElTable, ElTableColumn, ElCard, ElPagination, ElMessage } from 'element-plus'
+import { getFinancialGeneralLedgerData } from '@/api/finance'
 
 // 定义数据类型
 interface Amount {
@@ -93,12 +97,40 @@ interface LedgerItem {
 	remarks: Remarks
 }
 
+// API返回的数据类型
+interface ApiRow {
+	date: string
+	summary: string
+	remark: string | null
+	incomeCny: number
+	incomeUsd: number
+	incomeEur: number
+	expenseCny: number
+	expenseUsd: number
+	expenseEur: number
+}
+
+interface ApiResponse {
+	rows: ApiRow[]
+	total: {
+		incomeCny: number
+		incomeUsd: number
+		incomeEur: number
+		expenseCny: number
+		expenseUsd: number
+		expenseEur: number
+	}
+}
+
 // 分页相关变量
 const currentPage = ref(1)
 const pageSize = ref(10)
 
 // 表格数据
 const ledgerData = ref<LedgerItem[]>([])
+
+// 加载状态
+const loading = ref(false)
 
 // 分页相关计算属性
 const totalRecords = computed(() => ledgerData.value.length)
@@ -191,6 +223,85 @@ const headerCellStyle = ({ row, column, rowIndex, columnIndex }: any) => {
 		fontWeight: 'bold' as const
 	}
 }
+
+// 格式化日期
+const formatDate = (dateStr: string): string => {
+	if (!dateStr) return ''
+	try {
+		const date = new Date(dateStr)
+		const year = date.getFullYear()
+		const month = String(date.getMonth() + 1).padStart(2, '0')
+		const day = String(date.getDate()).padStart(2, '0')
+		return `${year}-${month}-${day}`
+	} catch (error) {
+		return dateStr
+	}
+}
+
+// 处理备注字段（将单个字符串拆分为 primary 和 secondary）
+const parseRemarks = (remark: string | null): Remarks => {
+	if (!remark) {
+		return { primary: '', secondary: '' }
+	}
+	// 如果备注包含换行符，第一行作为 primary，其余作为 secondary
+	const lines = remark.split('\n').filter(line => line.trim())
+	if (lines.length === 0) {
+		return { primary: '', secondary: '' }
+	}
+	if (lines.length === 1) {
+		return { primary: lines[0], secondary: '' }
+	}
+	return {
+		primary: lines[0],
+		secondary: lines.slice(1).join('\n')
+	}
+}
+
+// 转换API数据为前端格式
+const transformApiData = (apiRows: ApiRow[]): LedgerItem[] => {
+	return apiRows.map(row => ({
+		date: formatDate(row.date),
+		summary: row.summary || '',
+		income: {
+			rmb: row.incomeCny || 0,
+			usd: row.incomeUsd || 0,
+			eur: row.incomeEur || 0
+		},
+		expenditure: {
+			rmb: row.expenseCny || 0,
+			usd: row.expenseUsd || 0,
+			eur: row.expenseEur || 0
+		},
+		remarks: parseRemarks(row.remark)
+	}))
+}
+
+// 加载财务总账数据
+const loadData = async (customerID?: string) => {
+	loading.value = true
+	try {
+		const response = await getFinancialGeneralLedgerData(customerID)
+		if (response && response.code === 200 && response.data && response.data.rows) {
+			ledgerData.value = transformApiData(response.data.rows || [])
+			// 重置到第一页
+			currentPage.value = 1
+		} else {
+			ElMessage.error(response?.msg || '获取财务总账数据失败')
+			ledgerData.value = []
+		}
+	} catch (error: any) {
+		console.error('加载财务总账数据失败:', error)
+		ElMessage.error('加载财务总账数据失败，请稍后重试')
+		ledgerData.value = []
+	} finally {
+		loading.value = false
+	}
+}
+
+// 组件挂载时加载数据
+onMounted(() => {
+	loadData()
+})
 </script>
 
 <style scoped>
