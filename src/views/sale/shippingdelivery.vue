@@ -508,59 +508,6 @@
 				<el-table-column prop="amount" label="金额" width="150"></el-table-column>
 				<el-table-column prop="remark" label="备注" width="150"></el-table-column>
 			</el-table>
-			<br><span style="font-size: 20px; font-weight: bold;">其它费用</span>
-			<el-divider></el-divider>
-			<el-button class="mt-4" type="primary" @click="handleAddRow" style="margin-bottom: 10px;"
-				:disabled="IsEditable" size="default">添加其它费用</el-button>
-			<el-table :data="shippingDeliveryOtherexpensesTableData"
-				style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
-				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
-				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
-				<el-table-column prop=" expenseName" label="费用名称" width="150">
-					<template #default="{ row }">
-						<el-input v-model="row.expenseName" :disabled="IsEditable" placeholder="输入费用名称"
-							size="small"></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop="currency" label="币种" width="150">
-					<template #default="{ row }">
-						<el-select filterable v-model="row.currency" :disabled="IsEditable" placeholder="选择币种"
-							size="small" clearable @change="handleCurrencyChange(row)">
-							<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
-								:label="dict.dictLabel" :value="dict.dictValue" />
-						</el-select>
-					</template>
-				</el-table-column>
-				<el-table-column prop="exchangeRate" label="汇率" width="150">
-					<template #default="{ row }">
-						<el-input v-model="row.exchangeRate" disabled placeholder="输入汇率"
-							@change="handleExpenseChange(row)" size="small"></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop="expense" label="费用" width="150">
-					<template #default="{ row }">
-						<el-input v-model="row.expense" :disabled="IsEditable" placeholder="输入费用"
-							@change="handleExpenseChange(row)" size="small"></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column prop="amount" label="金额" width="150">
-					<template #default="{ row }">
-						<el-input v-model="row.amount" disabled placeholder="自动计算" size="small" />
-					</template>
-				</el-table-column>
-				<el-table-column prop="remark" label="备注" :disabled="IsEditable" width="150">
-					<template #default="{ row }">
-						<el-input v-model="row.remark" :disabled="IsEditable" placeholder="输入备注"
-							size="small"></el-input>
-					</template>
-				</el-table-column>
-				<el-table-column label="操作" width="100" fixed="right">
-					<template #default="scope">
-						<el-button type="text" size="small" @click="handleDelete(scope.$index)"
-							:disabled="IsEditable">删除</el-button>
-					</template>
-				</el-table-column>
-			</el-table>
 			<br><span style="font-size: 20px; font-weight: bold;">备注信息</span>
 			<el-divider></el-divider>
 			<el-form-item label="备注：" style="width: 100%;">
@@ -612,7 +559,6 @@ import Supperinfomation from '../purchase/supperinfomation.vue';
 import dayjs from 'dayjs';
 import useUserStore from "@/store/modules/user";
 import { useRoute } from 'vue-router'
-import exchangeRateService from '@/utils/exchangeRateService';
 
 const route = useRoute()
 // 添加onMounted钩子
@@ -845,8 +791,6 @@ const shippingDeliveryTableData = ref([])
 const shippingDeliveryContrctProductTableData = ref([])
 //采购明细表格数据
 const shippingDeliveryPurchaseDetailsTableData = ref([])
-// 其它费用
-const shippingDeliveryOtherexpensesTableData = ref([]);
 // 客户其他费用
 const shippingDeliveryCustomerExpensesTableData = ref([]);
 // 采购其它费用
@@ -1219,7 +1163,6 @@ const OpenCreateshippingdeliveryDialog = () => {
 	// 清空产品数据
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];
-	shippingDeliveryOtherexpensesTableData.value = [];
 	shippingDeliveryCustomerExpensesTableData.value = [];
 	shippingDeliveryPurchaseExpensesTableData.value = [];
 	OriginalShipmentQuantity.value = [];
@@ -1351,13 +1294,7 @@ const SaveClick = async (isDraft) => {
 			})),
 
 			// 其它费用
-			ShippingDeliveriesExpensesItems: shippingDeliveryOtherexpensesTableData.value.map(item => ({
-				expenseName: item.expenseName,
-				currency: item.currency,
-				exchangeRate: item.exchangeRate,
-				expense: item.expense,
-				remark: item.remark
-			}))
+			ShippingDeliveriesExpensesItems: []
 		};
 		// 3. 发送保存请求
 		const response = await request.post('ShippingDeliveries/AddShippingDeliveries/Add', requestData);
@@ -1467,7 +1404,6 @@ const resetForm = () => {
 
 	shippingDeliveryContrctProductTableData.value = [];
 	shippingDeliveryPurchaseDetailsTableData.value = [];
-	shippingDeliveryOtherexpensesTableData.value = [];
 	shippingDeliveryCustomerExpensesTableData.value = [];
 	shippingDeliveryPurchaseExpensesTableData.value = [];
 };
@@ -1593,23 +1529,8 @@ const EditSaveClick = (isDraft) => {
 					IsDelete: 0,
 					Remark: '无备注'
 				}],
-			// 其它费用 - 确保至少有一个空项目
-			ShippingDeliveriesExpensesItems: shippingDeliveryOtherexpensesTableData.value.length > 0 ?
-				shippingDeliveryOtherexpensesTableData.value.map(item => ({
-					ExpenseName: item.expenseName || '无费用名称',
-					Currency: item.currency ? Number(item.currency) : 0,
-					ExchangeRate: Number(item.exchangeRate || 0),
-					Expense: Number(item.expense || 0),
-					Remark: item.remark || '无备注',
-					IsDelete: 0
-				})) : [{
-					ExpenseName: '无费用名称',
-					Currency: 0,
-					ExchangeRate: 0,
-					Expense: 0,
-					Remark: '无备注',
-					IsDelete: 0
-				}]
+			// 其它费用
+			ShippingDeliveriesExpensesItems: []
 		};
 		// 直接发送请求，不再嵌套在shippingDeliveriesRequest中
 		request.post('ShippingDeliveries/EditShippingDeliveries/Edit', shippingDeliveriesRequest).then(response => {
@@ -1934,14 +1855,6 @@ const CheckShipingDelivery = async (row) => {
 				});
 			});
 		}
-		if (response.data && response.data.shippingDeliveriesExpenses && response.data.shippingDeliveriesExpenses.length > 0) {
-			shippingDeliveryOtherexpensesTableData.value = response.data.shippingDeliveriesExpenses;
-			shippingDeliveryOtherexpensesTableData.value.forEach(item => {
-				const currency = state.optionss.hr_export_currency.find(c => c.dictValue === (item.currency ? item.currency.toString() : ''));
-				item.currency = currency ? currency.dictValue : '';
-				item.amount = item.expense && item.exchangeRate ? (item.expense * item.exchangeRate).toFixed(2) : '0.00';
-			});
-		}
 		// 加载采购其它费用数据
 		if (response.data.shippingDeliveryPurchaseDetails && response.data.shippingDeliveryPurchaseDetails.length > 0) {
 			const purchaseContractIds = Array.from(new Set(response.data.shippingDeliveryPurchaseDetails.map(item => item.purchaseContractID)));
@@ -2217,85 +2130,21 @@ const SubmitReview = () => {
 	});
 };
 
-const handleAddRow = () => {
-	const newRow = {
-		expenseName: '',
-		currency: '',
-		exchangeRate: '',
-		expense: '',
-		amount: '',
-		remark: ''
-	};
-	shippingDeliveryOtherexpensesTableData.value.push(newRow);
-}
-
-const handleDelete = (index) => {
-	shippingDeliveryOtherexpensesTableData.value.splice(index, 1);
-}
 
 // 计算出运单总金额
 const calculateShipmentTotalAmount = () => {
 	let productTotal = 0
-	let otherExpensesTotal = 0
 
 	// 计算产品金额总和
 	shippingDeliveryContrctProductTableData.value.forEach(item => {
 		productTotal += Number(item.shipmentQuantity) * Number(item.singlesalesrevenue)
 	})
 
-	// 计算其它费用总和
-	shippingDeliveryOtherexpensesTableData.value.forEach(item => {
-		otherExpensesTotal += Number(item.expense) * Number(item.exchangeRate)
-	})
-
 	// 确保返回有效数字
-	const total = productTotal + otherExpensesTotal
-	console.log("总金额", total);
-	return isNaN(total) ? '0.00' : total.toFixed(3)
+	console.log("总金额", productTotal);
+	return isNaN(productTotal) ? '0.00' : productTotal.toFixed(3)
 }
 
-// 监听汇率和费用变化，自动计算金额
-const handleExpenseChange = (row) => {
-	const rate = Number(row.exchangeRate) || 0
-	const expense = Number(row.expense) || 0
-	row.amount = (rate * expense).toFixed(3)
-}
-
-// 处理币种改变，自动获取汇率
-const handleCurrencyChange = async (row) => {
-	if (!row.currency) {
-		row.exchangeRate = '';
-		row.amount = '';
-		return;
-	}
-
-	try {
-		// 获取最新汇率
-		const latestRate = await exchangeRateService.getLatestExchangeRate(row.currency);
-
-		if (latestRate !== null) {
-			// 格式化汇率并设置
-			row.exchangeRate = exchangeRateService.formatExchangeRate(latestRate);
-			// 重新计算金额
-			handleExpenseChange(row);
-		} else {
-			// 如果获取不到汇率，使用默认汇率
-			const defaultRate = exchangeRateService.getDefaultExchangeRate(row.currency);
-			row.exchangeRate = exchangeRateService.formatExchangeRate(defaultRate);
-			// 重新计算金额
-			handleExpenseChange(row);
-			ElMessage.warning(`未找到${exchangeRateService.getCurrencyName(row.currency, state.optionss.hr_export_currency)}的最新汇率，已使用默认汇率`);
-		}
-	} catch (error) {
-		console.error('获取汇率失败:', error);
-		// 获取失败时使用默认汇率
-		const defaultRate = exchangeRateService.getDefaultExchangeRate(row.currency);
-		row.exchangeRate = exchangeRateService.formatExchangeRate(defaultRate);
-		// 重新计算金额
-		handleExpenseChange(row);
-		ElMessage.warning(`获取汇率失败，已使用默认汇率`);
-	}
-}
 
 // 检查当前用户是否是当前审批人
 const checkIfCurrentUserIsApprover = () => {

@@ -139,9 +139,9 @@
 				<el-table-column prop="shippingPort" label="出运口岸" width="120" v-if="false"></el-table-column>
 				<el-table-column prop="destinationPort" label="目的地/港" width="160"></el-table-column>
 				<el-table-column prop="tradeCountry" label="贸易国别" width="90"></el-table-column>
-				<el-table-column prop="deposit" label="有无定金" width="120" v-if="false"></el-table-column>
-				<el-table-column prop="receivedDeposit" label="已收定金" width="120" v-if="false"></el-table-column>
-				<el-table-column prop="depositDate" label="定金日期" width="120" v-if="false"></el-table-column>
+				<el-table-column prop="deposit" label="有无预付款" width="120" v-if="false"></el-table-column>
+				<el-table-column prop="receivedDeposit" label="已收预付款" width="120" v-if="false"></el-table-column>
+				<el-table-column prop="depositDate" label="预付款日期" width="120" v-if="false"></el-table-column>
 				<el-table-column prop="stockProgress" label="备货进度" width="120" v-if="false"></el-table-column>
 				<el-table-column prop="deliveryProgress" label="交货进度" width="120" v-if="false"></el-table-column>
 				<el-table-column prop="estimatedProfitMargin" label="预估利润率" width="120" v-if="false"></el-table-column>
@@ -411,13 +411,13 @@
 						</el-row>
 						<el-row>
 							<el-col :span="6">
-								<el-form-item label="有无定金" prop="hasDeposit">
+								<el-form-item label="有无预付款" prop="hasDeposit">
 									<el-checkbox v-model="Newcontractform.hasDeposit" :disabled="isDisabled"
 										@change="hasDeposithandleCheckboxChange" size="default"></el-checkbox>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item label="定金比例" v-show=DepositShow prop="Depositratio">
+								<el-form-item label="预付款比例" v-show=DepositShow prop="Depositratio">
 									<el-input v-model="Newcontractform.Depositratio" style="width: 300px"
 										:disabled="isDisabled" size="default"></el-input>
 								</el-form-item>
@@ -425,15 +425,15 @@
 						</el-row>
 						<el-row>
 							<el-col :span="6" v-if="false">
-								<el-form-item label="已收定金" v-show=DepositShow prop="receivedDeposit">
+								<el-form-item label="已收预付款" v-show=DepositShow prop="receivedDeposit">
 									<el-input v-model="Newcontractform.receivedDeposit" style="width: 300px"
 										:disabled="isDisabled" size="default"></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6" v-if="false">
-								<el-form-item label="定金日期" v-show=DepositShow prop="depositDate">
+								<el-form-item label="预付款日期" v-show=DepositShow prop="depositDate">
 									<el-date-picker v-model="Newcontractform.depositDate" type="date"
-										placeholder="请选择定金日期" :disabled="isDisabled" style="width: 300px"
+										placeholder="请选择预付款日期" :disabled="isDisabled" style="width: 300px"
 										@change="handleDepositDateChange" size="default"></el-date-picker>
 								</el-form-item>
 							</el-col>
@@ -1319,7 +1319,7 @@ const handlecontractDialogclose = async () => {
 	history.replaceState(null, '', route.path);
 }
 
-//定金日期触发函数，将定金日期赋值给有效日期
+//预付款日期触发函数，将预付款日期赋值给有效日期
 const handleDepositDateChange = (date) => {
 	if (date) {
 		Newcontractform.effectiveDate = date;
@@ -2172,10 +2172,10 @@ interface Newcontractform {
 	tradeCountry: number,//贸易国别
 	transportation: number,//运输方式
 	salesperson: number,//销售员
-	hasDeposit: boolean,//是否有定金
-	receivedDeposit: number,//已收定金
-	depositDate: string,//定金日期
-	Depositratio: number,//定金比例
+	hasDeposit: boolean,//是否有预付款
+	receivedDeposit: number,//已收预付款
+	depositDate: string,//预付款日期
+	Depositratio: number,//预付款比例
 	quotationNumber: number,//报价单号
 	/*合同主体信息End*/
 	/*列表字段Start*/
@@ -2335,7 +2335,7 @@ const rules = reactive<FormRules<Newcontractform>>({
 	tradeCountry: [{ required: true, message: '请选择贸易国别', trigger: 'change,blur' }],
 	transportation: [{ required: true, message: '请选择运输方式', trigger: 'change,blur' }],
 	salesperson: [{ required: true, message: '请选择销售员', trigger: 'change,blur' }],
-	hasDeposit: [{ required: true, message: '请选择是否有定金', trigger: 'change' }],
+	hasDeposit: [{ required: true, message: '请选择是否有预付款', trigger: 'change' }],
 	receivedDeposit: [],
 	depositDate: [],
 	Depositratio: []
@@ -2347,13 +2347,13 @@ const hasDeposithandleCheckboxChange = (val) => {
 		Newcontractform.receivedDeposit = 0;
 		Newcontractform.depositDate = null;
 		Newcontractform.Depositratio = null;
-		// 如果勾选了"有定金"，则添加验证规则
-		// rules.receivedDeposit = [{ required: true, message: '请输入已收定金', trigger: 'change,blur' }];
-		// rules.depositDate = [{ required: true, message: '请选择定金日期', trigger: 'change,blur' }];
-		rules.Depositratio = [{ required: true, message: '请输入定金比例', trigger: 'change,blur' }];
+		// 如果勾选了"有预付款"，则添加验证规则
+		// rules.receivedDeposit = [{ required: true, message: '请输入已收预付款', trigger: 'change,blur' }];
+		// rules.depositDate = [{ required: true, message: '请选择预付款日期', trigger: 'change,blur' }];
+		rules.Depositratio = [{ required: true, message: '请输入预付款比例', trigger: 'change,blur' }];
 	} else if (val == false) {
 		Newcontractform.receivedDeposit = null;
-		// 如果取消勾选"有定金"，则移除验证规则
+		// 如果取消勾选"有预付款"，则移除验证规则
 		rules.receivedDeposit = [];
 		rules.depositDate = [];
 		rules.Depositratio = [];
