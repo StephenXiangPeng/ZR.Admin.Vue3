@@ -1002,8 +1002,8 @@ const loadMaterialsByIndex = async (indexID) => {
       }
       
       return {
-        label: item.optionName,
-        value: item.optionValue,
+        label: item.optionName || item.option_name || item.name || `材质ID: ${item.id}`,
+        value: item.optionValue || item.id || item.value,
         price: price
       }
     })
@@ -1023,7 +1023,7 @@ const loadMaterialsByIndex = async (indexID) => {
   }
 }
 
-// 加载联动设计选项（根据材质，支持多个材质ID）
+// 加载联动设计选项（根据折射率和材质，支持多个材质ID）
 const loadDesignsByMaterial = async (materialIDs) => {
   // 确保 materialIDs 是数组
   const ids = Array.isArray(materialIDs) ? materialIDs : (materialIDs ? [materialIDs] : [])
@@ -1033,8 +1033,15 @@ const loadDesignsByMaterial = async (materialIDs) => {
     return
   }
   
+  // 需要折射率ID（OptionValue）
+  if (!orderForm.refractiveIndex) {
+    designNameOptions.value = []
+    return
+  }
+  
   try {
-    const response = await getDesignByMaterialID(ids)
+    // 传递折射率ID（OptionValue）和材质ID数组
+    const response = await getDesignByMaterialID(orderForm.refractiveIndex, ids)
     
     // 根据实际返回数据结构处理：response.data 可能是数组，也可能是 { code, msg, data: [...] }
     let result = []
@@ -1055,8 +1062,8 @@ const loadDesignsByMaterial = async (materialIDs) => {
       }
       
       return {
-        label: item.design_name || item.optionName || item.name || item.designName || `设计ID: ${item.id || item.design_id}`,
-        value: item.id || item.design_id || item.value || item.designId,
+        label: item.optionName || item.design_name || item.name || item.designName || `设计ID: ${item.id || item.design_id}`,
+        value: item.optionValue || item.id || item.design_id || item.value || item.designId,
         price: price
       }
     })
@@ -1069,15 +1076,32 @@ const loadDesignsByMaterial = async (materialIDs) => {
   }
 }
 
-// 加载联动膜层选项（根据设计）
+// 加载联动膜层选项（根据折射率、材质和设计）
 const loadCoatingByDesign = async (designID) => {
   if (!designID) {
     coatingOptions.value = []
     return
   }
   
+  // 需要折射率ID和材质ID
+  if (!orderForm.refractiveIndex) {
+    coatingOptions.value = []
+    return
+  }
+  
+  // 材质可能是多选，需要选择一个材质ID（通常取第一个）
+  const materialIDs = Array.isArray(orderForm.material) ? orderForm.material : (orderForm.material ? [orderForm.material] : [])
+  if (materialIDs.length === 0) {
+    coatingOptions.value = []
+    return
+  }
+  
+  // 使用第一个材质ID（如果需要支持多个材质，可能需要调整逻辑）
+  const materialID = materialIDs[0]
+  
   try {
-    const response = await getModelByDesignID(designID)
+    // 传递折射率ID（OptionValue）、材质ID和设计ID
+    const response = await getModelByDesignID(orderForm.refractiveIndex, materialID, designID)
     // 根据实际返回数据结构处理：response.data 可能是数组，也可能是 { code, msg, data: [...] }
     let result = []
     if (Array.isArray(response.data)) {
@@ -1089,8 +1113,8 @@ const loadCoatingByDesign = async (designID) => {
     }
     
     coatingOptions.value = result.map(item => ({
-      label: item.option_name || item.optionName || item.name || `膜层ID: ${item.id || item.optionValue}`,
-      value: item.id || item.option_value || item.optionValue || item.value,
+      label: item.optionName || item.option_name || item.name || `膜层ID: ${item.id || item.optionValue}`,
+      value: item.optionValue || item.id || item.option_value || item.value,
       price: item.remark ? parseFloat(item.remark) : 0
     }))
   } catch (error) {

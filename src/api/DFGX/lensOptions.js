@@ -112,3 +112,21 @@ export function getLensOptionsByType(optionType) {
 		params: { optionType: optionType }
 	})
 }
+
+// 保存规格配置（折射率-材质-设计-膜层关联关系）
+export function saveSpecificationConfig(data) {
+	return request({
+		url: 'ProductConfiguration/SaveSpecificationConfig/Save',
+		method: 'post',
+		data: data
+	})
+}
+
+// 获取某个折射率下的完整规格配置（折射率-材质-设计-膜层）
+export function getSpecificationConfig(indexId) {
+	return request({
+		url: 'ProductConfiguration/GetSpecificationConfig/Get',
+		method: 'get',
+		params: { indexId: indexId }
+	})
+}
