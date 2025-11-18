@@ -69,6 +69,14 @@
           v-hasPermi="['DFGX:lensOptions:export']"
         >导出</el-button>
       </el-col> -->
+      <el-col :span="1.5">
+        <el-button
+          type="info"
+          plain
+          icon="Setting"
+          @click="handleSpecificationConfig"
+        >规格配置</el-button>
+      </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
@@ -342,6 +350,161 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 规格配置对话框 -->
+    <el-dialog 
+      :title="'规格配置 - 折射率·材质·设计·膜层'" 
+      v-model="specConfigOpen" 
+      width="1200px" 
+      append-to-body
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      @close="cancelSpecConfig"
+    >
+      <div class="spec-config-container">
+        <!-- 顶部：折射率选择 -->
+        <div class="spec-config-header">
+          <el-form :inline="true">
+            <el-form-item label="选择折射率">
+              <el-select 
+                v-model="specConfig.currentIndexId" 
+                placeholder="请选择折射率"
+                style="width: 300px"
+                filterable
+                clearable
+                @change="handleIndexChange"
+                :loading="specConfig.loading.index"
+              >
+                <el-option 
+                  v-for="index in specConfig.indexOptions" 
+                  :key="index.id" 
+                  :label="index.optionName" 
+                  :value="index.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-form>
+        </div>
+
+        <!-- 三列布局：材质 | 设计 | 膜层 -->
+        <div class="spec-config-content">
+          <!-- 左列：材质列表 -->
+          <div class="spec-config-column">
+            <div class="column-header">
+              <h3>材质列表</h3>
+              <el-text type="info" size="small">根据折射率显示关联材质</el-text>
+            </div>
+            <div class="column-body" v-loading="specConfig.loading.materials">
+              <div 
+                v-for="material in specConfig.materialOptions" 
+                :key="material.id"
+                class="config-item"
+                :class="{ 'active': specConfig.currentMaterialId === material.id }"
+                @click="handleMaterialClick(material.id)"
+              >
+                <div class="item-content">
+                  <el-switch
+                    v-model="material.enabled"
+                    @change="handleMaterialToggle(material)"
+                    @click.stop
+                  />
+                  <span class="item-name">{{ material.optionName }}</span>
+                </div>
+                <div class="item-status" v-if="material.status === '1'">
+                  <el-tag type="danger" size="small">停用</el-tag>
+                </div>
+              </div>
+              <el-empty v-if="specConfig.materialOptions.length === 0" description="暂无材质数据" />
+            </div>
+          </div>
+
+          <!-- 中列：设计列表 -->
+          <div class="spec-config-column">
+            <div class="column-header">
+              <h3>设计列表</h3>
+              <el-text type="info" size="small" v-if="specConfig.currentMaterialId">
+                根据材质显示关联设计
+              </el-text>
+              <el-text type="warning" size="small" v-else>
+                请先选择材质
+              </el-text>
+            </div>
+            <div class="column-body" v-loading="specConfig.loading.designs">
+              <div 
+                v-for="design in specConfig.designOptions" 
+                :key="design.id"
+                class="config-item"
+                :class="{ 'active': specConfig.currentDesignId === design.id }"
+                @click="handleDesignClick(design.id)"
+              >
+                <div class="item-content">
+                  <el-switch
+                    v-model="design.enabled"
+                    @change="handleDesignToggle(design)"
+                    @click.stop
+                  />
+                  <span class="item-name">{{ design.optionName }}</span>
+                </div>
+                <div class="item-status" v-if="design.status === '1'">
+                  <el-tag type="danger" size="small">停用</el-tag>
+                </div>
+              </div>
+              <el-empty v-if="specConfig.designOptions.length === 0 && !specConfig.currentMaterialId" description="请先选择材质" />
+              <el-empty v-else-if="specConfig.designOptions.length === 0" description="暂无设计数据" />
+            </div>
+          </div>
+
+          <!-- 右列：膜层配置 -->
+          <div class="spec-config-column">
+            <div class="column-header">
+              <h3>膜层配置</h3>
+              <el-text type="info" size="small" v-if="specConfig.currentDesignId">
+                根据设计显示膜层配置
+              </el-text>
+              <el-text type="warning" size="small" v-else>
+                请先选择设计
+              </el-text>
+            </div>
+            <div class="column-body" v-loading="specConfig.loading.coatings">
+              <div 
+                v-for="coating in specConfig.coatingOptions" 
+                :key="coating.id"
+                class="config-item"
+              >
+                <div class="item-content">
+                  <el-switch
+                    v-model="coating.enabled"
+                    @change="handleCoatingToggle(coating)"
+                  />
+                  <span class="item-name">{{ coating.optionName }}</span>
+                </div>
+                <div class="item-status" v-if="coating.status === '1'">
+                  <el-tag type="danger" size="small">停用</el-tag>
+                </div>
+              </div>
+              <el-empty v-if="specConfig.coatingOptions.length === 0 && !specConfig.currentDesignId" description="请先选择设计" />
+              <el-empty v-else-if="specConfig.coatingOptions.length === 0" description="暂无膜层数据" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="cancelSpecConfig">
+            取 消
+          </el-button>
+          <el-button 
+            type="primary" 
+            @click="saveSpecConfig" 
+            :loading="specConfig.saving"
+            :disabled="!specConfig.currentIndexId"
+          >
+            保存配置
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -365,6 +528,25 @@ const materialOptions = ref([])
 const designOptions = ref([])
 const submitLoading = ref(false)
 const modelImageRef = ref(null)
+
+// 规格配置相关
+const specConfigOpen = ref(false)
+const specConfig = reactive({
+  currentIndexId: null,
+  currentMaterialId: null,
+  currentDesignId: null,
+  indexOptions: [],
+  materialOptions: [],
+  designOptions: [],
+  coatingOptions: [],
+  loading: {
+    index: false,
+    materials: false,
+    designs: false,
+    coatings: false
+  },
+  saving: false
+})
 
 const data = reactive({
   form: {},
@@ -849,6 +1031,262 @@ function handleOptionTypeChange(value) {
   }
 }
 
+// ========== 规格配置相关函数 ==========
+
+/** 打开规格配置Dialog */
+function handleSpecificationConfig() {
+  specConfigOpen.value = true
+  resetSpecConfig()
+  loadSpecConfigDictionaries()
+}
+
+/** 重置规格配置数据 */
+function resetSpecConfig() {
+  specConfig.currentIndexId = null
+  specConfig.currentMaterialId = null
+  specConfig.currentDesignId = null
+  specConfig.materialOptions = []
+  specConfig.designOptions = []
+  specConfig.coatingOptions = []
+}
+
+/** 加载规格配置所需的字典数据 */
+function loadSpecConfigDictionaries() {
+  // 加载折射率字典（optionType = 5）
+  specConfig.loading.index = true
+  getLensOptionsByType(5).then(response => {
+    specConfig.indexOptions = response.data || []
+    specConfig.loading.index = false
+  }).catch(error => {
+    console.error('加载折射率字典失败:', error)
+    proxy.$modal.msgError('加载折射率字典失败')
+    specConfig.loading.index = false
+  })
+}
+
+/** 处理折射率选择变化 */
+function handleIndexChange(indexId) {
+  if (!indexId) {
+    // 清空折射率时，重置所有数据
+    resetSpecConfig()
+    return
+  }
+
+  // 重置材质和设计的选择状态
+  specConfig.currentMaterialId = null
+  specConfig.currentDesignId = null
+  specConfig.designOptions = []
+  specConfig.coatingOptions = []
+
+  // 调用 GetLensOptionByID 获取该折射率关联的材质
+  specConfig.loading.materials = true
+  getLensOption(indexId).then(response => {
+    console.log('获取折射率关联材质 - 响应数据:', response.data) // 调试信息
+    const productConfig = response.data.productConfiguration || response.data
+    const relatedMaterials = response.data.relatedMaterials || []
+
+    // 获取全量材质字典
+    getLensOptionsByType(3).then(materialResponse => {
+      const allMaterials = materialResponse.data || []
+      
+      // 从relatedMaterials数组中提取material_id（与handleUpdate中的逻辑保持一致）
+      let relatedMaterialIds = []
+      if (Array.isArray(relatedMaterials) && relatedMaterials.length > 0) {
+        relatedMaterialIds = relatedMaterials.map(item => item.material_id || item.id).filter(id => id != null)
+      }
+      
+      console.log('关联的材质ID列表:', relatedMaterialIds) // 调试信息
+      console.log('全量材质列表:', allMaterials.map(m => ({ id: m.id, name: m.optionName }))) // 调试信息
+      
+      // 构建材质选项列表，标记哪些已关联
+      specConfig.materialOptions = allMaterials.map(material => {
+        const isEnabled = relatedMaterialIds.includes(material.id)
+        console.log(`材质 ${material.optionName} (ID: ${material.id}) - 关联状态: ${isEnabled}`) // 调试信息
+        return {
+          id: material.id,
+          optionName: material.optionName,
+          status: material.status,
+          enabled: isEnabled
+        }
+      })
+      
+      specConfig.loading.materials = false
+    }).catch(error => {
+      console.error('加载材质字典失败:', error)
+      proxy.$modal.msgError('加载材质字典失败')
+      specConfig.loading.materials = false
+    })
+  }).catch(error => {
+    console.error('获取折射率关联材质失败:', error)
+    proxy.$modal.msgError('获取折射率关联材质失败')
+    specConfig.loading.materials = false
+  })
+}
+
+/** 处理材质点击 */
+function handleMaterialClick(materialId) {
+  if (specConfig.currentMaterialId === materialId) {
+    // 如果点击的是已选中的材质，取消选择
+    specConfig.currentMaterialId = null
+    specConfig.currentDesignId = null
+    specConfig.designOptions = []
+    specConfig.coatingOptions = []
+    return
+  }
+
+  specConfig.currentMaterialId = materialId
+  specConfig.currentDesignId = null
+  specConfig.coatingOptions = []
+
+  // 调用 GetLensOptionByID 获取该材质关联的设计
+  specConfig.loading.designs = true
+  getLensOption(materialId).then(response => {
+    console.log('获取材质关联设计 - 响应数据:', response.data) // 调试信息
+    const productConfig = response.data.productConfiguration || response.data
+    const relatedDesigns = response.data.relatedDesigns || []
+
+    // 获取全量设计字典
+    getLensOptionsByType(4).then(designResponse => {
+      const allDesigns = designResponse.data || []
+      
+      // 从relatedDesigns数组中提取design_id（与handleUpdate中的逻辑保持一致）
+      let relatedDesignIds = []
+      if (Array.isArray(relatedDesigns) && relatedDesigns.length > 0) {
+        relatedDesignIds = relatedDesigns.map(item => item.design_id || item.id).filter(id => id != null)
+      }
+      
+      console.log('关联的设计ID列表:', relatedDesignIds) // 调试信息
+      console.log('全量设计列表:', allDesigns.map(d => ({ id: d.id, name: d.optionName }))) // 调试信息
+      
+      // 构建设计选项列表，标记哪些已关联
+      specConfig.designOptions = allDesigns.map(design => {
+        const isEnabled = relatedDesignIds.includes(design.id)
+        console.log(`设计 ${design.optionName} (ID: ${design.id}) - 关联状态: ${isEnabled}`) // 调试信息
+        return {
+          id: design.id,
+          optionName: design.optionName,
+          status: design.status,
+          enabled: isEnabled
+        }
+      })
+      
+      specConfig.loading.designs = false
+    }).catch(error => {
+      console.error('加载设计字典失败:', error)
+      proxy.$modal.msgError('加载设计字典失败')
+      specConfig.loading.designs = false
+    })
+  }).catch(error => {
+    console.error('获取材质关联设计失败:', error)
+    proxy.$modal.msgError('获取材质关联设计失败')
+    specConfig.loading.designs = false
+  })
+}
+
+/** 处理设计点击 */
+function handleDesignClick(designId) {
+  if (specConfig.currentDesignId === designId) {
+    // 如果点击的是已选中的设计，取消选择
+    specConfig.currentDesignId = null
+    specConfig.coatingOptions = []
+    return
+  }
+
+  specConfig.currentDesignId = designId
+
+  // 加载膜层字典（optionType = 2）
+  specConfig.loading.coatings = true
+  getLensOptionsByType(2).then(response => {
+    const allCoatings = response.data || []
+    
+    // 构建膜层选项列表（这里暂时都设为未启用，后续可以根据设计ID获取已关联的膜层）
+    specConfig.coatingOptions = allCoatings.map(coating => ({
+      id: coating.id,
+      optionName: coating.optionName,
+      status: coating.status,
+      enabled: false // 默认未启用，后续可以根据实际接口返回的数据设置
+    }))
+    
+    specConfig.loading.coatings = false
+  }).catch(error => {
+    console.error('加载膜层字典失败:', error)
+    proxy.$modal.msgError('加载膜层字典失败')
+    specConfig.loading.coatings = false
+  })
+}
+
+/** 处理材质开关切换 */
+function handleMaterialToggle(material) {
+  // 这里只是更新本地状态，实际保存需要在保存按钮中处理
+  console.log('材质开关切换:', material.id, material.enabled)
+}
+
+/** 处理设计开关切换 */
+function handleDesignToggle(design) {
+  // 这里只是更新本地状态，实际保存需要在保存按钮中处理
+  console.log('设计开关切换:', design.id, design.enabled)
+}
+
+/** 处理膜层开关切换 */
+function handleCoatingToggle(coating) {
+  // 这里只是更新本地状态，实际保存需要在保存按钮中处理
+  console.log('膜层开关切换:', coating.id, coating.enabled)
+}
+
+/** 保存规格配置 */
+function saveSpecConfig() {
+  if (!specConfig.currentIndexId) {
+    proxy.$modal.msgWarning('请先选择折射率')
+    return
+  }
+
+  // 收集需要保存的数据
+  const enabledMaterials = specConfig.materialOptions
+    .filter(m => m.enabled)
+    .map(m => m.id)
+  
+  const enabledDesigns = specConfig.designOptions
+    .filter(d => d.enabled)
+    .map(d => d.id)
+  
+  const enabledCoatings = specConfig.coatingOptions
+    .filter(c => c.enabled)
+    .map(c => c.id)
+
+  console.log('保存配置数据:', {
+    indexId: specConfig.currentIndexId,
+    materials: enabledMaterials,
+    designs: enabledDesigns,
+    coatings: enabledCoatings
+  })
+
+  // TODO: 调用后端保存接口
+  // 这里需要根据实际的后端接口来实现
+  proxy.$modal.msgInfo('保存功能待实现，请根据实际后端接口完成')
+  
+  // 示例代码（需要根据实际接口调整）：
+  // specConfig.saving = true
+  // saveSpecificationConfig({
+  //   indexId: specConfig.currentIndexId,
+  //   materials: enabledMaterials,
+  //   designs: enabledDesigns,
+  //   coatings: enabledCoatings
+  // }).then(() => {
+  //   proxy.$modal.msgSuccess('保存成功')
+  //   cancelSpecConfig()
+  // }).catch(error => {
+  //   console.error('保存失败:', error)
+  //   proxy.$modal.msgError('保存失败')
+  // }).finally(() => {
+  //   specConfig.saving = false
+  // })
+}
+
+/** 取消规格配置 */
+function cancelSpecConfig() {
+  specConfigOpen.value = false
+  resetSpecConfig()
+}
 
 onMounted(() => {
   getList()
@@ -951,5 +1389,98 @@ onMounted(() => {
 
 .el-col {
   padding: 0 6px;
+}
+
+/* ========== 规格配置Dialog样式 ========== */
+.spec-config-container {
+  padding: 10px 0;
+}
+
+.spec-config-header {
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.spec-config-header .el-form-item {
+  margin-bottom: 0;
+}
+
+.spec-config-content {
+  display: flex;
+  gap: 16px;
+  min-height: 500px;
+}
+
+.spec-config-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.column-header {
+  padding: 12px 16px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.column-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.column-body {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+  min-height: 400px;
+}
+
+.config-item {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fff;
+}
+
+.config-item:hover {
+  border-color: #409eff;
+  background: #ecf5ff;
+}
+
+.config-item.active {
+  border-color: #409eff;
+  background: #ecf5ff;
+}
+
+.item-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.item-name {
+  flex: 1;
+  font-size: 14px;
+  color: #303133;
+  user-select: none;
+}
+
+.item-status {
+  margin-top: 4px;
+}
+
+.config-item .el-switch {
+  flex-shrink: 0;
 }
 </style>
