@@ -1986,7 +1986,7 @@
             <el-col :span="8">
               <el-form-item label="客户">
                 <el-select v-model="addcustomercollectionform.Customer" filterable clearable placeholder="请选择客户"
-                  style="width: 300px">
+                  style="width: 300px" @change="handleCustomerChange">
                   <el-option v-for="dict in optionss.sql_user_customers" :key="dict.dictCode" :label="dict.dictLabel"
                     :value="dict.dictValue"></el-option>
                 </el-select>
@@ -2005,7 +2005,8 @@
               :summary-method="getSummaries">
               <el-table-column prop="fundsClassification" label="款项类别">
                 <template #default="{ row }">
-                  <el-select v-model="row.fundsClassification" filterable clearable placeholder="请选择款项类别">
+                  <el-select v-model="row.fundsClassification" filterable clearable placeholder="请选择款项类别"
+                    @change="() => handleFundsClassificationChange(row)">
                     <el-option v-for="dict in optionss.hr_funds_classification" :key="dict.dictCode"
                       :label="dict.dictLabel" :value="dict.dictValue"></el-option>
                   </el-select>
@@ -2013,8 +2014,9 @@
               </el-table-column>
               <el-table-column prop="associatedModulesDocumentID" label="关联单号">
                 <template #default="{ row }">
-                  <el-select v-model="row.associatedModulesDocumentID" filterable clearable placeholder="请选择关联单号">
-                    <el-option v-for="dict in getAssociatedDocumentOptions()" :key="dict.dictValue"
+                  <el-select v-model="row.associatedModulesDocumentID" filterable clearable placeholder="请选择关联单号"
+                    @visible-change="(visible) => handleAssociatedDocumentVisibleChange(visible, row)">
+                    <el-option v-for="dict in getAssociatedDocumentOptions(row)" :key="dict.dictValue"
                       :label="dict.dictLabel" :value="dict.dictValue"></el-option>
                   </el-select>
                 </template>
@@ -2711,32 +2713,111 @@ const handleAssociatedModulesChange = (row) => {
   // 现在不再需要清空关联单号，因为所有数据都来自同一个接口
 };
 
-// 存储关联单号选项数据
-const associatedDocumentOptions = ref([]);
+// 存储关联单号选项数据缓存，key格式：customerID_paymentCategory
+const associatedDocumentOptionsCache = ref({} as any);
 
-// 获取关联单号选项数据
-const getAssociatedDocumentOptionsData = async () => {
+// 获取关联单号选项数据（针对单行）
+const getAssociatedDocumentOptionsData = async (paymentCategory, customerID) => {
+  // 如果没有款项类别或客户ID，返回空数组
+  if (!paymentCategory || !customerID) {
+    return [];
+  }
+
+  // 生成缓存key
+  const cacheKey = `${customerID}_${paymentCategory}`;
+
+  // 如果缓存中有数据，直接返回
+  if (associatedDocumentOptionsCache.value[cacheKey]) {
+    return associatedDocumentOptionsCache.value[cacheKey];
+  }
+
   try {
+    const params = {} as any;
+    params.PaymentCategories = paymentCategory; // 单个值，不是数组
+    params.CustomerID = customerID;
+
     const response = await request({
       url: 'Contracts/GetSalesNumberAndShippingDeliverNumberSelectList/GetSalesNumberAndShippingDeliverNumberSelectList',
-      method: 'GET'
+      method: 'GET',
+      params: params
     });
 
     if (response.code === 200 && response.data) {
-      associatedDocumentOptions.value = response.data;
+      // 缓存结果
+      associatedDocumentOptionsCache.value[cacheKey] = response.data;
+      return response.data;
     } else {
       console.error('获取关联单号选项失败:', response.msg);
-      associatedDocumentOptions.value = [];
+      return [];
     }
   } catch (error) {
     console.error('获取关联单号选项失败:', error);
-    associatedDocumentOptions.value = [];
+    return [];
   }
 };
 
-const getAssociatedDocumentOptions = (module) => {
-  // 直接返回从接口获取的数据，不再根据模块区分
-  return associatedDocumentOptions.value || [];
+// 根据行数据获取关联单号选项
+const getAssociatedDocumentOptions = (row) => {
+  if (!row) {
+    return [];
+  }
+
+  const paymentCategory = row.fundsClassification;
+  const customerID = addcustomercollectionform.value?.Customer;
+
+  if (!paymentCategory || !customerID) {
+    return [];
+  }
+
+  const cacheKey = `${customerID}_${paymentCategory}`;
+  return associatedDocumentOptionsCache.value[cacheKey] || [];
+};
+
+// 处理客户下拉框改变事件
+const handleCustomerChange = async () => {
+  // 清空缓存，因为客户改变了，所有行的关联单号选项都需要重新获取
+  associatedDocumentOptionsCache.value = {};
+
+  // 为所有已有款项类别的行重新获取关联单号选项
+  const customerID = addcustomercollectionform.value?.Customer;
+  if (customerID && ReceivingPaymentsDetailsTbaleData.value) {
+    for (const row of ReceivingPaymentsDetailsTbaleData.value) {
+      if (row.fundsClassification) {
+        await getAssociatedDocumentOptionsData(row.fundsClassification, customerID);
+      }
+    }
+  }
+};
+
+// 处理款项类别下拉框改变事件
+const handleFundsClassificationChange = async (row) => {
+  // 清空该行的关联单号选择
+  if (row) {
+    row.associatedModulesDocumentID = '';
+  }
+
+  // 获取该行的关联单号选项
+  const customerID = addcustomercollectionform.value?.Customer;
+  if (row && row.fundsClassification && customerID) {
+    await getAssociatedDocumentOptionsData(row.fundsClassification, customerID);
+  }
+};
+
+// 处理关联单号下拉框显示/隐藏事件
+const handleAssociatedDocumentVisibleChange = async (visible, row) => {
+  // 当下拉框打开时，如果还没有数据，则获取
+  if (visible && row) {
+    const paymentCategory = row.fundsClassification;
+    const customerID = addcustomercollectionform.value?.Customer;
+
+    if (paymentCategory && customerID) {
+      const cacheKey = `${customerID}_${paymentCategory}`;
+      // 如果缓存中没有数据，则获取
+      if (!associatedDocumentOptionsCache.value[cacheKey]) {
+        await getAssociatedDocumentOptionsData(paymentCategory, customerID);
+      }
+    }
+  }
 };
 
 // 日历相关方法
@@ -3438,8 +3519,8 @@ const handleClaim = async (row) => {
   claimDialogVisible.value = true
 
   try {
-    // 获取关联单号选项数据
-    await getAssociatedDocumentOptionsData();
+    // 清空缓存
+    associatedDocumentOptionsCache.value = {};
 
     // 调用接口获取客户收款单详情
     const response = await request({
@@ -3482,6 +3563,15 @@ const handleClaim = async (row) => {
         }))
         // 重新计算总金额
         calculateTotal()
+        // 为每一行单独获取关联单号选项
+        const customerID = addcustomercollectionform.value?.Customer;
+        if (customerID) {
+          for (const row of ReceivingPaymentsDetailsTbaleData.value) {
+            if (row.fundsClassification) {
+              await getAssociatedDocumentOptionsData(row.fundsClassification, customerID);
+            }
+          }
+        }
       } else {
         ReceivingPaymentsDetailsTbaleData.value = []
         totalAmount.value = 0
@@ -6064,7 +6154,7 @@ onMounted(async () => {
       getOverduePendingTaskPlanItemList(),
       fetchTaskReminderData(),
       getUnreadMessages(),
-      getAssociatedDocumentOptionsData(), // 获取关联单号选项数据
+      // 关联单号选项数据会在打开领取对话框时按需获取
       getPendingCount(),
       getFinancialTasksList(1, 10),
       getUserCustomerData()
