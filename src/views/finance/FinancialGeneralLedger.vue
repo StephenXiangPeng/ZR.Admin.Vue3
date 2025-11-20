@@ -313,26 +313,12 @@ const handleReset = () => {
 const loadData = async () => {
 	loading.value = true
 	try {
-		// 优先使用客户ID，如果没有则使用供应商ID
-		const filterId = searchForm.customerId || searchForm.supplierId || ''
-		const response = await getFinancialGeneralLedgerData(filterId)
+		// 分别传递客户ID和供应商ID
+		const customerId = searchForm.customerId || null
+		const supplierId = searchForm.supplierId || null
+		const response = await getFinancialGeneralLedgerData(customerId, supplierId)
 		if (response && response.code === 200 && response.data && response.data.rows) {
-			let filteredRows = response.data.rows || []
-
-			// 前端过滤：如果选择了客户或供应商，进一步过滤数据
-			if (searchForm.customerId) {
-				filteredRows = filteredRows.filter((row: ApiRow) => {
-					// 根据 customerOrPayee 字段判断是否为该客户
-					return row.customerOrPayee && row.customerOrPayee !== '-'
-				})
-			} else if (searchForm.supplierId) {
-				filteredRows = filteredRows.filter((row: ApiRow) => {
-					// 根据 customerOrPayee 字段判断是否为该供应商
-					return row.customerOrPayee && row.customerOrPayee !== '-'
-				})
-			}
-
-			ledgerData.value = transformApiData(filteredRows)
+			ledgerData.value = transformApiData(response.data.rows)
 			// 重置到第一页
 			currentPage.value = 1
 		} else {

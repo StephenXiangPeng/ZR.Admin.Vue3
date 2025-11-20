@@ -22,8 +22,8 @@
 				<el-table-column prop="productId" label="产品ID" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="productName" label="产品名称" width="150"></el-table-column>
 				<el-table-column prop="quantity" label="数量" width="90"></el-table-column>
-				<el-table-column prop="unitPrice" label="采购单价" width="90"></el-table-column>
-				<el-table-column prop="totalPrice" label="采购总价" width="90"></el-table-column>
+				<el-table-column prop="unitPrice" label="采购单价" width="120"></el-table-column>
+				<el-table-column prop="totalPrice" label="采购总价" width="120"></el-table-column>
 				<el-table-column prop="salesperson" label="销售员" width="150"></el-table-column>
 				<!-- 操作 -->
 				<el-table-column label="操作" width="150">
