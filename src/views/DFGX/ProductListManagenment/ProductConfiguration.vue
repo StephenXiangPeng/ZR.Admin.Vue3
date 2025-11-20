@@ -325,7 +325,7 @@
           <div class="spec-config-column">
             <div class="column-header">
               <h3>材质列表</h3>
-              <el-text type="info" size="small">根据折射率显示关联材质</el-text>
+              <el-text type="info" size="small">全量材质列表，选择折射率后显示关联状态</el-text>
             </div>
             <div class="column-body" v-loading="specConfig.loading.materials">
               <div 
@@ -356,10 +356,10 @@
             <div class="column-header">
               <h3>设计列表</h3>
               <el-text type="info" size="small" v-if="specConfig.currentMaterialId">
-                根据材质显示关联设计
+                点击材质后显示关联设计
               </el-text>
-              <el-text type="warning" size="small" v-else>
-                请先选择材质
+              <el-text type="info" size="small" v-else>
+                全量设计列表，选择材质后显示关联状态
               </el-text>
             </div>
             <div class="column-body" v-loading="specConfig.loading.designs">
@@ -382,8 +382,7 @@
                   <el-tag type="danger" size="small">停用</el-tag>
                 </div>
               </div>
-              <el-empty v-if="specConfig.designOptions.length === 0 && !specConfig.currentMaterialId" description="请先选择材质" />
-              <el-empty v-else-if="specConfig.designOptions.length === 0" description="暂无设计数据" />
+              <el-empty v-if="specConfig.designOptions.length === 0" description="暂无设计数据" />
             </div>
           </div>
 
@@ -391,11 +390,14 @@
           <div class="spec-config-column">
             <div class="column-header">
               <h3>膜层配置</h3>
-              <el-text type="info" size="small" v-if="specConfig.currentDesignId">
-                根据设计显示膜层配置
+              <el-text type="info" size="small" v-if="specConfig.currentMaterialId && specConfig.currentDesignId">
+                根据材质+设计显示关联膜层
               </el-text>
-              <el-text type="warning" size="small" v-else>
+              <el-text type="warning" size="small" v-else-if="specConfig.currentMaterialId">
                 请先选择设计
+              </el-text>
+              <el-text type="info" size="small" v-else>
+                全量膜层列表，选择材质和设计后显示关联状态
               </el-text>
             </div>
             <div class="column-body" v-loading="specConfig.loading.coatings">
@@ -415,8 +417,7 @@
                   <el-tag type="danger" size="small">停用</el-tag>
                 </div>
               </div>
-              <el-empty v-if="specConfig.coatingOptions.length === 0 && !specConfig.currentDesignId" description="请先选择设计" />
-              <el-empty v-else-if="specConfig.coatingOptions.length === 0" description="暂无膜层数据" />
+              <el-empty v-if="specConfig.coatingOptions.length === 0" description="暂无膜层数据" />
             </div>
           </div>
         </div>
@@ -936,25 +937,83 @@ function resetSpecConfig() {
   specConfig.currentIndexId = null
   specConfig.currentMaterialId = null
   specConfig.currentDesignId = null
-  specConfig.materialOptions = []
-  specConfig.designOptions = []
-  specConfig.coatingOptions = []
+  // 不清空列表，只重置选择状态和关联关系
   specConfig.materialDesignRelations = {}
   specConfig.designCoatingRelations = {}
+  // 重置所有列表的 enabled 状态为 false
+  specConfig.materialOptions.forEach(m => m.enabled = false)
+  specConfig.designOptions.forEach(d => d.enabled = false)
+  specConfig.coatingOptions.forEach(c => c.enabled = false)
 }
 
 /** 加载规格配置所需的字典数据 */
 function loadSpecConfigDictionaries() {
-  // 加载折射率字典（optionType = 5）
+  // 并行加载所有字典数据：折射率、材质、设计、膜层
   specConfig.loading.index = true
-  getLensOptionsByType(5).then(response => {
+  specConfig.loading.materials = true
+  specConfig.loading.designs = true
+  specConfig.loading.coatings = true
+
+  // 加载折射率字典（optionType = 5）
+  const loadIndex = getLensOptionsByType(5).then(response => {
     specConfig.indexOptions = response.data || []
-    specConfig.loading.index = false
   }).catch(error => {
     console.error('加载折射率字典失败:', error)
     proxy.$modal.msgError('加载折射率字典失败')
+  }).finally(() => {
     specConfig.loading.index = false
   })
+
+  // 加载材质字典（optionType = 3）
+  const loadMaterials = getLensOptionsByType(3).then(response => {
+    const allMaterials = response.data || []
+    specConfig.materialOptions = allMaterials.map(material => ({
+      id: material.id,
+      optionName: material.optionName,
+      status: material.status,
+      enabled: false // 初始状态为未关联
+    }))
+  }).catch(error => {
+    console.error('加载材质字典失败:', error)
+    proxy.$modal.msgError('加载材质字典失败')
+  }).finally(() => {
+    specConfig.loading.materials = false
+  })
+
+  // 加载设计字典（optionType = 4）
+  const loadDesigns = getLensOptionsByType(4).then(response => {
+    const allDesigns = response.data || []
+    specConfig.designOptions = allDesigns.map(design => ({
+      id: design.id,
+      optionName: design.optionName,
+      status: design.status,
+      enabled: false // 初始状态为未关联
+    }))
+  }).catch(error => {
+    console.error('加载设计字典失败:', error)
+    proxy.$modal.msgError('加载设计字典失败')
+  }).finally(() => {
+    specConfig.loading.designs = false
+  })
+
+  // 加载膜层字典（optionType = 2）
+  const loadCoatings = getLensOptionsByType(2).then(response => {
+    const allCoatings = response.data || []
+    specConfig.coatingOptions = allCoatings.map(coating => ({
+      id: coating.id,
+      optionName: coating.optionName,
+      status: coating.status,
+      enabled: false // 初始状态为未关联
+    }))
+  }).catch(error => {
+    console.error('加载膜层字典失败:', error)
+    proxy.$modal.msgError('加载膜层字典失败')
+  }).finally(() => {
+    specConfig.loading.coatings = false
+  })
+
+  // 等待所有字典加载完成
+  Promise.all([loadIndex, loadMaterials, loadDesigns, loadCoatings])
 }
 
 /** 处理折射率选择变化 */
@@ -968,67 +1027,98 @@ function handleIndexChange(indexId) {
   // 重置材质和设计的选择状态
   specConfig.currentMaterialId = null
   specConfig.currentDesignId = null
-  specConfig.designOptions = []
-  specConfig.coatingOptions = []
 
-  // 使用新的 GetSpecificationConfig 接口一次性获取完整的规格配置
+  // 使用新的 GetSpecificationConfig 接口获取扁平结构的规格配置
   specConfig.loading.materials = true
   getSpecificationConfig(indexId).then(response => {
     console.log('获取完整规格配置 - 响应数据:', response.data) // 调试信息
     
-    const configData = response.data || {}
-    const relatedMaterials = configData.RelatedMaterials || configData.relatedMaterials || []
-    const materialDesignRelations = configData.MaterialDesignRelations || configData.materialDesignRelations || []
-    const designCoatingRelations = configData.DesignCoatingRelations || configData.designCoatingRelations || []
-
-    // 获取全量材质字典
-    getLensOptionsByType(3).then(materialResponse => {
-      const allMaterials = materialResponse.data || []
-      
-      // 构建材质选项列表，标记哪些已关联
-      specConfig.materialOptions = allMaterials.map(material => {
-        const isEnabled = relatedMaterials.includes(material.id)
-        return {
-          id: material.id,
-          optionName: material.optionName,
-          status: material.status,
-          enabled: isEnabled
-        }
-      })
-      
-      // 初始化材质-设计关联关系映射
-      materialDesignRelations.forEach(md => {
-        const materialId = md.MaterialID || md.materialID
-        const designs = md.RelatedDesigns || md.relatedDesigns || []
-        if (materialId && designs.length > 0) {
-          specConfig.materialDesignRelations[materialId] = [...designs]
-        }
-      })
-      
-      // 初始化设计-膜层关联关系映射（需要根据 MaterialID 和 DesignID 构建）
-      designCoatingRelations.forEach(dc => {
-        const materialId = dc.MaterialID || dc.materialID
-        const designId = dc.DesignID || dc.designID
-        const coatings = dc.RelatedCoatings || dc.relatedCoatings || []
-        
-        // 注意：这里使用 designId 作为 key，因为设计ID是唯一的
-        // 但实际存储时需要考虑材质维度（如果需要的话）
-        if (designId && coatings.length > 0) {
-          specConfig.designCoatingRelations[designId] = [...coatings]
-        }
-      })
-      
-      console.log('初始化后的关联关系:', {
-        materialDesignRelations: specConfig.materialDesignRelations,
-        designCoatingRelations: specConfig.designCoatingRelations
-      })
-      
-      specConfig.loading.materials = false
-    }).catch(error => {
-      console.error('加载材质字典失败:', error)
-      proxy.$modal.msgError('加载材质字典失败')
-      specConfig.loading.materials = false
+    // 新接口返回的是扁平数组：[{ RefractionID, MaterialID, DesignID, CoatingID }, ...]
+    const flatRelations = Array.isArray(response.data) ? response.data : []
+    
+    // 1. 提取所有已关联的材质ID（MaterialID > 0）
+    const relatedMaterialIds = new Set()
+    flatRelations.forEach(rel => {
+      const materialId = rel.MaterialID || rel.materialID
+      if (materialId && materialId > 0) {
+        relatedMaterialIds.add(materialId)
+      }
     })
+    
+    // 2. 构建材质-设计关联关系映射（MaterialID -> DesignID数组）
+    specConfig.materialDesignRelations = {}
+    flatRelations.forEach(rel => {
+      const materialId = rel.MaterialID || rel.materialID
+      const designId = rel.DesignID || rel.designID
+      if (materialId && materialId > 0 && designId && designId > 0) {
+        if (!specConfig.materialDesignRelations[materialId]) {
+          specConfig.materialDesignRelations[materialId] = []
+        }
+        if (!specConfig.materialDesignRelations[materialId].includes(designId)) {
+          specConfig.materialDesignRelations[materialId].push(designId)
+        }
+      }
+    })
+    
+    // 3. 构建材质-设计-膜层关联关系映射（使用 MaterialID_DesignID 作为 key -> CoatingID数组）
+    // 膜层的关联关系需要同时考虑材质和设计，使用 `${materialId}_${designId}` 作为 key
+    specConfig.designCoatingRelations = {}
+    flatRelations.forEach(rel => {
+      const materialId = rel.MaterialID || rel.materialID
+      const designId = rel.DesignID || rel.designID
+      const coatingId = rel.CoatingID || rel.coatingID
+      if (materialId && materialId > 0 && designId && designId > 0 && coatingId && coatingId > 0) {
+        const key = `${materialId}_${designId}`
+        if (!specConfig.designCoatingRelations[key]) {
+          specConfig.designCoatingRelations[key] = []
+        }
+        if (!specConfig.designCoatingRelations[key].includes(coatingId)) {
+          specConfig.designCoatingRelations[key].push(coatingId)
+        }
+      }
+    })
+
+    // 4. 更新已加载的材质列表的 enabled 状态
+    specConfig.materialOptions.forEach(material => {
+      material.enabled = relatedMaterialIds.has(material.id)
+    })
+    
+    // 5. 更新已加载的设计列表的 enabled 状态（基于当前选中材质的关联关系）
+    // 如果没有选中材质，则重置所有设计的 enabled 状态
+    if (specConfig.currentMaterialId) {
+      const relatedDesignIds = specConfig.materialDesignRelations[specConfig.currentMaterialId] || []
+      specConfig.designOptions.forEach(design => {
+        design.enabled = relatedDesignIds.includes(design.id)
+      })
+    } else {
+      // 如果没有选中材质，重置所有设计的 enabled 状态
+      specConfig.designOptions.forEach(design => {
+        design.enabled = false
+      })
+    }
+    
+    // 6. 更新已加载的膜层列表的 enabled 状态（基于当前选中材质和设计的关联关系）
+    // 需要同时有材质和设计才能显示膜层的关联状态
+    if (specConfig.currentMaterialId && specConfig.currentDesignId) {
+      const key = `${specConfig.currentMaterialId}_${specConfig.currentDesignId}`
+      const relatedCoatingIds = specConfig.designCoatingRelations[key] || []
+      specConfig.coatingOptions.forEach(coating => {
+        coating.enabled = relatedCoatingIds.includes(coating.id)
+      })
+    } else {
+      // 如果没有选中材质或设计，重置所有膜层的 enabled 状态
+      specConfig.coatingOptions.forEach(coating => {
+        coating.enabled = false
+      })
+    }
+    
+    console.log('初始化后的关联关系:', {
+      relatedMaterialIds: Array.from(relatedMaterialIds),
+      materialDesignRelations: specConfig.materialDesignRelations,
+      designCoatingRelations: specConfig.designCoatingRelations
+    })
+    
+    specConfig.loading.materials = false
   }).catch(error => {
     console.error('获取规格配置失败:', error)
     proxy.$modal.msgError('获取规格配置失败')
@@ -1042,45 +1132,37 @@ function handleMaterialClick(materialId) {
     // 如果点击的是已选中的材质，取消选择
     specConfig.currentMaterialId = null
     specConfig.currentDesignId = null
-    specConfig.designOptions = []
-    specConfig.coatingOptions = []
+    // 重置所有设计的 enabled 状态
+    specConfig.designOptions.forEach(design => {
+      design.enabled = false
+    })
+    // 重置所有膜层的 enabled 状态
+    specConfig.coatingOptions.forEach(coating => {
+      coating.enabled = false
+    })
     return
   }
 
   specConfig.currentMaterialId = materialId
   specConfig.currentDesignId = null
-  specConfig.coatingOptions = []
 
   // 从已加载的关联关系中获取该材质关联的设计
   const relatedDesignIds = specConfig.materialDesignRelations[materialId] || []
 
-  // 获取全量设计字典
-  specConfig.loading.designs = true
-  getLensOptionsByType(4).then(designResponse => {
-    const allDesigns = designResponse.data || []
-    
-    // 构建设计选项列表，标记哪些已关联
-    specConfig.designOptions = allDesigns.map(design => {
-      const isEnabled = relatedDesignIds.includes(design.id)
-      return {
-        id: design.id,
-        optionName: design.optionName,
-        status: design.status,
-        enabled: isEnabled
-      }
-    })
-    
-    // 如果该材质还没有关联关系记录，初始化一个空数组
-    if (!specConfig.materialDesignRelations[materialId]) {
-      specConfig.materialDesignRelations[materialId] = []
-    }
-    
-    specConfig.loading.designs = false
-  }).catch(error => {
-    console.error('加载设计字典失败:', error)
-    proxy.$modal.msgError('加载设计字典失败')
-    specConfig.loading.designs = false
+  // 更新已加载的设计列表的 enabled 状态
+  specConfig.designOptions.forEach(design => {
+    design.enabled = relatedDesignIds.includes(design.id)
   })
+  
+  // 重置所有膜层的 enabled 状态（因为切换了材质）
+  specConfig.coatingOptions.forEach(coating => {
+    coating.enabled = false
+  })
+  
+  // 如果该材质还没有关联关系记录，初始化一个空数组
+  if (!specConfig.materialDesignRelations[materialId]) {
+    specConfig.materialDesignRelations[materialId] = []
+  }
 }
 
 /** 处理设计点击 */
@@ -1088,40 +1170,36 @@ function handleDesignClick(designId) {
   if (specConfig.currentDesignId === designId) {
     // 如果点击的是已选中的设计，取消选择
     specConfig.currentDesignId = null
-    specConfig.coatingOptions = []
+    // 重置所有膜层的 enabled 状态
+    specConfig.coatingOptions.forEach(coating => {
+      coating.enabled = false
+    })
     return
   }
 
   specConfig.currentDesignId = designId
 
-  // 从已加载的关联关系中获取该设计关联的膜层
-  // 注意：由于设计-膜层关系可能依赖于材质，优先使用当前材质下的配置
-  const relatedCoatingIds = specConfig.designCoatingRelations[designId] || []
+  // 从已加载的关联关系中获取该材质+设计组合关联的膜层
+  // 膜层关联关系需要同时考虑材质和设计，使用 MaterialID_DesignID 作为 key
+  if (specConfig.currentMaterialId) {
+    const key = `${specConfig.currentMaterialId}_${designId}`
+    const relatedCoatingIds = specConfig.designCoatingRelations[key] || []
 
-  // 加载膜层字典（optionType = 2）
-  specConfig.loading.coatings = true
-  getLensOptionsByType(2).then(coatingResponse => {
-    const allCoatings = coatingResponse.data || []
+    // 更新已加载的膜层列表的 enabled 状态
+    specConfig.coatingOptions.forEach(coating => {
+      coating.enabled = relatedCoatingIds.includes(coating.id)
+    })
     
-    // 构建膜层选项列表
-    specConfig.coatingOptions = allCoatings.map(coating => ({
-      id: coating.id,
-      optionName: coating.optionName,
-      status: coating.status,
-      enabled: relatedCoatingIds.includes(coating.id)
-    }))
-    
-    // 如果该设计还没有关联关系记录，初始化一个空数组
-    if (!specConfig.designCoatingRelations[designId]) {
-      specConfig.designCoatingRelations[designId] = []
+    // 如果该材质+设计组合还没有关联关系记录，初始化一个空数组
+    if (!specConfig.designCoatingRelations[key]) {
+      specConfig.designCoatingRelations[key] = []
     }
-    
-    specConfig.loading.coatings = false
-  }).catch(error => {
-    console.error('加载膜层字典失败:', error)
-    proxy.$modal.msgError('加载膜层字典失败')
-    specConfig.loading.coatings = false
-  })
+  } else {
+    // 如果没有选中材质，重置所有膜层的 enabled 状态
+    specConfig.coatingOptions.forEach(coating => {
+      coating.enabled = false
+    })
+  }
 }
 
 /** 处理材质开关切换 */
@@ -1129,15 +1207,30 @@ function handleMaterialToggle(material) {
   // 更新本地状态
   console.log('材质开关切换:', material.id, material.enabled)
   
-  // 如果取消关联材质，清除该材质的设计关联关系
+  // 如果取消关联材质，清除该材质的设计关联关系和膜层关联关系
   if (!material.enabled && specConfig.materialDesignRelations[material.id]) {
+    // 清除该材质下所有设计的膜层关联关系
+    const relatedDesigns = specConfig.materialDesignRelations[material.id] || []
+    relatedDesigns.forEach(designId => {
+      const key = `${material.id}_${designId}`
+      if (specConfig.designCoatingRelations[key]) {
+        delete specConfig.designCoatingRelations[key]
+      }
+    })
+    
     delete specConfig.materialDesignRelations[material.id]
-    // 如果当前选中的是这个材质，清空设计列表
+    // 如果当前选中的是这个材质，重置选择状态和显示状态
     if (specConfig.currentMaterialId === material.id) {
       specConfig.currentMaterialId = null
       specConfig.currentDesignId = null
-      specConfig.designOptions = []
-      specConfig.coatingOptions = []
+      // 重置所有设计的 enabled 状态
+      specConfig.designOptions.forEach(design => {
+        design.enabled = false
+      })
+      // 重置所有膜层的 enabled 状态
+      specConfig.coatingOptions.forEach(coating => {
+        coating.enabled = false
+      })
     }
   }
 }
@@ -1165,13 +1258,19 @@ function handleDesignToggle(design) {
     }
   }
   
-  // 如果取消关联设计，清除该设计的膜层关联关系
-  if (!design.enabled && specConfig.designCoatingRelations[design.id]) {
-    delete specConfig.designCoatingRelations[design.id]
-    // 如果当前选中的是这个设计，清空膜层列表
+  // 如果取消关联设计，清除该材质下该设计的膜层关联关系
+  if (!design.enabled && specConfig.currentMaterialId) {
+    const key = `${specConfig.currentMaterialId}_${design.id}`
+    if (specConfig.designCoatingRelations[key]) {
+      delete specConfig.designCoatingRelations[key]
+    }
+    // 如果当前选中的是这个设计，重置选择状态和膜层显示状态
     if (specConfig.currentDesignId === design.id) {
       specConfig.currentDesignId = null
-      specConfig.coatingOptions = []
+      // 重置所有膜层的 enabled 状态
+      specConfig.coatingOptions.forEach(coating => {
+        coating.enabled = false
+      })
     }
   }
 }
@@ -1181,12 +1280,14 @@ function handleCoatingToggle(coating) {
   // 更新本地状态
   console.log('膜层开关切换:', coating.id, coating.enabled)
   
-  // 更新当前设计的膜层关联关系
-  if (specConfig.currentDesignId) {
-    if (!specConfig.designCoatingRelations[specConfig.currentDesignId]) {
-      specConfig.designCoatingRelations[specConfig.currentDesignId] = []
+  // 更新当前材质+设计组合的膜层关联关系
+  // 膜层关联关系需要同时考虑材质和设计
+  if (specConfig.currentMaterialId && specConfig.currentDesignId) {
+    const key = `${specConfig.currentMaterialId}_${specConfig.currentDesignId}`
+    if (!specConfig.designCoatingRelations[key]) {
+      specConfig.designCoatingRelations[key] = []
     }
-    const coatingIds = specConfig.designCoatingRelations[specConfig.currentDesignId]
+    const coatingIds = specConfig.designCoatingRelations[key]
     if (coating.enabled) {
       if (!coatingIds.includes(coating.id)) {
         coatingIds.push(coating.id)
@@ -1233,8 +1334,9 @@ function saveSpecConfig() {
     
     // 遍历每个设计
     relatedDesigns.forEach(designId => {
-      // 获取该设计关联的膜层列表
-      const relatedCoatings = specConfig.designCoatingRelations[designId] || []
+      // 获取该材质+设计组合关联的膜层列表（使用 MaterialID_DesignID 作为 key）
+      const key = `${materialId}_${designId}`
+      const relatedCoatings = specConfig.designCoatingRelations[key] || []
       
       // 如果有膜层关联，添加到结果中（必须包含 MaterialID）
       if (relatedCoatings.length > 0) {

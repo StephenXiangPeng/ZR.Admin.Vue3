@@ -139,18 +139,6 @@
           <!-- 第二行：Design, Material -->
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="Design" prop="designName">
-                <el-select v-model="orderForm.designName" placeholder="Please select Design" style="width: 100%" clearable filterable>
-                  <el-option 
-                    v-for="option in designNameOptions" 
-                    :key="option.value" 
-                    :label="option.label" 
-                    :value="option.value">
-                  </el-option>
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
               <el-form-item label="Material" prop="material">
                 <el-select 
                   :key="`material-select-${materialSelectKey}`"
@@ -172,6 +160,19 @@
                 </el-select>
               </el-form-item>
             </el-col>
+            <el-col :span="12">
+              <el-form-item label="Design" prop="designName">
+                <el-select v-model="orderForm.designName" placeholder="Please select Design" style="width: 100%" clearable filterable>
+                  <el-option 
+                    v-for="option in designNameOptions" 
+                    :key="option.value" 
+                    :label="option.label" 
+                    :value="option.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            
           </el-row>
           
           <!-- 第三行：Corridor, Coating -->
