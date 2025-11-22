@@ -2048,7 +2048,8 @@ const calculateTotal = () => {
 	quotationDialogform.TotalOtherFees = TotalOtherFees || 0;
 	quotationDialogform.TotalTaxRefund = TotalTaxRefund || 0;
 	// 利润金额 = 货值合计 + 退税总额 - 采购合计 - 其它费用
-	quotationDialogform.ProfitAmount = Number(Number((TotalvalueOfGoods * quotationDialogform.exchangerate + TotalTaxRefund) - Number(TotalPurchases) - Number(TotalOtherFees)).toFixed(2)) || 0;
+	const calculatedProfitAmount = Number(Number((TotalvalueOfGoods * quotationDialogform.exchangerate + TotalTaxRefund) - Number(TotalPurchases) - Number(TotalOtherFees)).toFixed(2)) || 0;
+	quotationDialogform.ProfitAmount = calculatedProfitAmount < 0 ? 0 : calculatedProfitAmount; // 如果为负数，设置为0
 	quotationDialogform.Totalgrossprofit = Totalgrossprofit || 0;
 	quotationDialogform.Totalprofitmargin = Totalprofitmargin || 0;
 };
@@ -2194,7 +2195,7 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 			addQuotationRequest.totalPurchases = quotationDialogform.TotalPurchases;
 			addQuotationRequest.totalOtherFees = quotationDialogform.TotalOtherFees;
 			addQuotationRequest.totalTaxRefund = quotationDialogform.TotalTaxRefund;
-			addQuotationRequest.profitAmount = quotationDialogform.ProfitAmount;
+			addQuotationRequest.profitAmount = quotationDialogform.ProfitAmount < 0 ? 0 : quotationDialogform.ProfitAmount; // 如果为负数，设置为0
 			addQuotationRequest.portMiscellaneousFees = quotationDialogform.portMiscellaneousFees;
 			addQuotationRequest.inlandFreight = quotationDialogform.inlandFreight;
 			addQuotationRequest.oceanFreight = quotationDialogform.oceanFreight;
@@ -2376,7 +2377,8 @@ const SaveDraft = async () => {
 	addQuotationRequest.totalPurchases = quotationDialogform.TotalPurchases || 0;
 	addQuotationRequest.totalOtherFees = quotationDialogform.TotalOtherFees || 0;
 	addQuotationRequest.totalTaxRefund = quotationDialogform.TotalTaxRefund || 0;
-	addQuotationRequest.profitAmount = quotationDialogform.ProfitAmount || 0;
+	const profitAmount = quotationDialogform.ProfitAmount || 0;
+	addQuotationRequest.profitAmount = profitAmount < 0 ? 0 : profitAmount; // 如果为负数，设置为0
 	addQuotationRequest.portMiscellaneousFees = quotationDialogform.portMiscellaneousFees || 0;
 	addQuotationRequest.inlandFreight = quotationDialogform.inlandFreight || 0;
 	addQuotationRequest.oceanFreight = quotationDialogform.oceanFreight || 0;
@@ -2800,7 +2802,7 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 			addQuotationRequest.totalPurchases = quotationDialogform.TotalPurchases;
 			addQuotationRequest.totalOtherFees = quotationDialogform.TotalOtherFees;
 			addQuotationRequest.totalTaxRefund = quotationDialogform.TotalTaxRefund;
-			addQuotationRequest.profitAmount = quotationDialogform.ProfitAmount;
+			addQuotationRequest.profitAmount = quotationDialogform.ProfitAmount < 0 ? 0 : quotationDialogform.ProfitAmount; // 如果为负数，设置为0
 			addQuotationRequest.portMiscellaneousFees = quotationDialogform.portMiscellaneousFees;
 			addQuotationRequest.inlandFreight = quotationDialogform.inlandFreight;
 			addQuotationRequest.oceanFreight = quotationDialogform.oceanFreight;
