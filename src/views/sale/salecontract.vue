@@ -1843,7 +1843,7 @@ const handleRowDblClick = (row) => {
 		const invoiceOption = state.optionss.hr_pricing_term.find(x => x.dictValue === invoiceValue);
 
 		productData.value.push({
-			productID: row.productID,
+			productID: row.id || row.productID, // 兼容 id 和 productID 两种字段名
 			productNum: row.productCode,
 			customerNum: row.customerGoodsNumber,
 			cproductname: row.chineseProductName,
@@ -4479,7 +4479,7 @@ const handleHistoricalProductRowDblClick = (row) => {
 			Invoice = 1;
 		}
 		productData.value.push({
-			productID: row.productID,
+			productID: row.productID || row.id, // 兼容 productID 和 id 两种字段名
 			productNum: row.productCode,
 			customerNum: row.customerCode,
 			cproductname: row.chineseProductName,
