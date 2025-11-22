@@ -616,7 +616,7 @@
 						</el-table-column>
 						<el-table-column prop="NumberOfBoxes" label="箱数" width="100">
 							<template #default="scope">
-								<span>{{ scope.row.NumberOfBoxes }}</span>
+								<span>{{ formatSafeNumber(scope.row.NumberOfBoxes) }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="totalNetWeight" label="总净重(KG)" width="130">
@@ -647,23 +647,23 @@
 						</el-table-column>
 						<el-table-column prop="Singleproductvolume" label="单个产品体积(m³)" width="170" v-if="true">
 							<template #default="scope">
-								<span>{{ scope.row.Singleproductvolume }}</span>
+								<span>{{ formatSafeNumber(scope.row.Singleproductvolume) }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="Portchargesforindividualproducts" label="单个产品的港杂费" width="170"
 							v-if="true">
 							<template #default="scope">
-								<span>{{ scope.row.Portchargesforindividualproducts }}</span>
+								<span>{{ formatSafeNumber(scope.row.Portchargesforindividualproducts) }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="Oceanfreightforasingleproduct" label="单个产品海运费" width="130" v-if="true">
 							<template #default="scope">
-								<span>{{ scope.row.Oceanfreightforasingleproduct }}</span>
+								<span>{{ formatSafeNumber(scope.row.Oceanfreightforasingleproduct) }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="Inlandfreightforasingleproduct" label="单个产品内陆运费" width="170" v-if="true">
 							<template #default="scope">
-								<span>{{ scope.row.Inlandfreightforasingleproduct }}</span>
+								<span>{{ formatSafeNumber(scope.row.Inlandfreightforasingleproduct) }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column fixed="right" label="操作" width="120">
@@ -1757,6 +1757,14 @@ function formatNumber2(row, key) {
 		row[key] = parseFloat(row[key]).toFixed(2);
 	}
 }
+
+// 格式化数值，确保不会显示 Infinity 或 NaN
+function formatSafeNumber(value) {
+	if (value === null || value === undefined || isNaN(value) || !isFinite(value)) {
+		return 0;
+	}
+	return value;
+}
 /// 外销币种Change事件
 ///如果为人民币，汇率默认为1
 const currencySymbol = ref('$'); // 默認貨幣符號
@@ -1874,31 +1882,49 @@ const calculateTotal = () => {
 		const rebateDivisor = effectiveRebate === 0 ? 1 : (1 + effectiveRebate / 100);
 
 		// 箱数 = 报价数量 / 外箱装量
-		item.NumberOfBoxes = (item.quotationnum / item.outerboxloading);
-		item.NumberOfBoxes = Number(item.NumberOfBoxes.toFixed(1)); // 保留一位小数
+		if (!item.outerboxloading || item.outerboxloading === 0 || isNaN(item.outerboxloading)) {
+			item.NumberOfBoxes = 0;
+		} else {
+			const numberOfBoxes = item.quotationnum / item.outerboxloading;
+			item.NumberOfBoxes = isFinite(numberOfBoxes) ? Number(numberOfBoxes.toFixed(1)) : 0;
+		}
 
 		// 外箱体积 = (外箱长度 x 外箱宽度 x 外箱高度) / 1000000
-		item.outerboxvolume = (item.outerboxlength * item.outerboxwidth * item.outerboxheight / 1000000);
-		item.outerboxvolume = item.outerboxvolume.toFixed(4); // 保留4位小数
+		const outerboxVolume = (item.outerboxlength * item.outerboxwidth * item.outerboxheight / 1000000);
+		item.outerboxvolume = isFinite(outerboxVolume) && !isNaN(outerboxVolume) ? Number(outerboxVolume.toFixed(4)) : 0;
 
 		// 单个产品体积 = 外箱体积 / 外箱装量
-		item.Singleproductvolume = (item.outerboxvolume / item.outerboxloading).toFixed(6).toString().replace(/(\.\d*?[1-9])0+$/, '$1');
+		if (!item.outerboxloading || item.outerboxloading === 0 || isNaN(item.outerboxloading)) {
+			item.Singleproductvolume = '0';
+		} else {
+			const singleProductVolume = item.outerboxvolume / item.outerboxloading;
+			if (isFinite(singleProductVolume) && !isNaN(singleProductVolume)) {
+				item.Singleproductvolume = singleProductVolume.toFixed(6).toString().replace(/(\.\d*?[1-9])0+$/, '$1');
+			} else {
+				item.Singleproductvolume = '0';
+			}
+		}
 
 		// 单个产品的港杂费 = 港杂费 x 单个产品体积
-		item.Portchargesforindividualproducts = (Number(quotationDialogform.portMiscellaneousFees) * Number(item.Singleproductvolume)).toFixed(3);
+		const portCharges = Number(quotationDialogform.portMiscellaneousFees || 0) * Number(item.Singleproductvolume || 0);
+		item.Portchargesforindividualproducts = isFinite(portCharges) && !isNaN(portCharges) ? Number(portCharges.toFixed(3)) : 0;
 		console.log('单个产品的港杂费：' + item.Portchargesforindividualproducts);
 
 		// 单个产品海运费 = 海运费 x 单个产品体积 (如果非人民币，还需乘以汇率)
+		const singleProductVolumeNum = Number(item.Singleproductvolume || 0);
 		if (state.optionss['hr_export_currency']
 			.filter(hr_export_currency => hr_export_currency.dictValue == quotationDialogform.shippingcurrency)
 			.map(i => i.dictLabel).values().next().value == '人民币') {
-			item.Oceanfreightforasingleproduct = (Number(quotationDialogform.oceanFreight) * item.Singleproductvolume).toFixed(3);
+			const oceanFreight = Number(quotationDialogform.oceanFreight || 0) * singleProductVolumeNum;
+			item.Oceanfreightforasingleproduct = isFinite(oceanFreight) && !isNaN(oceanFreight) ? Number(oceanFreight.toFixed(3)) : 0;
 		} else {
-			item.Oceanfreightforasingleproduct = (Number(quotationDialogform.oceanFreight) * item.Singleproductvolume * Number(quotationDialogform.shippingrate)).toFixed(3);
+			const oceanFreight = Number(quotationDialogform.oceanFreight || 0) * singleProductVolumeNum * Number(quotationDialogform.shippingrate || 0);
+			item.Oceanfreightforasingleproduct = isFinite(oceanFreight) && !isNaN(oceanFreight) ? Number(oceanFreight.toFixed(3)) : 0;
 		}
 
 		// 单个产品内陆运费 = 内陆运费 x 单个产品体积
-		item.Inlandfreightforasingleproduct = (Number(item.inlandfreightprice) * item.Singleproductvolume).toFixed(3);
+		const inlandFreight = Number(item.inlandfreightprice || 0) * singleProductVolumeNum;
+		item.Inlandfreightforasingleproduct = isFinite(inlandFreight) && !isNaN(inlandFreight) ? Number(inlandFreight.toFixed(3)) : 0;
 
 		// 总净重 = 外箱净重 x 箱数
 		item.totalNetWeight = isNaN(item.outerboxnetweight * item.NumberOfBoxes) ? 0.000 : (item.outerboxnetweight * item.NumberOfBoxes).toFixed(1);
@@ -2226,7 +2252,8 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 					Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct,
 					inlandfreightprice: item.inlandfreightprice,
 					productPhotoPath: item.productPhotoPath || '', // 新增产品图片字段
-					IsNewProduct: item.isImported == true ? 0 : 1
+					IsNewProduct: item.isImported == true ? 0 : 1,
+					ImportProfitMargin: item.ProfitMargin !== undefined && item.ProfitMargin !== null && item.ProfitMargin !== '' ? Number(item.ProfitMargin) : 0 // 利润率字段
 				});
 			});
 			request.post('Quotation/AddQuotation/Add', addQuotationRequest).then(response => {
@@ -2290,20 +2317,6 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 }
 
 const SaveDraft = async () => {
-	// 过滤掉没有填写报价数量和利润率的产品
-	const validProducts = productData.value.filter(item =>
-		item.quotationnum && item.quotationnum > 0 &&
-		item.ProfitMargin !== undefined && item.ProfitMargin !== null && item.ProfitMargin >= 0
-	);
-
-	// 如果有被过滤掉的产品，更新产品列表
-	if (validProducts.length !== productData.value.length) {
-		const removedCount = productData.value.length - validProducts.length;
-		productData.value = validProducts;
-		calculateTotal(); // 重新计算总值
-		ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
-	}
-
 	// 检查是否有图片需要上传
 	const hasImagesToUpload = Object.values(selectedImages.value).some(img => img);
 	if (hasImagesToUpload) {
@@ -2423,7 +2436,8 @@ const SaveDraft = async () => {
 			inlandfreightprice: item.inlandfreightprice || 0,
 			productPhotoPath: item.productPhotoPath || '', // 新增产品图片字段
 			IsNewProduct: item.isImported == true ? 0 : 1,
-			ProfitMargin: item.ProfitMargin || 0
+			ProfitMargin: item.ProfitMargin !== undefined && item.ProfitMargin !== null && item.ProfitMargin !== '' ? Number(item.ProfitMargin) : 0,
+			ImportProfitMargin: item.ProfitMargin !== undefined && item.ProfitMargin !== null && item.ProfitMargin !== '' ? Number(item.ProfitMargin) : 0 // 利润率字段
 		});
 	});
 
@@ -2679,7 +2693,7 @@ const GetQuotationDetailsList = (ID) => {
 						outerboxvolume: element.outerBoxVolume,
 						inlandfreightprice: element.inlandfreightprice,
 						IsNewProduct: element.IsNewProduct,
-						ProfitMargin: element.profitMargin,
+						ProfitMargin: element.importProfitMargin !== undefined && element.importProfitMargin !== null ? element.importProfitMargin : element.profitMargin, // 优先使用 ImportProfitMargin
 						productPhotoPath: element.productPhotoPath || '', // 新增产品图片字段
 						isImported: element.IsNewProduct === 0
 					});
@@ -2844,7 +2858,8 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 					Inlandfreightforasingleproduct: item.Inlandfreightforasingleproduct,
 					inlandfreightprice: item.inlandfreightprice,
 					productPhotoPath: item.productPhotoPath || '', // 新增产品图片字段
-					IsNewProduct: item.isImported == true ? 0 : 1
+					IsNewProduct: item.isImported == true ? 0 : 1,
+					ImportProfitMargin: item.ProfitMargin !== undefined && item.ProfitMargin !== null && item.ProfitMargin !== '' ? Number(item.ProfitMargin) : 0 // 利润率字段
 				});
 			});
 			request.post('Quotation/EditQuotation/Edit', addQuotationRequest).then(response => {
@@ -3114,7 +3129,7 @@ const CreateRevision = () => {
 									outerboxvolume: element.outerBoxVolume,
 									inlandfreightprice: element.inlandfreightprice,
 									IsNewProduct: element.IsNewProduct,
-									ProfitMargin: element.profitMargin,
+									ProfitMargin: element.importProfitMargin !== undefined && element.importProfitMargin !== null ? element.importProfitMargin : element.profitMargin, // 优先使用 ImportProfitMargin
 									productPhotoPath: element.productPhotoPath || '', // 新增产品图片字段
 									isImported: element.IsNewProduct === 0
 								});
