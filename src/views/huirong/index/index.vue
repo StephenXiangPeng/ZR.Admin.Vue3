@@ -400,7 +400,7 @@
             <el-table-column prop="salesperson" label="销售员" width="150" v-if="false"></el-table-column>
           </el-table>
         </el-tab-pane>
-        <el-tab-pane name="paymentTask">
+        <el-tab-pane v-if="userStore.userInfo && userStore.userInfo.deptId === 213" name="paymentTask">
           <template #label>
             <span class="custom-tabs-label">
               <el-icon>
@@ -5192,11 +5192,13 @@ const calculatePendingCount = async () => {
       totalCount += rejectContractResponse.data.length;
     }
 
-    // 6. 获取付款任务数量
-    const paymentTaskResponse = await getPaymentTaskList();
-    if (paymentTaskResponse && paymentTaskResponse.length > 0) {
-      // 接口返回的是ReviewStatus == 2的待付款申请，都算作待处理任务
-      totalCount += paymentTaskResponse.length;
+    // 6. 获取付款任务数量（仅部门ID为213时）
+    if (userStore.userInfo && userStore.userInfo.deptId === 213) {
+      const paymentTaskResponse = await getPaymentTaskList();
+      if (paymentTaskResponse && paymentTaskResponse.length > 0) {
+        // 接口返回的是ReviewStatus == 2的待付款申请，都算作待处理任务
+        totalCount += paymentTaskResponse.length;
+      }
     }
 
     // 更新pendingCount
