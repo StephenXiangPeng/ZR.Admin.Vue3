@@ -41,6 +41,13 @@
 			<el-table :data="tableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="reviewStatus" label="状态" width="100" align="center">
+					<template #default="scope">
+						<el-tag :type="getStatusTagType(scope.row.reviewStatus)" size="small">
+							{{ formatReviewStatus(scope.row.reviewStatus) }}
+						</el-tag>
+					</template>
+				</el-table-column>
 				<el-table-column prop="applicationDate" label="申请日期" width="120" align="center">
 					<template #default="scope">
 						{{ formatDate(scope.row.applicationDate) }}
@@ -69,6 +76,7 @@
 						{{ scope.row.applicantLabel || scope.row.applicant }}
 					</template>
 				</el-table-column>
+
 				<el-table-column prop="remark" label="备注" width="200" align="left"
 					show-overflow-tooltip></el-table-column>
 				<el-table-column fixed="right" label="详情/状态" width="150" align="center">
@@ -238,6 +246,28 @@ const formatDate = (date: string | Date): string => {
 	return `${year}-${month}-${day}`
 }
 
+// 格式化审核状态
+const formatReviewStatus = (status: number | string): string => {
+	const statusNum = typeof status === 'string' ? parseInt(status) : status
+	if (statusNum === 2) {
+		return '待付款'
+	} else if (statusNum === 4) {
+		return '已付款'
+	}
+	return status?.toString() || '-'
+}
+
+// 获取状态标签类型
+const getStatusTagType = (status: number | string): string => {
+	const statusNum = typeof status === 'string' ? parseInt(status) : status
+	if (statusNum === 2) {
+		return 'warning' // 待付款 - 橙色
+	} else if (statusNum === 4) {
+		return 'success' // 已付款 - 绿色
+	}
+	return 'info'
+}
+
 // 查询
 const handleSearch = () => {
 	currentPage.value = 1
@@ -264,7 +294,10 @@ const loadData = async () => {
 			params: {
 				PageNum: currentPage.value,
 				PageSize: pageSize.value,
-				PaymentCategory: 1 // 固定为1，表示工厂付款
+				PaymentCategory: [1] // 固定为[1]，表示工厂付款
+			},
+			headers: {
+				'Content-Type': undefined as any
 			}
 		})
 

@@ -318,7 +318,7 @@
 									:label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>
 						</el-form-item>
-						<el-form-item label="有无定金">
+						<el-form-item label="有无预付款">
 							<el-checkbox v-model="AddShippingDeliveryform.isDeposit" :disabled="IsEditable"
 								size="default"></el-checkbox>
 						</el-form-item>
@@ -982,7 +982,7 @@ const referenceContractNumberChange = async () => {
 			}
 		}).then(response => {
 			if (response.data != null) {
-				AddShippingDeliveryform.value.customerNumber = state.optionss.customer_data.find(item => item.dictValue === response.data.contract.customerId.toString())?.dictValue || '';
+				AddShippingDeliveryform.value.customerNumber = response.data.contract.customerId ? state.optionss.customer_data.find(item => item.dictValue === response.data.contract.customerId.toString())?.dictValue || '' : '';
 
 				// 手动获取客户简称，而不调用 customerNumberChange()
 				request({
@@ -1001,15 +1001,15 @@ const referenceContractNumberChange = async () => {
 
 				AddShippingDeliveryform.value.salesContractNumber = response.data.contract.contractNumber;
 				AddShippingDeliveryform.value.customerContractNumber = response.data.contract.customerContract;
-				AddShippingDeliveryform.value.ourCompany = response.data.contract.ourCompany.toString();
-				AddShippingDeliveryform.value.exportCurrency = response.data.contract.foreignCurrency.toString();
+				AddShippingDeliveryform.value.ourCompany = response.data.contract.ourCompany ? response.data.contract.ourCompany.toString() : '';
+				AddShippingDeliveryform.value.exportCurrency = response.data.contract.foreignCurrency ? response.data.contract.foreignCurrency.toString() : '';
 				AddShippingDeliveryform.value.exchangeRate = response.data.contract.exchangeRate;
-				AddShippingDeliveryform.value.priceTerms = response.data.contract.priceTerms.toString();
-				AddShippingDeliveryform.value.departurePort = response.data.contract.shippingPort.toString();
-				AddShippingDeliveryform.value.destinationPort = response.data.contract.destinationPort.toString();
-				AddShippingDeliveryform.value.tradeCountry = response.data.contract.tradeCountry.toString();
-				AddShippingDeliveryform.value.settlementMethod = response.data.contract.settlementMethod.toString();
-				AddShippingDeliveryform.value.transportationMethod = response.data.contract.transportation.toString();
+				AddShippingDeliveryform.value.priceTerms = response.data.contract.priceTerms ? response.data.contract.priceTerms.toString() : '';
+				AddShippingDeliveryform.value.departurePort = response.data.contract.shippingPort ? response.data.contract.shippingPort.toString() : '';
+				AddShippingDeliveryform.value.destinationPort = response.data.contract.destinationPort ? response.data.contract.destinationPort.toString() : '';
+				AddShippingDeliveryform.value.tradeCountry = response.data.contract.tradeCountry ? response.data.contract.tradeCountry.toString() : '';
+				AddShippingDeliveryform.value.settlementMethod = response.data.contract.settlementMethod ? response.data.contract.settlementMethod.toString() : '';
+				AddShippingDeliveryform.value.transportationMethod = response.data.contract.transportation ? response.data.contract.transportation.toString() : '';
 				shippingDeliveryContrctProductTableData.value = [];
 				response.data.contractProducts.forEach((element) => {
 					var ShippingQuantity = 0;
@@ -1031,13 +1031,13 @@ const referenceContractNumberChange = async () => {
 							contractQuantity: element.contractQuantity,
 							RemainingQuantityToBeShipped: element.contractQuantity - ShippingQuantity,
 							shipmentQuantity: element.contractQuantity - ShippingQuantity,
-							unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
+							unit: element.unit ? state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无' : '无',
 							exportUnitPrice: element.exportUnitPrice,
 							exportTotalPrice: element.exportTotalPrice,
 							specialRequirements: element.specialRequirements,
 							outerBoxQuantity: element.outerBoxQuantity,
 							boxCount: element.boxCount,
-							outerBoxUnit: state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerboxunit.toString())?.dictLabel || '无',
+							outerBoxUnit: element.outerboxunit ? state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerboxunit.toString())?.dictLabel || '无' : '无',
 							outerBoxLength: element.outerBoxLength,
 							outerBoxWidth: element.outerBoxWidth,
 							outerBoxHeight: element.outerBoxHeight,
@@ -1070,13 +1070,13 @@ const referenceContractNumberChange = async () => {
 				purchaseContractNumber: element.purchaseContractNumber,
 				purchaseShippingNumber: element.purchaseContractNumber,
 				shipmentQuantity: element.contractQuantity,
-				vendorAbbreviation: state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictLabel || '无',
-				productNumber: state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel,
+				vendorAbbreviation: element.supplierID ? state.optionss.sql_supplier_info.find(item => item.dictValue === element.supplierID.toString())?.dictLabel || '无' : '无',
+				productNumber: element.productNumber ? state.optionss.sql_product.find(item => item.dictValue === element.productNumber.toString())?.dictLabel : '无',
 				chineseName: element.chineseName,
-				purchaseCurrency: state.optionss.hr_export_currency.find(item => item.dictValue === element.purchaseCurrency.toString())?.dictLabel || '无',
+				purchaseCurrency: element.purchaseCurrency ? state.optionss.hr_export_currency.find(item => item.dictValue === element.purchaseCurrency.toString())?.dictLabel || '无' : '无',
 				purchaseUnitPrice: element.purchasePrice,
 				purchaseTotalPrice: element.purchaseTotalPrice,
-				measurementUnit: state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无',
+				measurementUnit: element.unit ? state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无' : '无',
 				invoice: element.invoice,
 				totalVolume: element.totalVolume,
 				totalGrossWeight: element.totalGrossWeight,
@@ -1594,17 +1594,17 @@ async function GetShippingDeliveriesList(start, end) {
 		if (response.data != null) {
 			shippingDeliveryTableData.value = response.data.result;
 			shippingDeliveryTableData.value.forEach(item => {
-				item.shippingStatus = state.optionss.hr_shipping_status.find(s => s.dictValue === item.shippingStatus.toString())?.dictLabel || '无';
-				item.customerNumber = state.optionss.sql_hr_customer.find(c => c.dictValue === item.customerNumber.toString())?.dictLabel || '无';
-				item.ourCompany = state.optionss.hr_ourcompany.find(c => c.dictValue === item.ourCompany.toString())?.dictLabel || '无';
+				item.shippingStatus = item.shippingStatus ? state.optionss.hr_shipping_status.find(s => s.dictValue === item.shippingStatus.toString())?.dictLabel || '无' : '无';
+				item.customerNumber = item.customerNumber ? state.optionss.sql_hr_customer.find(c => c.dictValue === item.customerNumber.toString())?.dictLabel || '无' : '无';
+				item.ourCompany = item.ourCompany ? state.optionss.hr_ourcompany.find(c => c.dictValue === item.ourCompany.toString())?.dictLabel || '无' : '无';
 				item.bankOfReceipt = !item.bankOfReceipt ? '无' : state.optionss.hr_bank.find(c => c.dictValue === item.bankOfReceipt.toString())?.dictLabel || '无';
-				item.exportCurrency = state.optionss.hr_export_currency.find(c => c.dictValue === item.exportCurrency.toString())?.dictLabel || '无';
-				item.departurePort = state.optionss.hr_transport_port.find(c => c.dictValue === item.departurePort.toString())?.dictLabel || '无';
-				item.destinationPort = item.destinationPort.toString() || '无';
-				item.priceTerms = state.optionss.hr_pricing_term.find(c => c.dictValue === item.priceTerms.toString())?.dictLabel || '无';
-				item.settlementMethod = state.optionss.hr_settlement_way.find(c => c.dictValue === item.settlementMethod.toString())?.dictLabel || '无';
-				item.transportationMethod = state.optionss.hr_transportation_method.find(c => c.dictValue === item.transportationMethod.toString())?.dictLabel || '无';
-				item.tradeCountry = state.optionss.hr_nation.find(c => c.dictValue === item.tradeCountry.toString())?.dictLabel || '无';
+				item.exportCurrency = item.exportCurrency ? state.optionss.hr_export_currency.find(c => c.dictValue === item.exportCurrency.toString())?.dictLabel || '无' : '无';
+				item.departurePort = item.departurePort ? state.optionss.hr_transport_port.find(c => c.dictValue === item.departurePort.toString())?.dictLabel || '无' : '无';
+				item.destinationPort = item.destinationPort ? item.destinationPort.toString() : '无';
+				item.priceTerms = item.priceTerms ? state.optionss.hr_pricing_term.find(c => c.dictValue === item.priceTerms.toString())?.dictLabel || '无' : '无';
+				item.settlementMethod = item.settlementMethod ? state.optionss.hr_settlement_way.find(c => c.dictValue === item.settlementMethod.toString())?.dictLabel || '无' : '无';
+				item.transportationMethod = item.transportationMethod ? state.optionss.hr_transportation_method.find(c => c.dictValue === item.transportationMethod.toString())?.dictLabel || '无' : '无';
+				item.tradeCountry = item.tradeCountry ? state.optionss.hr_nation.find(c => c.dictValue === item.tradeCountry.toString())?.dictLabel || '无' : '无';
 				item.shippingDate = item.shippingDate ? dayjs(item.shippingDate).format('YYYY-MM-DD') : '';
 				item.invoiceDate = item.invoiceDate ? dayjs(item.invoiceDate).format('YYYY-MM-DD') : '';
 				item.OrderMakingDate = item.OrderMakingDate ? dayjs(item.OrderMakingDate).format('YYYY-MM-DD') : '';
@@ -1785,13 +1785,13 @@ const CheckShipingDelivery = async (row) => {
 									productCode: productData.productCode,
 									chineseName: productData.chineseName,
 									contractQuantity: productData.contractQuantity,
-									unit: state.optionss.hr_calculate_unit.find(u => u.dictValue === productData.unit.toString())?.dictLabel || '无',
+									unit: productData.unit ? state.optionss.hr_calculate_unit.find(u => u.dictValue === productData.unit.toString())?.dictLabel || '无' : '无',
 									exportUnitPrice: productData.exportUnitPrice,
 									exportTotalPrice: productData.exportTotalPrice,
 									specialRequirements: productData.specialRequirements,
 									outerBoxQuantity: productData.outerBoxQuantity,
 									boxCount: productData.boxCount,
-									outerBoxUnit: state.optionss.hr_outerbox_unit.find(u => u.dictValue === productData.outerboxunit.toString())?.dictLabel || '无',
+									outerBoxUnit: productData.outerboxunit ? state.optionss.hr_outerbox_unit.find(u => u.dictValue === productData.outerboxunit.toString())?.dictLabel || '无' : '无',
 									outerBoxLength: productData.outerBoxLength,
 									outerBoxWidth: productData.outerBoxWidth,
 									outerBoxHeight: productData.outerBoxHeight,
@@ -1835,13 +1835,13 @@ const CheckShipingDelivery = async (row) => {
 							shippingDeliveryPurchaseDetailsTableData.value[index] = {
 								...shippingDeliveryPurchaseDetailsTableData.value[index], // 保留原有数据
 								purchaseContractNumber: purchaseData.purchaseContractNumber,
-								vendorAbbreviation: state.optionss.sql_supplier_info.find(s => s.dictValue === purchaseData.supplierID.toString())?.dictLabel || '无',
-								productNumber: state.optionss.sql_product.find(p => p.dictValue === purchaseData.productNumber.toString())?.dictLabel || '无',
+								vendorAbbreviation: purchaseData.supplierID ? state.optionss.sql_supplier_info.find(s => s.dictValue === purchaseData.supplierID.toString())?.dictLabel || '无' : '无',
+								productNumber: purchaseData.productNumber ? state.optionss.sql_product.find(p => p.dictValue === purchaseData.productNumber.toString())?.dictLabel || '无' : '无',
 								chineseName: purchaseData.chineseName,
-								purchaseCurrency: state.optionss.hr_export_currency.find(c => c.dictValue === purchaseData.purchaseCurrency.toString())?.dictLabel || '无',
+								purchaseCurrency: purchaseData.purchaseCurrency ? state.optionss.hr_export_currency.find(c => c.dictValue === purchaseData.purchaseCurrency.toString())?.dictLabel || '无' : '无',
 								purchaseUnitPrice: purchaseData.purchasePrice,
 								purchaseTotalPrice: purchaseData.purchaseTotalPrice,
-								measurementUnit: state.optionss.hr_calculate_unit.find(u => u.dictValue === purchaseData.unit.toString())?.dictLabel || '无',
+								measurementUnit: purchaseData.unit ? state.optionss.hr_calculate_unit.find(u => u.dictValue === purchaseData.unit.toString())?.dictLabel || '无' : '无',
 								invoice: purchaseData.invoice === 1 ? '是' : '否',
 								totalVolume: purchaseData.totalVolume,
 								totalGrossWeight: purchaseData.totalGrossWeight,

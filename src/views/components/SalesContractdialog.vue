@@ -206,7 +206,7 @@
 							</el-form-item>
 						</el-col>
 						<el-col :span="8">
-							<el-form-item label="有无定金" prop="hasDeposit">
+							<el-form-item label="有无预付款" prop="hasDeposit">
 								<el-checkbox v-model="contractform.hasDeposit" disabled
 									@change="hasDeposithandleCheckboxChange"></el-checkbox>
 							</el-form-item>
@@ -214,19 +214,19 @@
 					</el-row>
 					<el-row>
 						<el-col :span="8">
-							<el-form-item label="已收定金" v-show=DepositShow prop="receivedDeposit">
+							<el-form-item label="已收预付款" v-show=DepositShow prop="receivedDeposit">
 								<el-input v-model="contractform.receivedDeposit" style="width: 300px"
 									disabled></el-input>
 							</el-form-item>
 						</el-col>
 						<el-col :span="8">
-							<el-form-item label="定金日期" v-show=DepositShow prop="depositDate">
-								<el-date-picker v-model="contractform.depositDate" type="date" placeholder="请选择定金日期"
+							<el-form-item label="预付款日期" v-show=DepositShow prop="depositDate">
+								<el-date-picker v-model="contractform.depositDate" type="date" placeholder="请选择预付款日期"
 									disabled style="width: 300px"></el-date-picker>
 							</el-form-item>
 						</el-col>
 						<el-col :span="8">
-							<el-form-item label="定金比例" v-show=DepositShow prop="Depositratio">
+							<el-form-item label="预付款比例" v-show=DepositShow prop="Depositratio">
 								<el-input v-model="contractform.Depositratio" style="width: 300px" disabled></el-input>
 							</el-form-item>
 						</el-col>

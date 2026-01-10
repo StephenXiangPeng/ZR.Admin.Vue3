@@ -452,8 +452,8 @@
 							<el-col :span="6" v-if="false">
 								<el-form-item label="签约地点">
 									<el-select filterable v-model="Newcontractform.signingLocation"
-										placeholder="请选择签约地点" :disabled="isDisabled" style="width: 300px" size="default"
-										clearable>
+										placeholder="请选择签约地点" :disabled="isDisabled || isFOBPriceTerm"
+										style="width: 300px" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_signing_place" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
 									</el-select>
@@ -462,7 +462,8 @@
 							<el-col :span="6" v-if="false">
 								<el-form-item label="可否分批">
 									<el-select filterable v-model="Newcontractform.canPartial" placeholder="请选择可否分批"
-										:disabled="isDisabled" style="width: 300px" size="default" clearable>
+										:disabled="isDisabled || isFOBPriceTerm" style="width: 300px" size="default"
+										clearable>
 										<el-option v-for="dict in optionss.sys_yes_no" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
 									</el-select>
@@ -471,7 +472,8 @@
 							<el-col :span="6" v-if="false">
 								<el-form-item label="可否转运">
 									<el-select filterable v-model="Newcontractform.canTransit" placeholder="请选择可否转运"
-										:disabled="isDisabled" style="width: 300px" size="default" clearable>
+										:disabled="isDisabled || isFOBPriceTerm" style="width: 300px" size="default"
+										clearable>
 										<el-option v-for="dict in optionss.sys_yes_no" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" size="default"></el-option>
 									</el-select>
@@ -480,7 +482,7 @@
 							<el-col :span="6" v-if="false">
 								<el-form-item label="佣金比率">
 									<el-input v-model="Newcontractform.commissionRate" style="width: 300px"
-										:disabled="isDisabled" size="default"></el-input>
+										:disabled="isDisabled || isFOBPriceTerm" size="default"></el-input>
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -488,26 +490,27 @@
 							<el-col :span="6" v-if="false">
 								<el-form-item label="保险加成">
 									<el-input v-model="Newcontractform.insuranceAddition" style="width: 300px"
-										:disabled="isDisabled" size="default"></el-input>
+										:disabled="isDisabled || isFOBPriceTerm" size="default"></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6" v-if="false">
 								<el-form-item label="保险比率">
 									<el-input v-model="Newcontractform.insuranceRate" style="width: 300px"
-										:disabled="isDisabled" size="default"></el-input>
+										:disabled="isDisabled || isFOBPriceTerm" size="default"></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="海运费/m³">
 									<el-input v-model="Newcontractform.oceanFreight" style="width: 300px;"
-										@change="calculateTotal" :disabled="isDisabled" size="default" />
+										@change="calculateTotal" :disabled="isDisabled || isFOBPriceTerm"
+										size="default" />
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="海运费币种" prop="shippingCurrency">
 									<el-select v-model="Newcontractform.shippingCurrency" filterable
-										placeholder="选择运费币种" :disabled="isDisabled" style="width: 300px;"
-										@change="shippingcurrencyChange" size="default" clearable>
+										placeholder="选择运费币种" :disabled="isDisabled || isFOBPriceTerm"
+										style="width: 300px;" @change="shippingcurrencyChange" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" size="default" />
 									</el-select>
@@ -516,14 +519,14 @@
 							<el-col :span="6">
 								<el-form-item label="海运费汇率">
 									<el-input v-model="Newcontractform.shippingrate" style="width: 300px;"
-										:disabled="isDisabled" @change="calculateTotal" @blur="formatShippingRate"
-										size="default"></el-input>
+										:disabled="isDisabled || isFOBPriceTerm" @change="calculateTotal"
+										@blur="formatShippingRate" size="default"></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item label="港杂费/m³">
+								<el-form-item label="内陆运杂费/m³">
 									<el-input v-model="Newcontractform.portMiscellaneousFees" style="width: 300px;"
-										@change="calculateTotal" :disabled="isDisabled" size="default"
+										@change="calculateTotal" :disabled="isDisabled || isFOBPriceTerm" size="default"
 										clearable></el-input>
 								</el-form-item>
 							</el-col>
@@ -531,29 +534,30 @@
 						<el-row>
 
 							<el-col :span="6">
-								<el-form-item label="货代报关杂费">
+								<el-form-item label="货代港杂费">
 									<el-input v-model="Newcontractform.freightForwarderCustomsClearanceFees"
-										style="width: 300px;" :disabled="isDisabled" size="default"
+										style="width: 300px;" :disabled="isDisabled || isFOBPriceTerm" size="default"
 										clearable></el-input>
 								</el-form-item>
 							</el-col>
-							<el-col :span="6">
+							<el-col :span="6" v-if="false">
 								<el-form-item label="银行费用">
 									<el-input v-model="Newcontractform.BankFee" style="width: 300px;"
-										@change="calculateTotal" :disabled="isDisabled" size="default"
+										@change="calculateTotal" :disabled="isDisabled || isFOBPriceTerm" size="default"
 										clearable></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6" v-if="false">
 								<el-form-item label="收汇银行">
 									<el-input v-model="Newcontractform.receivingBank" style="width: 300px"
-										:disabled="isDisabled" size="default"></el-input>
+										:disabled="isDisabled || isFOBPriceTerm" size="default"></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item label="文件杂费">
+								<el-form-item label="快递费(人民币)">
 									<el-input v-model="Newcontractform.DocumentationFees" style="width: 300px;"
-										@change="calculateTotal" :disabled="isDisabled" size="default" />
+										@change="calculateTotal" :disabled="isDisabled || isFOBPriceTerm"
+										size="default" />
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -561,8 +565,8 @@
 							<el-col :span="6" v-if="false">
 								<el-form-item label="付款日期">
 									<el-date-picker v-model="Newcontractform.paymentDate" type="date"
-										placeholder="请选择付款日期" :disabled="isDisabled" style="width: 300px"
-										size="default"></el-date-picker>
+										placeholder="请选择付款日期" :disabled="isDisabled || isFOBPriceTerm"
+										style="width: 300px" size="default"></el-date-picker>
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -1229,6 +1233,15 @@ const hasChangedProducts = computed(() => {
 	return productData.value.some(product => product.isPriceChanged === 1);
 });
 
+// 判断价格条款是否为FOB
+const isFOBPriceTerm = computed(() => {
+	if (!Newcontractform.priceTerms) return false;
+	const priceTermOption = state.optionss.hr_pricing_term.find(
+		item => item.dictValue == Newcontractform.priceTerms
+	);
+	return priceTermOption?.dictLabel?.toUpperCase().includes('FOB') || false;
+});
+
 // 添加此函数来获取已收费用明细
 const getReceivedExpenseDetails = (contractId) => {
 	request({
@@ -1884,12 +1897,30 @@ const handleRowDblClick = (row) => {
 	}
 };
 
-const shippingcurrencyChange = (value) => {
+const shippingcurrencyChange = async (value) => {
 	if (state.optionss['hr_export_currency'].filter(hr_export_currency => hr_export_currency.dictValue == value).map(item => item.dictValue).values().next().value == 3) {
 		Newcontractform.shippingrate = Number(1);
 	} else {
-		Newcontractform.shippingrate = null;
+		// 获取最新汇率
+		try {
+			const latestRate = await exchangeRateService.getLatestExchangeRate(value);
+			if (latestRate !== null) {
+				Newcontractform.shippingrate = Number(latestRate);
+			} else {
+				// 如果获取不到最新汇率，使用默认汇率
+				const defaultRate = exchangeRateService.getDefaultExchangeRate(value);
+				Newcontractform.shippingrate = Number(defaultRate);
+				ElMessage.warning(`未找到${exchangeRateService.getCurrencyName(value, state.optionss.hr_export_currency)}的最新汇率，已使用默认汇率`);
+			}
+		} catch (error) {
+			console.error('获取汇率失败:', error);
+			// 使用默认汇率
+			const defaultRate = exchangeRateService.getDefaultExchangeRate(value);
+			Newcontractform.shippingrate = Number(defaultRate);
+			ElMessage.warning(`获取汇率失败，已使用默认汇率`);
+		}
 	}
+	calculateTotal();
 }
 
 const foreignCurrencyChange = async (value) => {
@@ -2021,7 +2052,10 @@ const calculateTotal = () => {
 		TotalVolume += Number(item.totalVolume);
 		TotalPurchases += Number(item.purchaseunitprice) * Number(item.contractQuantity);
 		OtherFees += Number(item.OtherFees);
-		TotalTaxRefund += Number((item.purchaseunitprice / (1 + item.rebaterate / 100) * 0.13 * item.contractQuantity).toFixed(3));//采购单价*13%*合同数量
+		// 如果退税率不为0，才计算该行的退税总额
+		if (item.rebaterate && Number(item.rebaterate) !== 0) {
+			TotalTaxRefund += Number((item.purchaseunitprice / (1 + item.rebaterate / 100) * 0.13 * item.contractQuantity).toFixed(3));//采购单价*13%*合同数量
+		}
 		ProfitAmount += Number(item.ProfitAmount);
 		//总毛利合计=单个产品毛利 x 合同数量 - 其他费用
 		Totalgrossprofit += Number(item.singleProductGrossProfit * item.contractQuantity - item.OtherFees);
@@ -2607,16 +2641,12 @@ const GetcontractReviewStatusStr = (ReviewStatus) => {
 	switch (ReviewStatus) {
 		case 0:
 			return '待提审';
-			break;
 		case 1:
 			return '审核中';
-			break;
 		case 2:
 			return '已批准';
-			break;
 		case 3:
 			return '已拒绝';
-			break;
 	}
 }
 
@@ -2957,6 +2987,196 @@ const scrollToError = (formEl: FormInstance) => {
 	}
 }
 
+// 验证产品明细必填字段
+const validateProductData = () => {
+	if (!productData.value || productData.value.length === 0) {
+		ElMessage.error('请至少添加一个产品');
+		return false;
+	}
+
+	// 定义必填字段及其标签
+	const requiredFields = [
+		{ key: 'contractQuantity', label: '合同数量' },
+		{ key: 'exportunitprice', label: '外销单价' },
+		{ key: 'purchaseunitprice', label: '采购单价' },
+		{ key: 'purchasecurrency', label: '采购币种' },
+		{ key: 'outerboxlength', label: '外箱长度(CM)' },
+		{ key: 'outerboxwidth', label: '外箱宽度(CM)' },
+		{ key: 'outerboxheight', label: '外箱高度(CM)' },
+		{ key: 'outerboxnetweight', label: '外箱净重(KG)' },
+		{ key: 'outerboxgrossweight', label: '外箱毛重(KG)' },
+		{ key: 'outerboxloading', label: '外箱装量' },
+		{ key: 'rebaterate', label: '退税率%' }
+	];
+
+	// 检查每个产品
+	for (let i = 0; i < productData.value.length; i++) {
+		const product = productData.value[i];
+		const productIndex = i + 1;
+
+		// 检查每个必填字段
+		for (const field of requiredFields) {
+			const value = product[field.key];
+
+			// 判断是否为空
+			let isEmpty = false;
+
+			if (value === null || value === undefined || value === '') {
+				isEmpty = true;
+			} else if (typeof value === 'number') {
+				// 对于数字类型，0值在某些字段是有效的（如外销单价、采购单价、退税率），但在其他字段无效
+				if (isNaN(value)) {
+					isEmpty = true;
+				} else if (value === 0) {
+					// 外销单价、采购单价和退税率允许为0（可能是免费产品或不退税）
+					if (field.key !== 'exportunitprice' && field.key !== 'purchaseunitprice' && field.key !== 'rebaterate') {
+						isEmpty = true;
+					}
+				}
+			}
+
+			if (isEmpty) {
+				// 滚动到错误字段并高亮显示
+				scrollToProductField(i, field.key, field.label, productIndex);
+				ElMessage.error(`第${productIndex}个产品的【${field.label}】不能为空`);
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+// 滚动到产品表格中的错误字段并高亮显示
+const scrollToProductField = (rowIndex: number, fieldKey: string, fieldLabel: string, productIndex: number) => {
+	// 等待DOM更新
+	nextTick(() => {
+		// 查找产品表格（通过标签页定位）
+		const productTab = document.querySelector('.el-tabs__content');
+		if (!productTab) {
+			ElMessage.error('找不到产品表格区域');
+			return;
+		}
+
+		// 查找产品资料标签页中的表格
+		const productTable = productTab.querySelector('.el-table');
+		if (!productTable) {
+			ElMessage.error('找不到产品表格');
+			return;
+		}
+
+		// 查找对应的表格行
+		const tableRows = productTable.querySelectorAll('.el-table__body tr');
+		if (tableRows.length <= rowIndex) {
+			ElMessage.error('找不到对应的产品行');
+			return;
+		}
+
+		const targetRow = tableRows[rowIndex] as HTMLElement;
+
+		// 查找对应的列（通过表头找到列索引）
+		const tableHeaders = productTable.querySelectorAll('.el-table__header th');
+		let columnIndex = -1;
+
+		// 字段名映射（prop属性名 -> 表头显示名）
+		const fieldNameMap: { [key: string]: string[] } = {
+			'contractQuantity': ['合同数量'],
+			'exportunitprice': ['外销单价'],
+			'purchaseunitprice': ['采购单价'],
+			'purchasecurrency': ['采购币种'],
+			'outerboxlength': ['外箱长度'],
+			'outerboxwidth': ['外箱宽度'],
+			'outerboxheight': ['外箱高度'],
+			'outerboxnetweight': ['外箱净重'],
+			'outerboxgrossweight': ['外箱毛重'],
+			'outerboxloading': ['外箱装量'],
+			'rebaterate': ['退税率']
+		};
+
+		// 获取可能的标签名
+		const possibleLabels = fieldNameMap[fieldKey] || [fieldLabel];
+
+		for (let i = 0; i < tableHeaders.length; i++) {
+			const header = tableHeaders[i];
+			const prop = header.getAttribute('prop');
+			const headerText = header.textContent?.trim() || '';
+
+			// 匹配字段名或标签
+			if (prop === fieldKey) {
+				columnIndex = i;
+				break;
+			}
+			// 检查标签是否包含字段标签
+			for (const label of possibleLabels) {
+				if (headerText.includes(label) || label.includes(headerText)) {
+					columnIndex = i;
+					break;
+				}
+			}
+			if (columnIndex !== -1) break;
+		}
+
+		if (columnIndex === -1) {
+			// 如果找不到列，只滚动到行
+			targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			// 高亮整行
+			targetRow.classList.add('error-row');
+			setTimeout(() => {
+				targetRow.classList.remove('error-row');
+			}, 3000);
+			return;
+		}
+
+		// 查找对应的单元格
+		const cells = targetRow.querySelectorAll('td');
+		if (cells.length > columnIndex) {
+			const targetCell = cells[columnIndex] as HTMLElement;
+
+			// 滚动到单元格
+			targetCell.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+
+			// 高亮单元格
+			targetCell.classList.add('error-cell');
+
+			// 高亮整行
+			targetRow.classList.add('error-row');
+
+			// 查找单元格内的输入框或选择框
+			const input = targetCell.querySelector('.el-input__inner') as HTMLElement;
+			const select = targetCell.querySelector('.el-select') as HTMLElement;
+
+			if (input) {
+				input.classList.add('error-input');
+				// 尝试聚焦输入框
+				setTimeout(() => {
+					input.focus();
+				}, 300);
+			} else if (select) {
+				select.classList.add('error-select');
+			}
+
+			// 移除高亮效果
+			setTimeout(() => {
+				targetCell.classList.remove('error-cell');
+				targetRow.classList.remove('error-row');
+				if (input) {
+					input.classList.remove('error-input');
+				}
+				if (select) {
+					select.classList.remove('error-select');
+				}
+			}, 3000);
+		} else {
+			// 如果找不到单元格，只滚动到行
+			targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			targetRow.classList.add('error-row');
+			setTimeout(() => {
+				targetRow.classList.remove('error-row');
+			}, 3000);
+		}
+	});
+}
+
 const SaveContract = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
 	try {
@@ -2965,8 +3185,8 @@ const SaveContract = async (formEl: FormInstance | undefined) => {
 			scrollToError(formEl)
 			return
 		}
-		if (!productData.value || productData.value.length === 0) {
-			ElMessage.error('请至少添加一个产品');
+		// 验证产品明细必填字段
+		if (!validateProductData()) {
 			return;
 		}
 		await ElMessageBox.confirm('确定提交当前合同吗?', '提示', {
@@ -3713,8 +3933,8 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 			scrollToError(formEl)
 			return
 		}
-		if (!productData.value || productData.value.length === 0) {
-			ElMessage.error('请至少添加一个产品');
+		// 验证产品明细必填字段
+		if (!validateProductData()) {
 			return;
 		}
 		// 显示确认对话框
@@ -5100,6 +5320,60 @@ const resetFilters = () => {
 
 	50% {
 		background-color: var(--el-color-danger-light-8);
+	}
+}
+
+/* 表格单元格错误高亮样式 */
+.error-cell {
+	position: relative;
+	animation: error-cell-shake 0.5s ease-in-out;
+}
+
+.error-cell::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	border: 2px solid var(--el-color-danger);
+	border-radius: 4px;
+	pointer-events: none;
+	z-index: 10;
+	box-shadow: 0 0 8px var(--el-color-danger);
+}
+
+.error-input {
+	border-color: var(--el-color-danger) !important;
+	box-shadow: 0 0 0 2px var(--el-color-danger-light-8) !important;
+}
+
+.error-select {
+	border-color: var(--el-color-danger) !important;
+}
+
+.error-select .el-input__inner {
+	border-color: var(--el-color-danger) !important;
+	box-shadow: 0 0 0 2px var(--el-color-danger-light-8) !important;
+}
+
+@keyframes error-cell-shake {
+
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+
+	25% {
+		transform: translateX(-3px);
+	}
+
+	50% {
+		transform: translateX(3px);
+	}
+
+	75% {
+		transform: translateX(-3px);
 	}
 }
 

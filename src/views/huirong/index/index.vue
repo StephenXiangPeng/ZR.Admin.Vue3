@@ -400,6 +400,33 @@
             <el-table-column prop="salesperson" label="销售员" width="150" v-if="false"></el-table-column>
           </el-table>
         </el-tab-pane>
+        <el-tab-pane name="paymentTask">
+          <template #label>
+            <span class="custom-tabs-label">
+              <el-icon>
+                <document />
+              </el-icon>
+              <span>付款任务</span>
+            </span>
+          </template>
+          <el-table :data="paymentTaskList" :height="400" style="width: 100%"
+            @row-dblclick="handlePaymentTaskRowDblClick">
+            <el-table-column prop="applicationDate" label="申请日期" width="120"></el-table-column>
+            <el-table-column prop="payeeUnit" label="收款单位" width="180"></el-table-column>
+            <el-table-column prop="paymentItemName" label="款项名称" width="200"></el-table-column>
+            <el-table-column prop="paymentAmount" label="付款金额" width="150">
+              <template #default="scope">
+                {{ scope.row.currency }} {{ scope.row.paymentAmount.toLocaleString() }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="applicant" label="申请人" width="120"></el-table-column>
+            <el-table-column fixed="right" prop="operate" label="操作" width="120" align="center">
+              <template v-slot:default="scope">
+                <el-button link type="primary" size="small" @click="viewPaymentTask(scope.row)">查看详情</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
         <el-tab-pane name="reject">
           <template #label>
             <span class="custom-tabs-label">
@@ -649,25 +676,25 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="有无定金" prop="hasDeposit">
+            <el-form-item label="有无预付款" prop="hasDeposit">
               <el-checkbox v-model="contractform.hasDeposit" disabled></el-checkbox>
             </el-form-item>
           </el-col>
         </el-row>
         <el-row>
           <el-col :span="8">
-            <el-form-item label="已收定金" v-show=DepositShow prop="receivedDeposit">
+            <el-form-item label="已收预付款" v-show=DepositShow prop="receivedDeposit">
               <el-input v-model="contractform.receivedDeposit" style="width: 300px" disabled></el-input>
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="定金日期" v-show=DepositShow prop="depositDate">
-              <el-date-picker v-model="contractform.depositDate" type="date" placeholder="请选择定金日期" disabled
+            <el-form-item label="预付款日期" v-show=DepositShow prop="depositDate">
+              <el-date-picker v-model="contractform.depositDate" type="date" placeholder="请选择预付款日期" disabled
                 style="width: 300px"></el-date-picker>
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="定金比例" v-show=DepositShow prop="Depositratio">
+            <el-form-item label="预付款比例" v-show=DepositShow prop="Depositratio">
               <el-input v-model="contractform.Depositratio" style="width: 300px" disabled></el-input>
             </el-form-item>
           </el-col>
@@ -1176,10 +1203,10 @@
         <el-descriptions-item label="交货地点">
           {{ PurchaseContractDialogData.deliveryLocation }}
         </el-descriptions-item>
-        <el-descriptions-item label="定金金额" v-if="false">
+        <el-descriptions-item label="预付款金额" v-if="false">
           {{ PurchaseContractDialogData.deposit }}
         </el-descriptions-item>
-        <el-descriptions-item label="有无定金" v-if="false">
+        <el-descriptions-item label="有无预付款" v-if="false">
           {{ PurchaseContractDialogData.hasDeposit ? '是' : '否' }}
         </el-descriptions-item>
       </el-descriptions>
@@ -1189,13 +1216,13 @@
           <el-table :data="PurchaseContractDialogData.productinfotableData">
             <el-table-column prop="productCode" label="产品编号" width="120"></el-table-column>
             <el-table-column prop="supplier" label="供应商" width="200"></el-table-column>
-            <el-table-column prop="hasDeposit" label="有无定金" width="90">
+            <el-table-column prop="hasDeposit" label="有无预付款" width="90">
               <template #default="scope">
                 <el-checkbox v-model="scope.row.hasDeposit" disabled>
                 </el-checkbox>
               </template>
             </el-table-column>
-            <el-table-column prop="depositAmount" label="定金金额" width="120"></el-table-column>
+            <el-table-column prop="depositAmount" label="预付款金额" width="120"></el-table-column>
             <el-table-column prop="customerCode" label="客户货号" width="120"></el-table-column>
             <el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
             <el-table-column prop="englishName" label="英文品名" width="150" v-if="false"></el-table-column>
@@ -1343,10 +1370,9 @@
         <el-descriptions-item label="申请部门">
           {{ PaymentrequestForm.applicationDepartment }}
         </el-descriptions-item>
-
-        <el-descriptions-item label="经手人">
+        <!-- <el-descriptions-item label="经手人">
           {{ PaymentrequestForm.handler }}
-        </el-descriptions-item>
+        </el-descriptions-item> -->
       </el-descriptions>
 
       <!-- 关联合同字段 - 仅在业务费用且款项名称为其它时显示 -->
@@ -1368,12 +1394,12 @@
         <!-- 费用明细 -->
         <el-tab-pane label="费用明细" name="CostDetailsTab">
           <el-table :data="CostDetailsTbaleData" border>
-            <el-table-column prop="relatedModules" label="关联模块" />
-            <el-table-column prop="associatedOrderNumber" label="关联单号" />
-            <el-table-column prop="applicationAmount" label="申请金额" />
-            <el-table-column prop="relevantDates" label="关联日期" />
-            <el-table-column prop="specificPaymentItems" label="具体款项" />
-            <el-table-column prop="remark" label="备注" />
+            <el-table-column prop="expenseName" label="费用名称" />
+            <el-table-column prop="relatedDocumentTypeName" label="单据类型" />
+            <el-table-column prop="relatedDocumentsNo" label="单据号" />
+            <el-table-column prop="amount" label="金额" />
+            <el-table-column prop="appliedAmount" label="已申请金额" />
+            <el-table-column prop="amountAlreadyApplied" label="本次申请金额" />
           </el-table>
         </el-tab-pane>
 
@@ -1386,7 +1412,7 @@
             <el-table-column prop="exportcurrency" label="外销币种" />
             <el-table-column prop="exchangerate" label="汇率" />
             <el-table-column prop="amountspayable" label="应支付金额" />
-            <el-table-column prop="depositpaid" label="已付定金" />
+            <el-table-column prop="depositpaid" label="已付预付款" />
             <el-table-column prop="paymentrequested" label="已申请付款" />
             <el-table-column prop="nopaymentrequested" label="未申请付款" />
             <el-table-column prop="paymentpaid" label="已付货款" />
@@ -1504,7 +1530,7 @@
           {{ ShippingDeliveryForm.documentClerk }}
         </el-descriptions-item>
 
-        <el-descriptions-item label="有无定金">
+        <el-descriptions-item label="有无预付款">
           <el-checkbox v-model="ShippingDeliveryForm.isDeposit" disabled />
         </el-descriptions-item>
       </el-descriptions>
@@ -3926,10 +3952,10 @@ const contractform = reactive({
   tradeCountry: null,       // 贸易国别
   transportation: null,     // 运输方式
   salesperson: null,        // 销售员
-  hasDeposit: false,        // 是否有定金
-  receivedDeposit: null,    // 已收定金
-  depositDate: '',          // 定金日期
-  Depositratio: null,       // 定金比例
+  hasDeposit: false,        // 是否有预付款
+  receivedDeposit: null,    // 已收预付款
+  depositDate: '',          // 预付款日期
+  Depositratio: null,       // 预付款比例
   stockProgress: '',        // 备货进度
   deliveryProgress: '',     // 交货进度
   profitCalculation: '',    // 利润计算
@@ -4257,16 +4283,16 @@ const openSaleContractDialog = (row) => {
       if (response.data != null) {
         const purchaseContracts = response.data.purchaseContracts;
         PurchaseContractDialogData.value.purchaseContract = purchaseContracts.purchaseContractNumber;
-        PurchaseContractDialogData.value.contractStatus = state.optionss['hr_contract_status'].find(item => item.dictValue === purchaseContracts.contractStatus.toString()).dictLabel;
+        PurchaseContractDialogData.value.contractStatus = purchaseContracts.contractStatus ? state.optionss['hr_contract_status'].find(item => item.dictValue === purchaseContracts.contractStatus.toString())?.dictLabel || '未知状态' : '未知状态';
         PurchaseContractDialogData.value.deliveryDate = purchaseContracts.deliveryDate;
-        PurchaseContractDialogData.value.vendorCode = state.optionss['sql_supplier_info'].find(item => item.dictValue === purchaseContracts.vendorCode.toString())?.dictLabel || '无';
-        PurchaseContractDialogData.value.purchaseCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === purchaseContracts.purchaseCurrency.toString()).dictLabel;
+        PurchaseContractDialogData.value.vendorCode = purchaseContracts.vendorCode ? state.optionss['sql_supplier_info'].find(item => item.dictValue === purchaseContracts.vendorCode.toString())?.dictLabel || '无' : '无';
+        PurchaseContractDialogData.value.purchaseCurrency = purchaseContracts.purchaseCurrency ? state.optionss['hr_export_currency'].find(item => item.dictValue === purchaseContracts.purchaseCurrency.toString())?.dictLabel || '未知货币' : '未知货币';
         PurchaseContractDialogData.value.deposit = purchaseContracts.deposit || '0';
-        PurchaseContractDialogData.value.salesperson = (state.optionss['sql_hr_sale'].find(item => item.dictValue === purchaseContracts.salesperson.toString()) || { dictLabel: '未知销售员' }).dictLabel;
-        PurchaseContractDialogData.value.purchaser = (state.optionss['sql_all_user'].find(item => item.dictValue === purchaseContracts.purchaser.toString()) || { dictLabel: '未知采购员' }).dictLabel;
-        PurchaseContractDialogData.value.priceTerms = (state.optionss['hr_purchase_pricing_term'].find(item => item.dictValue === purchaseContracts.priceTerms.toString()) || { dictLabel: '未知价格条款' }).dictLabel;
-        PurchaseContractDialogData.value.paymentDays = (state.optionss['hr_purchase_payment_days'].find(item => item.dictValue === purchaseContracts.paymentDays.toString()) || { dictLabel: '未知付款天数' }).dictLabel;
-        PurchaseContractDialogData.value.salesContract = state.optionss['sql_sale_contracts'].find(item => item.dictValue === purchaseContracts.salesContract.toString())?.dictLabel || '未知合同';
+        PurchaseContractDialogData.value.salesperson = purchaseContracts.salesperson ? (state.optionss['sql_hr_sale'].find(item => item.dictValue === purchaseContracts.salesperson.toString()) || { dictLabel: '未知销售员' }).dictLabel : '未知销售员';
+        PurchaseContractDialogData.value.purchaser = purchaseContracts.purchaser ? (state.optionss['sql_all_user'].find(item => item.dictValue === purchaseContracts.purchaser.toString()) || { dictLabel: '未知采购员' }).dictLabel : '未知采购员';
+        PurchaseContractDialogData.value.priceTerms = purchaseContracts.priceTerms ? (state.optionss['hr_purchase_pricing_term'].find(item => item.dictValue === purchaseContracts.priceTerms.toString()) || { dictLabel: '未知价格条款' }).dictLabel : '未知价格条款';
+        PurchaseContractDialogData.value.paymentDays = purchaseContracts.paymentDays ? (state.optionss['hr_purchase_payment_days'].find(item => item.dictValue === purchaseContracts.paymentDays.toString()) || { dictLabel: '未知付款天数' }).dictLabel : '未知付款天数';
+        PurchaseContractDialogData.value.salesContract = purchaseContracts.salesContract ? state.optionss['sql_sale_contracts'].find(item => item.dictValue === purchaseContracts.salesContract.toString())?.dictLabel || '未知合同' : '未知合同';
         PurchaseContractDialogData.value.deliveryLocation = purchaseContracts.deliveryLocation || '';
         PurchaseContractDialogData.value.hasDeposit = parseFloat(purchaseContracts.deposit || '0') > 0;
         PurchaseContractDialogData.value.totalValue = purchaseContracts.totalGoodsValue;
@@ -4283,13 +4309,13 @@ const openSaleContractDialog = (row) => {
         PurchaseContractDialogData.value.unpaidAmount = purchaseContracts.unpaidAmount;
         PurchaseContractDialogData.value.paidAmount = purchaseContracts.paidAmount;
         response.data.purchaseContractProducts.forEach(productData => {
-          productData.unit = state.optionss['hr_calculate_unit'].find(item => item.dictValue === productData.unit.toString())?.dictLabel || '无';
-          productData.packaging = state.optionss['hr_packing'].find(item => item.dictValue === productData.packaging.toString())?.dictLabel || '无';
+          productData.unit = productData.unit ? state.optionss['hr_calculate_unit'].find(item => item.dictValue === productData.unit.toString())?.dictLabel || '无' : '无';
+          productData.packaging = productData.packaging ? state.optionss['hr_packing'].find(item => item.dictValue === productData.packaging.toString())?.dictLabel || '无' : '无';
           productData.invoice = productData.invoice == 0 ? "否" : "是";
-          if (productData.supplierID.toString() == '0') {
+          if (!productData.supplierID || productData.supplierID.toString() == '0') {
             productData.supplier = '无';
           } else {
-            productData.supplier = state.optionss['sql_supplier_info'].find(item => item.dictValue === productData.supplierID.toString()).dictLabel || '无';
+            productData.supplier = state.optionss['sql_supplier_info'].find(item => item.dictValue === productData.supplierID.toString())?.dictLabel || '无';
           }
           productData.hasDeposit = productData.hasdeposit == 1 || productData.hasdeposit === true;
           productData.customerCode = productData.customerNumber;
@@ -4305,7 +4331,7 @@ const openSaleContractDialog = (row) => {
         PurchaseContractDialogData.value.CustomerRelaterExoensesTableData = response.data.purchaseContractVendorExpenses;
         PurchaseContractDialogData.value.CustomerRelaterExoensesTableData.forEach(item => {
           item.amount = item.expense * item.exchangeRate;
-          item.currency = state.optionss['hr_export_currency'].find(currency => currency.dictValue == item.currency.toString()).dictLabel || '无';
+          item.currency = item.currency ? state.optionss['hr_export_currency'].find(currency => currency.dictValue == item.currency.toString())?.dictLabel || '无' : '无';
         });
         PurchaseContractDialog.value = true;
       }
@@ -5125,11 +5151,11 @@ const calculatePendingCount = async () => {
           Status: 0
         }
       });
-      if (inquiryResponse.code === 200) {
+      if (inquiryResponse.code === 200 && inquiryResponse.data != 0) {
         totalCount += inquiryResponse.data.result.length;
       }
 
-      // 3. 获取采购需求数量
+      // 3. 获取采购需求数量（同一个合同号只算一条记录）
       const procurementResponse = await request({
         url: 'PurchaseContracts/GetProcurementRequirements/GetList',
         method: 'get',
@@ -5139,8 +5165,12 @@ const calculatePendingCount = async () => {
           Status: 0
         }
       });
-      if (procurementResponse.code === 200) {
-        totalCount += procurementResponse.data.result.length;
+      if (procurementResponse.code === 200 && procurementResponse.data.result) {
+        // 对合同号进行去重，同一个合同号只算一条记录
+        const uniqueContractNumbers = new Set(
+          procurementResponse.data.result.map(item => item.contractNumber).filter(Boolean)
+        );
+        totalCount += uniqueContractNumbers.size;
       }
 
       // 4. 获取被驳回的采购合同数量
@@ -5160,6 +5190,13 @@ const calculatePendingCount = async () => {
     });
     if (rejectContractResponse.code == 200) {
       totalCount += rejectContractResponse.data.length;
+    }
+
+    // 6. 获取付款任务数量
+    const paymentTaskResponse = await getPaymentTaskList();
+    if (paymentTaskResponse && paymentTaskResponse.length > 0) {
+      // 接口返回的是ReviewStatus == 2的待付款申请，都算作待处理任务
+      totalCount += paymentTaskResponse.length;
     }
 
     // 更新pendingCount
@@ -6252,6 +6289,9 @@ const rejectPurchaseContractList = ref([])
 // 被驳回的销售合同列表数据
 const rejectContractList = ref([])
 
+// 付款任务列表数据
+const paymentTaskList = ref([])
+
 // 获取询价列表
 const getInquiryList = async () => {
   try {
@@ -6822,6 +6862,142 @@ const GetRejectContractList = async () => {
 }
 //#endregion
 
+//#region 付款任务相关处理函数
+// 获取付款任务列表
+const getPaymentTaskList = async () => {
+  try {
+    const response = await request({
+      url: 'PaymentRequest/GetPendingPaymentList/GetPendingPaymentList',
+      method: 'GET',
+      params: {
+        PageNum: 1,
+        PageSize: 100
+      }
+    });
+
+    if (response.code === 200 && response.data && response.data.result) {
+      // 映射数据到表格需要的格式
+      paymentTaskList.value = response.data.result.map(item => {
+        // 获取申请人名称
+        const applicantName = state.optionss['sql_all_user']?.find(
+          user => user.dictValue === item.applicant?.toString()
+        )?.dictLabel || '未知';
+
+        // 获取币种
+        const currency = state.optionss['hr_currency_code']?.find(
+          code => code.dictValue === item.currencyCode?.toString()
+        )?.dictLabel || item.currencyCode || '';
+
+        // 获取款项名称 - 根据付款类别选择对应的字典
+        const paymentCategory = item.paymentCategory?.toString();
+        const paymentName = item.paymentName?.toString();
+        let paymentItemName = '未知';
+
+        if (paymentCategory && paymentName) {
+          switch (paymentCategory) {
+            case '1':
+              paymentItemName = state.optionss['hr_factory_payment']?.find(
+                item => item.dictValue === paymentName
+              )?.dictLabel || paymentName;
+              break;
+            case '2':
+              paymentItemName = state.optionss['hr_domestic_charges']?.find(
+                item => item.dictValue === paymentName
+              )?.dictLabel || paymentName;
+              break;
+            case '3':
+              paymentItemName = state.optionss['hr_foreign_charges']?.find(
+                item => item.dictValue === paymentName
+              )?.dictLabel || paymentName;
+              break;
+            case '4':
+              paymentItemName = state.optionss['hr_daily_expenses']?.find(
+                item => item.dictValue === paymentName
+              )?.dictLabel || paymentName;
+              break;
+            case '5':
+              paymentItemName = state.optionss['hr_business_expenses']?.find(
+                item => item.dictValue === paymentName
+              )?.dictLabel || paymentName;
+              break;
+            default:
+              paymentItemName = paymentName;
+              break;
+          }
+        }
+
+        return {
+          id: item.id,
+          applicationDate: formatDate(item.applicationDate || item.create_time),
+          payeeUnit: item.payeeName || '未知',
+          paymentItemName: paymentItemName,
+          paymentAmount: item.totalAmount || 0,
+          currency: currency,
+          applicant: applicantName,
+          paymentCategory: paymentCategory, // 保存付款类别用于路由跳转
+          // 保留原始数据用于详情查看
+          originalData: item
+        };
+      });
+
+      return paymentTaskList.value;
+    } else {
+      paymentTaskList.value = [];
+      return [];
+    }
+  } catch (error) {
+    console.error('获取付款任务列表失败', error);
+    ElMessage.error('获取付款任务列表失败');
+    paymentTaskList.value = [];
+    return [];
+  }
+}
+
+// 处理付款任务表格行双击事件
+const handlePaymentTaskRowDblClick = (row) => {
+  console.log('双击付款任务:', row);
+  viewPaymentTask(row);
+}
+
+// 查看付款任务详情
+const viewPaymentTask = (row) => {
+  console.log('查看付款任务详情:', row);
+  // 获取付款申请ID和付款类别
+  const paymentRequestId = row.id || row.originalData?.id;
+  const paymentCategory = row.originalData?.paymentCategory?.toString() || row.paymentCategory?.toString();
+
+  if (!paymentRequestId) {
+    ElMessage.warning('无法获取付款申请ID');
+    return;
+  }
+
+  // 根据付款类别跳转到不同的页面
+  let targetPath = '';
+
+  if (paymentCategory === '1') {
+    // 工厂付款
+    targetPath = '/finance/factorypayment';
+  } else if (paymentCategory === '5') {
+    // 业务费用付款
+    targetPath = '/finance/businessExpensespayment';
+  } else if (paymentCategory === '4') {
+    // 日常费用付款
+    targetPath = '/finance/dailyExpensespayment';
+  } else {
+    // 其他情况，跳转到付款申请详情页面
+    targetPath = '/paymentrequest';
+  }
+
+  router.push({
+    path: targetPath,
+    query: {
+      PaymentRequestID: paymentRequestId,
+      viewDetail: 'true'
+    }
+  });
+}
+//#endregion
+
 //#region 被驳回单据相关处理函数
 // 处理tab切换事件
 const handleTabClick = (tab) => {
@@ -6831,6 +7007,9 @@ const handleTabClick = (tab) => {
     GetRejectContractList()
     // 重新计算pendingCount
     calculatePendingCount()
+  } else if (tab.props.name === 'paymentTask') {
+    // 当切换到付款任务tab时，重新加载数据
+    getPaymentTaskList()
   }
 }
 

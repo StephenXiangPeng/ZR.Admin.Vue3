@@ -75,6 +75,12 @@
 						<el-tag v-else type="warning" size="small">待领取</el-tag>
 					</template>
 				</el-table-column>
+				<el-table-column prop="isConfirm" label="是否确认" width="90">
+					<template #default="scope">
+						<el-tag v-if="scope.row.isConfirm === 1" type="success" size="small">已确认</el-tag>
+						<el-tag v-else type="warning" size="small">待确认</el-tag>
+					</template>
+				</el-table-column>
 				<el-table-column fixed="right" prop="operate" label="操作" width="200">
 					<template v-slot:default="scope">
 						<el-button type="text" size="small"
@@ -140,7 +146,7 @@
 									<el-input v-model="addcustomercollectionform.exchangeRate" placeholder="请输入汇率"
 										style="width: 300px" @input="handleExchangeRateInput"
 										@blur="handleExchangeRateBlur" @change="calculateSettlementAmount"
-										:disabled="isReadOnly" size="default" clearable></el-input>
+										:disabled="true" size="default" clearable></el-input>
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
@@ -386,6 +392,9 @@
 					</el-button>
 					<el-button type="success" v-if="isSubmitBtnShow" @click="SubmitCustomerCollection()">
 						提交
+					</el-button>
+					<el-button type="primary" v-if="isConfirmBtnShow" @click="ConfirmCustomerCollection()">
+						确认
 					</el-button>
 				</span>
 			</template>
@@ -736,6 +745,7 @@ const isReadOnly = ref(false); // 控制表单是否只读
 const isSaveBtnShow = ref(true);
 const isEditSaveBtnShow = ref(false);
 const isSubmitBtnShow = ref(false);
+const isConfirmBtnShow = ref(false);
 
 // 折叠面板控制变量
 const basicInfoCollapseActive = ref(['basicInfo']);
@@ -1197,7 +1207,10 @@ const customerCollectionsRequest = reactive({
 	Remark: "",
 	IsDelete: 0,
 	isDraft: 1,
-	ExchangeSettlementAmount: 0
+	ExchangeSettlementAmount: 0,
+	isConfirm: 0,
+	CustomerID: 0,
+	ReceivingUser: 0
 })
 
 //保存收款单据
@@ -1231,6 +1244,9 @@ const SaveCustomerCollection = async () => {
 		// 去除结汇金额的货币符号后转换为数字
 		const cleanSettlementAmount = removeCurrencySymbol(addcustomercollectionform.value.ExchangeSettlementAmount);
 		customerCollectionsRequest.ExchangeSettlementAmount = Number(cleanSettlementAmount);
+		customerCollectionsRequest.isConfirm = addcustomercollectionform.value.isConfirm || 0;
+		customerCollectionsRequest.CustomerID = Number(addcustomercollectionform.value.customerID) || 0;
+		customerCollectionsRequest.ReceivingUser = Number(addcustomercollectionform.value.receivingUser) || 0;
 		// 上传图片
 		let receiptImageUrls = [];
 		if (Array.isArray(fileList.value) && fileList.value.length > 0) {
@@ -1344,6 +1360,9 @@ const clearAll = () => {
 	// 清空客户ID和领取人
 	addcustomercollectionform.value.customerID = ''
 	addcustomercollectionform.value.receivingUser = ''
+	// 清空isConfirm
+	addcustomercollectionform.value.isConfirm = 0
+	isConfirmBtnShow.value = false
 }
 
 //分页组件
@@ -1422,6 +1441,7 @@ const CheckCustomerCollectionDetails = async (row) => {
 		isSaveBtnShow.value = false;
 		isEditSaveBtnShow.value = true;
 		isReadOnly.value = false;
+		isConfirmBtnShow.value = false;
 	} else {
 		// 已提交状态：只读模式
 		isSubmitBtnShow.value = false;
@@ -1429,6 +1449,8 @@ const CheckCustomerCollectionDetails = async (row) => {
 		isSaveBtnShow.value = false;
 		isEditSaveBtnShow.value = false;
 		isReadOnly.value = true;
+		// 只有在已领取（isCollected为true）且待确认（isConfirm为0）的情况下，才显示确认按钮
+		isConfirmBtnShow.value = row.isCollected && row.isConfirm === 0;
 	}
 	// 基本信息赋值
 	addcustomercollectionform.value.receiptNumber = row.receiptNumber;
@@ -1453,6 +1475,8 @@ const CheckCustomerCollectionDetails = async (row) => {
 	addcustomercollectionform.value.receivingUser = state.optionss.sql_all_user.find((dict) => dict.dictValue === row.receivingUser.toString())?.dictValue || '';
 	// 备注字段赋值
 	addcustomercollectionform.value.remark = row.remark || '';
+	// isConfirm字段赋值
+	addcustomercollectionform.value.isConfirm = row.isConfirm || 0;
 
 	// 关联模块相关字段赋值
 	addcustomercollectionform.value.Customer = row.customer || '';
@@ -1546,7 +1570,8 @@ const addcustomercollectionform = ref({
 	AssociatedModulesDocumentID: '',
 	ExchangeSettlementAmount: '',
 	customerID: '',
-	receivingUser: ''
+	receivingUser: '',
+	isConfirm: 0
 })
 
 // 保存收款单据（用于提交时的保存）
@@ -1566,6 +1591,9 @@ const SaveCustomerCollectionForSubmit = async () => {
 		// 去除结汇金额的货币符号后转换为数字
 		const cleanSettlementAmount = removeCurrencySymbol(addcustomercollectionform.value.ExchangeSettlementAmount);
 		customerCollectionsRequest.ExchangeSettlementAmount = Number(cleanSettlementAmount);
+		customerCollectionsRequest.isConfirm = addcustomercollectionform.value.isConfirm || 0;
+		customerCollectionsRequest.CustomerID = Number(addcustomercollectionform.value.customerID) || 0;
+		customerCollectionsRequest.ReceivingUser = Number(addcustomercollectionform.value.receivingUser) || 0;
 
 		// 上传图片
 		let receiptImageUrls = [];
@@ -1675,6 +1703,71 @@ const SubmitCustomerCollection = async () => {
 		if (error !== 'cancel') {
 			console.error('提交收款单据出错：', error);
 			ElMessage.error('提交收款单据失败');
+		}
+	}
+}
+
+// 确认收款单据
+const ConfirmCustomerCollection = async () => {
+	try {
+		await ElMessageBox.confirm('确定确认该收款单据吗？', '提示', {
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			type: 'warning',
+		});
+
+		// 准备基础数据
+		customerCollectionsRequest.ReceiptNumber = addcustomercollectionform.value.receiptNumber;
+		customerCollectionsRequest.ReceiptDate = addcustomercollectionform.value.receiptDate;
+		customerCollectionsRequest.OurCompany = addcustomercollectionform.value.ourCompany;
+		customerCollectionsRequest.ForeignCurrency = addcustomercollectionform.value.foreignCurrency;
+		customerCollectionsRequest.ExchangeRate = Number(addcustomercollectionform.value.exchangeRate);
+		// 去除收汇金额的货币符号后转换为数字
+		const cleanAmount = removeCurrencySymbol(addcustomercollectionform.value.amount);
+		customerCollectionsRequest.Amount = Number(cleanAmount);
+		customerCollectionsRequest.Bank = addcustomercollectionform.value.bank;
+		customerCollectionsRequest.Remark = addcustomercollectionform.value.remark;
+		// 去除结汇金额的货币符号后转换为数字
+		const cleanSettlementAmount = removeCurrencySymbol(addcustomercollectionform.value.ExchangeSettlementAmount);
+		customerCollectionsRequest.ExchangeSettlementAmount = Number(cleanSettlementAmount);
+		// 设置isConfirm为1（已确认）
+		customerCollectionsRequest.isConfirm = 1;
+		// 设置CustomerID和ReceivingUser
+		customerCollectionsRequest.CustomerID = Number(addcustomercollectionform.value.customerID) || 0;
+		customerCollectionsRequest.ReceivingUser = Number(addcustomercollectionform.value.receivingUser) || 0;
+
+		// 处理图片URL（确认时不需要重新上传，使用现有URL）
+		if (filelistUrlStr.value) {
+			customerCollectionsRequest.ReceiptImageUrl = filelistUrlStr.value;
+		} else {
+			customerCollectionsRequest.ReceiptImageUrl = '';
+		}
+
+		// 处理附件URL（确认时不需要重新上传，使用现有URL）
+		if (attachmentUrlStr.value) {
+			customerCollectionsRequest.AttachmentUrl = attachmentUrlStr.value;
+		} else {
+			customerCollectionsRequest.AttachmentUrl = '';
+		}
+
+		// 调用edit接口更新数据
+		const response = await request.post(
+			'CustomerCollections/EditCustomerCollections/Edit',
+			{ ...customerCollectionsRequest, Id: EditID.value }
+		);
+
+		if (response != null) {
+			ElMessage({
+				message: response.msg || '确认成功',
+				type: 'success'
+			});
+			Closeaddcustomercollectiondialog();
+			GetCustomerCollectionsList(currentPage.value, pageSize.value);
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('确认收款单据出错：', error);
+			ElMessage.error('确认收款单据失败');
 		}
 	}
 }

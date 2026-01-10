@@ -529,6 +529,19 @@
 								<span>{{ row.amount || row.totalGoodsValue || '0.00' }}</span>
 							</template>
 						</el-table-column>
+						<el-table-column prop="appliedAmount" label="已申请金额" min-width="120">
+							<template #default="{ row }">
+								<span>{{ row.appliedAmount || '0.00' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="currentPaymentAmount" label="本次申请金额" min-width="140">
+							<template #default="{ row }">
+								<el-input v-model="row.currentPaymentAmount" :disabled="IsDisabled" size="small"
+									placeholder="0.00" style="width: 100%"
+									:class="{ 'error-input': isPaymentAmountExceeded(row) }"
+									@blur="handleCurrentPaymentAmountInput(row)" />
+							</template>
+						</el-table-column>
 						<el-table-column fixed="right" label="操作" width="100">
 							<template #default="scope">
 								<el-button type="text" size="large"
@@ -579,6 +592,11 @@
 						<el-table-column prop="amount" label="金额" min-width="120">
 							<template #default="{ row }">
 								<span>{{ row.amount || '0.00' }}</span>
+							</template>
+						</el-table-column>
+						<el-table-column prop="appliedAmount" label="已申请金额" min-width="120">
+							<template #default="{ row }">
+								<span>{{ row.appliedAmount || '0.00' }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column fixed="right" label="操作" width="100">
@@ -912,7 +930,7 @@ const filterSampleOurCompany = ref(''); // 待支付列表的我方公司筛选
 const filterSelectedCustomerSupplier = ref(''); // 已选择列表的客户/供应商筛选
 const filterSelectedOurCompany = ref(''); // 已选择列表的我方公司筛选
 
-// 是否为定金（款项名称 dictValue == 1）
+// 是否为预付款（款项名称 dictValue == 1）
 const isDepositType = computed(() => Number(addpaymentrequestform.value.paymentName) === 1);
 const paymentrequesttableData = ref([])//付款申请列表Table
 const CostDetailsTbaleData = ref([])//费用明细Table
@@ -1032,7 +1050,9 @@ const handleAddRowCostDetails = () => {
 		deposit: '',
 		paidAmount: '',
 		unpaidAmount: '',
+		appliedAmount: 0, // 已申请金额字段
 		currentPaymentAmount: '', // 新增本次付款金额字段
+		unpaidAmountID: 0, // 未支付款项ID
 		contractStatus: '',
 		remark: '',
 		// 保留原有字段以兼容现有逻辑
@@ -1341,6 +1361,11 @@ const paymentCategoryChange = async () => {
 
 				if (unpaidResponse.data && unpaidResponse.code === 200) {
 					UnpaidDetailsTbaleData.value = unpaidResponse.data || [];
+					// 保存原始未支付款项数据到Map，用于恢复时使用
+					UnpaidDetailsTbaleData.value.forEach((element) => {
+						const key = `${element.expenseName}_${element.relatedDocumentsNo}_${element.relatedDocumentType}`;
+						originalUnpaidItemsMap.value.set(key, { ...element });
+					});
 					// 新API数据结构不需要处理contractStatus，直接使用返回的数据
 				} else {
 					UnpaidDetailsTbaleData.value = [];
@@ -1377,7 +1402,34 @@ const relatedmoduleshandleChange = (row) => {
 	}
 }
 const payeeCodeChange = async () => {
+	// 如果收款单位被清空，清空相关字段
 	if (addpaymentrequestform.value.payeeCode === '' || addpaymentrequestform.value.payeeCode === null || addpaymentrequestform.value.payeeCode === undefined) {
+		// 清空收款单位名称
+		addpaymentrequestform.value.payeeName = '';
+		// 清空开户银行
+		addpaymentrequestform.value.bankName = '';
+		// 清空银行账号
+		addpaymentrequestform.value.bankAccount = '';
+		// 清空供应商银行账号列表
+		supplierBankAccounts.value = [];
+		// 清空未支付款项详情
+		UnpaidDetailsTbaleData.value = [];
+		// 清空原始未支付款项数据Map
+		originalUnpaidItemsMap.value.clear();
+		// 清空已选择的未付款项
+		selectedUnpaidItemIds.value.clear();
+		// 清空关联合同
+		addpaymentrequestform.value.relatedContract = '';
+		contractList.value = [];
+		// 清空收寄样列表
+		sampleCollectionTableData.value = [];
+		showSampleCollection.value = false;
+		sampleCollectionTotalItems.value = 0;
+		sampleCollectionCurrentPage.value = 1;
+		selectedSampleCollectionTableData.value = [];
+		showSelectedSampleCollection.value = false;
+		selectedSampleCollectionTotalItems.value = 0;
+		selectedSampleCollectionCurrentPage.value = 1;
 		return;
 	}
 	try {
@@ -1480,6 +1532,11 @@ const payeeCodeChange = async () => {
 
 				if (unpaidResponse.data && unpaidResponse.code === 200) {
 					UnpaidDetailsTbaleData.value = unpaidResponse.data || [];
+					// 保存原始未支付款项数据到Map，用于恢复时使用
+					UnpaidDetailsTbaleData.value.forEach((element) => {
+						const key = `${element.expenseName}_${element.relatedDocumentsNo}_${element.relatedDocumentType}`;
+						originalUnpaidItemsMap.value.set(key, { ...element });
+					});
 					// 新API数据结构不需要处理contractStatus，直接使用返回的数据
 				} else {
 					UnpaidDetailsTbaleData.value = [];
@@ -1576,6 +1633,9 @@ const paymentRequestRequest = reactive({
 	Remark: '',
 	IsDelete: 0,
 	CompanyType: 0, // 新增公司类型字段
+	RelatedContract: '', // 关联合同
+	RelatedCustomer: null, // 关联客户（可空整数）
+	ActualApplicationAmount: 0, // 本次申请金额
 	PaymentRequestDetails: [],
 	SampleReceipts: [] // 已选择的样品收据
 });
@@ -1611,7 +1671,8 @@ const FormHandler = {
 			RelatedDocumentID: Number(detail.relatedDocumentID) || Number(detail.id) || 0,
 			IsDeleted: 0, // 默认未删除
 			ExpenseName: detail.expenseName || '',
-			PaymentRequestID: PaymentRequestID.value || 0
+			PaymentRequestID: PaymentRequestID.value || 0,
+			UnpaidAmountID: Number(detail.unpaidAmountID) || 0 // 未支付款项ID
 		}));
 
 		// 构建SampleReceipts数组
@@ -1649,6 +1710,12 @@ const FormHandler = {
 			};
 		});
 
+		// 计算本次申请金额（ActualApplicationAmount）
+		// 本次申请金额 = 付款明细中所有明细项的本次申请金额之和
+		const actualApplicationAmount = CostDetailsTbaleData.value.reduce((sum, row) => {
+			return sum + (parseFloat(row.currentPaymentAmount) || 0);
+		}, 0);
+
 		return {
 			id: isEdit ? PaymentRequestID.value : 0,
 			ApplicationNumber: addpaymentrequestform.value.applicationNumber,
@@ -1673,6 +1740,7 @@ const FormHandler = {
 			CompanyType: getCurrentCompanyType(),
 			RelatedContract: addpaymentrequestform.value.relatedContract || '', // 关联合同字段
 			RelatedCustomer: addpaymentrequestform.value.relatedCustomer ? Number(addpaymentrequestform.value.relatedCustomer) : null, // 相关客户字段（可空整数）
+			ActualApplicationAmount: actualApplicationAmount, // 本次申请金额
 			PaymentRequestDetails: processedDetails,
 			SampleReceipts: sampleReceipts
 		};
@@ -2052,11 +2120,14 @@ const CheckPaymentRequest = async (row) => {
 
 				if (unpaidResponse && unpaidResponse.code === 200) {
 					UnpaidDetailsTbaleData.value = unpaidResponse.data || [];
-					// 处理contractStatus显示
+					// 处理contractStatus显示，并保存原始数据到Map
 					UnpaidDetailsTbaleData.value.forEach((element) => {
 						// 保存原始的contractStatus数值，同时添加显示用的contractStatusLabel
 						element.contractStatusOriginal = element.contractStatus; // 保存原始数值
 						element.contractStatus = state.optionss.hr_contract_status.find((item) => item.dictValue == element.contractStatus)?.dictLabel || '';
+						// 保存原始未支付款项数据到Map，用于恢复时使用
+						const key = `${element.expenseName}_${element.relatedDocumentsNo}_${element.relatedDocumentType}`;
+						originalUnpaidItemsMap.value.set(key, { ...element });
 					});
 				} else {
 					UnpaidDetailsTbaleData.value = [];
@@ -2303,15 +2374,12 @@ const CheckPaymentRequest = async (row) => {
 			element.paidAmount = detail.paidAmount;
 			element.unpaidAmount = detail.unpaidAmount;
 			// —— 列表展示所需的字段别名（与“未支付款项详情”一致） —— //
-			element.depositPaidAmount = detail.deposit || 0;       // 已付定金
-			element.depositUnpaidAmount = detail.depositUnpaidAmount || 0; // 未付定金（如果后端没有该字段则为0）
+			element.depositPaidAmount = detail.deposit || 0;       // 已付预付款
+			element.depositUnpaidAmount = detail.depositUnpaidAmount || 0; // 未付预付款（如果后端没有该字段则为0）
 			element.goodsPaidAmount = detail.paidAmount || 0;      // 已付货款
 			element.goodsUnpaidAmount = detail.unpaidAmount || 0;  // 未付货款
 			element.contractStatusOriginal = detail.contractStatus; // 保存原始contractStatus数值
 			element.contractStatus = state.optionss.hr_contract_status.find((item) => item.dictValue == detail.contractStatus)?.dictLabel || ''; // 显示用的标签
-			// 确保 currentPaymentAmount 可编辑
-			element.currentPaymentAmount = detail.paymentAmount || 0;
-			element.remark = detail.remark;
 
 			// 新增字段映射 - 使用现有字段或提供默认值
 			element.expenseName = detail.expenseName || '未设置费用名称';
@@ -2319,7 +2387,17 @@ const CheckPaymentRequest = async (row) => {
 			element.relatedDocumentTypeName = detail.relatedDocumentTypeName || '未设置单据类型';
 			element.relatedDocumentID = detail.relatedDocumentID || detail.shippingOrderID || 0;
 			element.relatedDocumentsNo = detail.relatedDocumentsNo || detail.invoiceNumber || detail.purchaseContractNumber || '';
+			// 金额：使用接口返回的amount字段
 			element.amount = detail.amount || detail.totalGoodsValue || detail.actualShippingAmount || 0;
+
+			// 已申请金额：使用接口返回的appliedAmount字段
+			element.appliedAmount = detail.appliedAmount || 0;
+
+			// 本次申请金额：使用接口返回的amountAlreadyApplied字段
+			element.currentPaymentAmount = detail.amountAlreadyApplied || 0;
+			// 未支付款项ID：使用接口返回的UnpaidAmountID字段
+			element.unpaidAmountID = detail.UnpaidAmountID || detail.unpaidAmountID || 0;
+			element.remark = detail.remark;
 
 			// 兼容旧字段
 			element.relatedmodules = detail.relatedModules?.toString() || '0';
@@ -2339,10 +2417,28 @@ const CheckPaymentRequest = async (row) => {
 					selectedUnpaidItemIds.value.add(unpaidItem.id);
 				}
 			}
+
+			// 保存付款明细对应的原始未支付款项数据到Map（用于恢复时使用）
+			// 构建原始未支付款项数据结构，使用接口返回的appliedAmount字段（已申请金额）
+			const originalUnpaidKey = `${element.expenseName}_${element.relatedDocumentsNo}_${element.relatedDocumentType}`;
+			if (!originalUnpaidItemsMap.value.has(originalUnpaidKey)) {
+				const originalUnpaidItem = {
+					id: element.id || 0,
+					expenseName: element.expenseName || '',
+					relatedDocumentType: element.relatedDocumentType || 0,
+					relatedDocumentTypeName: element.relatedDocumentTypeName || '',
+					relatedDocumentsNo: element.relatedDocumentsNo || '',
+					amount: element.amount || 0,
+					appliedAmount: element.appliedAmount || 0, // 使用接口返回的appliedAmount（已申请金额）
+					contractStatus: element.contractStatusOriginal || 0,
+					contractStatusOriginal: element.contractStatusOriginal || 0
+				};
+				originalUnpaidItemsMap.value.set(originalUnpaidKey, originalUnpaidItem);
+			}
 		});
 
-		// 重新计算总金额
-		CalculatetotalAmount();
+		// 查看详情时不需要重新计算总金额，直接使用接口返回的值
+		// CalculatetotalAmount();
 
 		getApprovalFlow(row.id).then(() => {
 			const isCurrentUserApprover = checkIfCurrentUserIsApprover();
@@ -2486,7 +2582,6 @@ const EditPayment = async () => {
 					supplierID: addpaymentrequestform.value.payeeCode
 				}
 			});
-
 			if (unpaidResponse && unpaidResponse.code === 200) {
 				const allUnpaidItems = unpaidResponse.data || [];
 				// 过滤掉已经存在于付款明细中的单据
@@ -2499,10 +2594,13 @@ const EditPayment = async () => {
 				});
 				UnpaidDetailsTbaleData.value = filteredUnpaidItems;
 
-				// 处理contractStatus显示
+				// 处理contractStatus显示，并保存原始数据到Map
 				UnpaidDetailsTbaleData.value.forEach((element) => {
 					element.contractStatusOriginal = element.contractStatus; // 保存原始数值
 					element.contractStatus = state.optionss.hr_contract_status.find((item) => item.dictValue == element.contractStatus)?.dictLabel || '';
+					// 保存原始未支付款项数据到Map，用于恢复时使用
+					const key = `${element.expenseName}_${element.relatedDocumentsNo}_${element.relatedDocumentType}`;
+					originalUnpaidItemsMap.value.set(key, { ...element });
 				});
 			} else {
 				UnpaidDetailsTbaleData.value = [];
@@ -2657,63 +2755,6 @@ const submitForReview = () => {
 		}
 	});
 };
-// const submitForReview = () => {
-// 	paymentFormRef.value.validate((valid) => {
-// 		if (valid) {
-// 			ElMessageBox.confirm('确定提交审核吗?', '提示', {
-// 				confirmButtonText: '确定',
-// 				cancelButtonText: '取消',
-// 				type: 'warning'
-// 			}).then(() => {
-// 				// 发送提交审核请求
-// 				request({
-// 					url: 'PaymentRequest/SubmitForReview/SubmitPaymentReview',
-// 					method: 'GET',
-// 					params: {
-// 						PaymentID: PaymentRequestID.value
-// 					}
-// 				}).then(response => {
-// 					if (response.code === 200) {
-// 						ElMessage({
-// 							message: response.msg || "付款申请单已提交审核！",
-// 							type: "success"
-// 						});
-// 						// 隐藏所有按钮
-// 						showEditBtn.value = false;
-// 						showSubmitReviewBtn.value = false;
-// 						IsDisabled.value = true;
-// 						isEditSaveBtnShow.value = false;
-// 						isSaveBtnShow.value = false;
-// 						isCheckAndEdit.value = false;
-// 						PaymentRequestID.value = 0;
-
-// 						// 关闭对话框
-// 						addpaymentrequestdialog.value = false;
-
-// 						// 刷新列表
-// 						GetPaymentRequestList(
-// 							paymentrequesttableDataCurrentPage.value,
-// 							paymentrequesttableDataPageSize.value
-// 						);
-// 					} else {
-// 						ElMessage.error(response.msg || '提交审核失败');
-// 					}
-// 				}).catch(error => {
-// 					console.error('提交审核失败:', error);
-// 					ElMessage.error('提交审核失败，请重试');
-// 				});
-// 			}).catch(() => {
-// 				ElMessage({
-// 					type: 'info',
-// 					message: '已取消提交审核'
-// 				});
-// 			});
-// 		} else {
-// 			ElMessage.error('请填写必填项');
-// 			return false;
-// 		}
-// 	});
-// };
 
 // 清空表单数据的方法
 const resetForm = () => {
@@ -2778,6 +2819,9 @@ const resetForm = () => {
 	// 清空已选择的未付款项
 	selectedUnpaidItemIds.value.clear();
 
+	// 清空原始未支付款项数据Map
+	originalUnpaidItemsMap.value.clear();
+
 	// 清空收寄样列表
 	sampleCollectionTableData.value = [];
 	showSampleCollection.value = false;
@@ -2803,11 +2847,20 @@ const CalculatetotalAmount = () => {
 
 	// 遍历费用明细表格中的所有行
 	CostDetailsTbaleData.value.forEach(row => {
-		// 如果是工厂付款，自动设置本次付款金额为对应的金额
+		// 如果是工厂付款，自动设置本次付款金额为对应的金额 - 已申请金额
 		if (addpaymentrequestform.value.paymentCategory === '1') {
 			// 优先使用amount字段，如果没有则使用totalGoodsValue，最后使用actualShippingAmount
 			const amount = parseFloat(row.amount) || parseFloat(row.totalGoodsValue) || parseFloat(row.actualShippingAmount) || 0;
-			row.currentPaymentAmount = amount.toFixed(2);
+			// 获取已申请金额
+			const appliedAmount = parseFloat(row.appliedAmount || 0);
+			// 本次申请金额 = 金额 - 已申请金额
+			const defaultCurrentPaymentAmount = Math.max(0, amount - appliedAmount);
+			// 如果当前值为空、0、或者等于金额（说明是旧逻辑设置的），则更新为计算后的值
+			// 否则保持用户输入的值
+			const currentValue = parseFloat(row.currentPaymentAmount || 0);
+			if (!row.currentPaymentAmount || currentValue === 0 || currentValue === amount) {
+				row.currentPaymentAmount = defaultCurrentPaymentAmount.toFixed(2);
+			}
 		}
 
 		// 将字符串转换为数字并累加
@@ -2835,6 +2888,8 @@ const CalculatetotalAmount = () => {
 
 // 存储已选择的未付款项ID
 const selectedUnpaidItemIds = ref(new Set());
+// 存储原始未支付款项数据（包含接口返回的appliedAmount），用于恢复时使用
+const originalUnpaidItemsMap = ref(new Map());
 
 // 检查项目是否已被选择
 const isItemSelected = (row) => {
@@ -2866,7 +2921,7 @@ const isIndeterminateUnpaid = computed(() => {
 // 统一的付款明细处理工具函数
 const PaymentDetailsHandler = {
 	// 创建新的付款明细项
-	createPaymentDetailItem(row) {
+	createPaymentDetailItem(row, existingId = null) {
 		// 计算今日日期字符串，作为默认的关联日期
 		const today = new Date();
 		const year = today.getFullYear();
@@ -2874,8 +2929,15 @@ const PaymentDetailsHandler = {
 		const day = String(today.getDate()).padStart(2, '0');
 		const todayStr = `${year}-${month}-${day}`;
 
+		// 获取已申请金额（优先使用appliedAmount，如果没有则使用applicationamount）
+		const appliedAmount = parseFloat(row.appliedAmount || row.applicationamount || 0);
+		// 获取金额
+		const amount = parseFloat(row.amount || 0);
+		// 本次申请金额默认值 = 金额 - 已申请金额
+		const defaultCurrentPaymentAmount = Math.max(0, amount - appliedAmount);
+
 		return {
-			id: row.id || 0, // 使用未支付款项的原始ID
+			id: existingId !== null && existingId !== undefined ? existingId : 0, // 如果提供了已存在的ID则使用，否则为0（新增）
 			pcid: row.relatedDocumentID || 0,
 			shippingOrderNumber: row.relatedDocumentsNo || '',
 			ShippingOrderNumberOptions: [],
@@ -2888,8 +2950,12 @@ const PaymentDetailsHandler = {
 			depositUnpaidAmount: 0,
 			goodsPaidAmount: 0,
 			goodsUnpaidAmount: row.amount || 0,
-			// 默认本次付款金额：使用amount字段
-			currentPaymentAmount: row.amount || 0,
+			// 已申请金额
+			appliedAmount: appliedAmount,
+			// 本次申请金额默认值 = 金额 - 已申请金额
+			currentPaymentAmount: defaultCurrentPaymentAmount,
+			// 未支付款项ID（用于保存时传递到服务端）：优先使用unpaidAmountID，如果没有则使用row.id
+			unpaidAmountID: row.unpaidAmountID || row.id || 0,
 			contractStatus: '',
 			contractStatusOriginal: 0,
 			relevantdates: todayStr,
@@ -2903,7 +2969,7 @@ const PaymentDetailsHandler = {
 		};
 	},
 
-	// 创建原始未付款项
+	// 创建原始未付款项（仅在无法从Map获取原始数据时使用）
 	createOriginalUnpaidItem(item) {
 		return {
 			id: item.id || Date.now() + Math.random(),
@@ -2914,6 +2980,7 @@ const PaymentDetailsHandler = {
 			relatedDocumentTypeName: item.relatedDocumentTypeName || '',
 			relatedDocumentsNo: item.relatedDocumentsNo || '',
 			amount: item.amount || 0,
+			appliedAmount: item.appliedAmount || 0, // 已申请金额字段
 			// 兼容旧字段
 			invoiceNumbers: item.shippingOrderNumber,
 			purchaseContractNumber: item.purchaseContractNumber,
@@ -2955,7 +3022,22 @@ const PaymentDetailsHandler = {
 
 	// 添加项目到付款明细
 	addToPaymentDetails(row) {
-		const newDetail = this.createPaymentDetailItem(row);
+		// 保存原始未支付款项数据到Map，用于恢复时使用
+		const key = `${row.expenseName}_${row.relatedDocumentsNo}_${row.relatedDocumentType}`;
+		if (!originalUnpaidItemsMap.value.has(key)) {
+			originalUnpaidItemsMap.value.set(key, { ...row });
+		}
+
+		// 检查是否已存在相同的付款明细（编辑模式下，可能已经存在）
+		const existingDetail = CostDetailsTbaleData.value.find(item =>
+			item.expenseName === row.expenseName &&
+			item.relatedDocumentsNo === row.relatedDocumentsNo &&
+			item.relatedDocumentType === row.relatedDocumentType
+		);
+
+		// 如果已存在，保留原有的id；否则创建新的明细（id为0）
+		const newDetail = this.createPaymentDetailItem(row, existingDetail?.id);
+
 		CostDetailsTbaleData.value.push(newDetail);
 		selectedUnpaidItemIds.value.add(row.id);
 		this.removeFromUnpaidDetails(row);
@@ -2966,7 +3048,12 @@ const PaymentDetailsHandler = {
 	removeFromPaymentDetailsAndAddToUnpaid(row) {
 		selectedUnpaidItemIds.value.delete(row.relatedDocumentID || row.id);
 		this.removeFromPaymentDetails(row);
-		UnpaidDetailsTbaleData.value.push(row);
+		// 从Map中查找原始未支付款项数据（包含接口返回的appliedAmount）
+		const key = `${row.expenseName}_${row.relatedDocumentsNo}_${row.relatedDocumentType}`;
+		const originalItem = originalUnpaidItemsMap.value.get(key);
+		// 如果找到原始数据，使用原始数据；否则使用当前数据
+		const itemToAdd = originalItem ? { ...originalItem } : { ...row };
+		UnpaidDetailsTbaleData.value.push(itemToAdd);
 		ElMessage.success('已从付款明细中移除');
 	}
 };
@@ -2998,6 +3085,11 @@ const handleSelectAllUnpaid = (checked) => {
 			);
 
 			if (!alreadyExists) {
+				// 保存原始未支付款项数据到Map，用于恢复时使用
+				const key = `${row.expenseName}_${row.relatedDocumentsNo}_${row.relatedDocumentType}`;
+				if (!originalUnpaidItemsMap.value.has(key)) {
+					originalUnpaidItemsMap.value.set(key, { ...row });
+				}
 				const newDetail = PaymentDetailsHandler.createPaymentDetailItem(row);
 				CostDetailsTbaleData.value.push(newDetail);
 				selectedUnpaidItemIds.value.add(row.id);
@@ -3010,9 +3102,13 @@ const handleSelectAllUnpaid = (checked) => {
 		ElMessage.success('已全选所有未付款项');
 	} else {
 		// 取消全选：将所有已选择的项目移回未支付款项详情列表
-		const itemsToMoveBack = CostDetailsTbaleData.value.map(item =>
-			PaymentDetailsHandler.createOriginalUnpaidItem(item)
-		);
+		const itemsToMoveBack = CostDetailsTbaleData.value.map(item => {
+			// 优先从Map中查找原始未支付款项数据（包含接口返回的appliedAmount）
+			const key = `${item.expenseName}_${item.relatedDocumentsNo}_${item.relatedDocumentType}`;
+			const originalItem = originalUnpaidItemsMap.value.get(key);
+			// 如果找到原始数据，使用原始数据；否则使用createOriginalUnpaidItem创建
+			return originalItem ? { ...originalItem } : PaymentDetailsHandler.createOriginalUnpaidItem(item);
+		});
 
 		// 清空付款明细
 		CostDetailsTbaleData.value = [];
@@ -3050,9 +3146,11 @@ const PaymentAmountValidator = {
 	// 检查本次付款金额是否超过实际金额
 	isPaymentAmountExceeded(row) {
 		const currentPaymentAmount = parseFloat(row.currentPaymentAmount) || 0;
+		const appliedAmount = parseFloat(row.appliedAmount) || 0;
 		// 优先使用amount字段，如果没有则使用totalGoodsValue，最后使用actualShippingAmount
 		const amount = parseFloat(row.amount) || parseFloat(row.totalGoodsValue) || parseFloat(row.actualShippingAmount) || 0;
-		return currentPaymentAmount > amount;
+		// 本次申请金额 + 已申请金额不能超过金额
+		return (currentPaymentAmount + appliedAmount) > amount;
 	},
 
 	// 检查是否有超过金额的情况
@@ -3070,15 +3168,15 @@ const PaymentAmountValidator = {
 		const totalPaymentAmount = this.getTotalPaymentAmount();
 		const applicationAmount = this.getApplicationAmount();
 
-		// 检查是否有超过金额的情况
+		// 检查是否有超过金额的情况（本次申请金额 + 已申请金额 > 金额）
 		if (this.hasExceededAmount()) {
-			ElMessage.error('存在本次付款金额超过金额的情况，请检查');
+			ElMessage.error('存在本次申请金额+已申请金额超过金额的情况，请检查');
 			return false;
 		}
 
-		// 本次付款金额合计必须完全等于申请金额
-		if (totalPaymentAmount !== applicationAmount) {
-			ElMessage.error(`付款明细总金额(${totalPaymentAmount.toFixed(2)})与申请金额(${applicationAmount.toFixed(2)})不匹配，必须100%匹配`);
+		// 本次付款金额合计不能超过申请金额，但可以少于申请金额
+		if (totalPaymentAmount > applicationAmount) {
+			ElMessage.error(`付款明细总金额(${totalPaymentAmount.toFixed(2)})不能超过申请金额(${applicationAmount.toFixed(2)})`);
 			return false;
 		}
 
@@ -3098,7 +3196,8 @@ const PaymentAmountValidator = {
 		// 检查是否有超过金额的情况
 		const hasExceeded = this.hasExceededAmount();
 
-		return totalPayment === applicationAmount && !hasExceeded;
+		// 本次付款金额合计不能超过申请金额，但可以少于申请金额
+		return totalPayment <= applicationAmount && !hasExceeded;
 	},
 
 	// 获取付款金额警告类型
@@ -3181,9 +3280,12 @@ const CostDetailsTbaleDatahandleDelete = (index: number) => {
 		);
 
 		if (!alreadyExists) {
-			// 重新添加到未支付款项列表中
-			const originalUnpaidItem = PaymentDetailsHandler.createOriginalUnpaidItem(deletedItem);
-			UnpaidDetailsTbaleData.value.push(originalUnpaidItem);
+			// 从Map中查找原始未支付款项数据（包含接口返回的appliedAmount）
+			const key = `${deletedItem.expenseName}_${deletedItem.relatedDocumentsNo}_${deletedItem.relatedDocumentType}`;
+			const originalItem = originalUnpaidItemsMap.value.get(key);
+			// 如果找到原始数据，使用原始数据；否则使用createOriginalUnpaidItem创建
+			const itemToAdd = originalItem ? { ...originalItem } : PaymentDetailsHandler.createOriginalUnpaidItem(deletedItem);
+			UnpaidDetailsTbaleData.value.push(itemToAdd);
 		}
 
 		// 从已选择列表中移除
@@ -3247,6 +3349,11 @@ const paymentNameChange = async () => {
 		});
 		if (unpaidResponse && unpaidResponse.code === 200) {
 			UnpaidDetailsTbaleData.value = unpaidResponse.data || [];
+			// 保存原始未支付款项数据到Map，用于恢复时使用
+			UnpaidDetailsTbaleData.value.forEach((element) => {
+				const key = `${element.expenseName}_${element.relatedDocumentsNo}_${element.relatedDocumentType}`;
+				originalUnpaidItemsMap.value.set(key, { ...element });
+			});
 			// 新API数据结构不需要处理contractStatus，直接使用返回的数据
 		} else {
 			UnpaidDetailsTbaleData.value = [];
@@ -3995,6 +4102,23 @@ const calculateTotalPaidExpressFee = () => {
 
 // 处理手动输入收款单位时的逻辑
 const handleManualPayeeInput = () => {
+	// 如果收款单位名称被清空，清空相关字段
+	if (!addpaymentrequestform.value.payeeName || addpaymentrequestform.value.payeeName.trim() === '') {
+		// 清空开户银行
+		addpaymentrequestform.value.bankName = '';
+		// 清空银行账号
+		addpaymentrequestform.value.bankAccount = '';
+		// 清空供应商银行账号列表
+		supplierBankAccounts.value = [];
+		// 清空未支付款项详情
+		UnpaidDetailsTbaleData.value = [];
+		// 清空原始未支付款项数据Map
+		originalUnpaidItemsMap.value.clear();
+		// 清空已选择的未付款项
+		selectedUnpaidItemIds.value.clear();
+		return;
+	}
+
 	// 当手动输入收款单位时，清空相关的银行信息，让用户手动输入
 	if (isDailyExpenseWithManualInput() || isManualBankInput() || isCustomerMatterWithManualInput()) {
 		// 清空银行账号下拉选项
@@ -4147,7 +4271,24 @@ const DeleteCustomerProfile = (row) => {
 	});
 };
 
+//本次申请金额输入
+const handleCurrentPaymentAmountInput = (row) => {
+	const currentPaymentAmount = parseFloat(row.currentPaymentAmount) || 0;
+	const appliedAmount = parseFloat(row.appliedAmount) || 0;
+	// 优先使用amount字段，如果没有则使用totalGoodsValue，最后使用actualShippingAmount
+	const amount = parseFloat(row.amount) || parseFloat(row.totalGoodsValue) || parseFloat(row.actualShippingAmount) || 0;
 
+	// 验证：本次申请金额 + 已申请金额不能超过金额
+	if ((currentPaymentAmount + appliedAmount) > amount) {
+		ElMessage.warning(`本次申请金额(${currentPaymentAmount.toFixed(2)}) + 已申请金额(${appliedAmount.toFixed(2)}) = ${(currentPaymentAmount + appliedAmount).toFixed(2)}，超过了金额(${amount.toFixed(2)})，请调整`);
+		// 自动调整为最大可申请金额
+		const maxCurrentPaymentAmount = Math.max(0, amount - appliedAmount);
+		row.currentPaymentAmount = maxCurrentPaymentAmount.toFixed(2);
+	}
+
+	// 重新计算总金额
+	CalculatetotalAmount();
+};
 </script>
 
 <style scoped>
