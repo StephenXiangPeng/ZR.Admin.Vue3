@@ -417,19 +417,19 @@
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item label="预付款比例" v-show=DepositShow prop="Depositratio">
+								<el-form-item label="预付款金额" v-show=DepositShow prop="Depositratio">
 									<el-input v-model="Newcontractform.Depositratio" style="width: 300px"
 										:disabled="isDisabled" size="default"></el-input>
 								</el-form-item>
 							</el-col>
-						</el-row>
-						<el-row>
-							<el-col :span="6" v-if="false">
+							<el-col :span="6" v-if="hasReceivedDepositShow">
 								<el-form-item label="已收预付款" v-show=DepositShow prop="receivedDeposit">
 									<el-input v-model="Newcontractform.receivedDeposit" style="width: 300px"
 										:disabled="isDisabled" size="default"></el-input>
 								</el-form-item>
 							</el-col>
+						</el-row>
+						<el-row>
 							<el-col :span="6" v-if="false">
 								<el-form-item label="预付款日期" v-show=DepositShow prop="depositDate">
 									<el-date-picker v-model="Newcontractform.depositDate" type="date"
@@ -1192,6 +1192,7 @@ import exchangeRateService from '@/utils/exchangeRateService';
 const activeSearchProductTab = ref('productInfoTab');
 const selectedCustomerId = ref(null);
 const historicalProducts = ref([]);
+const hasReceivedDepositShow = ref(false);//是否显示已收预付款
 
 // 监听标签页切换
 watch(activeSearchProductTab, (newTabName) => {
@@ -3504,8 +3505,6 @@ const openContractDialog = () => {
 	contractDialog.value = true;
 }
 
-
-
 // 获取合同编辑锁状态
 const getContractEditLock = async (contractId) => {
 	try {
@@ -3710,6 +3709,11 @@ const checkContractsDetails = async (row) => {
 				contractId: row.id
 			}
 		}).then(response => {
+			if (response.data.contract.receivedDeposit > 0) {
+				hasReceivedDepositShow.value = true;
+			} else {
+				hasReceivedDepositShow.value = false;
+			}
 			if (response.data.contractProducts.length > 0) {
 				productData.value = [];
 				response.data.contractProducts.forEach(element => {

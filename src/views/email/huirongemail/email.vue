@@ -2010,7 +2010,7 @@ const EditEmailTags = async () => {
 			data: EmailModel
 		})
 
-		if (response != null) {
+		if (response != null && response.code === 200) {
 			ElMessage({
 				message: response.msg,
 				type: 'success'
@@ -2018,12 +2018,13 @@ const EditEmailTags = async () => {
 
 			// 标签更新成功后，同步更新前端数据
 			await updateLocalEmailTags(EmailModel.id, EmailTagcheckboxGroup.value)
-
 		} else {
 			console.error('更新邮件标签失败')
+			throw new Error(response?.msg || '更新邮件标签失败')
 		}
 	} catch (error) {
 		console.error('更新邮件标签失败！😔错误内容：', error)
+		throw error // 重新抛出异常，让调用者能够捕获
 	}
 }
 
@@ -2744,6 +2745,40 @@ const CheckShowEmailDetail = async () => {
 		}
 
 		if (currentEmail.value) {
+			// 先检查前端是否已经选择了标签
+			if (EmailTagcheckboxGroup.value && EmailTagcheckboxGroup.value.length > 0) {
+				// 如果前端有标签，说明用户已经选择了标签（即使还没保存），需要先保存标签到后端
+				try {
+					await EditEmailTags()
+					// 保存成功，允许返回
+					resolve(true)
+					return
+				} catch (error) {
+					console.error('保存标签失败:', error)
+					// 保存失败，不允许返回，提示用户重新保存
+					ElMessageBox.confirm(
+						'标签保存失败，请重新保存标签后再返回。是否现在保存标签？',
+						'提示',
+						{
+							confirmButtonText: '重新保存',
+							cancelButtonText: '取消',
+							type: 'error',
+							closeOnClickModal: false,
+							closeOnPressEscape: false
+						}
+					).then(() => {
+						// 用户选择重新保存，打开标签面板
+						tagPopoverVisible.value = true
+						resolve(false)
+					}).catch(() => {
+						// 用户取消，不允许返回
+						resolve(false)
+					})
+					return
+				}
+			}
+
+			// 如果前端没有标签，再检查后端是否有标签
 			try {
 				const res = await request({
 					url: 'Email/CheckEmailTagsByEmailID/CheckEmailTags',
