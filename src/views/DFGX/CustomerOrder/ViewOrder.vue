@@ -18,12 +18,22 @@
           </el-input>
         </el-col>
         <el-col :span="6">
-          <el-input
+          <el-select
             v-model="searchForm.customerName"
             placeholder="Customer Name"
+            filterable
             clearable
+            :loading="loadingCustomers"
+            :disabled="isDeptSix"
+            @change="handleSearch"
             @clear="handleSearch">
-          </el-input>
+            <el-option
+              v-for="customer in customerOptions"
+              :key="customer.dictValue"
+              :label="customer.dictLabel"
+              :value="customer.dictLabel"
+            />
+          </el-select>
         </el-col>
         <el-col :span="6">
           <el-select v-model="searchForm.status" placeholder="Order Status" clearable @change="handleSearch">
@@ -372,7 +382,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Document } from '@element-plus/icons-vue'
@@ -381,8 +391,11 @@ import { listCustomerOrders, getCustomerOrder, updateOrderStatus, delCustomerOrd
 import { getOrderDetailsByOrderId } from '@/api/DFGX/orderDetails'
 import { getOrderStatusHistoryByOrderId, recordOrderStatusChange } from '@/api/DFGX/orderStatusHistory'
 import { getCompleteOrder } from '@/api/DFGX/orderManagement'
+import { getCustomerUserList } from '@/api/DFGX/priceManagement'
+import useUserStore from '@/store/modules/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 // 搜索表单
 const searchForm = reactive({
@@ -413,6 +426,22 @@ const statusHistory = ref<any[]>([])
 
 // 订单列表数据
 const orderList = ref<any[]>([])
+
+// 客户下拉选项
+const customerOptions = ref<{ dictValue: number; dictLabel: string }[]>([])
+const loadingCustomers = ref(false)
+
+const isDeptSix = computed(() => {
+  const userInfo = userStore.userInfo as any
+  const deptId = userInfo?.deptId ?? userInfo?.dept_id ?? userInfo?.dept?.deptId
+  //生产环境为7，本地为6
+  return Number(deptId) === 7
+})
+
+const lockedCustomerName = computed(() => {
+  const userInfo = userStore.userInfo as any
+  return userStore.name || userStore.userName || userInfo?.nickName || userInfo?.userName || ''
+})
 
 // 订单状态选项 (optionType = 16, value = 1-6)
 const orderStatusOptions = ref([
@@ -452,6 +481,30 @@ const getOrderList = async () => {
     ElMessage.error('Failed to get order list')
   } finally {
     loading.value = false
+  }
+}
+
+// 获取客户用户列表
+const loadCustomerUsers = async () => {
+  loadingCustomers.value = true
+  try {
+    const response: any = await getCustomerUserList()
+    customerOptions.value = response?.data || []
+  } catch (error) {
+    console.error('获取客户用户列表失败:', error)
+    ElMessage.error('Failed to get customer list')
+    customerOptions.value = []
+  } finally {
+    loadingCustomers.value = false
+  }
+}
+
+const applyLockedCustomer = () => {
+  if (!isDeptSix.value) return
+  const nextName = lockedCustomerName.value
+  if (nextName && searchForm.customerName !== nextName) {
+    searchForm.customerName = nextName
+    handleSearch()
   }
 }
 
@@ -535,7 +588,7 @@ const handleSearch = () => {
 // 重置搜索
 const resetSearch = () => {
   searchForm.orderNo = ''
-  searchForm.customerName = ''
+  searchForm.customerName = isDeptSix.value ? lockedCustomerName.value : ''
   searchForm.status = ''
   searchForm.beginTime = ''
   searchForm.endTime = ''
@@ -756,8 +809,14 @@ const goToPlaceOrder = () => {
 }
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
+  await loadCustomerUsers()
+  applyLockedCustomer()
   getOrderList()
+})
+
+watch([isDeptSix, lockedCustomerName], () => {
+  applyLockedCustomer()
 })
 </script>
 
