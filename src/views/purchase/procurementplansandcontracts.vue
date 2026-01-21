@@ -883,11 +883,11 @@ const notifySales = () => {
 					viewDetailsDialog.value = false
 					//更新生成采购合同状态
 					updateGenerateStatusByContractId(editRequest.contractId);
-					// 刷新列表
-					ProcurementRequirements(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value)
 				} else {
 					ElMessage.error('通知失败，请重试')
 				}
+				// 刷新列表
+				ProcurementRequirements(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value)
 			})
 			.catch(error => {
 				console.error('通知销售失败:', error)

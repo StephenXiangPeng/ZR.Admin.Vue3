@@ -427,6 +427,23 @@
             </el-table-column>
           </el-table>
         </el-tab-pane>
+        <el-tab-pane label="采购价格变更" name="purchasePriceChange">
+          <el-table :data="purchasePriceChangeList" :height="400" style="width: 100%"
+            @row-dblclick="handlePurchasePriceChangeRowDblClick">
+            <el-table-column prop="contractNumber" label="销售合同号" width="160"></el-table-column>
+            <el-table-column prop="create_time" label="创建时间" width="180">
+              <template #default="{ row }">
+                <span>{{ formatDate(row.create_time || row.createTime) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column fixed="right" prop="operate" label="操作" width="120" align="center">
+              <template v-slot:default="scope">
+                <el-button link type="primary" size="small"
+                  @click="viewPurchasePriceChangeContract(scope.row)">查看详情</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
         <el-tab-pane name="reject">
           <template #label>
             <span class="custom-tabs-label">
@@ -5192,7 +5209,13 @@ const calculatePendingCount = async () => {
       totalCount += rejectContractResponse.data.length;
     }
 
-    // 6. 获取付款任务数量（仅部门ID为213时）
+    // 6. 获取采购价格变更合同数量
+    const priceChangeList = await getPurchasePriceChangeContracts()
+    if (priceChangeList && priceChangeList.length > 0) {
+      totalCount += priceChangeList.length
+    }
+
+    // 7. 获取付款任务数量（仅部门ID为213时）
     if (userStore.userInfo && userStore.userInfo.deptId === 213) {
       const paymentTaskResponse = await getPaymentTaskList();
       if (paymentTaskResponse && paymentTaskResponse.length > 0) {
@@ -6294,6 +6317,9 @@ const rejectContractList = ref([])
 // 付款任务列表数据
 const paymentTaskList = ref([])
 
+// 采购价格变更合同列表数据
+const purchasePriceChangeList = ref([])
+
 // 获取询价列表
 const getInquiryList = async () => {
   try {
@@ -6313,6 +6339,34 @@ const getInquiryList = async () => {
   } catch (error) {
     console.error('获取询价列表失败', error)
   }
+}
+
+// 获取采购价格变更合同列表
+const getPurchasePriceChangeContracts = async (showError = false) => {
+  try {
+    const response = await request({
+      url: 'Contracts/GetContractListByPurchaseUnitPrice/GetContractList',
+      method: 'GET'
+    })
+    if (response.code === 200) {
+      const list = Array.isArray(response.data)
+        ? response.data
+        : (response.data?.result || [])
+      purchasePriceChangeList.value = list
+      return list
+    }
+    purchasePriceChangeList.value = []
+    if (showError) {
+      ElMessage.error('获取采购价格变更合同失败')
+    }
+  } catch (error) {
+    console.error('获取采购价格变更合同失败:', error)
+    purchasePriceChangeList.value = []
+    if (showError) {
+      ElMessage.error('获取采购价格变更合同失败，请稍后重试')
+    }
+  }
+  return []
 }
 
 // 处理询价需求表格的双击事件
@@ -7009,10 +7063,36 @@ const handleTabClick = (tab) => {
     GetRejectContractList()
     // 重新计算pendingCount
     calculatePendingCount()
+  } else if (tab.props.name === 'purchasePriceChange') {
+    // 当切换到采购价格变更tab时，重新加载数据
+    getPurchasePriceChangeContracts(true)
   } else if (tab.props.name === 'paymentTask') {
     // 当切换到付款任务tab时，重新加载数据
     getPaymentTaskList()
   }
+}
+
+// 处理采购价格变更表格行双击事件
+const handlePurchasePriceChangeRowDblClick = (row) => {
+  console.log('双击采购价格变更合同:', row)
+  viewPurchasePriceChangeContract(row)
+}
+
+// 查看采购价格变更合同详情
+const viewPurchasePriceChangeContract = (row) => {
+  const contractId = row?.id || row?.contractId || row?.ID || row?.Id
+  if (!contractId) {
+    ElMessage.warning('无法获取销售合同ID')
+    return
+  }
+  router.push({
+    path: '/sale/sale/salecontract',
+    query: {
+      contractId: contractId,
+      contractNumber: row.contractNumber,
+      viewDetail: 'true'
+    }
+  })
 }
 
 // 处理被驳回采购合同表格行双击事件
