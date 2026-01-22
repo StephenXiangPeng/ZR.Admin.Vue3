@@ -379,6 +379,28 @@
             </el-table-column>
           </el-table>
         </el-tab-pane>
+        <el-tab-pane name="inquiryReplied">
+          <template #label>
+            <span class="custom-tabs-label">
+              <el-icon>
+                <document />
+              </el-icon>
+              <el-badge :value="inquiryRepliedCount" :hidden="inquiryRepliedCount === 0">
+                <span>询价已回复</span>
+              </el-badge>
+            </span>
+          </template>
+          <el-table :data="inquiryRepliedList" :height="400" style="width: 100%"
+            @row-dblclick="handleInquiryRepliedRowDblClick">
+            <el-table-column prop="inquiry_number" label="询价单号" width="150"></el-table-column>
+            <el-table-column prop="subject" label="询价主题" width="200"></el-table-column>
+            <el-table-column prop="createTime" label="创建时间" width="180">
+              <template #default="scope">
+                {{ scope.row.createTime }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
         <el-tab-pane v-if="userStore.userInfo && userStore.userInfo.deptId === 210">
           <template #label>
             <span class="custom-tabs-label">
@@ -5296,7 +5318,19 @@ const calculatePendingCount = async () => {
       totalCount += approvalResponse.data.length;
     }
 
-    // 2. 获取询价需求数量
+    // 2. 获取询价已回复数量
+    const inquiryRepliedResponse = await request({
+      url: 'Inquiry/GetInquiryListByInquirer/GetInquiryList',
+      method: 'get'
+    });
+    if (inquiryRepliedResponse.code === 200) {
+      const repliedList = Array.isArray(inquiryRepliedResponse.data)
+        ? inquiryRepliedResponse.data
+        : (inquiryRepliedResponse.data?.result || []);
+      totalCount += repliedList.length;
+    }
+
+    // 3. 获取询价需求数量
     if (userStore.userInfo && userStore.userInfo.deptId === 210) {
       const inquiryResponse = await request({
         url: 'Inquiry/GetInquiryProductListByBuyer/GetInquiryProductList',
@@ -5311,7 +5345,7 @@ const calculatePendingCount = async () => {
         totalCount += inquiryResponse.data.result.length;
       }
 
-      // 3. 获取采购需求数量（同一个合同号只算一条记录）
+      // 4. 获取采购需求数量（同一个合同号只算一条记录）
       const procurementResponse = await request({
         url: 'PurchaseContracts/GetProcurementRequirements/GetList',
         method: 'get',
@@ -5329,7 +5363,7 @@ const calculatePendingCount = async () => {
         totalCount += uniqueContractNumbers.size;
       }
 
-      // 4. 获取被驳回的采购合同数量
+      // 5. 获取被驳回的采购合同数量
       const rejectPurchaseResponse = await request({
         url: 'PurchaseContracts/GetRejectPurchaseContractList/GetRejectList',
         method: 'get'
@@ -5339,7 +5373,7 @@ const calculatePendingCount = async () => {
       }
     }
 
-    // 5. 获取被驳回的销售合同数量
+    // 6. 获取被驳回的销售合同数量
     const rejectContractResponse = await request({
       url: 'Contracts/GetRejectContractsList/GetRejectList',
       method: 'get'
@@ -5348,13 +5382,13 @@ const calculatePendingCount = async () => {
       totalCount += rejectContractResponse.data.length;
     }
 
-    // 6. 获取采购价格变更合同数量
+    // 7. 获取采购价格变更合同数量
     const priceChangeList = await getPurchasePriceChangeContracts()
     if (priceChangeList && priceChangeList.length > 0) {
       totalCount += priceChangeList.length
     }
 
-    // 7. 获取付款任务数量（仅部门ID为213时）
+    // 8. 获取付款任务数量（仅部门ID为213时）
     if (userStore.userInfo && userStore.userInfo.deptId === 213) {
       const paymentTaskResponse = await getPaymentTaskList();
       if (paymentTaskResponse && paymentTaskResponse.length > 0) {
@@ -6446,6 +6480,9 @@ const handleRowDblClick = (row) => {
 
 // 询价列表数据
 const inquiryList = ref([])
+// 询价已回复列表数据
+const inquiryRepliedList = ref([])
+const inquiryRepliedCount = computed(() => inquiryRepliedList.value?.length || 0)
 
 // 被驳回的采购合同列表数据
 const rejectPurchaseContractList = ref([])
@@ -6480,6 +6517,23 @@ const getInquiryList = async () => {
   }
 }
 
+// 获取询价已回复列表
+const getInquiryRepliedList = async () => {
+  try {
+    const res = await request({
+      url: 'Inquiry/GetInquiryListByInquirer/GetInquiryList',
+      method: 'get',
+    })
+    if (res.code === 200) {
+      inquiryRepliedList.value = Array.isArray(res.data)
+        ? res.data
+        : (res.data?.result || [])
+    }
+  } catch (error) {
+    console.error('获取询价已回复列表失败', error)
+  }
+}
+
 // 获取采购价格变更合同列表
 const getPurchasePriceChangeContracts = async (showError = false) => {
   try {
@@ -6511,10 +6565,31 @@ const getPurchasePriceChangeContracts = async (showError = false) => {
 // 处理询价需求表格的双击事件
 const handleInquiryRowDblClick = (row) => {
   // 使用路由导航到requestquote页面，并通过query参数传递数据
+  const inquiryId = row?.inquiryID ?? row?.inquiryId ?? row?.id ?? row?.Id
+  if (!inquiryId) {
+    ElMessage.warning('无法获取询价单ID')
+    return
+  }
   router.push({
     path: '/purchase/requestquote',
     query: {
-      inquiryId: row.inquiryID,
+      inquiryId: inquiryId,
+      fromDashboard: 'true'
+    }
+  })
+}
+
+// 处理询价已回复表格的双击事件
+const handleInquiryRepliedRowDblClick = (row) => {
+  const inquiryId = row?.id ?? row?.Id ?? row?.inquiryID ?? row?.inquiryId
+  if (!inquiryId) {
+    ElMessage.warning('无法获取询价单ID')
+    return
+  }
+  router.push({
+    path: '/sale/productinquiry',
+    query: {
+      inquiryId: inquiryId,
       fromDashboard: 'true'
     }
   })
@@ -6607,6 +6682,8 @@ onMounted(async () => {
 
   // 获取各种数据
   GetRejectContractList();
+  // 获取询价已回复列表
+  getInquiryRepliedList();
   if (userStore.userInfo && userStore.userInfo.deptId === 210) {
     getInquiryList();
     GetRejectPurchaseContractList();
@@ -7208,6 +7285,9 @@ const handleTabClick = (tab) => {
   } else if (tab.props.name === 'paymentTask') {
     // 当切换到付款任务tab时，重新加载数据
     getPaymentTaskList()
+  } else if (tab.props.name === 'inquiryReplied') {
+    // 当切换到询价已回复tab时，重新加载数据
+    getInquiryRepliedList()
   }
 }
 

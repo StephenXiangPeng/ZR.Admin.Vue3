@@ -165,7 +165,7 @@
 				</el-table-column>
 				<el-table-column prop="smallpackagingmethod" label="小包装方式" width="150" align="center">
 					<template #default="{ row }">
-						<span>{{ row.smallpackagingmethod }}</span>
+						<span>{{ getPackingLabel(row.smallpackagingmethod) }}</span>
 					</template>
 				</el-table-column>
 				<!-- <el-table-column prop="IsNewProduct" label="是否新产品" width="120" align="center">
@@ -423,11 +423,12 @@ const state = reactive({
 	optionss: {
 		// 选项列表(动态字典将会从后台获取数据)
 		hr_purchase_pricing_term: [], // 价格条款
-		sql_hr_sale: [] // 销售员
+		sql_hr_sale: [], // 销售员
+		hr_packing: [] // 小包装方式
 	}
 })
 const { optionss } = toRefs(state)
-var dictParams = [{ dictType: 'hr_purchase_pricing_term' }, { dictType: 'sql_hr_sale' }]
+var dictParams = [{ dictType: 'hr_purchase_pricing_term' }, { dictType: 'sql_hr_sale' }, { dictType: 'hr_packing' }]
 getDicts(dictParams).then((response) => {
 	console.log('字典数据加载结果:', response);
 	response.data.forEach((element) => {
@@ -520,6 +521,13 @@ const getPriceTermsLabel = (priceTerms) => {
 	return priceTerm ? priceTerm.dictLabel : '';
 };
 
+// 获取小包装方式标签
+const getPackingLabel = (packingValue) => {
+	if (!packingValue || packingValue === 0) return '';
+	const packing = optionss.value.hr_packing?.find(item => Number(item.dictValue) === Number(packingValue));
+	return packing ? packing.dictLabel : packingValue;
+};
+
 // 计算体积
 const calculateVolume = (row) => {
 	const length = parseFloat(row.outerboxlength) || 0;
@@ -552,39 +560,81 @@ const hideHoverImage = () => {
 };
 
 // 获取询价单列表
+// const getInquiryList = async () => {
+// 	// 调用后端API获取询价单列表
+// 	try {
+// 		loading.value = true;
+// 		// 使用采购员专用的API接口
+// 		const requestParams = {
+// 			PageNum: currentPage.value,
+// 			PageSize: pageSize.value,
+// 			InquiryCode: searchParams.inquiryNumber || '',
+// 			startDate: '',
+// 			endDate: '',
+// 			Status: searchParams.status === 1 ? [1, 2] : [0]
+// 		};
+// 		console.log('API请求参数:', requestParams); // 添加调试日志
+
+// 		const res: any = await request({
+// 			url: 'Inquiry/GetInquiryListByPurchase/GetList',
+// 			method: 'GET',
+// 			params: requestParams
+// 		});
+// 		if (res.code === 200) {
+// 			const data = res.data;
+// 			inquiryList.value = data.result || [];
+// 			total.value = data.totalNum || 0;
+// 			console.log('API返回数据:', data); // 添加调试日志
+// 			console.log('当前状态过滤:', searchParams.status); // 添加调试日志
+
+// 			// 处理询价人字段，转换为销售员显示
+// 			if (inquiryList.value.length > 0) {
+// 				inquiryList.value.forEach(item => {
+// 					item.salePerson = state.optionss.sql_hr_sale.find(option => option.dictValue === item.inquirer?.toString())?.dictLabel || '';
+// 				});
+// 			}
+// 		} else {
+// 			ElMessage.error(res.msg || '获取询价单列表失败');
+// 		}
+// 	} catch (error) {
+// 		console.error('获取询价单列表失败', error);
+// 		ElMessage.error('获取询价单列表失败');
+// 	} finally {
+// 		loading.value = false;
+// 	}
+// };
+
 const getInquiryList = async () => {
-	// 调用后端API获取询价单列表
 	try {
 		loading.value = true;
-		// 使用采购员专用的API接口
-		const requestParams = {
-			PageNum: currentPage.value,
-			PageSize: pageSize.value,
-			InquiryCode: searchParams.inquiryNumber || '',
-			startDate: '',
-			endDate: '',
-			Status: searchParams.status || 0
-		};
-		console.log('API请求参数:', requestParams); // 添加调试日志
+
+		const params = new URLSearchParams();
+		params.append('PageNum', String(currentPage.value));
+		params.append('PageSize', String(pageSize.value));
+
+		// 这些空的别传，避免后端 DateTime? 绑定异常
+		if (searchParams.inquiryNumber) params.append('InquiryCode', searchParams.inquiryNumber);
+		if (searchParams.startDate) params.append('startDate', searchParams.startDate);
+		if (searchParams.endDate) params.append('endDate', searchParams.endDate);
+
+		const statusArr = (searchParams.status === 1) ? [1, 2] : [0];
+		statusArr.forEach(s => params.append('Status', String(s))); // ✅ repeat 格式
 
 		const res: any = await request({
-			url: 'Inquiry/GetInquiryListByPurchase/GetList',
-			method: 'GET',
-			params: requestParams
+			url: `Inquiry/GetInquiryListByPurchase/GetList?${params.toString()}`,
+			method: 'GET'
 		});
+
 		if (res.code === 200) {
 			const data = res.data;
 			inquiryList.value = data.result || [];
 			total.value = data.totalNum || 0;
-			console.log('API返回数据:', data); // 添加调试日志
-			console.log('当前状态过滤:', searchParams.status); // 添加调试日志
 
-			// 处理询价人字段，转换为销售员显示
-			if (inquiryList.value.length > 0) {
-				inquiryList.value.forEach(item => {
-					item.salePerson = state.optionss.sql_hr_sale.find(option => option.dictValue === item.inquirer?.toString())?.dictLabel || '';
-				});
-			}
+			inquiryList.value.forEach(item => {
+				item.salePerson =
+					state.optionss.sql_hr_sale.find(option => option.dictValue === item.inquirer?.toString())
+						?.dictLabel || '';
+			});
 		} else {
 			ElMessage.error(res.msg || '获取询价单列表失败');
 		}
@@ -595,6 +645,7 @@ const getInquiryList = async () => {
 		loading.value = false;
 	}
 };
+
 
 // 查询询价单
 const searchInquiries = () => {

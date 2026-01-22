@@ -185,8 +185,12 @@
 					</el-table-column>
 					<el-table-column prop="smallpackagingmethod" label="小包装方式" width="150" align="center">
 						<template #default="{ row }">
-							<el-input v-if="!isEditable" v-model="row.smallpackagingmethod" />
-							<span v-else>{{ row.smallpackagingmethod }}</span>
+							<el-select v-if="!isEditable" v-model="row.smallpackagingmethod" filterable
+								placeholder="请选择" style="width: 100%;" clearable>
+								<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
+									:label="dict.dictLabel" :value="dict.dictValue" />
+							</el-select>
+							<span v-else>{{ getPackingLabel(row.smallpackagingmethod) }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="supplierID" label="供应商" width="150" align="center">
@@ -242,7 +246,7 @@
 					</el-table-column>
 					<el-table-column prop="QuoteQuantity" label="报价数量" width="120" align="center">
 						<template #default="{ row }">
-							<el-input v-if="!isEditable" v-model="row.QuoteQuantity" disabled />
+							<el-input v-if="!isEditable" v-model="row.QuoteQuantity" />
 							<span v-else-if="row.status === 1" class="highlight-field">{{ row.QuoteQuantity }}</span>
 						</template>
 					</el-table-column>
@@ -470,15 +474,17 @@
 </template>
 <script setup lang="ts">
 import { UploadFilled } from '@element-plus/icons-vue'
-import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
+import { createApp, getCurrentInstance, reactive, toRefs, ref, nextTick } from 'vue'
 import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from 'element-plus'
 import request from '@/utils/request';
 import { create, get } from 'sortablejs';
 import dayjs from 'dayjs';
 import useUserStore from "@/store/modules/user";
+import { useRoute } from 'vue-router';
 
 //获取当前登录用户ID
 var userId = useUserStore().userId;
+const route = useRoute();
 
 //查找产品窗体
 const SearchProcutDialog = ref(false)
@@ -729,6 +735,13 @@ const getPriceTermsLabel = (priceTerms) => {
 	return priceTerm ? priceTerm.dictLabel : priceTerms;
 };
 
+// 获取包装方式标签
+const getPackingLabel = (packingValue) => {
+	if (!packingValue) return '';
+	const packing = state.optionss.hr_packing?.find(item => Number(item.dictValue) === Number(packingValue));
+	return packing ? packing.dictLabel : packingValue;
+};
+
 /*创建询价单Dialog中的Button*/
 const isEditBtnVisible = ref(false);
 const isEditSaveBtnVisible = ref(false);
@@ -777,7 +790,9 @@ proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
 	})
-	GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
+	GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value).then(() => {
+		openInquiryFromDashboard();
+	});
 })
 /*动态下拉框end*/
 const CreateInquiryDialog = ref(false)
@@ -1125,6 +1140,21 @@ const ChcekDetails = (row) => {
 		ElMessage.error('获取询价单详情失败');
 	});
 }
+
+const openInquiryFromDashboard = () => {
+	if (!route.query.inquiryId || !route.query.fromDashboard) return;
+	nextTick(() => {
+		setTimeout(() => {
+			const inquiryId = route.query.inquiryId?.toString();
+			const targetInquiry = InquityTableData.value.find(item =>
+				item.id?.toString() === inquiryId || item.inquiry_number?.toString() === inquiryId
+			);
+			if (targetInquiry) {
+				ChcekDetails(targetInquiry);
+			}
+		}, 500);
+	});
+};
 
 // 下载询价单附件
 const handleDownload = (file) => {
