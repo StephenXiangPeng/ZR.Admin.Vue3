@@ -239,7 +239,7 @@
 							<el-col :span="6">
 								<el-form-item label="销售人员" prop="salesPerson">
 									<el-select filterable v-model="CustomerProfileform.salesPerson" placeholder="选择销售员"
-										style="width: 100%;" clearable>
+										style="width: 100%;" disabled clearable>
 										<el-option v-for="dict in optionss.sql_hr_sale" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
@@ -352,10 +352,12 @@
 
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="primary" @click="SaveCustomerDraft(CustomerProfileformRef)">
+					<el-button type="primary" @click="SaveCustomerDraft(CustomerProfileformRef)"
+						:disabled="!canSubmitCustomerProfile">
 						保存草稿
 					</el-button>
-					<el-button type="success" @click="submitForm(CustomerProfileformRef)">
+					<el-button type="success" @click="submitForm(CustomerProfileformRef)"
+						:disabled="!canSubmitCustomerProfile">
 						提交
 					</el-button>
 				</span>
@@ -787,7 +789,8 @@
 			</el-collapse>
 			<template #footer>
 				<span class="dialog-footer">
-					<el-button type="warning" @click="EditCustomerInfoClick">编辑</el-button>
+					<el-button type="warning" @click="EditCustomerInfoClick"
+						:disabled="!canEditSelectedCustomer">编辑</el-button>
 					<!-- <el-button type="primary">保存</el-button> -->
 				</span>
 			</template>
@@ -986,6 +989,7 @@ interface CustomUploadFile extends UploadFile {
 }
 
 const activeTab = ref('ContactInfoTable');
+const userStore = useUserStore();
 const isEditCustomerInfo = ref(false);
 const basicInfoCollapseActive = ref(['basicInfo']);
 const contactInfoCollapseActive = ref(['contactInfo']);
@@ -1504,6 +1508,13 @@ const handlePictureCardPreview = (file: CustomUploadFile) => {
 }
 
 const EditCustomerInfoClick = () => {
+	if (!canEditSelectedCustomer.value) {
+		ElMessage({
+			message: '当前登录用户不是该客户的销售人员，无法编辑。',
+			type: 'warning'
+		});
+		return;
+	}
 	isEditCustomerInfo.value = true;
 	CustomerProfileform.customerStatus = state.optionss['hr_customer_status'].filter(item => item.dictValue == CustomerProfileDetailDialogform.customerStatus).map(item => item.dictValue).values().next().value;
 	CustomerProfileform.customerLevel = state.optionss['hr_customer_level'].filter(item => item.dictValue == CustomerProfileDetailDialogform.customerLevel).map(item => item.dictValue).values().next().value;
@@ -1550,6 +1561,13 @@ const EditCustomerInfoClick = () => {
 //保存草稿
 const SaveCustomerDraft = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
+	if (isEditCustomerInfo.value && !canSubmitCustomerProfile.value) {
+		ElMessage({
+			message: '当前登录用户不是该客户的销售人员，无法保存草稿。',
+			type: 'warning'
+		});
+		return;
+	}
 	ElMessageBox.confirm('确定保存该客户资料的草稿吗？', '提示', {
 		confirmButtonText: '确定',
 		cancelButtonText: '取消',
@@ -1683,6 +1701,13 @@ const SaveCustomerDraft = async (formEl: FormInstance | undefined) => {
 //保存客户资料
 const submitForm = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
+	if (isEditCustomerInfo.value && !canSubmitCustomerProfile.value) {
+		ElMessage({
+			message: '当前登录用户不是该客户的销售人员，无法提交。',
+			type: 'warning'
+		});
+		return;
+	}
 	await formEl.validate((valid, fields) => {
 		if (valid) {
 			if (CustomerContactPersonTableData.value != null) {
@@ -2252,6 +2277,27 @@ const CustomerProfileDetailDialogform = reactive<CustomerProfileform>({
 	update_by: "",
 	isDelete: 0,
 	IsDraft: 0
+});
+
+const isCurrentUserSalesPerson = (salesPersonId: unknown) => {
+	if (salesPersonId === null || salesPersonId === undefined || salesPersonId === '') {
+		return false;
+	}
+	return Number(salesPersonId) === Number(userStore.userId);
+};
+
+const canEditSelectedCustomer = computed(() => {
+	if (!CustomerProfileDetailDialogform.id) {
+		return true;
+	}
+	return isCurrentUserSalesPerson(CustomerProfileDetailDialogform.salesPerson);
+});
+
+const canSubmitCustomerProfile = computed(() => {
+	if (!isEditCustomerInfo.value) {
+		return true;
+	}
+	return isCurrentUserSalesPerson(CustomerProfileform.salesPerson);
 });
 
 

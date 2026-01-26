@@ -637,7 +637,6 @@ const { optionss } = toRefs(state)
 var dictParams = [
 	{ dictType: 'hr_recipient_type_examples' },
 	{ dictType: 'sql_all_user' },
-	{ dictType: 'sql_hr_customer_abbreviation' },
 	{ dictType: 'sql_supplier_info' },
 	{ dictType: 'hr_ourcompany' },
 	{ dictType: 'hr_express_payment_method' },
@@ -645,12 +644,37 @@ var dictParams = [
 	{ dictType: 'sql_waybill_number' }
 ]
 
+// 获取用户相关的客户下拉数据
+const loadUserCustomerData = async () => {
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetCustomerDataByUserID/GetSelectCustomerDataByUserID',
+			method: 'get'
+		});
+		if (response.code === 200) {
+			state.optionss.sql_hr_customer_abbreviation = (response.data || []).map(item => ({
+				dictValue: String(item.dictValue ?? item.id ?? ''),
+				dictLabel: item.dictLabel ?? item.label ?? '',
+				dictCode: String(item.dictCode ?? item.dictValue ?? item.id ?? '')
+			}));
+		} else {
+			state.optionss.sql_hr_customer_abbreviation = [];
+			ElMessage.error(response.msg || '获取客户数据失败');
+		}
+	} catch (error) {
+		console.error('获取客户数据失败:', error);
+		state.optionss.sql_hr_customer_abbreviation = [];
+		ElMessage.error('获取客户数据失败');
+	}
+};
+
 async function fetchDataAndExecute() {
 	try {
 		const response = await proxy.getDicts(dictParams);
 		response.data.forEach((element) => {
 			state.optionss[element.dictType] = element.list;
 		});
+		await loadUserCustomerData();
 		GetProductSampleList(currentPage.value, pageSize.value);
 	} catch (error) {
 		console.error('Failed to fetch data:', error);

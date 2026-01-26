@@ -741,7 +741,7 @@ const getCustomerData = async () => {
 	state.optionss.customer_data = [];
 	try {
 		const response = await request({
-			url: 'CustomerInfoMation/GetCustomerDataByUserId/GetSelectCustomerData',
+			url: 'CustomerInfoMation/GetCustomerDataByUserID/GetSelectCustomerDataByUserID',
 			method: 'get'
 		})
 		if (response.code === 200) {

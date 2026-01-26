@@ -3467,21 +3467,9 @@ const loadDailyExpensePayeeOptions = async () => {
 // 加载客户选项
 const loadCustomerOptions = async () => {
 	try {
-		// 使用字典数据 sql_hr_customer_abbreviation 作为客户选项
-		// 因为 LogisticsCompany API 的 companyType: 4 返回空数组
-		if (state.optionss.sql_hr_customer_abbreviation && state.optionss.sql_hr_customer_abbreviation.length > 0) {
-			// 标准化字典数据结构
-			customerOptions.value = ApiRequestHandler.standardizeData(state.optionss.sql_hr_customer_abbreviation);
-			return Promise.resolve(customerOptions.value);
-		}
-
-		// 如果字典数据还没有加载，尝试从 API 获取
 		const response = await request({
-			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
-			method: 'GET',
-			params: {
-				companyType: 4 // 客户类型
-			}
+			url: 'CustomerInfoMation/GetCustomerDataByUserID/GetSelectCustomerDataByUserID',
+			method: 'GET'
 		});
 
 		// 返回Promise，确保数据设置完成后再resolve
