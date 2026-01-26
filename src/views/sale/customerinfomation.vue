@@ -850,15 +850,15 @@
 						</el-form-item>
 					</el-col>
 				</el-row>
-				<el-form-item label="关联单据">
+				<el-form-item label="关联单据" v-if="relatedDocumentTypeOptions.length > 0">
 					<el-radio-group v-model="contactLogForm.relatedDocumentType" @change="RelatedDocumentsChange"
 						:disabled="isRelatedDocumentLocked">
-						<el-radio :value="1">销售合同</el-radio>
-						<el-radio :value="2">出运合同</el-radio>
-						<el-radio :value="3">报价单</el-radio>
+						<el-radio v-for="item in relatedDocumentTypeOptions" :key="item.value" :value="item.value">
+							{{ item.label }}
+						</el-radio>
 					</el-radio-group>
-					<el-select v-model="contactLogForm.relatedDocumentID" filterable
-						:placeholder="getRelatedDocumentPlaceholder()" style="width: 100%;" clearable>
+					<el-select v-if="getRelatedDocumentOptions().length > 0" v-model="contactLogForm.relatedDocumentID"
+						filterable :placeholder="getRelatedDocumentPlaceholder()" style="width: 100%;" clearable>
 						<el-option v-for="item in getRelatedDocumentOptions()" :key="item.dictValue"
 							:label="item.dictLabel" :value="item.dictValue" />
 					</el-select>
@@ -953,7 +953,7 @@
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance, reactive, toRefs, ref, onMounted, nextTick, computed } from 'vue'
+import { getCurrentInstance, reactive, toRefs, ref, onMounted, nextTick, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, UploadUserFile, ElMessage, UploadFile, FormInstance, FormRules } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -1093,7 +1093,6 @@ const GetVisibleContractSelectList = async (customerId = 0) => {
 	}
 }
 GetVisibleContractSelectList();
-
 
 //线索导入窗体
 const LeadImportDialog = ref(false)
@@ -1279,6 +1278,20 @@ const AddContactPersonTableRow = () => {
 const RemoveContactPersonTableRow = (index) => {
 	CustomerContactPersonTableData.value.splice(index, 1);
 }
+
+const contactPersonEmailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const normalizeContactEmail = (email) => (email || '').trim().toLowerCase();
+const getContactPersonCountByEmail = async (emailAddress) => {
+	const response = await request({
+		url: 'CustomerInfoMation/GetContactPersonCountByEmailAddress/GetContactPersonCount',
+		method: 'GET',
+		params: { EmailAddress: emailAddress }
+	});
+	if (response?.code === 200) {
+		return response.data;
+	}
+	throw new Error(response?.msg || '验证联系人邮箱失败');
+};
 
 const isCustomerContactPersonTableDataCount = ref(0);
 //客户联系人表格
@@ -1708,129 +1721,158 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 		});
 		return;
 	}
-	await formEl.validate((valid, fields) => {
-		if (valid) {
-			if (CustomerContactPersonTableData.value != null) {
-				var personnamestr = '';
-				var isEmail = true;
-				CustomerContactPersonTableData.value.forEach(person => {
-					if (person.email == null || person.email == '' || person.email == undefined) {
-						personnamestr += '【' + person.name + '】'
-						isEmail = false;
-					}
-				});
-				if (isEmail == false) {
-					ElMessage({
-						message: '请在联系人列表里，为' + personnamestr + '补充完整的邮箱',
-						type: 'warning',
-					})
-					return;
-				}
+	try {
+		await formEl.validate();
+	} catch (error) {
+		return;
+	}
+	if (CustomerContactPersonTableData.value != null) {
+		var personnamestr = '';
+		var isEmail = true;
+		CustomerContactPersonTableData.value.forEach(person => {
+			if (person.email == null || person.email == '' || person.email == undefined) {
+				personnamestr += '【' + person.name + '】'
+				isEmail = false;
 			}
-			//#region 保存客户资料
-			ElMessageBox.confirm('确定保存该客户资料吗？', '提示', {
-				confirmButtonText: '确定',
-				cancelButtonText: '取消',
+		});
+		if (isEmail == false) {
+			ElMessage({
+				message: '请在联系人列表里，为' + personnamestr + '补充完整的邮箱',
+				type: 'warning',
+			})
+			return;
+		}
+	}
+
+	const contactPeople = CustomerContactPersonTableData.value || [];
+	const invalidEmailNames = [];
+	const emailCheckMap = new Map();
+	const existingEmailMap = new Map();
+	if (ContactPersonData.value && ContactPersonData.value.length > 0) {
+		ContactPersonData.value.forEach(item => {
+			if (item?.id != null) {
+				existingEmailMap.set(item.id, normalizeContactEmail(item.email));
+			}
+		});
+	}
+
+	contactPeople.forEach(person => {
+		const normalizedEmail = normalizeContactEmail(person?.email);
+		if (!normalizedEmail) {
+			return;
+		}
+		const displayName = person?.name || normalizedEmail;
+		if (!contactPersonEmailRegex.test(normalizedEmail)) {
+			invalidEmailNames.push(displayName);
+			return;
+		}
+		const originalEmail = person?.id != null ? existingEmailMap.get(person.id) : '';
+		if (!person?.id || originalEmail !== normalizedEmail) {
+			if (!emailCheckMap.has(normalizedEmail)) {
+				emailCheckMap.set(normalizedEmail, []);
+			}
+			emailCheckMap.get(normalizedEmail).push(displayName);
+		}
+	});
+
+	if (invalidEmailNames.length > 0) {
+		ElMessage({
+			message: `联系人邮箱格式不正确：${invalidEmailNames.join('、')}`,
+			type: 'warning'
+		});
+		return;
+	}
+
+	if (emailCheckMap.size > 0) {
+		const existedEmailNames = [];
+		try {
+			await Promise.all(
+				Array.from(emailCheckMap.entries()).map(async ([email, names]) => {
+					const count = await getContactPersonCountByEmail(email);
+					if (Number(count) > 0) {
+						existedEmailNames.push(...names);
+					}
+				})
+			);
+		} catch (error) {
+			console.error('验证联系人邮箱失败：', error);
+			ElMessage({
+				message: error?.message || '验证联系人邮箱失败',
+				type: 'error'
+			});
+			return;
+		}
+		if (existedEmailNames.length > 0) {
+			ElMessage({
+				message: `联系人邮箱已存在：${existedEmailNames.join('、')}`,
 				type: 'warning'
-			}).then(() => {
-				if (CustomerProfileform.customerStatus == null) {
-					CustomerProfileform.customerStatus = 0;
-				}
-				if (addCustomerInfo.customerInfo.customerLevel == null) {
-					addCustomerInfo.customerInfo.customerLevel = 0;
-				}
-				if (addCustomerInfo.customerInfo.pricingTerm == null) {
-					addCustomerInfo.customerInfo.pricingTerm = 0;
-				}
-				if (addCustomerInfo.customerInfo.settlementWay == null) {
-					addCustomerInfo.customerInfo.settlementWay = 0;
-				}
-				if (addCustomerInfo.customerInfo.collectionPeriod == null) {
-					addCustomerInfo.customerInfo.collectionPeriod = 0;
-				}
-				if (isEditCustomerInfo.value == false) {
-					if (isImport.value == false) {
-						// 处理文件上传 - 使用与SaveCustomerDraft相同的逻辑
-						let filelistUrlStr = '';
-						if (fileList.value && fileList.value.length > 0) {
-							// 收集已存在的URL（排除blob URL）
-							const existingUrls = fileList.value
-								.filter(file => file.url && !file.url.startsWith('blob:'))
-								.map(file => file.url);
+			});
+			return;
+		}
+	}
 
-							// 只上传新文件
-							const newFiles = fileList.value.filter(file => file.raw && (!file.url || file.url.startsWith('blob:')));
-							if (newFiles.length > 0) {
-								const uploadPromises = newFiles.map(file => {
-									const formData = new FormData();
-									formData.append('FileName', file.name);
-									formData.append('FileDir', 'CustomerInfo/CustomerInfoPhoto');
-									formData.append('FileNameType', '1');
-									formData.append('File', file.raw);
-									formData.append('storeType', '1');
-									return request.postForm(UploadUrl, formData);
-								});
+	//#region 保存客户资料
+	ElMessageBox.confirm('确定保存该客户资料吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		if (CustomerProfileform.customerStatus == null) {
+			CustomerProfileform.customerStatus = 0;
+		}
+		if (addCustomerInfo.customerInfo.customerLevel == null) {
+			addCustomerInfo.customerInfo.customerLevel = 0;
+		}
+		if (addCustomerInfo.customerInfo.pricingTerm == null) {
+			addCustomerInfo.customerInfo.pricingTerm = 0;
+		}
+		if (addCustomerInfo.customerInfo.settlementWay == null) {
+			addCustomerInfo.customerInfo.settlementWay = 0;
+		}
+		if (addCustomerInfo.customerInfo.collectionPeriod == null) {
+			addCustomerInfo.customerInfo.collectionPeriod = 0;
+		}
+		if (isEditCustomerInfo.value == false) {
+			if (isImport.value == false) {
+				// 处理文件上传 - 使用与SaveCustomerDraft相同的逻辑
+				let filelistUrlStr = '';
+				if (fileList.value && fileList.value.length > 0) {
+					// 收集已存在的URL（排除blob URL）
+					const existingUrls = fileList.value
+						.filter(file => file.url && !file.url.startsWith('blob:'))
+						.map(file => file.url);
 
-								Promise.all(uploadPromises).then(responses => {
-									responses.forEach(response => {
-										if (response?.data?.url) {
-											existingUrls.push(response.data.url);
-										} else {
-											ElMessage({
-												message: "上传客户图片出错！😔",
-												type: 'error'
-											})
-										}
-									});
+					// 只上传新文件
+					const newFiles = fileList.value.filter(file => file.raw && (!file.url || file.url.startsWith('blob:')));
+					if (newFiles.length > 0) {
+						const uploadPromises = newFiles.map(file => {
+							const formData = new FormData();
+							formData.append('FileName', file.name);
+							formData.append('FileDir', 'CustomerInfo/CustomerInfoPhoto');
+							formData.append('FileNameType', '1');
+							formData.append('File', file.raw);
+							formData.append('storeType', '1');
+							return request.postForm(UploadUrl, formData);
+						});
 
-									// 合并所有URL
-									filelistUrlStr = existingUrls.join(',');
-
-									// 保存客户资料
-									addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
-									CustomerProfileform.customerPhoto = filelistUrlStr;
-									CustomerProfileform.IsDraft = 0;
-									request.post('CustomerInfoMation/AddCustomerInfo/Add', addCustomerInfo).then(response => {
-										if (response != null) {
-											ElMessage({
-												message: response.msg,
-												type: 'success'
-											})
-											//清空上传图片
-											filelistUrlStr = '';
-											CloseCustomerProfileDetailDialog();
-										} else {
-											console.error('保存客户资料出错');
-										}
-									}).catch(error => {
-										console.error('保存客户资料出错！😔错误内容：', error);
+						Promise.all(uploadPromises).then(responses => {
+							responses.forEach(response => {
+								if (response?.data?.url) {
+									existingUrls.push(response.data.url);
+								} else {
+									ElMessage({
+										message: "上传客户图片出错！😔",
+										type: 'error'
 									})
-								}).catch(error => {
-									console.error('上传客户图片出错！😔错误内容：', error);
-								});
-							} else {
-								// 没有新文件需要上传，直接保存
-								filelistUrlStr = existingUrls.join(',');
-								addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
-								CustomerProfileform.customerPhoto = filelistUrlStr;
-								CustomerProfileform.IsDraft = 0;
-								request.post('CustomerInfoMation/AddCustomerInfo/Add', addCustomerInfo).then(response => {
-									if (response != null) {
-										ElMessage({
-											message: response.msg,
-											type: 'success'
-										})
-										CloseCustomerProfileDetailDialog();
-									} else {
-										console.error('保存客户资料出错');
-									}
-								}).catch(error => {
-									console.error('保存客户资料出错！😔错误内容：', error);
-								})
-							}
-						} else {
-							// 没有文件，直接保存
+								}
+							});
+
+							// 合并所有URL
+							filelistUrlStr = existingUrls.join(',');
+
+							// 保存客户资料
 							addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
+							CustomerProfileform.customerPhoto = filelistUrlStr;
 							CustomerProfileform.IsDraft = 0;
 							request.post('CustomerInfoMation/AddCustomerInfo/Add', addCustomerInfo).then(response => {
 								if (response != null) {
@@ -1838,6 +1880,8 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 										message: response.msg,
 										type: 'success'
 									})
+									//清空上传图片
+									filelistUrlStr = '';
 									CloseCustomerProfileDetailDialog();
 								} else {
 									console.error('保存客户资料出错');
@@ -1845,19 +1889,21 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 							}).catch(error => {
 								console.error('保存客户资料出错！😔错误内容：', error);
 							})
-						}
+						}).catch(error => {
+							console.error('上传客户图片出错！😔错误内容：', error);
+						});
 					} else {
+						// 没有新文件需要上传，直接保存
+						filelistUrlStr = existingUrls.join(',');
 						addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
-						addCustomerInfo.customerInfo = CustomerProfileform;
-						//保存导入客户资料
-						request.post('CustomerInfoMation/AddCustomerInfo/Add', addCustomerInfo).then((response: any) => {
+						CustomerProfileform.customerPhoto = filelistUrlStr;
+						CustomerProfileform.IsDraft = 0;
+						request.post('CustomerInfoMation/AddCustomerInfo/Add', addCustomerInfo).then(response => {
 							if (response != null) {
 								ElMessage({
-									message: (response as any).msg,
+									message: response.msg,
 									type: 'success'
 								})
-								//清空上传图片
-								isImport.value = false;
 								CloseCustomerProfileDetailDialog();
 							} else {
 								console.error('保存客户资料出错');
@@ -1867,114 +1913,86 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 						})
 					}
 				} else {
-					// 编辑客户资料 - 使用与SaveCustomerDraft相同的逻辑
-					let filelistUrlStr = '';
-					if (fileList.value && fileList.value.length > 0) {
-						// 收集已存在的URL（排除blob URL）
-						const existingUrls = fileList.value
-							.filter(file => file.url && !file.url.startsWith('blob:'))
-							.map(file => file.url);
-
-						// 只上传新文件或已更改的文件
-						const newFiles = fileList.value.filter(file =>
-							file.raw && (!file.url || file.url.startsWith('blob:')) || file.isChanged
-						);
-
-						if (newFiles.length > 0) {
-							const uploadPromises = newFiles.map(file => {
-								const formData = new FormData();
-								formData.append('FileName', file.name);
-								formData.append('FileDir', 'CustomerInfo/CustomerInfoPhoto');
-								formData.append('FileNameType', '1');
-								formData.append('File', file.raw);
-								formData.append('storeType', '1');
-								return request.postForm(UploadUrl, formData);
-							});
-
-							Promise.all(uploadPromises).then(responses => {
-								responses.forEach(response => {
-									if (response?.data?.url) {
-										existingUrls.push(response.data.url);
-									} else {
-										ElMessage({
-											message: "上传客户图片出错！😔",
-											type: 'error'
-										})
-									}
-								});
-
-								// 合并所有URL
-								filelistUrlStr = existingUrls.join(',');
-
-								// 保存客户资料
-								addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
-								CustomerProfileform.customerPhoto = filelistUrlStr;
-								addCustomerInfo.customerInfo = CustomerProfileform;
-								addCustomerInfo.customerInfo.id = CustomerProfileDetailDialogform.id;
-								let collectionPeriodValue = CustomerProfileform.collectionPeriod;
-								if (typeof collectionPeriodValue === 'string' && CustomerProfileform.collectionPeriod.toString().trim() === '') {
-									collectionPeriodValue = 0;
-								} else {
-									collectionPeriodValue = Number(collectionPeriodValue);
-								}
-								addCustomerInfo.customerInfo.collectionPeriod = collectionPeriodValue;
-								addCustomerInfo.customerInfo.IsDraft = 0;
-
-								request.post('CustomerInfoMation/EditCustomerInfo/Edit', addCustomerInfo).then((response: any) => {
-									if (response != null) {
-										ElMessage({
-											message: (response as any).msg,
-											type: 'success'
-										})
-										//清空上传图片
-										filelistUrlStr = '';
-										//关闭编辑状态
-										isEditCustomerInfo.value = false;
-										CloseCustomerProfileDetailDialog();
-									} else {
-										console.error('保存客户资料出错');
-									}
-								}).catch(error => {
-									console.error('保存客户资料出错！😔错误内容：', error);
-								})
-							}).catch(error => {
-								console.error('上传客户图片出错！😔错误内容：', error);
-							});
-						} else {
-							// 没有新文件需要上传，直接保存
-							filelistUrlStr = existingUrls.join(',');
-							addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
-							CustomerProfileform.customerPhoto = filelistUrlStr;
-							addCustomerInfo.customerInfo = CustomerProfileform;
-							addCustomerInfo.customerInfo.id = CustomerProfileDetailDialogform.id;
-							let collectionPeriodValue = CustomerProfileform.collectionPeriod;
-							if (typeof collectionPeriodValue === 'string' && CustomerProfileform.collectionPeriod.toString().trim() === '') {
-								collectionPeriodValue = 0;
-							} else {
-								collectionPeriodValue = Number(collectionPeriodValue);
-							}
-							addCustomerInfo.customerInfo.collectionPeriod = collectionPeriodValue;
-							addCustomerInfo.customerInfo.IsDraft = 0;
-
-							request.post('CustomerInfoMation/EditCustomerInfo/Edit', addCustomerInfo).then(response => {
-								if (response != null) {
-									ElMessage({
-										message: response.msg,
-										type: 'success'
-									})
-									//关闭编辑状态
-									isEditCustomerInfo.value = false;
-									CloseCustomerProfileDetailDialog();
-								} else {
-									console.error('保存客户资料出错');
-								}
-							}).catch(error => {
-								console.error('保存客户资料出错！😔错误内容：', error);
+					// 没有文件，直接保存
+					addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
+					CustomerProfileform.IsDraft = 0;
+					request.post('CustomerInfoMation/AddCustomerInfo/Add', addCustomerInfo).then(response => {
+						if (response != null) {
+							ElMessage({
+								message: response.msg,
+								type: 'success'
 							})
+							CloseCustomerProfileDetailDialog();
+						} else {
+							console.error('保存客户资料出错');
 						}
+					}).catch(error => {
+						console.error('保存客户资料出错！😔错误内容：', error);
+					})
+				}
+			} else {
+				addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
+				addCustomerInfo.customerInfo = CustomerProfileform;
+				//保存导入客户资料
+				request.post('CustomerInfoMation/AddCustomerInfo/Add', addCustomerInfo).then((response: any) => {
+					if (response != null) {
+						ElMessage({
+							message: (response as any).msg,
+							type: 'success'
+						})
+						//清空上传图片
+						isImport.value = false;
+						CloseCustomerProfileDetailDialog();
 					} else {
-						// 没有文件，直接保存
+						console.error('保存客户资料出错');
+					}
+				}).catch(error => {
+					console.error('保存客户资料出错！😔错误内容：', error);
+				})
+			}
+		} else {
+			// 编辑客户资料 - 使用与SaveCustomerDraft相同的逻辑
+			let filelistUrlStr = '';
+			if (fileList.value && fileList.value.length > 0) {
+				// 收集已存在的URL（排除blob URL）
+				const existingUrls = fileList.value
+					.filter(file => file.url && !file.url.startsWith('blob:'))
+					.map(file => file.url);
+
+				// 只上传新文件或已更改的文件
+				const newFiles = fileList.value.filter(file =>
+					file.raw && (!file.url || file.url.startsWith('blob:')) || file.isChanged
+				);
+
+				if (newFiles.length > 0) {
+					const uploadPromises = newFiles.map(file => {
+						const formData = new FormData();
+						formData.append('FileName', file.name);
+						formData.append('FileDir', 'CustomerInfo/CustomerInfoPhoto');
+						formData.append('FileNameType', '1');
+						formData.append('File', file.raw);
+						formData.append('storeType', '1');
+						return request.postForm(UploadUrl, formData);
+					});
+
+					Promise.all(uploadPromises).then(responses => {
+						responses.forEach(response => {
+							if (response?.data?.url) {
+								existingUrls.push(response.data.url);
+							} else {
+								ElMessage({
+									message: "上传客户图片出错！😔",
+									type: 'error'
+								})
+							}
+						});
+
+						// 合并所有URL
+						filelistUrlStr = existingUrls.join(',');
+
+						// 保存客户资料
 						addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
+						CustomerProfileform.customerPhoto = filelistUrlStr;
 						addCustomerInfo.customerInfo = CustomerProfileform;
 						addCustomerInfo.customerInfo.id = CustomerProfileDetailDialogform.id;
 						let collectionPeriodValue = CustomerProfileform.collectionPeriod;
@@ -1992,6 +2010,8 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 									message: (response as any).msg,
 									type: 'success'
 								})
+								//清空上传图片
+								filelistUrlStr = '';
 								//关闭编辑状态
 								isEditCustomerInfo.value = false;
 								CloseCustomerProfileDetailDialog();
@@ -2001,20 +2021,80 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 						}).catch(error => {
 							console.error('保存客户资料出错！😔错误内容：', error);
 						})
+					}).catch(error => {
+						console.error('上传客户图片出错！😔错误内容：', error);
+					});
+				} else {
+					// 没有新文件需要上传，直接保存
+					filelistUrlStr = existingUrls.join(',');
+					addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
+					CustomerProfileform.customerPhoto = filelistUrlStr;
+					addCustomerInfo.customerInfo = CustomerProfileform;
+					addCustomerInfo.customerInfo.id = CustomerProfileDetailDialogform.id;
+					let collectionPeriodValue = CustomerProfileform.collectionPeriod;
+					if (typeof collectionPeriodValue === 'string' && CustomerProfileform.collectionPeriod.toString().trim() === '') {
+						collectionPeriodValue = 0;
+					} else {
+						collectionPeriodValue = Number(collectionPeriodValue);
 					}
+					addCustomerInfo.customerInfo.collectionPeriod = collectionPeriodValue;
+					addCustomerInfo.customerInfo.IsDraft = 0;
+
+					request.post('CustomerInfoMation/EditCustomerInfo/Edit', addCustomerInfo).then(response => {
+						if (response != null) {
+							ElMessage({
+								message: response.msg,
+								type: 'success'
+							})
+							//关闭编辑状态
+							isEditCustomerInfo.value = false;
+							CloseCustomerProfileDetailDialog();
+						} else {
+							console.error('保存客户资料出错');
+						}
+					}).catch(error => {
+						console.error('保存客户资料出错！😔错误内容：', error);
+					})
 				}
-				//关闭建档窗体
-			}).catch(() => {
-				ElMessage({
-					type: 'info',
-					message: '已取消保存'
+			} else {
+				// 没有文件，直接保存
+				addCustomerInfo.contactPeople = CustomerContactPersonTableData.value;
+				addCustomerInfo.customerInfo = CustomerProfileform;
+				addCustomerInfo.customerInfo.id = CustomerProfileDetailDialogform.id;
+				let collectionPeriodValue = CustomerProfileform.collectionPeriod;
+				if (typeof collectionPeriodValue === 'string' && CustomerProfileform.collectionPeriod.toString().trim() === '') {
+					collectionPeriodValue = 0;
+				} else {
+					collectionPeriodValue = Number(collectionPeriodValue);
+				}
+				addCustomerInfo.customerInfo.collectionPeriod = collectionPeriodValue;
+				addCustomerInfo.customerInfo.IsDraft = 0;
+
+				request.post('CustomerInfoMation/EditCustomerInfo/Edit', addCustomerInfo).then((response: any) => {
+					if (response != null) {
+						ElMessage({
+							message: (response as any).msg,
+							type: 'success'
+						})
+						//关闭编辑状态
+						isEditCustomerInfo.value = false;
+						CloseCustomerProfileDetailDialog();
+					} else {
+						console.error('保存客户资料出错');
+					}
+				}).catch(error => {
+					console.error('保存客户资料出错！😔错误内容：', error);
 				})
-			})
-			//#endregion 
-		} else {
-			console.log('error submit!', fields)
+			}
 		}
+		//关闭建档窗体
+	}).catch(() => {
+		ElMessage({
+			type: 'info',
+			message: '已取消保存'
+		})
 	})
+	//#endregion 
 }
 
 const handleDownload = (file: UploadFile) => {
@@ -2497,6 +2577,7 @@ const contactLogAttachments = ref<any[]>([])
 const contactLogImages = ref<any[]>([])
 const previewImageVisible = ref(false)
 const previewImageUrl = ref('')
+const quotationNumberOptions = ref([])
 
 interface ContactLogForm {
 	contactDate: string | Date
@@ -2564,6 +2645,33 @@ const getRelatedDocumentOptions = () => {
 	}
 }
 
+const relatedDocumentTypeOptions = computed(() => {
+	const options = []
+	if ((state.optionss.customer_contract_data || []).length > 0) {
+		options.push({ value: 1, label: '销售合同' })
+	}
+	if ((state.optionss.sql_shippingdeliveries || []).length > 0) {
+		options.push({ value: 2, label: '出运合同' })
+	}
+	if ((quotationNumberOptions.value || []).length > 0) {
+		options.push({ value: 3, label: '报价单' })
+	}
+	return options
+})
+
+const normalizeRelatedDocumentType = () => {
+	const options = relatedDocumentTypeOptions.value
+	if (!options.length) return
+	if (!options.some(option => option.value === contactLogForm.relatedDocumentType)) {
+		contactLogForm.relatedDocumentType = options[0].value
+		contactLogForm.relatedDocumentID = null
+	}
+}
+
+watch(relatedDocumentTypeOptions, () => {
+	normalizeRelatedDocumentType()
+})
+
 const RelatedDocumentsChange = (value) => {
 	// 清空当前选择的值
 	contactLogForm.relatedDocumentID = null;
@@ -2618,6 +2726,7 @@ const AddContactLog = async () => {
 	contactLogForm.businessOpportunityName = ''
 	contactLogForm.relatedDocumentType = 1 // 默认选择销售合同
 	contactLogForm.relatedDocumentID = null
+	normalizeRelatedDocumentType()
 	contactLogAttachments.value = []
 	contactLogImages.value = []
 	previewImageUrl.value = ''
@@ -3125,7 +3234,6 @@ const SaveCustomerProfile = async (formEl: FormInstance | undefined) => {
 				});
 			}
 		} else {
-			console.log('error submit!', fields)
 		}
 	})
 }
@@ -3134,7 +3242,6 @@ const ContactLogTagData = ref([]);
 
 // 控制字段显示的变量
 const showBusinessOpportunityField = ref(false)
-const quotationNumberOptions = ref([])
 const businessOpportunityOptions = ref([])
 
 const loadContactLogTagData = async () => {

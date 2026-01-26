@@ -1093,8 +1093,9 @@
 						<el-table-column prop="unitOfMeasurement" label="计量单位编号" width="120" v-if="false" />
 						<el-table-column label="计量单位" width="120">
 							<template #default="scope">
-								{{state.optionss.hr_calculate_unit.find(x => x.dictValue ==
-									scope.row.unitOfMeasurement)?.dictLabel || '-'}}
+								{{scope.row.unitOfMeasurementLabel || state.optionss.hr_calculate_unit.find(x =>
+									x.dictValue ==
+									scope.row.unitOfMeasurement)?.dictLabel || scope.row.unitOfMeasurement || '-'}}
 							</template>
 						</el-table-column>
 						<el-table-column prop="unitPrice" label="最新采购单价" width="120" />
@@ -1777,11 +1778,11 @@ function GetProductInfoList(start, end) {
 				SearchProductCurrentPage.value = res.pageIndex;
 
 				productDatatwo.value.forEach(item => {
-					item.unitOfMeasurement = state.optionss['hr_calculate_unit']
-						.filter(u => u.dictValue == item.unitOfMeasurement)
-						.map(x => x.dictLabel)
-						.values()
-						.next().value;
+					const unitValue = item.unitOfMeasurement?.toString();
+					const unitOption = state.optionss.hr_calculate_unit.find(u => u.dictValue == unitValue)
+						|| state.optionss.hr_calculate_unit.find(u => u.dictLabel == unitValue);
+					item.unitOfMeasurement = unitOption?.dictValue ?? item.unitOfMeasurement;
+					item.unitOfMeasurementLabel = unitOption?.dictLabel || unitValue || '-';
 				});
 				resolve(res.data);
 			} else {
