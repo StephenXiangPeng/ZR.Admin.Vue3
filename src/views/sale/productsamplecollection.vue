@@ -1,273 +1,322 @@
 <template>
 	<div>
-		<div style="margin-top: 0px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;功能区</span>
-		</div>
-		<el-divider></el-divider>
-		<el-button type="primary" @click="handleCreate">创建收样/寄样</el-button>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;过滤条件</span>
-		</div>
-		<div style="width: 100%; margin-top: 30px;">
-			<el-select v-model="SearchwaybillNumber" filterable clearable placeholder="选择运单号" style="width: 15%">
-				<el-option v-for="item in optionss.sql_waybill_number" :key="item.dictCode" :label="item.dictLabel"
-					:value="item.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="SearchCustomer" filterable clearable placeholder="选择客户（可输入查询）" style="width: 15%">
-				<el-option v-for="item in optionss.sql_hr_customer_abbreviation" :key="item.dictCode"
-					:label="item.dictLabel" :value="item.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-select v-model="SearchSalesperson" filterable clearable placeholder="选择业务员" style="width: 15%">
-				<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode" :label="item.dictLabel"
-					:value="item.dictValue" />
-			</el-select>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<el-date-picker v-model="SearchStartDate" type="date" placeholder="请选择开始日期"
-				style="width: 15%" />&nbsp;至&nbsp;
-			<el-date-picker v-model="SearchEndDate" type="date" placeholder="请选择结束日期" style="width: 15%" />
-		</div>
-		<div style="width: 100%; margin-top: 5px;">
-		</div>
-		<div style="width: 100%; margin-top: 20px; text-align: right;">
-			<el-row class="mb-4">
-				<el-button type="primary" plain @click="SearchHandleSearch">查询</el-button>
-				<el-button @click="SearchHandleReset">重置</el-button>
-			</el-row>
-		</div>
-		<div style="margin-top: 30px;">
-			<span style="font-size: 20px; font-weight: bold;">&nbsp;&nbsp;收样/寄样信息表</span>
-		</div>
-		<el-divider> </el-divider>
-		<el-table :data="ProductSampleTableData">
-			<el-table-column prop="type" label="寄样/收样" width="150"></el-table-column>
-			<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="150"></el-table-column>
-			<el-table-column prop="customer_ID" label="寄样对象" width="150"></el-table-column>
-			<el-table-column prop="waybill_Number" label="运单号" width="150"></el-table-column>
-			<el-table-column prop="express_Company" label="快件公司" width="150"></el-table-column>
-			<el-table-column prop="sample_Date" label="登记日期" width="150"></el-table-column>
-			<el-table-column prop="payment_Method" label="付费方式" width="150"></el-table-column>
-			<el-table-column prop="company_ID" label="我方公司" width="150"></el-table-column>
-			<el-table-column prop="paid_Express_Fee" label="已付快件费" width="150"></el-table-column>
-			<el-table-column fixed="right" prop="operate" label="操作" style="width: 8%;">
-				<template v-slot:default="scope">
-					<el-button link type="primary" size="small" @click="handleView(scope.row.id)">查看/编辑</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+		<!-- 收样/寄样信息表 -->
+		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+			<!-- 功能区区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15">
+					<el-col :span="12">
+						<div style="text-align: left;">
+							<el-button type="primary" @click="handleCreate" size="default">创建收样/寄样</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
+			<!-- 过滤条件区域 -->
+			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" style="margin-bottom: 10px;">
+					<el-col :span="4">
+						<el-select v-model="SearchwaybillNumber" filterable clearable placeholder="选择运单号"
+							size="default">
+							<el-option v-for="item in optionss.sql_waybill_number" :key="item.dictCode"
+								:label="item.dictLabel" :value="item.dictValue" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="SearchCustomer" filterable clearable placeholder="选择客户（可输入查询）"
+							size="default">
+							<el-option v-for="item in optionss.sql_hr_customer_abbreviation" :key="item.dictCode"
+								:label="item.dictLabel" :value="item.dictValue" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-select v-model="SearchSalesperson" filterable clearable placeholder="选择业务员" size="default">
+							<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode"
+								:label="item.dictLabel" :value="item.dictValue" />
+						</el-select>
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchStartDate" type="date" placeholder="请选择开始日期" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<el-date-picker v-model="SearchEndDate" type="date" placeholder="请选择结束日期" size="default" />
+					</el-col>
+					<el-col :span="4">
+						<div style="text-align: left;">
+							<el-button type="primary" plain @click="SearchHandleSearch" size="default">查询</el-button>
+							<el-button @click="SearchHandleReset" size="default">重置</el-button>
+						</div>
+					</el-col>
+				</el-row>
+			</div>
 
-		<el-dialog v-model="CreateDialog" title="创建收样/寄样" :close-on-click-modal=false style="width: 70%;"
+			<!-- 表格区域 -->
+			<el-table :data="ProductSampleTableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="type" label="寄样/收样" width="100">
+					<template #default="scope">
+						<span>{{ scope.row.type }}</span>
+						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column prop="customer_or_Supplier" label="客户/供应商" width="110"></el-table-column>
+				<el-table-column prop="customer_ID" label="寄样对象" width="150"></el-table-column>
+				<el-table-column prop="waybill_Number" label="运单号" width="130"></el-table-column>
+				<el-table-column prop="express_Company" label="快件公司" width="130"></el-table-column>
+				<el-table-column prop="sample_Date" label="登记日期" width="110"></el-table-column>
+				<el-table-column prop="payment_Method" label="付费方式" width="90"></el-table-column>
+				<el-table-column prop="company_ID" label="我方公司" width="110"></el-table-column>
+				<el-table-column prop="paid_Express_Fee" label="已付快件费" width="110"></el-table-column>
+				<el-table-column prop="relatedContractID" label="销售合同" width="130"></el-table-column>
+				<el-table-column prop="relatedShippingContractsID" label="出运合同" width="130"></el-table-column>
+				<el-table-column fixed="right" prop="operate" label="操作" width="200">
+					<template v-slot:default="scope">
+						<el-button type="text" size="small" @click="handleView(scope.row.id)">查看/编辑</el-button>
+						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
+							link type="danger" size="small" @click="DeleteProductSample(scope.row)">删除</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
+				:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+		</div>
+
+		<el-dialog :modal="false" modal-penetrable v-model="dialogVisible"
+			:title="isCreateMode ? '创建收样/寄样' : '查看/编辑收样/寄样'" :close-on-click-modal="false" style="width: 75%;"
 			@closed="handleDialogClosed">
-			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
-			<el-divider></el-divider>
-			<el-form :model="CreateDialogform" label-width="120px">
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="请选择">
-							<el-radio-group v-model="radioValue" :disabled="IsEditDisabled">
-								<el-radio label="1" size="large" border>寄样</el-radio>
-								<el-radio label="2" size="large" border>收样</el-radio>
-							</el-radio-group>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="客户/供应商">
-							<el-select v-model="CreateDialogform.recipienttypeexamples" placeholder="请选择供应商或客户"
-								style="width: 300px;" @change="handleRecipientTypeChange" :disabled="IsEditDisabled">
-								<el-option v-for="item in optionss.hr_recipient_type_examples" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="运单号">
-							<el-input v-model="CreateDialogform.waybillNumber" style="width: 300px;"
-								:disabled="IsEditDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="快递公司">
-							<el-select v-model="CreateDialogform.expressCompany" placeholder="请选择快递公司"
-								style="width: 300px;" :disabled="IsEditDisabled">
-								<el-option v-for="item in optionss.hr_express_delivery_company" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item v-if="radioValue === '1'" label="寄样日期">
-							<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
-								style="width: 300px;" :disabled="IsEditDisabled"></el-date-picker>
-						</el-form-item>
-						<el-form-item v-else-if="radioValue === '2'" label="收样日期">
-							<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
-								style="width: 300px;" :disabled="IsEditDisabled"></el-date-picker>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item :label="sampleObjectLabel">
-							<el-select v-model="CreateDialogform.sampleObject" placeholder="请选择" style="width: 300px;"
-								:disabled="IsEditDisabled">
-								<el-option v-for="item in getObjectOptions" :key="item.dictCode" :label="item.dictLabel"
-									:value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="对方简称">
-							<el-input v-model="CreateDialogform.partnerAbbreviation" style="width: 300px;"
-								:disabled="IsEditDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="我方公司">
-							<el-select v-model="CreateDialogform.ourCompany" placeholder="请选择" style="width: 300px;"
-								:disabled="IsEditDisabled">
-								<el-option v-for="item in optionss.hr_ourcompany" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="业务员">
-							<el-select v-model="CreateDialogform.salesperson" placeholder="请选择" style="width: 300px;"
-								:disabled="IsEditDisabled" @change="handleSalespersonChange">
-								<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="付费方式">
-							<el-select v-model="CreateDialogform.paymentMethod" placeholder="请选择快递付费方式"
-								style="width: 300px;" :disabled="IsEditDisabled">
-								<el-option v-for="item in optionss.hr_express_payment_method" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="已付快递费">
-							<el-input v-model="CreateDialogform.paidExpressCost" style="width: 300px;"
-								:disabled="!isExpressFeeRequired || IsEditDisabled"></el-input>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8">
-						<el-form-item label="销售合同">
-							<el-select v-model="CreateDialogform.relatedContractID" filterable placeholder="请选择销售合同"
-								style="width: 300px;" :disabled="IsEditDisabled" clearable>
-								<el-option v-for="item in saleContractsOptions" :key="item.dictValue"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<el-form-item label="出运合同">
-							<el-select v-model="CreateDialogform.relatedShippingContractsID" filterable
-								placeholder="请选择出运合同" style="width: 300px;" :disabled="IsEditDisabled" clearable>
-								<el-option v-for="item in shippingContractsOptions" :key="item.dictValue"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<span style="font-size: 20px; font-weight: bold;">样品信息</span>
-				<el-divider></el-divider>
-				<el-button class="mt-4" type="primary" style="margin-bottom: 10px;" @click="addSampleRow"
-					:disabled="IsEditDisabled">添加样品</el-button>
-				<el-table :data="SampleProductData" style="width: 100%;margin-bottom: 15px;" max-height="550">
-					<el-table-column prop="productNumber" label="样品编号" width="250">
-						<template #default="{ row, $index }">
-							<el-select v-model="row.productNumber" filterable clearable allow-create
-								:default-first-option="true" placeholder="请选择或输入样品编号" style="width: 100%"
-								:disabled="IsEditDisabled"
-								@change="(value) => handleProductNumberChange(value, $index, $event)"
-								@clear="handleClearProductNumber($index)">
-								<el-option v-for="item in optionss.sql_product_name" :key="item.dictCode"
-									:label="item.dictLabel" :value="item.dictValue" />
-							</el-select>
-						</template>
-					</el-table-column>
-					<el-table-column prop="productChineseName" label="中文品名" width="170">
-						<template #default="{ row }">
-							<el-input v-model="row.productChineseName" :disabled="IsEditDisabled"></el-input>
-						</template>
-					</el-table-column>
-					<el-table-column prop="SampleQuantity" label="寄样数量" width="100">
-						<template #default="{ row }">
-							<el-input v-model="row.SampleQuantity" :disabled="IsEditDisabled"></el-input>
-						</template>
-					</el-table-column>
-					<el-table-column prop="PricingAmount" label="计价金额" width="100">
-						<template #default="{ row }">
-							<el-input v-model="row.PricingAmount" :disabled="IsEditDisabled"></el-input>
-						</template>
-					</el-table-column>
-					<el-table-column prop="subproductImage" label="产品图片" width="200" align="center">
-						<template #default="scope">
-							<el-upload :id="`upload-${scope.$index}`" ref="uploadRefs" :auto-upload="false"
-								:show-file-list="true" :on-change="(file) => handleImageSelect(file, scope.$index)"
-								:on-remove="(file) => handleImageRemove(file, scope.$index)" :limit="3" accept="image/*"
-								multiple list-type="text" :file-list="scope.row.subproductImages || []">
-								<el-button
-									v-if="!isViewMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3)"
-									type="primary" icon="Plus" size="small" :disabled="IsEditDisabled">
-									选择图片
-								</el-button>
-								<template #tip>
-									<div v-if="scope.row.subproductImages && scope.row.subproductImages.length >= 3"
-										class="el-upload__tip">
-										已达到最大图片数量
-									</div>
-								</template>
-							</el-upload>
-						</template>
-					</el-table-column>
-					<el-table-column prop="previewImages" label="图片预览" width="300" align="center">
-						<template #default="scope">
-							<div class="image-preview-container"
-								v-if="scope.row.subproductImages && scope.row.subproductImages.length">
-								<el-button type="text" :icon="ArrowLeft" @click="prevImage(scope.$index)"
-									:disabled="scope.row.currentImageIndex === 0" />
-								<el-image style="width: 150px; height: 150px;"
-									:src="scope.row.subproductImages[scope.row.currentImageIndex || 0].url"
-									:preview-src-list="scope.row.subproductImages.map(img => img.url)"
-									:initial-index="scope.row.currentImageIndex || 0" fit="cover" preview-teleported
-									@click="openPreview(scope.$index)" />
-								<el-button type="text" :icon="ArrowRight" @click="nextImage(scope.$index)"
-									:disabled="scope.row.currentImageIndex === scope.row.subproductImages.length - 1" />
-								<el-button v-if="!isViewMode" type="danger" icon="Delete"
-									@click="deleteCurrentImage(scope.$index)" size="small"
-									:disabled="IsEditDisabled">删除</el-button>
-							</div>
-							<span v-else>暂无图片</span>
-						</template>
-					</el-table-column>
-					<el-table-column label="操作" width="100" fixed="right">
-						<template #default="{ $index }">
-							<el-button type="danger" size="small" @click="removeSampleRow($index)"
-								:disabled="IsEditDisabled">删除</el-button>
-						</template>
-					</el-table-column>
-				</el-table>
-			</el-form>
+			<el-collapse v-model="basicInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="基本信息" name="basicInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">基本信息</span>
+					</template>
+					<el-form :model="CreateDialogform" label-width="120px" :show-message="false">
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="请选择">
+									<el-radio-group v-model="radioValue" :disabled="!isEditable" size="default">
+										<el-radio label="1" size="large" border>寄样</el-radio>
+										<el-radio label="2" size="large" border>收样</el-radio>
+									</el-radio-group>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="客户/供应商" required>
+									<el-select v-model="CreateDialogform.recipienttypeexamples" placeholder="请选择供应商或客户"
+										style="width: 300px;" @change="handleRecipientTypeChange"
+										:disabled="!isEditable" size="default" clearable>
+										<el-option v-for="item in optionss.hr_recipient_type_examples"
+											:key="item.dictCode" :label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="运单号">
+									<el-input v-model="CreateDialogform.waybillNumber" style="width: 300px;"
+										:disabled="!isEditable" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="快递公司" required>
+									<el-select v-model="CreateDialogform.expressCompany" placeholder="请选择快递公司"
+										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
+										<el-option v-for="item in optionss.hr_express_delivery_company"
+											:key="item.dictCode" :label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item v-if="radioValue === '1'" label="寄样日期" required>
+									<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
+										style="width: 300px;" :disabled="!isEditable" size="default"></el-date-picker>
+								</el-form-item>
+								<el-form-item v-else-if="radioValue === '2'" label="收样日期" required>
+									<el-date-picker v-model="CreateDialogform.sampleDate" type="date" placeholder="请选择"
+										style="width: 300px;" :disabled="!isEditable" size="default"></el-date-picker>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item :label="sampleObjectLabel" required>
+									<el-select v-model="CreateDialogform.sampleObject" filterable placeholder="请选择"
+										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
+										<el-option v-for="item in getObjectOptions" :key="item.dictCode"
+											:label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="我方公司" required>
+									<el-select v-model="CreateDialogform.ourCompany" placeholder="请选择"
+										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
+										<el-option v-for="item in optionss.hr_ourcompany" :key="item.dictCode"
+											:label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="业务员">
+									<el-select v-model="CreateDialogform.salesperson" placeholder="请选择"
+										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
+										<el-option v-for="item in optionss.sql_all_user" :key="item.dictCode"
+											:label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="6">
+								<el-form-item label="付费方式" required>
+									<el-select v-model="CreateDialogform.paymentMethod" placeholder="请选择快递付费方式"
+										style="width: 300px;" :disabled="!isEditable" size="default" clearable>
+										<el-option v-for="item in optionss.hr_express_payment_method"
+											:key="item.dictCode" :label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="已付快递费">
+									<el-input v-model="CreateDialogform.paidExpressCost" style="width: 300px;"
+										:disabled="!isExpressFeeRequired || !isEditable" size="default"></el-input>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item :label="contractLabel">
+									<el-select v-model="CreateDialogform.relatedContractID" filterable
+										:placeholder="contractPlaceholder" style="width: 300px;" :disabled="!isEditable"
+										size="default" clearable>
+										<el-option v-for="item in contractOptions" :key="item.dictValue"
+											:label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="出运合同">
+									<el-select v-model="CreateDialogform.relatedShippingContractsID" filterable
+										placeholder="请选择出运合同" style="width: 300px;" :disabled="!isEditable"
+										size="default" clearable>
+										<el-option v-for="item in shippingContractsOptions" :key="item.dictValue"
+											:label="item.dictLabel" :value="item.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+						</el-row>
+						<el-row>
+							<el-col :span="24">
+								<el-form-item label="备注">
+									<el-input v-model="CreateDialogform.remark" type="textarea" :rows="3"
+										placeholder="请输入备注信息" style="width: 100%;" :disabled="!isEditable"
+										size="default"></el-input>
+								</el-form-item>
+							</el-col>
+						</el-row>
+					</el-form>
+				</el-collapse-item>
+			</el-collapse>
+			<el-collapse v-model="sampleInfoCollapseActive" style="margin-bottom: 20px;">
+				<el-collapse-item title="样品信息" name="sampleInfo">
+					<template #title>
+						<span style="font-size: 20px; font-weight: bold;">样品信息</span>
+					</template>
+					<el-button class="mt-4" type="primary" style="margin-bottom: 10px;" @click="addSampleRow"
+						:disabled="!isEditable" size="default">添加样品</el-button>
+					<el-table :data="SampleProductData" style="width: 100%;margin-bottom: 15px;" max-height="550" stripe
+						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+						<el-table-column prop="productNumber" label="样品编号" width="250">
+							<template #default="{ row, $index }">
+								<el-select v-model="row.productNumber" filterable clearable allow-create
+									:default-first-option="true" placeholder="请选择或输入样品编号" style="width: 100%"
+									:disabled="!isEditable" size="default"
+									@change="(value) => handleProductNumberChange(value, $index)"
+									@clear="handleClearProductNumber($index)">
+									<el-option v-for="item in optionss.sql_product_name" :key="item.dictCode"
+										:label="item.dictLabel" :value="item.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
+						<el-table-column prop="productChineseName" label="中文品名" width="170">
+							<template #default="{ row }">
+								<el-input v-model="row.productChineseName" :disabled="!isEditable"
+									size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="SampleQuantity" label="寄样数量" width="100">
+							<template #default="{ row }">
+								<el-input v-model="row.SampleQuantity" :disabled="!isEditable"
+									size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="PricingAmount" label="计价金额" width="100">
+							<template #default="{ row }">
+								<el-input v-model="row.PricingAmount" :disabled="!isEditable" size="default"></el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="subproductImage" label="产品图片" width="200" align="center">
+							<template #default="scope">
+								<el-upload :id="`upload-${scope.$index}`" ref="uploadRefs" :auto-upload="false"
+									:show-file-list="true" :on-change="(file) => handleImageSelect(file, scope.$index)"
+									:on-remove="(file) => handleImageRemove(file, scope.$index)" :limit="3"
+									accept="image/*" multiple list-type="text"
+									:file-list="scope.row.subproductImages || []">
+									<el-button
+										v-if="!isCreateMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3)"
+										type="primary" icon="Plus" size="default" :disabled="!isEditable">
+										选择图片
+									</el-button>
+									<template #tip>
+										<div v-if="scope.row.subproductImages && scope.row.subproductImages.length >= 3"
+											class="el-upload__tip">
+											已达到最大图片数量
+										</div>
+									</template>
+								</el-upload>
+							</template>
+						</el-table-column>
+						<el-table-column prop="previewImages" label="图片预览" width="300" align="center">
+							<template #default="scope">
+								<div class="image-preview-container"
+									v-if="scope.row.subproductImages && scope.row.subproductImages.length">
+									<el-button type="text" :icon="ArrowLeft" @click="prevImage(scope.$index)"
+										:disabled="scope.row.currentImageIndex === 0" />
+									<el-image style="width: 150px; height: 150px;"
+										:src="scope.row.subproductImages[scope.row.currentImageIndex || 0].url"
+										:preview-src-list="scope.row.subproductImages.map(img => img.url)"
+										:initial-index="scope.row.currentImageIndex || 0" fit="cover" preview-teleported
+										@click="openPreview(scope.$index)" />
+									<el-button type="text" :icon="ArrowRight" @click="nextImage(scope.$index)"
+										:disabled="scope.row.currentImageIndex === scope.row.subproductImages.length - 1" />
+									<el-button v-if="!isCreateMode" type="danger" icon="Delete"
+										@click="deleteCurrentImage(scope.$index)" size="default"
+										:disabled="!isEditable">删除</el-button>
+								</div>
+								<span v-else>暂无图片</span>
+							</template>
+						</el-table-column>
+						<el-table-column label="操作" width="100" fixed="right">
+							<template #default="{ $index }">
+								<el-button type="danger" size="default" @click="removeSampleRow($index)"
+									:disabled="!isEditable">删除</el-button>
+							</template>
+						</el-table-column>
+					</el-table>
+				</el-collapse-item>
+			</el-collapse>
 			<template #footer>
 				<span class="dialog-footer">
-					<!-- 新建时显示的保存按钮 -->
-					<el-button v-if="isViewMode" type="primary" :loading="loading" @click="handleSave">确定保存</el-button>
-					<!-- 查看时显示的编辑按钮 -->
-					<el-button v-if="!isViewMode && IsEditDisabled" type="primary" @click="handleEdit">编辑</el-button>
-					<!-- 编辑时显示的保存按钮 -->
-					<el-button v-if="!isViewMode && !IsEditDisabled" type="primary" :loading="loading"
-						@click="handleEditSave">编辑保存</el-button>
+					<!-- 查看模式：显示编辑按钮 -->
+					<el-button v-if="isEditBtnShow" type="primary" @click="handleEdit" size="default">编辑</el-button>
+					<!-- 新建模式：显示保存按钮 -->
+					<el-button v-if="isSaveDraftBtnShow" type="warning" :loading="loading" @click="handleSaveDraft"
+						size="default">保存草稿</el-button>
+					<!-- 编辑模式：显示保存按钮 -->
+					<el-button v-if="isEditSubmitBtnShow" type="success" :loading="loading" @click="handleEditSave"
+						size="default">提交</el-button>
+					<!-- 编辑模式：显示提交按钮 -->
+					<el-button v-if="isSubmitBtnShow" type="success" :loading="loading" @click="handleSave"
+						size="default">提交</el-button>
 				</span>
 			</template>
 		</el-dialog>
@@ -275,7 +324,7 @@
 </template>
 
 <script setup lang="ts">
-import { createApp, ref, reactive, onMounted, getCurrentInstance, computed, toRefs } from 'vue'
+import { createApp, ref, reactive, onMounted, getCurrentInstance, computed, toRefs, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer,
@@ -283,9 +332,19 @@ import {
 } from 'element-plus'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import request from '@/utils/request';
+import useUserStore from "@/store/modules/user";
 
 // 获取路由实例
 const route = useRoute()
+
+const isEditBtnShow = ref(false);//编辑按钮
+const isSaveDraftBtnShow = ref(false);//保存草稿按钮
+const isEditSubmitBtnShow = ref(false);//编辑提交按钮
+const isSubmitBtnShow = ref(false);//提交按钮
+
+// collapse组件状态
+const basicInfoCollapseActive = ref(['basicInfo']);
+const sampleInfoCollapseActive = ref(['sampleInfo']);
 
 //查询条件
 const SearchwaybillNumber = ref('');
@@ -318,9 +377,9 @@ const SearchHandleSearch = () => {
 	GetProductSampleList(currentPage.value, pageSize.value);
 }
 //表格数据
-const GetProductSampleList = (start, end) => {
-	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
-		request({
+const GetProductSampleList = async (start, end) => {
+	try {
+		const response = await request({
 			url: 'ProductSample/GetProductSampleList/GetList',
 			method: 'GET',
 			params: {
@@ -332,33 +391,91 @@ const GetProductSampleList = (start, end) => {
 				StartDate: SearchStartDate.value,
 				EndDate: SearchEndDate.value,
 			}
-		}).then(response => {
-			if (response.code === 200) {
-				// 更新表格数据
-				ProductSampleTableData.value = response.data.result;
-				ProductSampleTableData.value.forEach(item => {
-					item.type = item.type === 1 ? '寄样' : '收样';
-					item.customer_or_Supplier = item.customer_or_Supplier === 1 ? '客户' : '供应商';
-					item.customer_ID = optionss.value.sql_hr_customer_abbreviation.find(customer => customer.dictValue === item.customer_ID.toString())?.dictLabel || '未知';
-					item.express_Company = optionss.value.hr_express_delivery_company.find(company => company.dictValue === item.express_Company.toString())?.dictLabel || '未知';
-					item.paid_Express_Fee = item.paid_Express_Fee.toFixed(2);
-					item.payment_Method = optionss.value.hr_express_payment_method.find(method => method.dictValue === item.payment_Method.toString())?.dictLabel || '未知';
-					item.company_ID = optionss.value.hr_ourcompany.find(company => company.dictValue === item.company_ID.toString())?.dictLabel || '未知';
-					item.sample_Date = formatDate(item.sample_Date);
-				});
-				// 更新分页信息
-				totalItems.value = response.data.totalNum;
-				// 解决 Promise
-				resolve(response.data);
-			} else {
-				ElMessage.error(response.msg || '获取数据失败');
-				reject(new Error(response.msg));
-			}
-		}).catch(error => {
-			ElMessage.error('获取数据失败');
-			reject(error);
 		});
-	})
+
+		if (response.code === 200) {
+			// 更新表格数据
+			ProductSampleTableData.value = response.data.result;
+
+			// 收集所有不同的业务员ID，用于批量加载出运合同
+			const uniqueSalespersonIds = Array.from(new Set(
+				ProductSampleTableData.value
+					.filter(item => item.salesperson_ID && item.salesperson_ID !== 0)
+					.map(item => item.salesperson_ID.toString())
+			));
+
+			// 为每个业务员加载出运合同列表（用于显示）
+			const shippingContractMap = new Map();
+			for (const salespersonId of uniqueSalespersonIds) {
+				try {
+					const shippingResponse = await request({
+						url: 'ShippingDeliveries/GetShippingContractSelectListByCustomerID/GetSelectList',
+						method: 'GET',
+						params: {
+							CustomerID: parseInt(salespersonId)
+						}
+					});
+					if (shippingResponse.code === 200) {
+						const contracts = (shippingResponse.data || []).map(item => ({
+							dictValue: String(item.dictValue || item.id || item.Id),
+							dictLabel: item.dictLabel || item.invoiceNumber || item.InvoiceNumber
+						}));
+						shippingContractMap.set(salespersonId, contracts);
+					}
+				} catch (error) {
+					console.error(`加载业务员 ${salespersonId} 的出运合同列表失败:`, error);
+				}
+			}
+
+			// 处理列表数据
+			ProductSampleTableData.value.forEach((item) => {
+				item.type = item.type === 1 ? '寄样' : '收样';
+				item.customer_or_Supplier = item.customer_or_Supplier === 1 ? '客户' : '供应商';
+				if (item.customer_ID != 0 && item.customer_ID != null) {
+					item.customer_ID = optionss.value.sql_hr_customer_abbreviation.find(customer => customer.dictValue === item.customer_ID.toString())?.dictLabel || '未知';
+				}
+				if (item.express_Company != 0 && item.express_Company != null) {
+					item.express_Company = optionss.value.hr_express_delivery_company.find(company => company.dictValue === item.express_Company.toString())?.dictLabel || '未知';
+				}
+				item.paid_Express_Fee = item.paid_Express_Fee.toFixed(2);
+				if (item.payment_Method != 0 && item.payment_Method != null) {
+					item.payment_Method = optionss.value.hr_express_payment_method.find(method => method.dictValue === item.payment_Method.toString())?.dictLabel || '未知';
+				}
+				if (item.company_ID != 0 && item.company_ID != null) {
+					item.company_ID = optionss.value.hr_ourcompany.find(company => company.dictValue === item.company_ID.toString())?.dictLabel || '未知';
+				}
+				item.sample_Date = formatDate(item.sample_Date);
+
+				// 处理销售合同/采购合同显示（优先使用后端返回的合同编号）
+				if (item.relatedContractID != 0 && item.relatedContractID != null) {
+					item.relatedContractID = item.relatedContractNumber || item.relatedContractID.toString() || '';
+				} else {
+					item.relatedContractID = '';
+				}
+
+				// 处理出运合同显示
+				if (item.relatedShippingContractsID != 0 && item.relatedShippingContractsID != null) {
+					const salespersonId = item.salesperson_ID ? item.salesperson_ID.toString() : '';
+					const shippingContracts = shippingContractMap.get(salespersonId) || [];
+					const shippingContract = shippingContracts.find(c => c.dictValue === item.relatedShippingContractsID.toString());
+					item.relatedShippingContractsID = shippingContract ? shippingContract.dictLabel : (item.relatedShippingNumber || item.relatedShippingContractsID || '');
+				} else {
+					item.relatedShippingContractsID = '';
+				}
+			});
+
+			// 更新分页信息
+			totalItems.value = response.data.totalNum;
+			return response.data;
+		} else {
+			ElMessage.error(response.msg || '获取数据失败');
+			throw new Error(response.msg);
+		}
+	} catch (error) {
+		console.error('获取数据失败:', error);
+		ElMessage.error('获取数据失败');
+		throw error;
+	}
 }
 
 const formatDate = (dateString) => {
@@ -366,25 +483,37 @@ const formatDate = (dateString) => {
 	return dateString.split(' ')[0]; // Returns just the date part
 };
 
-// 编辑按钮点击事件
-const handleEdit = () => {
-	IsEditDisabled.value = false; // 切换到可编辑状态
+// 1. 修改状态变量
+const isCreateMode = ref(false);    // 是否是新建模式
+const isEditable = ref(false);      // 是否可编辑
+const dialogVisible = ref(false);   // 对话框显示状态（原 CreateDialog）
+
+// 2. 修改处理函数
+// 新建按钮点击事件
+const handleCreate = () => {
+	isCreateMode.value = true;      // 设置为新建模式
+	isEditable.value = true;        // 允许编辑
+	isEditBtnShow.value = false;
+	isSaveDraftBtnShow.value = true;
+	isEditSubmitBtnShow.value = false;
+	isSubmitBtnShow.value = true;
+	CreateDialogform.value.salesperson = useUserStore().userId ? useUserStore().userId.toString() : '';
+	// 清空合同选项（等待选择客户/供应商后再加载）
+	saleContractsOptions.value = [];
+	purchaseContractsOptions.value = [];
+	shippingContractsOptions.value = [];
+	dialogVisible.value = true;     // 打开对话框
 };
 
-// 修改新建按钮点击事件
-const handleCreate = () => {
-	isViewMode.value = false;
-	IsEditDisabled.value = false; // 新建时可编辑
-	CreateDialog.value = true;
-};
-// 状态控制变量
-const isViewMode = ref(false);
-const IsEditDisabled = ref(false);
-//查看详情的方法
+// 查看/编辑按钮点击事件
 const handleView = async (id) => {
 	currentEditId.value = id;
-	isViewMode.value = false;
-	IsEditDisabled.value = true; // 初始查看状态，表单不可编辑
+	isCreateMode.value = false;     // 设置为查看模式
+	isEditable.value = false;       // 初始禁用编辑
+	isEditBtnShow.value = true;
+	isSaveDraftBtnShow.value = false;
+	isEditSubmitBtnShow.value = false;
+	isSubmitBtnShow.value = false;
 	try {
 		const response = await request({
 			url: 'ProductSample/GetProductSampleDetails/GetDetails',
@@ -394,64 +523,101 @@ const handleView = async (id) => {
 
 		if (response.code === 200) {
 			const { sample, details } = response.data;
+			// 保存paymentRequestID
+			currentPaymentRequestID.value = sample?.paymentRequestID ?? null;
+
+			// 根据paymentRequestID判断是否允许编辑
+			// 如果paymentRequestID等于0或者为null，可以编辑；如果不等于0，则不允许编辑
+			const canEdit = !currentPaymentRequestID.value || currentPaymentRequestID.value === 0;
+
 			// 保存销售合同和出运合同的ID（在选项加载完成前先保存）
-			// 使用大写开头的字段名，与 product 目录下的实现保持一致
-			const relatedContractIDValue = sample.RelatedContractID ? sample.RelatedContractID.toString() : '';
-			const relatedShippingContractsIDValue = sample.RelatedShippingContractsID ? sample.RelatedShippingContractsID.toString() : '';
+			const relatedContractIDValue = sample?.relatedContractID ? sample.relatedContractID.toString() : '';
+			const relatedShippingContractsIDValue = sample?.relatedShippingContractsID ? sample.relatedShippingContractsID.toString() : '';
+			const salespersonID = sample?.salesperson_ID ? sample.salesperson_ID.toString() : '';
+			const customerID = (sample?.customer_ID ?? '').toString();
+			const recipientType = (sample?.customer_or_Supplier ?? 1).toString();
 
-			// 先加载销售合同列表（等待加载完成）
-			await loadSaleContracts();
-
-			// 如果有业务员，加载出运合同列表（等待加载完成）
-			const salespersonID = sample.salesperson_ID ? sample.salesperson_ID.toString() : '';
-			if (salespersonID) {
-				await loadShippingContracts(salespersonID);
-			}
-
-			// 填充主表数据（在选项加载完成后再赋值，确保下拉框能正确显示）
+			// 填充主表数据（先填充，这样loadContractsByType才能获取到正确的值）
 			CreateDialogform.value = {
-				recipienttypeexamples: sample.customer_or_Supplier.toString(),
-				waybillNumber: sample.waybill_Number,
-				expressCompany: sample.express_Company.toString(),
-				sampleDate: sample.sample_Date.split(' ')[0],
-				sampleObject: sample.customer_ID.toString(),
-				partnerAbbreviation: sample.abbreviation,
-				ourCompany: sample.company_ID.toString(),
+				recipienttypeexamples: recipientType,
+				waybillNumber: sample?.waybill_Number ?? '',
+				expressCompany: (sample?.express_Company ?? '').toString(),
+				sampleDate: sample?.sample_Date ? sample.sample_Date.split(' ')[0] : '',
+				sampleObject: customerID,
+				partnerAbbreviation: sample?.abbreviation ?? '',
+				ourCompany: (sample?.company_ID ?? '').toString(),
 				salesperson: salespersonID,
-				paymentMethod: sample.payment_Method.toString(),
-				paidExpressCost: sample.paid_Express_Fee.toString(),
+				paymentMethod: (sample?.payment_Method ?? '').toString(),
+				paidExpressCost: (sample?.paid_Express_Fee ?? 0).toString(),
 				relatedContractID: relatedContractIDValue,
 				relatedShippingContractsID: relatedShippingContractsIDValue,
-				photos: sample.photos || []
+				photos: sample?.photos ?? [],
+				remark: sample?.remark ?? ''
 			};
+
+			// 根据客户/供应商类型和ID加载对应的合同列表（等待加载完成后再赋值合同ID，确保下拉框能正确显示）
+			if (customerID) {
+				await loadContractsByType();
+			}
+
+			// 重新赋值合同ID（在选项加载完成后，确保下拉框能正确显示）
+			CreateDialogform.value.relatedContractID = relatedContractIDValue;
+			CreateDialogform.value.relatedShippingContractsID = relatedShippingContractsIDValue;
+
 			// 设置寄样/收样类型
-			radioValue.value = sample.type.toString();
+			radioValue.value = (sample?.type ?? 1).toString();
+
+			// 根据paymentRequestID设置编辑按钮显示
+			if (!canEdit) {
+				// 如果已关联付款申请，不允许编辑，只显示查看按钮
+				isEditBtnShow.value = false;
+				isEditable.value = false;
+			}
+
 			// 填充样品明细数据
-			SampleProductData.value = details.map(detail => {
-				const images = detail.product_Image_URL ?
+			SampleProductData.value = (details || []).map(detail => {
+				const images = detail?.product_Image_URL ?
 					detail.product_Image_URL.split(',').map(url => ({
 						url: url.trim(),
 						name: url.split('/').pop()
 					})) : [];
 
 				return {
-					productNumber: detail.sample_Code,
-					productChineseName: detail.chinese_Name,
-					SampleQuantity: detail.sample_Quantity,
-					PricingAmount: detail.valuation_Amount,
+					id: detail?.ID ?? 0,
+					productNumber: detail?.sample_Code ?? '',
+					productChineseName: detail?.chinese_Name ?? '',
+					SampleQuantity: detail?.sample_Quantity ?? '',
+					PricingAmount: detail?.valuation_Amount ?? '',
 					subproductImages: images,
 					currentImageIndex: 0
 				};
 			});
 
-			CreateDialog.value = true;
+			dialogVisible.value = true;
 		} else {
 			ElMessage.error(response.msg || '获取详情失败');
 		}
 	} catch (error) {
+		console.error('获取详情失败:', error);
 		ElMessage.error('获取详情失败');
 	}
 };
+
+// 编辑按钮点击事件
+const handleEdit = () => {
+	// 检查paymentRequestID，如果不为0且不为null，则不允许编辑
+	if (currentPaymentRequestID.value && currentPaymentRequestID.value !== 0) {
+		ElMessage.warning('该记录已关联付款申请，不允许编辑');
+		return;
+	}
+
+	isEditable.value = true;        // 切换到可编辑状态
+	isEditBtnShow.value = false;
+	isSaveDraftBtnShow.value = true;
+	isEditSubmitBtnShow.value = true;
+	isSubmitBtnShow.value = false;
+};
+
 /*动态下拉框start*/
 const proxy = getCurrentInstance().proxy
 const state = reactive({
@@ -471,14 +637,36 @@ const { optionss } = toRefs(state)
 var dictParams = [
 	{ dictType: 'hr_recipient_type_examples' },
 	{ dictType: 'sql_all_user' },
-	{ dictType: 'sql_hr_customer_abbreviation' },
 	{ dictType: 'sql_supplier_info' },
 	{ dictType: 'hr_ourcompany' },
-	{ dictType: 'hr_express_delivery_company' },
 	{ dictType: 'hr_express_payment_method' },
 	{ dictType: 'sql_product_name' },
 	{ dictType: 'sql_waybill_number' }
 ]
+
+// 获取用户相关的客户下拉数据
+const loadUserCustomerData = async () => {
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetCustomerDataByUserID/GetSelectCustomerDataByUserID',
+			method: 'get'
+		});
+		if (response.code === 200) {
+			state.optionss.sql_hr_customer_abbreviation = (response.data || []).map(item => ({
+				dictValue: String(item.dictValue ?? item.id ?? ''),
+				dictLabel: item.dictLabel ?? item.label ?? '',
+				dictCode: String(item.dictCode ?? item.dictValue ?? item.id ?? '')
+			}));
+		} else {
+			state.optionss.sql_hr_customer_abbreviation = [];
+			ElMessage.error(response.msg || '获取客户数据失败');
+		}
+	} catch (error) {
+		console.error('获取客户数据失败:', error);
+		state.optionss.sql_hr_customer_abbreviation = [];
+		ElMessage.error('获取客户数据失败');
+	}
+};
 
 async function fetchDataAndExecute() {
 	try {
@@ -486,25 +674,54 @@ async function fetchDataAndExecute() {
 		response.data.forEach((element) => {
 			state.optionss[element.dictType] = element.list;
 		});
+		await loadUserCustomerData();
 		GetProductSampleList(currentPage.value, pageSize.value);
 	} catch (error) {
 		console.error('Failed to fetch data:', error);
 	}
 }
 fetchDataAndExecute();
-/*动态下拉框end*/
+
+// 加载快递公司下拉选项
+const loadLogisticsCompanySelect = async () => {
+	try {
+		const response = await request({
+			url: 'LogisticsCompany/GetSelectList/GetLogisticsCompanySelect',
+			method: 'get',
+			params: { companyType: 2 }
+		});
+		if (response.code === 200) {
+			state.optionss.hr_express_delivery_company = (response.data || []).map(x => ({
+				dictValue: String(x.dictValue),
+				dictLabel: x.dictLabel
+			}));
+		}
+	} catch (error) {
+		console.error('加载快递公司下拉失败:', error);
+	}
+};
+loadLogisticsCompanySelect();
 
 // 销售合同列表
 const saleContractsOptions = ref([]);
+// 采购合同列表
+const purchaseContractsOptions = ref([]);
 // 出运合同列表
 const shippingContractsOptions = ref([]);
 
-// 加载销售合同列表（根据当前用户）
-const loadSaleContracts = async () => {
+// 加载销售合同列表（根据客户ID）
+const loadSaleContracts = async (customerID) => {
+	if (!customerID) {
+		saleContractsOptions.value = [];
+		return;
+	}
 	try {
 		const response = await request({
-			url: 'Contracts/GetContractListByUser/GetContractList',
-			method: 'GET'
+			url: 'Contracts/GetContractListByCustomerID/GetContractListByCustomerIDList',
+			method: 'GET',
+			params: {
+				CustomerID: parseInt(customerID)
+			}
 		});
 		if (response.code === 200) {
 			saleContractsOptions.value = (response.data || []).map(item => ({
@@ -522,18 +739,48 @@ const loadSaleContracts = async () => {
 	}
 };
 
-// 加载出运合同列表（根据业务员ID）
-const loadShippingContracts = async (salePersonID) => {
-	if (!salePersonID) {
+// 加载采购合同列表（根据供应商ID）
+const loadPurchaseContracts = async (supplierID) => {
+	if (!supplierID) {
+		purchaseContractsOptions.value = [];
+		return;
+	}
+	try {
+		const response = await request({
+			url: 'PurchaseContracts/GetContractListBySupplierID/GetContractListBySupplierIDList',
+			method: 'GET',
+			params: {
+				supplierID: parseInt(supplierID)
+			}
+		});
+		if (response.code === 200) {
+			purchaseContractsOptions.value = (response.data || []).map(item => ({
+				dictValue: String(item.dictValue || item.id),
+				dictLabel: item.dictLabel || item.PurchaseContractNumber || ''
+			}));
+		} else {
+			purchaseContractsOptions.value = [];
+			// 不显示错误消息，因为供应商可能没有采购合同
+		}
+	} catch (error) {
+		console.error('加载采购合同列表失败:', error);
+		purchaseContractsOptions.value = [];
+	}
+};
+
+// 加载出运合同列表（根据合同类型和合同ID）
+const loadShippingContracts = async (documentType, documentID) => {
+	if (!documentID) {
 		shippingContractsOptions.value = [];
 		return;
 	}
 	try {
 		const response = await request({
-			url: 'ShippingDeliveries/GetShippingContractSelectList/GetSelectList',
+			url: 'ShippingDeliveries/GetShippingContractSelectListByDocumentType/GetSelectListByDocumentType',
 			method: 'GET',
 			params: {
-				SalespersonID: parseInt(salePersonID)
+				DocumentType: parseInt(documentType),
+				DocumentID: parseInt(documentID)
 			}
 		});
 		if (response.code === 200) {
@@ -543,7 +790,7 @@ const loadShippingContracts = async (salePersonID) => {
 			}));
 		} else {
 			shippingContractsOptions.value = [];
-			// 不显示错误消息，因为业务员可能没有出运合同
+			// 不显示错误消息，因为合同可能没有出运合同
 		}
 	} catch (error) {
 		console.error('加载出运合同列表失败:', error);
@@ -551,21 +798,46 @@ const loadShippingContracts = async (salePersonID) => {
 	}
 };
 
+// 根据客户/供应商类型和选择的客户/供应商ID加载对应的合同
+const loadContractsByType = async () => {
+	const recipientType = CreateDialogform.value.recipienttypeexamples;
+	const sampleObject = CreateDialogform.value.sampleObject;
+
+	// 清空所有合同选项
+	saleContractsOptions.value = [];
+	purchaseContractsOptions.value = [];
+	shippingContractsOptions.value = [];
+
+	// 清空当前选择的合同
+	CreateDialogform.value.relatedContractID = '';
+	CreateDialogform.value.relatedShippingContractsID = '';
+
+	if (!sampleObject) {
+		return;
+	}
+
+	// 如果是客户，只加载销售合同（出运合同将在选择销售合同后加载）
+	if (recipientType === '1') {
+		await loadSaleContracts(sampleObject);
+	}
+	// 如果是供应商，只加载采购合同（出运合同将在选择采购合同后加载）
+	else if (recipientType === '2') {
+		await loadPurchaseContracts(sampleObject);
+	}
+};
+
+/*动态下拉框end*/
+
+
 // 处理寄收样对象类型变化
 const handleRecipientTypeChange = () => {
 	CreateDialogform.value.sampleObject = ''; // 清空选择的寄样对象
-};
-
-// 处理业务员变化
-const handleSalespersonChange = (value) => {
-	// 清空出运合同选择
+	// 清空合同选项
+	saleContractsOptions.value = [];
+	purchaseContractsOptions.value = [];
+	shippingContractsOptions.value = [];
+	CreateDialogform.value.relatedContractID = '';
 	CreateDialogform.value.relatedShippingContractsID = '';
-	// 如果有业务员，重新加载出运合同列表
-	if (value) {
-		loadShippingContracts(value);
-	} else {
-		shippingContractsOptions.value = [];
-	}
 };
 const sampleObjectLabel = computed(() => {
 	// 根据recipienttypeexamples的值来决定使用哪个数据源
@@ -586,6 +858,28 @@ const getObjectOptions = computed(() => {
 		return optionss.value.sql_hr_customer_abbreviation;
 	}
 	return []; // 默认返回空数组
+});
+
+// 计算属性：根据客户/供应商类型决定合同标签和选项
+const contractLabel = computed(() => {
+	if (CreateDialogform.value.recipienttypeexamples === '2') {
+		return '采购合同';
+	}
+	return '销售合同';
+});
+
+const contractOptions = computed(() => {
+	if (CreateDialogform.value.recipienttypeexamples === '2') {
+		return purchaseContractsOptions.value;
+	}
+	return saleContractsOptions.value;
+});
+
+const contractPlaceholder = computed(() => {
+	if (CreateDialogform.value.recipienttypeexamples === '2') {
+		return '请选择采购合同';
+	}
+	return '请选择销售合同';
 });
 
 //样品产品数据
@@ -697,10 +991,10 @@ const CreateDialogform = ref({
 	relatedContractID: '',
 	relatedShippingContractsID: '',
 	photos: [],
+	remark: '',
 });
 
 const radioValue = ref('1');
-const CreateDialog = ref(false);
 const customerinfoselect = ref('');
 const loading = ref(false);
 // 添加上传URL常量
@@ -720,6 +1014,13 @@ const uploadProductPhoto = async (file) => {
 //确定保存方法
 const handleSave = async () => {
 	if (loading.value) return;
+
+	// 检查paymentRequestID，如果不为0且不为null，则不允许保存
+	if (currentPaymentRequestID.value && currentPaymentRequestID.value !== 0) {
+		ElMessage.warning('该记录已关联付款申请，不允许保存');
+		return;
+	}
+
 	// 1. 构建基础请求数据用于验证
 	const requestData = {
 		type: parseInt(radioValue.value),
@@ -735,7 +1036,9 @@ const handleSave = async () => {
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
 		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
 		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
+		remark: CreateDialogform.value.remark || '',
 		isDelete: 0,
+		isDraft: 0,
 		details: SampleProductData.value.map(item => ({
 			sample_Code: item.productNumber,
 			chinese_Name: item.productChineseName,
@@ -784,7 +1087,7 @@ const handleSave = async () => {
 		const response = await request.post('ProductSample/AddProductSample/Add', requestData);
 		if (response.code === 200) {
 			ElMessage.success(response.msg || '保存成功');
-			CreateDialog.value = false;
+			dialogVisible.value = false;
 			resetForm();
 			// 6. 刷新列表数据
 			await GetProductSampleList(currentPage.value, pageSize.value);
@@ -806,20 +1109,28 @@ const isExpressFeeRequired = computed(() => {
 });
 // 表单验证
 const validateForm = (data) => {
+	if (!data.customer_or_Supplier) {
+		ElMessage.warning('请选择客户/供应商');
+		return false;
+	}
 	if (!data.express_Company) {
 		ElMessage.warning('请选择快递公司');
 		return false;
 	}
 	if (!data.sample_Date) {
-		ElMessage.warning('请选择日期');
+		ElMessage.warning('请选择寄样日期');
 		return false;
 	}
 	if (!data.customer_ID) {
-		ElMessage.warning('请选择客户/供应商');
+		ElMessage.warning('请选择客户或供应商');
 		return false;
 	}
 	if (!data.company_ID) {
 		ElMessage.warning('请选择我方公司');
+		return false;
+	}
+	if (!data.payment_Method) {
+		ElMessage.warning('请选择付费方式');
 		return false;
 	}
 	if (!data.salesperson_ID) {
@@ -829,12 +1140,11 @@ const validateForm = (data) => {
 
 	// 寄样和收样的快递费验证
 	if (data.type === 1 && data.payment_Method === 1 && !data.paid_Express_Fee) { // 寄样且预付
-		ElMessage.warning('选择预付时，已付快递费为必填项');
-		return false;
+		data.paid_Express_Fee = 0;
+
 	}
 	if (data.type === 2 && data.payment_Method === 2 && !data.paid_Express_Fee) { // 收样且到付
-		ElMessage.warning('选择到付时，已付快递费为必填项');
-		return false;
+		data.paid_Express_Fee = 0;
 	}
 
 	if (data.details.length === 0) {
@@ -860,6 +1170,7 @@ const validateForm = (data) => {
 // 重置表单
 const resetForm = () => {
 	currentEditId.value = null;
+	currentPaymentRequestID.value = null;
 	// 重置基本表单数据
 	CreateDialogform.value = {
 		recipienttypeexamples: '1',
@@ -869,30 +1180,46 @@ const resetForm = () => {
 		sampleObject: '',
 		partnerAbbreviation: '',
 		ourCompany: '',
-		salesperson: '',
+		salesperson: useUserStore().userId ? useUserStore().userId.toString() : '', // 这里设置默认业务员,
 		paymentMethod: '',
 		paidExpressCost: '',
 		relatedContractID: '',
 		relatedShippingContractsID: '',
 		photos: [],
+		remark: '',
 	};
 	// 重置寄样/收样选择
 	radioValue.value = '1';
 	// 清空样品列表数据
 	SampleProductData.value = [];
+	// 清空合同选项
+	saleContractsOptions.value = [];
+	purchaseContractsOptions.value = [];
+	shippingContractsOptions.value = [];
 	// 重置编辑状态
-	IsEditDisabled.value = false;
+	isEditable.value = false;
 };
 // 对话框关闭时的处理函数
 const handleDialogClosed = () => {
 	resetForm();
-	isViewMode.value = false;
-	IsEditDisabled.value = true;
+	isCreateMode.value = false;
+	isEditable.value = false;
 };
 
 // 编辑保存方法
 // ... existing code ...
 const handleEditSave = async () => {
+	// 检查paymentRequestID，如果不为0且不为null，则不允许保存
+	if (currentPaymentRequestID.value && currentPaymentRequestID.value !== 0) {
+		ElMessage.warning('该记录已关联付款申请，不允许保存');
+		isEditable.value = false; // 恢复到不可编辑状态
+		isEditBtnShow.value = true;
+		isSaveDraftBtnShow.value = false;
+		isEditSubmitBtnShow.value = false;
+		isSubmitBtnShow.value = false;
+		return;
+	}
+
 	// 1. 构建请求数据
 	const requestData = {
 		ID: currentEditId.value,
@@ -909,7 +1236,9 @@ const handleEditSave = async () => {
 		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
 		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
 		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
+		remark: CreateDialogform.value.remark || '',
 		isDelete: 0,
+		isDraft: 0,
 		details: SampleProductData.value.map(item => ({
 			ID: item.id || 0,
 			sample_Code: item.productNumber,
@@ -923,7 +1252,7 @@ const handleEditSave = async () => {
 	// 2. 表单验证
 	if (!validateForm(requestData)) {
 		// 验证失败时保持编辑状态
-		IsEditDisabled.value = false;
+		isEditable.value = true;
 		return;
 	}
 	loading.value = true;
@@ -943,7 +1272,7 @@ const handleEditSave = async () => {
 							}
 						} catch (error) {
 							ElMessage.error(`图片 ${img.name} 上传失败`);
-							IsEditDisabled.value = false; // 保持编辑状态
+							isEditable.value = false; // 保持编辑状态
 							loading.value = false;
 							return;
 						}
@@ -962,18 +1291,20 @@ const handleEditSave = async () => {
 		// 5. 发送编辑请求
 		const response = await request.post('ProductSample/EditProductSample/Edit', requestData);
 		if (response.code === 200) {
-			ElMessage.success('更新成功');
+			ElMessage.success('提交成功');
+			dialogVisible.value = false;
+			resetForm();
 			// 6. 刷新列表数据
 			await GetProductSampleList(currentPage.value, pageSize.value);
-			IsEditDisabled.value = true; // 成功后禁用编辑
+			isEditable.value = false; // 成功后禁用编辑
 		} else {
-			ElMessage.error('更新失败');
-			IsEditDisabled.value = false; // 失败时保持编辑状态
+			ElMessage.error('提交失败');
+			isEditable.value = false; // 失败时保持编辑状态
 		}
 	} catch (error) {
-		console.error('更新失败:', error);
-		ElMessage.error('更新失败，请稍后重试');
-		IsEditDisabled.value = false; // 错误时保持编辑状态
+		console.error('提交失败:', error);
+		ElMessage.error('提交失败，请稍后重试');
+		isEditable.value = false; // 错误时保持编辑状态
 	} finally {
 		loading.value = false;
 	}
@@ -981,10 +1312,11 @@ const handleEditSave = async () => {
 
 // 添加存储当前编辑记录ID的变量
 const currentEditId = ref(null);
+// 添加存储当前记录的paymentRequestID的变量
+const currentPaymentRequestID = ref(null);
 
 // 处理样品编号变化
-// 处理样品编号变化
-const handleProductNumberChange = async (value, rowIndex, event) => {
+const handleProductNumberChange = async (value, rowIndex) => {
 	if (rowIndex === undefined) {
 		console.error('Row index is undefined!');
 		return;
@@ -1071,7 +1403,141 @@ const addSampleRow = () => {
 	});
 };
 
-// 添加在fetchDataAndExecute函数后
+const handleSaveDraft = async () => {
+	if (loading.value) return;
+
+	// 检查paymentRequestID，如果不为0且不为null，则不允许保存草稿
+	if (currentPaymentRequestID.value && currentPaymentRequestID.value !== 0) {
+		ElMessage.warning('该记录已关联付款申请，不允许保存草稿');
+		return;
+	}
+
+	// 1. 构建请求数据
+	const requestData = {
+		ID: currentEditId.value || 0,  // 如果是编辑模式，使用当前ID
+		type: parseInt(radioValue.value),
+		customer_or_Supplier: parseInt(CreateDialogform.value.recipienttypeexamples),
+		waybill_Number: CreateDialogform.value.waybillNumber,
+		express_Company: parseInt(CreateDialogform.value.expressCompany) || null,
+		sample_Date: CreateDialogform.value.sampleDate,
+		customer_ID: parseInt(CreateDialogform.value.sampleObject) || null,
+		abbreviation: CreateDialogform.value.partnerAbbreviation,
+		company_ID: parseInt(CreateDialogform.value.ourCompany) || null,
+		salesperson_ID: parseInt(CreateDialogform.value.salesperson) || null,
+		payment_Method: parseInt(CreateDialogform.value.paymentMethod) || null,
+		paid_Express_Fee: parseFloat(CreateDialogform.value.paidExpressCost) || 0,
+		RelatedContractID: CreateDialogform.value.relatedContractID ? parseInt(CreateDialogform.value.relatedContractID) : null,
+		RelatedShippingContractsID: CreateDialogform.value.relatedShippingContractsID ? parseInt(CreateDialogform.value.relatedShippingContractsID) : null,
+		remark: CreateDialogform.value.remark || '',
+		isDelete: 0,
+		isDraft: 1,  // 标记为草稿
+		details: SampleProductData.value.map(item => ({
+			ID: item.id || 0,
+			sample_Code: item.productNumber,
+			chinese_Name: item.productChineseName,
+			sample_Quantity: parseInt(item.SampleQuantity) || 0,
+			valuation_Amount: parseFloat(item.PricingAmount) || 0,
+			isDelete: 0,
+			remark: ''
+		}))
+	};
+
+	loading.value = true;
+	try {
+		// 处理图片上传
+		for (const row of SampleProductData.value) {
+			if (row.subproductImages) {
+				const newImageUrls = [];
+				for (const img of row.subproductImages) {
+					if (img.isChanged) { // 只上传新添加的图片
+						try {
+							const uploadResult = await uploadProductPhoto(img);
+							if (uploadResult.code === 200) {
+								newImageUrls.push(uploadResult.data.url);
+							} else {
+								throw new Error('图片上传失败');
+							}
+						} catch (error) {
+							ElMessage.error(`图片 ${img.name} 上传失败`);
+							return;
+						}
+					} else {
+						newImageUrls.push(img.url); // 保留已有的图片URL
+					}
+				}
+				row.finalImageUrls = newImageUrls.join(',');
+			}
+		}
+
+		// 更新请求数据中的图片URL
+		requestData.details = requestData.details.map((detail, index) => ({
+			...detail,
+			product_Image_URL: SampleProductData.value[index].finalImageUrls || ''
+		}));
+
+		// 发送请求
+		const url = isCreateMode.value ?
+			'ProductSample/AddProductSample/Add' :
+			'ProductSample/EditProductSample/Edit';
+
+		const response = await request.post(url, requestData);
+
+		if (response.code === 200) {
+			ElMessage.success('草稿保存成功');
+			dialogVisible.value = false;
+			resetForm();
+			// 刷新列表数据
+			await GetProductSampleList(currentPage.value, pageSize.value);
+		} else {
+			ElMessage.error(response.msg || '保存草稿失败');
+		}
+	} catch (error) {
+		console.error('保存草稿失败:', error);
+		ElMessage.error('保存草稿失败，请稍后重试');
+	} finally {
+		loading.value = false;
+	}
+};
+
+// 监听付费方式变化
+watch(() => CreateDialogform.value.paymentMethod, (newValue) => {
+	// 如果选择到付，自动设置已付快递费为0
+	if (newValue === '2') { // 假设'2'代表到付
+		CreateDialogform.value.paidExpressCost = '0';
+	}
+});
+
+// 监听客户/供应商选择变化，动态加载对应的合同列表
+watch(() => CreateDialogform.value.sampleObject, (newValue) => {
+	if (newValue) {
+		// 根据客户/供应商类型加载对应的合同
+		loadContractsByType();
+	} else {
+		// 如果客户/供应商为空，清空所有合同列表
+		saleContractsOptions.value = [];
+		purchaseContractsOptions.value = [];
+		shippingContractsOptions.value = [];
+		CreateDialogform.value.relatedContractID = '';
+		CreateDialogform.value.relatedShippingContractsID = '';
+	}
+});
+
+// 监听销售合同/采购合同选择变化，动态加载对应的出运合同列表
+watch(() => CreateDialogform.value.relatedContractID, (newValue) => {
+	if (newValue) {
+		// 当选择了销售合同或采购合同时，根据客户/供应商类型加载对应的出运合同
+		const recipientType = CreateDialogform.value.recipienttypeexamples;
+		// 1-销售合同，2-采购合同
+		const documentType = recipientType === '1' ? 1 : 2;
+		loadShippingContracts(documentType, newValue);
+	} else {
+		// 如果合同为空，清空出运合同列表和选择
+		shippingContractsOptions.value = [];
+		CreateDialogform.value.relatedShippingContractsID = '';
+	}
+});
+
+// 在fetchDataAndExecute函数后添加
 // 检查URL参数并自动加载样品详情
 onMounted(async () => {
 	// 检查URL中的参数
@@ -1087,6 +1553,102 @@ onMounted(async () => {
 		handleView(id);
 	}
 })
+
+const DeleteProductSample = (row) => {
+	ElMessageBox.confirm('确定要删除该收样/寄样记录吗？', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'ProductSample/DeleteProductSample/Delete',
+			method: 'post',
+			data: { ID: row.id }
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage.success('删除成功');
+				GetProductSampleList(currentPage.value, pageSize.value);
+			} else {
+				ElMessage.error('删除失败');
+			}
+		}).catch(() => {
+			ElMessage.error('删除失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消删除');
+	});
+};
 </script>
 
-<style scoped></style>
+<style scoped>
+/* 创建收样/寄样和查看详情dialog中的表单组件间距减少一半 */
+.el-dialog .el-form-item {
+	margin-bottom: 5px !important;
+}
+
+.el-dialog .el-row {
+	margin-bottom: 2.5px !important;
+}
+
+/* 错误placeholder样式 */
+.error-placeholder .el-input__inner::placeholder,
+.error-placeholder .el-select__input::placeholder,
+.error-placeholder .el-date-editor__input::placeholder {
+	color: var(--el-color-danger) !important;
+}
+
+.error-placeholder .el-input__inner,
+.error-placeholder .el-select__input,
+.error-placeholder .el-date-editor__input {
+	border-color: var(--el-color-danger) !important;
+}
+
+/* 表格行高度调整 */
+.el-table .el-table__row,
+.el-table .el-table__body tr,
+.el-table .el-table__body .el-table__row {
+	height: 20px !important;
+}
+
+/* 表格列间距调整 */
+.el-table {
+	border-spacing: 0 !important;
+	border-collapse: collapse !important;
+	table-layout: fixed !important;
+}
+
+.el-table td {
+	border-spacing: 0 !important;
+	margin: 0 !important;
+	padding-left: 1px !important;
+	padding-right: 1px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+.el-table th {
+	padding-left: 1px !important;
+	padding-right: 1px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+.el-table .el-table__body tr td,
+.el-table .el-table__body .el-table__row td {
+	padding: 2px 1px !important;
+	line-height: 12px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+.el-table tbody tr td {
+	padding: 2px 1px !important;
+	line-height: 12px !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+</style>
