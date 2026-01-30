@@ -768,6 +768,83 @@
 								:total="CustomerSendSampleTotalItems" background layout="prev, pager, next"
 								style="margin-top: 5px;" />
 						</el-tab-pane>
+						<el-tab-pane label="财务" name="FinanceLedgerTable">
+							<el-table v-loading="financeLedgerLoading" :data="financeLedgerPaginatedData"
+								style="width: 100%; table-layout: fixed;" stripe
+								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+								<el-table-column prop="date" label="日期" width="130" align="center" />
+								<el-table-column prop="summary" label="摘要/事项" width="150" align="center" />
+
+								<el-table-column label="收支" align="center">
+									<el-table-column prop="income.rmb" label="人民币" width="120" align="right">
+										<template #default="scope">
+											<span v-if="scope.row.income.rmb > 0">{{ formatFinanceAmount(scope.row.income.rmb)
+											}}</span>
+										</template>
+									</el-table-column>
+									<el-table-column prop="income.usd" label="美元" width="120" align="right">
+										<template #default="scope">
+											<span v-if="scope.row.income.usd > 0">{{ formatFinanceAmount(scope.row.income.usd)
+											}}</span>
+										</template>
+									</el-table-column>
+									<el-table-column prop="income.eur" label="欧元" width="120" align="right">
+										<template #default="scope">
+											<span v-if="scope.row.income.eur > 0">{{ formatFinanceAmount(scope.row.income.eur)
+											}}</span>
+										</template>
+									</el-table-column>
+								</el-table-column>
+
+								<el-table-column label="支出" align="center">
+									<el-table-column prop="expenditure.rmb" label="人民币" width="120" align="right">
+										<template #default="scope">
+											<span v-if="scope.row.expenditure.rmb > 0">{{
+												formatFinanceAmount(scope.row.expenditure.rmb)
+											}}</span>
+										</template>
+									</el-table-column>
+									<el-table-column prop="expenditure.usd" label="美元" width="120" align="right">
+										<template #default="scope">
+											<span v-if="scope.row.expenditure.usd > 0">{{
+												formatFinanceAmount(scope.row.expenditure.usd)
+											}}</span>
+										</template>
+									</el-table-column>
+									<el-table-column prop="expenditure.eur" label="欧元" width="120" align="right">
+										<template #default="scope">
+											<span v-if="scope.row.expenditure.eur > 0">{{
+												formatFinanceAmount(scope.row.expenditure.eur)
+											}}</span>
+										</template>
+									</el-table-column>
+								</el-table-column>
+
+								<el-table-column label="备注" align="center">
+									<el-table-column label="收款客户/付款单位" width="180" align="center">
+										<template #default="scope">
+											<span v-if="scope.row.remarks && scope.row.remarks.customerOrSupplier">
+												{{ scope.row.remarks.customerOrSupplier }}
+											</span>
+											<span v-else>-</span>
+										</template>
+									</el-table-column>
+									<el-table-column label="合同号/备注" width="200" align="center">
+										<template #default="scope">
+											<span v-if="scope.row.remarks && scope.row.remarks.contractOrRemark">
+												{{ scope.row.remarks.contractOrRemark }}
+											</span>
+											<span v-else>-</span>
+										</template>
+									</el-table-column>
+								</el-table-column>
+							</el-table>
+							<el-pagination @current-change="handleFinanceLedgerPageChange"
+								:current-page="financeLedgerCurrentPage" :page-size="financeLedgerPageSize"
+								:total="financeLedgerTotalRecords" background layout="prev, pager, next, total"
+								style="margin-top: 5px;" />
+						</el-tab-pane>
 						<el-tab-pane label="出货记录" name="ShippingRecordTable">
 							<el-table :data="ShipRecoreData" style="width: 100%; table-layout: fixed;"
 								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
@@ -958,6 +1035,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, UploadUserFile, ElMessage, UploadFile, FormInstance, FormRules } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import request from '@/utils/request';
+import { getFinancialGeneralLedgerData } from '@/api/finance'
 import useUserStore from "@/store/modules/user";
 import { number } from 'echarts';
 import { fa } from 'element-plus/es/locale';
@@ -988,6 +1066,38 @@ interface CustomUploadFile extends UploadFile {
 	isChanged?: boolean;
 }
 
+interface FinanceAmount {
+	rmb: number
+	usd: number
+	eur: number
+}
+
+interface FinanceRemarks {
+	customerOrSupplier: string
+	contractOrRemark: string
+}
+
+interface FinanceLedgerItem {
+	date: string
+	summary: string
+	income: FinanceAmount
+	expenditure: FinanceAmount
+	remarks: FinanceRemarks
+}
+
+interface FinanceApiRow {
+	date: string
+	summary: string
+	incomeCny: number
+	incomeUsd: number
+	incomeEur: number
+	expenseCny: number
+	expenseUsd: number
+	expenseEur: number
+	customerOrPayee: string
+	contractOrRemark: string
+}
+
 const activeTab = ref('ContactInfoTable');
 const userStore = useUserStore();
 const isEditCustomerInfo = ref(false);
@@ -998,6 +1108,16 @@ const detailTabsCollapseActive = ref(['detailTabs']);
 const duplicationCheckCollapseActive = ref(['duplicationCheck']);
 const duplicationResultCollapseActive = ref(['duplicationResult']);
 const proxy = getCurrentInstance().proxy as any
+const financeLedgerLoading = ref(false)
+const financeLedgerData = ref<FinanceLedgerItem[]>([])
+const financeLedgerCurrentPage = ref(1)
+const financeLedgerPageSize = ref(10)
+const financeLedgerTotalRecords = computed(() => financeLedgerData.value.length)
+const financeLedgerPaginatedData = computed(() => {
+	const start = (financeLedgerCurrentPage.value - 1) * financeLedgerPageSize.value
+	const end = start + financeLedgerPageSize.value
+	return financeLedgerData.value.slice(start, end)
+})
 const state = reactive({
 	optionss: {
 		// 显示状态选项列表(动态字典将会从后台获取数据)
@@ -2222,6 +2342,8 @@ const OpenCustomerProfileDetailDialog = (row) => {
 	loadContractHistory(row.id);
 	//加载收寄样历史
 	loadCustomerSendSampleHistory(row.id);
+	//加载财务总账
+	loadFinanceLedger(row.id);
 	//加载日志标签
 	loadContactLogTagData();
 	CustomerProfileDetailDialog.value = true;
@@ -2278,6 +2400,66 @@ const formatDate = (dateTimeStr) => {
 	const month = String(date.getMonth() + 1).padStart(2, '0');
 	const day = String(date.getDate()).padStart(2, '0');
 	return `${year}-${month}-${day}`;
+}
+
+const formatFinanceAmount = (amount: number): string => {
+	if (!amount) return ''
+	return Number(amount).toFixed(2)
+}
+
+const parseFinanceRemarks = (row: FinanceApiRow): FinanceRemarks => {
+	return {
+		customerOrSupplier: row.customerOrPayee || '-',
+		contractOrRemark: row.contractOrRemark || '-'
+	}
+}
+
+const transformFinanceLedgerData = (apiRows: FinanceApiRow[]): FinanceLedgerItem[] => {
+	return apiRows.map(row => ({
+		date: formatDate(row.date),
+		summary: row.summary || '',
+		income: {
+			rmb: row.incomeCny || 0,
+			usd: row.incomeUsd || 0,
+			eur: row.incomeEur || 0
+		},
+		expenditure: {
+			rmb: row.expenseCny || 0,
+			usd: row.expenseUsd || 0,
+			eur: row.expenseEur || 0
+		},
+		remarks: parseFinanceRemarks(row)
+	}))
+}
+
+const handleFinanceLedgerPageChange = (page: number) => {
+	financeLedgerCurrentPage.value = page
+}
+
+const loadFinanceLedger = async (customerId: number) => {
+	financeLedgerLoading.value = true
+	try {
+		const response = await getFinancialGeneralLedgerData(customerId || null, null)
+		if (response && response.code === 200 && response.data && response.data.rows) {
+			const currentCustomerLabel = CustomerProfileDetailDialogform.customerAbbreviation
+				|| CustomerProfileDetailDialogform.customerName
+				|| ''
+			const filteredRows = currentCustomerLabel
+				? response.data.rows.filter((row: FinanceApiRow) =>
+					(row.customerOrPayee || '').includes(currentCustomerLabel)
+				)
+				: response.data.rows
+			financeLedgerData.value = transformFinanceLedgerData(filteredRows)
+			financeLedgerCurrentPage.value = 1
+		} else {
+			financeLedgerData.value = []
+		}
+	} catch (error) {
+		console.error('加载财务总账数据失败:', error)
+		financeLedgerData.value = []
+	} finally {
+		financeLedgerLoading.value = false
+	}
 }
 
 // 获取联系日志数据的方法
