@@ -466,6 +466,42 @@
             </el-table-column>
           </el-table>
         </el-tab-pane>
+        <el-tab-pane v-if="isSalesRole()" label="收款单领取" name="receiptClaim">
+          <el-table :data="FinancialTasksTableData" :height="400" style="width: 100%">
+            <el-table-column prop="receiptNumber" label="收款单号" width="120" />
+            <el-table-column prop="ourCompany" label="我方公司" width="120" />
+            <el-table-column prop="amount" label="金额" width="200">
+              <template #default="{ row }">
+                {{ formatAmountWithCurrency(row.amount, row.foreignCurrencyValue) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="bank" label="收汇银行" width="120" />
+            <el-table-column fixed="right" label="操作" width="100" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="handleClaim(row)">领取</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-pagination v-model:current-page="FinancialTasksTableCurrentPage"
+            v-model:page-size="FinancialTasksTablePageSize" :total="FinancialTasksTableTotalItems"
+            @current-change="FinancialTasksTableshandlePageChange" layout="total, prev, pager, next" size="small" />
+        </el-tab-pane>
+        <el-tab-pane v-if="isFinanceRole()" label="收款单确认" name="receiptConfirm">
+          <el-table :data="receiptConfirmTableData" :height="400" style="width: 100%"
+            @row-dblclick="handleReceiptConfirmRowDblClick">
+            <el-table-column prop="receiptNumber" label="收款单号" width="120" />
+            <el-table-column prop="ourCompany" label="我方公司" width="120" />
+            <el-table-column prop="amount" label="金额" width="200">
+              <template #default="{ row }">
+                {{ formatAmountWithCurrency(row.amount, row.foreignCurrencyValue) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="bank" label="收汇银行" width="120" />
+          </el-table>
+          <el-pagination v-model:current-page="receiptConfirmTableCurrentPage"
+            v-model:page-size="receiptConfirmTablePageSize" :total="receiptConfirmTableTotalItems"
+            @current-change="receiptConfirmTableHandlePageChange" layout="total, prev, pager, next" size="small" />
+        </el-tab-pane>
         <el-tab-pane name="reject">
           <template #label>
             <span class="custom-tabs-label">
@@ -926,6 +962,12 @@
                 </el-input>
               </template>
             </el-table-column>
+            <el-table-column prop="purchasepriceterms" label="采购价格条款" width="180">
+              <template #default="{ row }">
+                <span>{{optionss.hr_purchase_pricing_term.find(item =>
+                  item.dictValue === row.purchasepriceterms?.toString())?.dictLabel || '-'}}</span>
+              </template>
+            </el-table-column>
             <el-table-column prop=" inlandfreightprice" label="内陆运费(m³)" width="130">
               <template #default="{ row }">
                 <el-input v-model="row.inlandfreightprice" disabled />
@@ -944,7 +986,7 @@
             <el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="160">
               <template #default="scope">
                 <span :class="{ 'red-text': scope.row.isPriceChanged }">{{ scope.row.singleProductGrossProfitTotal
-                }}</span>
+                  }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="grossProfitRate" label="毛利率%" width="110">
@@ -1284,7 +1326,7 @@
         <el-descriptions-item label="采购币种">
           {{ PurchaseContractDialogData.purchaseCurrency }}
         </el-descriptions-item>
-        <el-descriptions-item label="价格条款">
+        <el-descriptions-item label="价格条款" v-if="false">
           {{ PurchaseContractDialogData.priceTerms }}
         </el-descriptions-item>
         <el-descriptions-item label="付款天数">
@@ -1315,13 +1357,16 @@
           <el-table :data="PurchaseContractDialogData.productinfotableData">
             <el-table-column prop="productCode" label="产品编号" width="120"></el-table-column>
             <el-table-column prop="supplier" label="供应商" width="200"></el-table-column>
-            <el-table-column prop="hasDeposit" label="有无预付款" width="90">
+            <el-table-column prop="hasDeposit" label="有无预付款" width="120">
               <template #default="scope">
-                <el-checkbox v-model="scope.row.hasDeposit" disabled>
-                </el-checkbox>
+                <span>{{ scope.row.hasDeposit ? '有' : '无' }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="depositAmount" label="预付款金额" width="120"></el-table-column>
+            <el-table-column prop="depositAmount" label="预付款金额" width="120">
+              <template #default="scope">
+                <span>{{ scope.row.hasDeposit ? scope.row.depositAmount : '无' }}</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="customerCode" label="客户货号" width="120"></el-table-column>
             <el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
             <el-table-column prop="englishName" label="英文品名" width="150" v-if="false"></el-table-column>
@@ -1329,6 +1374,7 @@
             <el-table-column prop="unit" label="计量单位" width="90"></el-table-column>
             <el-table-column prop="contractQuantity" label="合同数量" width="120"></el-table-column>
             <el-table-column prop="purchaseUnitPrice" label="采购单价" width="120"></el-table-column>
+            <el-table-column prop="purchasePriceTerms" label="采购价格条款" width="180"></el-table-column>
             <el-table-column prop="purchaseTotalPrice" label="采购总价" width="120"></el-table-column>
             <el-table-column prop="deliveryDate" label="交货日期" width="120">
               <template #default="scope">
@@ -3042,6 +3088,33 @@ const isPurchaseRole = () => {
   return false;
 };
 
+const isFinanceRole = () => {
+  if (userStore.userInfo && userStore.userInfo.deptId) {
+    return userStore.userInfo.deptId === 213;
+  }
+  if (userStore.roles && userStore.roles.length > 0) {
+    return userStore.roles.some(role =>
+      role.includes('财务') ||
+      role.includes('finance') ||
+      role.includes('FINANCE')
+    );
+  }
+  return false;
+};
+
+const isSalesRole = () => {
+  if (userStore.roles && userStore.roles.length > 0) {
+    return userStore.roles.some(role =>
+      role.includes('销售') ||
+      role.includes('业务') ||
+      role.includes('sales') ||
+      role.includes('SALE')
+    );
+  }
+  // 非采购/非财务默认视为业务员
+  return !isPurchaseRole() && !isFinanceRole();
+};
+
 // 获取商机当前阶段的辅助函数
 const getCurrentStage = (item) => {
   // 遍历所有阶段，找到包含该商机的阶段
@@ -3918,6 +3991,12 @@ const FinancialTasksTableCurrentPage = ref(1);
 const FinancialTasksTablePageSize = ref(10);
 //收款单据表格
 const FinancialTasksTableData = ref([])
+// 收款单确认表格数据
+const receiptConfirmTableData = ref([])
+const receiptConfirmTableFullData = ref([])
+const receiptConfirmTableTotalItems = ref(0)
+const receiptConfirmTableCurrentPage = ref(1)
+const receiptConfirmTablePageSize = ref(10)
 // 分页变化处理函数
 const FinancialTasksTableshandlePageChange = (newPage) => {
   getFinancialTasksList(newPage, FinancialTasksTablePageSize.value);
@@ -3971,6 +4050,92 @@ const getFinancialTasksList = (start, end) => {
     console.error('获取列表数据失败:', error);
     ElMessage.error('获取列表数据失败');
   });
+};
+
+const normalizeCustomerCollectionItem = (item) => {
+  const normalized = { ...item };
+  normalized.customerIDRaw = item.customerID;
+  normalized.receivingUserRaw = item.receivingUser;
+
+  normalized.ourCompany = state.optionss.hr_ourcompany.find(dict => dict.dictValue === item.ourCompany)?.dictLabel;
+  normalized.foreignCurrencyValue = item.foreignCurrency;
+  normalized.foreignCurrency = state.optionss.hr_export_currency.find(dict => dict.dictValue === item.foreignCurrency)?.dictLabel;
+
+  let bankOptions = [];
+  if (normalized.ourCompany === '荣发塑料') {
+    bankOptions = state.optionss.hr_rf_receiving_bank || [];
+  } else if (normalized.ourCompany === '惠荣进出口') {
+    bankOptions = state.optionss.hr_receiving_bank || [];
+  }
+  normalized.bank = bankOptions.find(dict => dict.dictValue === item.bank)?.dictLabel || item.bank;
+
+  normalized.isCollected = !!(item.customerID && item.receivingUser);
+  normalized.isConfirm = typeof item.isConfirm === 'string' ? Number(item.isConfirm) : item.isConfirm;
+  return normalized;
+};
+
+const filterReceiptConfirmList = (list) => list.filter(item => item.isCollected && Number(item.isConfirm) === 0);
+
+const setReceiptConfirmPage = (pageNum) => {
+  receiptConfirmTableCurrentPage.value = pageNum;
+  const startIndex = (pageNum - 1) * receiptConfirmTablePageSize.value;
+  const endIndex = startIndex + receiptConfirmTablePageSize.value;
+  receiptConfirmTableData.value = receiptConfirmTableFullData.value.slice(startIndex, endIndex);
+};
+
+const receiptConfirmTableHandlePageChange = (newPage) => {
+  setReceiptConfirmPage(newPage);
+};
+
+const loadReceiptConfirmList = async () => {
+  try {
+    const pageSize = 200;
+    let pageNum = 1;
+    let totalNum = 0;
+    let allItems = [];
+
+    const firstResponse = await request({
+      url: 'CustomerCollections/GetCustomerCollectionsList/GetList',
+      method: 'GET',
+      params: {
+        PageNum: pageNum,
+        PageSize: pageSize
+      }
+    });
+
+    const firstResult = firstResponse?.data?.result || [];
+    totalNum = firstResponse?.data?.totalNum || firstResult.length;
+    allItems = allItems.concat(firstResult);
+
+    const totalPages = Math.ceil(totalNum / pageSize);
+    for (let i = 2; i <= totalPages; i++) {
+      const res = await request({
+        url: 'CustomerCollections/GetCustomerCollectionsList/GetList',
+        method: 'GET',
+        params: {
+          PageNum: i,
+          PageSize: pageSize
+        }
+      });
+      const result = res?.data?.result || [];
+      allItems = allItems.concat(result);
+    }
+
+    const normalized = allItems.map(normalizeCustomerCollectionItem);
+    receiptConfirmTableFullData.value = filterReceiptConfirmList(normalized);
+    receiptConfirmTableTotalItems.value = receiptConfirmTableFullData.value.length;
+    setReceiptConfirmPage(receiptConfirmTableCurrentPage.value);
+  } catch (error) {
+    console.error('获取收款单确认列表失败:', error);
+    receiptConfirmTableFullData.value = [];
+    receiptConfirmTableData.value = [];
+    receiptConfirmTableTotalItems.value = 0;
+  }
+};
+
+const getReceiptConfirmTotalCount = async () => {
+  await loadReceiptConfirmList();
+  return receiptConfirmTableTotalItems.value;
 };
 
 // #endregion
@@ -4400,6 +4565,7 @@ const openSaleContractDialog = (row) => {
                   unitOfMeasurementLabel: unitOption?.dictLabel || '',
                   purchasecurrency: purchaseCurrencyOption?.dictValue || element.purchasecurrency,
                   purchaseunitprice: element.purchaseUnitPrice,
+                  purchasepriceterms: element.purchasingPriceTerms ?? element.purchasePriceTerms ?? element.purchasepriceterms ?? null,
                   inlandfreightprice: element.inlandfreightprice,
                   AdditionalPackagingCosts: element.additionalPackagingCosts,
                   singleProductGrossProfit: element.singleProductGrossProfit,
@@ -4504,6 +4670,11 @@ const openSaleContractDialog = (row) => {
           if (productData.purchasePrice) {
             productData.purchaseUnitPrice = productData.purchasePrice;
           }
+          const rawPurchasePriceTerms = productData.purchasingPriceTerms ?? productData.purchasePriceTerms ?? productData.purchasepriceterms;
+          productData.purchasePriceTerms = rawPurchasePriceTerms
+            ? (state.optionss['hr_purchase_pricing_term'].find(item =>
+              item.dictValue === rawPurchasePriceTerms.toString())?.dictLabel || '无')
+            : '无';
         });
         PurchaseContractDialogData.value.productinfotableData = response.data.purchaseContractProducts;
         PurchaseContractDialogData.value.CustomerRelaterExoensesTableData = response.data.purchaseContractVendorExpenses;
@@ -5394,6 +5565,29 @@ const calculatePendingCount = async () => {
       if (paymentTaskResponse && paymentTaskResponse.length > 0) {
         // 接口返回的是ReviewStatus == 2的待付款申请，都算作待处理任务
         totalCount += paymentTaskResponse.length;
+      }
+    }
+
+    // 9. 获取收款单领取数量（业务员可见）
+    if (isSalesRole()) {
+      const receiptClaimResponse = await request({
+        url: 'CustomerCollections/GetUnassignedCustomerCollectionsList/GetList',
+        method: 'GET',
+        params: {
+          PageNum: 1,
+          PageSize: 1
+        }
+      });
+      if (receiptClaimResponse?.data?.totalNum) {
+        totalCount += receiptClaimResponse.data.totalNum;
+      }
+    }
+
+    // 10. 获取收款单确认数量（财务可见）
+    if (isFinanceRole()) {
+      const receiptConfirmCount = await getReceiptConfirmTotalCount();
+      if (receiptConfirmCount > 0) {
+        totalCount += receiptConfirmCount;
       }
     }
 
@@ -6392,6 +6586,7 @@ onMounted(async () => {
       // 关联单号选项数据会在打开领取对话框时按需获取
       getPendingCount(),
       getFinancialTasksList(1, 10),
+      loadReceiptConfirmList(),
       getUserCustomerData()
     ];
 
@@ -7231,6 +7426,22 @@ const handlePaymentTaskRowDblClick = (row) => {
   viewPaymentTask(row);
 }
 
+const handleReceiptConfirmRowDblClick = (row) => {
+  const customerId = row.customerIDRaw || row.customerID || row.customerId;
+  if (!customerId) {
+    ElMessage.warning('无法获取客户信息');
+    return;
+  }
+  router.push({
+    path: '/finance/customercollection',
+    query: {
+      customerId,
+      receiptId: row.id,
+      receiptNumber: row.receiptNumber
+    }
+  });
+}
+
 // 查看付款任务详情
 const viewPaymentTask = (row) => {
   console.log('查看付款任务详情:', row);
@@ -7288,6 +7499,9 @@ const handleTabClick = (tab) => {
   } else if (tab.props.name === 'inquiryReplied') {
     // 当切换到询价已回复tab时，重新加载数据
     getInquiryRepliedList()
+  } else if (tab.props.name === 'receiptConfirm') {
+    // 当切换到收款单确认tab时，重新加载数据
+    loadReceiptConfirmList()
   }
 }
 

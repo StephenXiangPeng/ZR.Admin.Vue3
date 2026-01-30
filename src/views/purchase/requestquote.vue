@@ -876,7 +876,7 @@ const saveDetailAsDraft = async () => {
 const loadInquiryDocuments = async (inquiryId) => {
 	try {
 		const res: any = await request({
-			url: 'Inquiry/GetInquiryProductsAndDocuments/GetInquiryProductsAndDocuments',
+			url: 'Inquiry/GetInquiryProductsAndDocumentsByPurchase/GetInquiryProductsAndDocuments',
 			method: 'GET',
 			params: {
 				InqueryID: inquiryId

@@ -650,6 +650,15 @@
 								</el-input>
 							</template>
 						</el-table-column>
+						<el-table-column prop="purchasepriceterms" label="采购价格条款" width="180">
+							<template #default="{ row }">
+								<el-select v-model="row.purchasepriceterms" filterable placeholder="请选择采购价格条款"
+									style="width: 100%;" :disabled="isDisabled" clearable>
+									<el-option v-for="dict in optionss.hr_purchase_pricing_term" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
 						<el-table-column prop=" inlandfreightprice" label="内陆运费(m³)" width="130">
 							<template #default="{ row }">
 								<el-input v-model="row.inlandfreightprice" @change="calculateTotal"
@@ -1870,6 +1879,7 @@ const handleRowDblClick = (row) => {
 			unitOfMeasurementLabel: unitMeasurement?.dictLabel || '-',
 			purchaseinquiry: 0,
 			purchaseunitprice: row.unitPrice,
+			purchasepriceterms: null,
 			onepacking: 0,
 			isInvoicingc: invoiceOption?.dictValue || '',
 			packaging: '',
@@ -2136,6 +2146,7 @@ const onAddquotationProductItem = () => {
 		unitOfMeasurementLabel: '-',
 		purchaseinquiry: 0,
 		purchaseunitprice: 0,
+		purchasepriceterms: null,
 		onepacking: 0,
 		invoice: '',
 		packaging: '',
@@ -2409,6 +2420,7 @@ const state = reactive({
 		hr_customer_level: [],
 		hr_settlement_way: [],
 		hr_pricing_term: [],
+		hr_purchase_pricing_term: [],
 		hr_nation: [],
 		sql_hr_sale: [],
 		hr_transport_port: [],
@@ -2440,6 +2452,7 @@ var dictParams = [
 	{ dictType: 'sql_hr_customer' }, { dictType: 'hr_ourcompany' },
 	{ dictType: 'hr_quotation_status' }, { dictType: 'hr_export_currency' },
 	{ dictType: 'hr_settlement_way' }, { dictType: 'hr_pricing_term' },
+	{ dictType: 'hr_purchase_pricing_term' },
 	{ dictType: 'hr_nation' }, { dictType: 'sql_hr_sale' },
 	{ dictType: 'hr_transport_port' }, { dictType: 'hr_transportation_method' },
 	{ dictType: 'sys_yes_no' }, { dictType: 'hr_calculate_unit' },
@@ -2893,6 +2906,7 @@ const addContractsRequest = reactive({
 		ExportUnitPrice: number,
 		ExportTotalPrice: number,
 		PurchaseUnitPrice: number,
+		PurchasingPriceTerms: number,
 		PurchaseTotalPrice: number,
 		Packaging: number,
 		SpecialRequirements: string,
@@ -3291,6 +3305,7 @@ const SaveContract = async (formEl: FormInstance | undefined) => {
 				ExportUnitPrice: item.exportunitprice,
 				ExportTotalPrice: item.exporttotalprice,
 				PurchaseUnitPrice: item.purchaseunitprice,
+				PurchasingPriceTerms: item.purchasepriceterms,
 				PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
 				Packaging: item.packaging,
 				SpecialRequirements: item.specialrequirements,
@@ -3723,6 +3738,7 @@ const checkContractsDetails = async (row) => {
 					let invoiceValue;
 					let packagingValue;
 					let outerboxunitValue;
+					let purchasePriceTermsValue;
 					if (element.unit > 0) {
 						unitValue = state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString()).dictValue;
 					}
@@ -3738,6 +3754,12 @@ const checkContractsDetails = async (row) => {
 					if (element.outerboxunit > 0) {
 						outerboxunitValue = state.optionss.hr_calculate_unit.find(item => item.dictValue === element.outerboxunit.toString()).dictValue;
 					}
+					const rawPurchasePriceTerms = element.purchasingPriceTerms ?? element.purchasePriceTerms ?? element.purchasepriceterms;
+					if (rawPurchasePriceTerms > 0) {
+						purchasePriceTermsValue = state.optionss.hr_purchase_pricing_term.find(item =>
+							item.dictValue === rawPurchasePriceTerms.toString()
+						)?.dictValue;
+					}
 					productData.value.push({
 						Id: element.id,
 						productID: element.productID,
@@ -3752,6 +3774,7 @@ const checkContractsDetails = async (row) => {
 						unitofmeasurement: unitValue,
 						purchasecurrency: currencyValue,
 						purchaseunitprice: element.purchaseUnitPrice,
+						purchasepriceterms: purchasePriceTermsValue ?? null,
 						inlandfreightprice: element.inlandfreightprice,
 						AdditionalPackagingCosts: element.additionalPackagingCosts,
 						singleProductGrossProfit: element.singleProductGrossProfit,
@@ -4044,6 +4067,7 @@ const EditContractSave = async (formEl: FormInstance | undefined) => {
 			ExportUnitPrice: item.exportunitprice,
 			ExportTotalPrice: item.exporttotalprice,
 			PurchaseUnitPrice: item.purchaseunitprice,
+			PurchasingPriceTerms: item.purchasepriceterms,
 			PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
 			Packaging: item.packaging,
 			SpecialRequirements: item.specialrequirements,
@@ -4565,6 +4589,7 @@ const SaveContractDraft = async (formEl: FormInstance | undefined) => {
 			ExportUnitPrice: item.exportunitprice,
 			ExportTotalPrice: item.exporttotalprice,
 			PurchaseUnitPrice: item.purchaseunitprice,
+			PurchasingPriceTerms: item.purchasepriceterms,
 			PurchaseTotalPrice: item.purchaseunitprice * item.contractQuantity,
 			Packaging: item.packaging || 0,
 			SpecialRequirements: item.specialrequirements,
@@ -4716,6 +4741,7 @@ const handleHistoricalProductRowDblClick = (row) => {
 			unitOfMeasurementLabel: unitMeasurement?.dictLabel || '-',
 			purchaseinquiry: 0,
 			purchaseunitprice: 0,
+			purchasepriceterms: null,
 			onepacking: 0,
 			invoice: Invoice,
 			packaging: '',
@@ -5110,6 +5136,7 @@ const GetQutaionProductListByID = (quotationId) => {
 					unitOfMeasurementLabel: unitMeasurement?.dictLabel || '-',
 					purchasecurrency: state.optionss.hr_export_currency.find(x => x.dictValue == item.purchaseCurrency)?.dictValue,
 					purchaseunitprice: item.purchaseUnitPrice || 0,
+					purchasepriceterms: item.purchasingPriceTerms ?? item.purchasePriceTerms ?? item.purchasepriceterms ?? null,
 					inlandfreightprice: item.inlandfreightprice || 0,
 					AdditionalPackagingCosts: item.additionalPackagingCosts || 0,
 					isInvoicingc: invoiceOption?.dictValue || '',

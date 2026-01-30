@@ -171,7 +171,7 @@
 							</el-col>
 						</el-row>
 						<el-row>
-							<el-col :span="6">
+							<el-col :span="6" v-if="false">
 								<el-form-item label="价格条款">
 									<el-select v-model="Addcontractofpurchaseform.priceTerms" style="width: 300px"
 										:disabled="isFormDisabled" size="default" @change="handlePriceTermsChange"
@@ -210,8 +210,6 @@
 									</el-select>
 								</el-form-item>
 							</el-col>
-						</el-row>
-						<el-row>
 							<el-col :span="6">
 								<el-form-item label="采购员">
 									<el-select disabled v-model="Addcontractofpurchaseform.purchaser"
@@ -221,6 +219,8 @@
 									</el-select>
 								</el-form-item>
 							</el-col>
+						</el-row>
+						<el-row>
 							<el-col :span="6">
 								<el-form-item label="交货地点">
 									<el-input v-model="Addcontractofpurchaseform.deliveryLocation" style="width: 300px"
@@ -298,6 +298,15 @@
 								</el-input>
 							</template>
 						</el-table-column>
+						<el-table-column prop="purchasePriceTerms" label="采购价格条款" width="180">
+							<template #default="scope">
+								<el-select v-model="scope.row.purchasePriceTerms" filterable placeholder="请选择采购价格条款"
+									:disabled="true" clearable>
+									<el-option v-for="dict in optionss.hr_purchase_pricing_term" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
+							</template>
+						</el-table-column>
 						<el-table-column prop="purchaseTotalPrice" label="采购总价" width="90">
 							<template #default="scope">
 								<span>{{ scope.row.purchaseTotalPrice }}</span>
@@ -320,7 +329,8 @@
 						<el-table-column prop="specialRequirements" label="特殊要求" width="90"></el-table-column>
 						<el-table-column prop="invoice" label="是否开票" width="90">
 							<template #default="scope">
-								<span>{{ scope.row.invoice === 1 || scope.row.invoice === '是' ? '是' : '否' }}</span>
+								<span>{{ (scope.row.invoice === 1 || scope.row.invoice === '1' || scope.row.invoice ===
+									true || scope.row.invoice === '是') ? '是' : '否' }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="innerBoxQuantity" label="内盒装量" width="90"></el-table-column>
@@ -674,6 +684,7 @@ const GeneratePurchaseContract = (row) => {
 						unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === product.unit.toString())?.dictLabel || '无',
 						contractQuantity: product.contractQuantity,
 						purchaseUnitPrice: product.purchaseUnitPrice,
+						purchasePriceTerms: (product.purchasingPriceTerms ?? product.purchasePriceTerms ?? product.purchasepriceterms)?.toString() || '',
 						purchaseTotalPrice: product.purchaseTotalPrice,
 						// 如果产品没有交货日期，则使用基本信息中的交货日期
 						deliveryDate: product.deliveryDate || response.data.contract.deliveryDate,
@@ -1366,6 +1377,7 @@ const submitPurchaseContract = () => {
 		contractQuantity: parseFloat(product.contractQuantity),
 		unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
 		purchasePrice: parseFloat(product.purchaseUnitPrice),
+		PurchasingPriceTerms: parseInt(product.purchasePriceTerms) || 0,
 		purchaseTotalPrice: parseFloat(product.purchaseTotalPrice),
 		deliveryDate: product.deliveryDate,
 		productionLeadTime: product.productionLeadTime,
@@ -1534,6 +1546,7 @@ const saveEditContractData = async () => {
 		ContractQuantity: parseFloat(product.contractQuantity) || 0,
 		Unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
 		PurchasePrice: parseFloat(product.purchaseUnitPrice),
+		PurchasingPriceTerms: parseInt(product.purchasePriceTerms) || 0,
 		PurchaseTotalPrice: parseFloat(product.purchaseTotalPrice),
 		DeliveryDate: product.deliveryDate,
 		ProductionLeadTime: product.productionLeadTime,
@@ -1672,6 +1685,7 @@ const submitForReview = () => {
 					contractQuantity: parseFloat(product.contractQuantity),
 					unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
 					purchasePrice: parseFloat(product.purchaseUnitPrice),
+					PurchasingPriceTerms: parseInt(product.purchasePriceTerms) || 0,
 					purchaseTotalPrice: parseFloat(product.purchaseTotalPrice),
 					deliveryDate: product.deliveryDate,
 					productionLeadTime: product.productionLeadTime,
@@ -2180,6 +2194,7 @@ const CheckDetails = async (row) => {
 						unit: element.unit ? state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无' : '无',
 						contractQuantity: element.contractQuantity,
 						purchaseUnitPrice: element.purchasePrice,
+						purchasePriceTerms: (element.purchasingPriceTerms ?? element.purchasePriceTerms ?? element.purchasepriceterms)?.toString() || '',
 						purchaseTotalPrice: element.purchaseTotalPrice,
 						deliveryDate: element.deliveryDate,
 						productionLeadTime: element.productionLeadTime,
@@ -2187,7 +2202,7 @@ const CheckDetails = async (row) => {
 						specialRequirements: element.specialRequirements,
 						innerBoxQuantity: element.innerBoxQuantity,
 						outerBoxQuantity: element.outerBoxQuantity,
-						invoice: element.invoke == '是' ? 1 : 0,
+						invoice: element.invoice == 1 ? 1 : 0,
 						hasDeposit: element.hasdeposit == 1 || element.hasdeposit === true,
 						depositAmount: element.depositAmount || 0,
 						remark: element.remark,

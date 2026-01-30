@@ -54,6 +54,15 @@
 				</el-table-column>
 				<el-table-column prop="subject" label="询价主题" :width="200"></el-table-column>
 				<el-table-column prop="inquirer" label="询价人" :width="130"></el-table-column>
+				<el-table-column prop="status" label="状态" :width="110">
+					<template #default="scope">
+						<el-tag
+							:type="Number(scope.row.status) === 0 ? 'warning' : Number(scope.row.status) === 1 ? 'success' : 'info'">
+							{{ Number(scope.row.status) === 0 ? '待处理' : Number(scope.row.status) === 1 ? '已处理' : '已查看'
+							}}
+						</el-tag>
+					</template>
+				</el-table-column>
 				<el-table-column prop="shippingDestination" label="送货目的地" v-if="false"></el-table-column>
 				<el-table-column fixed="right" prop="operate" label="操作" :width="200">
 					<template v-slot:default="scope">
@@ -1188,7 +1197,7 @@ const IsEditBtnClick = () => {
 	inquryProductDocumentTableData.value = [];
 }
 
-const CloseInquiryDialog = () => {
+const CloseInquiryDialog = async () => {
 	isEditable.value = false;
 	isEditBtnVisible.value = false;
 	isEditSaveBtnVisible.value = false;
@@ -1206,6 +1215,12 @@ const CloseInquiryDialog = () => {
 	selectedImages.value = []; // 清空图片列表
 	CreateInquiryDialog.value = false;
 	isShowUpload.value = true;
+	try {
+		await GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
+	} catch (error) {
+		console.error('刷新列表失败:', error);
+		ElMessage.error('刷新列表失败，请稍后重试');
+	}
 }
 
 const handleDeleteNewFile = (index: number) => {

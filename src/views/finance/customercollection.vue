@@ -404,6 +404,7 @@
 <script setup lang="ts">
 import { createApp, getCurrentInstance, reactive, toRefs, ref, computed, watch, nextTick } from 'vue'
 import { ElMessageBox, UploadProps, UploadUserFile, ElMessage, UploadFile } from 'element-plus'
+import { useRoute } from 'vue-router'
 import request from '@/utils/request';
 import { getDicts } from '@/api/system/dict/data';
 import { get } from 'sortablejs';
@@ -746,6 +747,7 @@ const isSaveBtnShow = ref(true);
 const isEditSaveBtnShow = ref(false);
 const isSubmitBtnShow = ref(false);
 const isConfirmBtnShow = ref(false);
+const route = useRoute()
 
 // 折叠面板控制变量
 const basicInfoCollapseActive = ref(['basicInfo']);
@@ -786,6 +788,83 @@ var dictParams = [
 	{ dictType: 'sql_all_user' }
 ]
 
+const mapReceiptDetailToRow = (details) => {
+	const companyLabel = state.optionss.hr_ourcompany.find((dict) => dict.dictValue === details.ourCompany)?.dictLabel || details.ourCompany;
+	const foreignCurrencyLabel = state.optionss.hr_export_currency.find((dict) => dict.dictValue === details.foreignCurrency)?.dictLabel || details.foreignCurrency;
+
+	let bankOptions = [];
+	if (companyLabel === '荣发塑料') {
+		bankOptions = state.optionss.hr_rf_receiving_bank || [];
+	} else if (companyLabel === '惠荣进出口') {
+		bankOptions = state.optionss.hr_receiving_bank || [];
+	}
+	const bankLabel = bankOptions.find((dict) => dict.dictValue === details.bank)?.dictLabel || details.bank;
+
+	const customerID = details.customerID ?? details.customer ?? details.CustomerID ?? details.Customer;
+	const receivingUser = details.receivingUser ?? details.receiving_user ?? details.receivingUserId ?? details.receivinguserid;
+
+	return {
+		id: details.id ?? details.ID ?? details.customerCollectionId ?? details.customerCollectionID ?? details.collectionId,
+		receiptNumber: details.receiptNumber,
+		receiptDate: details.receiptDate,
+		ourCompany: companyLabel,
+		foreignCurrency: foreignCurrencyLabel,
+		exchangeRate: details.exchangeRate,
+		amount: details.amount,
+		exchangeSettlementAmount: details.exchangeSettlementAmount ?? details.ExchangeSettlementAmount,
+		bank: bankLabel,
+		customerID,
+		receivingUser,
+		customer: details.customer ?? details.Customer,
+		fundsClassification: details.fundsClassification,
+		associatedModules: details.associatedModules,
+		associatedModulesDocumentID: details.associatedModulesDocumentID,
+		remark: details.remark,
+		isConfirm: details.isConfirm ?? 0,
+		isDraft: details.isDraft ?? 0,
+		isCollected: !!(customerID && receivingUser),
+		receiptImageUrl: details.receiptImageUrl,
+		attachmentUrl: details.attachmentUrl
+	};
+};
+
+const openReceiptFromRoute = async () => {
+	const receiptId = route.query.receiptId;
+	const receiptNumber = route.query.receiptNumber;
+	if (!receiptId && !receiptNumber) return;
+
+	await nextTick();
+	let targetRow = null;
+	if (receiptId) {
+		targetRow = customercollectiontableData.value.find((item) => String(item.id) === String(receiptId));
+	}
+	if (!targetRow && receiptNumber) {
+		targetRow = customercollectiontableData.value.find((item) => item.receiptNumber === receiptNumber);
+	}
+	if (!targetRow && receiptId) {
+		try {
+			const response = await request({
+				url: 'CustomerCollections/GetCustomerCollectionDetails/GetDetails',
+				method: 'GET',
+				params: {
+					id: receiptId
+				}
+			});
+			if (response?.code === 200 && response.data) {
+				targetRow = mapReceiptDetailToRow(response.data);
+			}
+		} catch (error) {
+			console.error('获取收款单详情失败:', error);
+		}
+	}
+
+	if (targetRow) {
+		await CheckCustomerCollectionDetails(targetRow);
+	} else {
+		ElMessage.warning('未找到对应收款单');
+	}
+};
+
 async function fetchDataAndExecute() {
 	try {
 		const response = await getDicts(dictParams);
@@ -794,6 +873,7 @@ async function fetchDataAndExecute() {
 		});
 		/*获取当前页面列表函数放在下方*/
 		await GetCustomerCollectionsList(currentPage.value, pageSize.value);
+		await openReceiptFromRoute();
 		//await GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value);;  // 现在可以安全执行
 		//await GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
 	} catch (error) {
