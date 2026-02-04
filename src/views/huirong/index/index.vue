@@ -1,20 +1,20 @@
 <template>
   <div class="home">
-    <!-- 当日汇率显示 - 紧凑型 -->
-    <el-row class="exchange-rate-header" justify="center">
-      <el-col :span="6" class="exchange-rate-container">
-        <el-card class="exchange-rate-card" shadow="hover">
+    <!-- 顶部汇率 + 任务看板 -->
+    <el-row :gutter="12" class="dashboard-header">
+      <el-col :lg="6" :md="12" :sm="24" class="mb8 exchange-rate-container">
+        <el-card class="dashboard-card exchange-rate-card" shadow="hover">
+          <div class="card-header">
+            <el-icon class="card-icon">
+              <Money />
+            </el-icon>
+            <span class="card-title">当日汇率</span>
+          </div>
           <div class="exchange-rate-content">
-            <div class="exchange-rate-title">
-              <el-icon class="exchange-rate-icon">
-                <Money />
-              </el-icon>
-              <span>当日汇率</span>
-            </div>
             <div class="exchange-rate-list" v-if="todayExchangeRates.length > 0">
-              <div v-for="rate in todayExchangeRates" :key="rate.currency" class="exchange-rate-item">
-                <span class="currency-name">{{ rate.currencyName }}</span>
-                <span class="exchange-rate-value">{{ rate.exchangeRate }}</span>
+              <div v-for="rate in todayExchangeRates" :key="rate.currency" class="metric-row">
+                <span class="metric-label">{{ rate.currencyName }}</span>
+                <span class="metric-value">{{ rate.exchangeRate }}</span>
               </div>
             </div>
             <div v-else class="no-exchange-rate">
@@ -23,11 +23,8 @@
           </div>
         </el-card>
       </el-col>
-    </el-row>
 
-    <!-- 任务看板 - 优化布局 -->
-    <el-row :gutter="12" class="dashboard-header">
-      <el-col :lg="8" class="mb8">
+      <el-col :lg="6" :md="12" :sm="24" class="mb8">
         <el-card class="dashboard-card" shadow="hover">
           <div class="card-header">
             <el-icon class="card-icon">
@@ -52,7 +49,7 @@
         </el-card>
       </el-col>
 
-      <el-col :lg="8" class="mb8">
+      <el-col :lg="6" :md="12" :sm="24" class="mb8">
         <el-card class="dashboard-card" shadow="hover">
           <div class="card-header">
             <el-icon class="card-icon">
@@ -83,7 +80,7 @@
         </el-card>
       </el-col>
 
-      <el-col :lg="8" class="mb8">
+      <el-col :lg="6" :md="12" :sm="24" class="mb8">
         <el-card class="dashboard-card" shadow="hover">
           <div class="card-header">
             <el-icon class="card-icon">
@@ -986,7 +983,7 @@
             <el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="160">
               <template #default="scope">
                 <span :class="{ 'red-text': scope.row.isPriceChanged }">{{ scope.row.singleProductGrossProfitTotal
-                  }}</span>
+                }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="grossProfitRate" label="毛利率%" width="110">
@@ -4825,39 +4822,53 @@ const openSaleContractDialog = (row) => {
         ShippingDeliveriesId: row.documentID
       }
     }).then(response => {
-      ShippingDeliveryForm.value.invoiceNumber = response.data.shippingDeliveries.invoiceNumber;
-      ShippingDeliveryForm.value.OrderMakingDate = response.data.shippingDeliveries.createTime;
-      ShippingDeliveryForm.value.shippingStatus = state.optionss['hr_shipping_status'].find(item => item.dictValue === response.data.shippingDeliveries.shippingStatus.toString()).dictLabel;
-      ShippingDeliveryForm.value.shippingDate = response.data.shippingDeliveries.shippingDate;
-      ShippingDeliveryForm.value.invoiceDate = response.data.shippingDeliveries.invoiceDate;
-      ShippingDeliveryForm.value.customerNumber = state.optionss['sql_hr_customer'].find(item => item.dictValue === response.data.shippingDeliveries.customerNumber.toString()).dictLabel;
-      ShippingDeliveryForm.value.customerAbbreviation = response.data.shippingDeliveries.customerAbbreviation;
-      ShippingDeliveryForm.value.referenceContractNumber = state.optionss['sql_sale_contracts'].find(item => item.dictValue === response.data.shippingDeliveries.referenceContractNumber.toString()).dictLabel;
-      ShippingDeliveryForm.value.salesContractNumber = response.data.shippingDeliveries.salesContractNumber.toString();
-      ShippingDeliveryForm.value.customerContractNumber = response.data.shippingDeliveries.customerContractNumber.toString();
-      ShippingDeliveryForm.value.ourCompany = state.optionss['hr_ourcompany'].find(item => item.dictValue === response.data.shippingDeliveries.ourCompany.toString()).dictLabel;
-      ShippingDeliveryForm.value.bankOfReceipt = state.optionss['hr_bank'].find(item => item.dictValue === response.data.shippingDeliveries.bankOfReceipt.toString()).dictLabel;
-      ShippingDeliveryForm.value.exportCurrency = state.optionss['hr_export_currency'].find(item => item.dictValue === response.data.shippingDeliveries.exportCurrency.toString()).dictLabel;
-      ShippingDeliveryForm.value.exchangeRate = response.data.shippingDeliveries.exchangeRate;
-      ShippingDeliveryForm.value.priceTerms = state.optionss['hr_pricing_term'].find(item => item.dictValue === response.data.shippingDeliveries.priceTerms.toString()).dictLabel;
-      ShippingDeliveryForm.value.departurePort = state.optionss['hr_transport_port'].find(item => item.dictValue === response.data.shippingDeliveries.departurePort.toString()).dictLabel;
-      ShippingDeliveryForm.value.destinationPort = response.data.shippingDeliveries.destinationPort;
-      ShippingDeliveryForm.value.transportationMethod = state.optionss['hr_transportation_method'].find(item => item.dictValue === response.data.shippingDeliveries.transportationMethod.toString()).dictLabel;
-      ShippingDeliveryForm.value.tradeCountry = state.optionss['hr_nation'].find(item => item.dictValue === response.data.shippingDeliveries.tradeCountry.toString()).dictLabel;
-      ShippingDeliveryForm.value.settlementMethod = state.optionss['hr_settlement_way'].find(item => item.dictValue === response.data.shippingDeliveries.settlementMethod.toString()).dictLabel;
-      ShippingDeliveryForm.value.receivableDate = response.data.shippingDeliveries.receivableDate;
-      ShippingDeliveryForm.value.documentClerk = state.optionss['sql_all_user'].find(item => item.dictValue === response.data.shippingDeliveries.documentClerk.toString()).dictLabel;
-      ShippingDeliveryForm.value.isDeposit = response.data.shippingDeliveries.isDeposit.toString();
+      const shipping = response.data.shippingDeliveries;
+      ShippingDeliveryForm.value.invoiceNumber = shipping.invoiceNumber;
+      ShippingDeliveryForm.value.OrderMakingDate = shipping.orderMakingDate || shipping.createTime;
+      ShippingDeliveryForm.value.shippingStatus = state.optionss['hr_shipping_status']
+        .find(item => item.dictValue === shipping.shippingStatus?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.shippingDate = shipping.shippingDate;
+      ShippingDeliveryForm.value.invoiceDate = shipping.invoiceDate;
+      ShippingDeliveryForm.value.customerNumber = state.optionss['sql_hr_customer']
+        .find(item => item.dictValue === shipping.customerNumber?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.customerAbbreviation = shipping.customerAbbreviation || '';
+      ShippingDeliveryForm.value.referenceContractNumber = shipping.referenceContractNumber
+        ? (state.optionss['sql_sale_contracts'].find(item => item.dictValue === shipping.referenceContractNumber.toString())?.dictLabel || '')
+        : '';
+      ShippingDeliveryForm.value.salesContractNumber = shipping.salesContractNumber?.toString() || '';
+      ShippingDeliveryForm.value.customerContractNumber = shipping.customerContractNumber?.toString() || '';
+      ShippingDeliveryForm.value.ourCompany = state.optionss['hr_ourcompany']
+        .find(item => item.dictValue === shipping.ourCompany?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.bankOfReceipt = state.optionss['hr_bank']
+        .find(item => item.dictValue === shipping.bankOfReceipt?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.exportCurrency = state.optionss['hr_export_currency']
+        .find(item => item.dictValue === shipping.exportCurrency?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.exchangeRate = shipping.exchangeRate;
+      ShippingDeliveryForm.value.priceTerms = state.optionss['hr_pricing_term']
+        .find(item => item.dictValue === shipping.priceTerms?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.departurePort = state.optionss['hr_transport_port']
+        .find(item => item.dictValue === shipping.departurePort?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.destinationPort = shipping.destinationPort;
+      ShippingDeliveryForm.value.transportationMethod = state.optionss['hr_transportation_method']
+        .find(item => item.dictValue === shipping.transportationMethod?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.tradeCountry = state.optionss['hr_nation']
+        .find(item => item.dictValue === shipping.tradeCountry?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.settlementMethod = state.optionss['hr_settlement_way']
+        .find(item => item.dictValue === shipping.settlementMethod?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.receivableDate = shipping.receivableDate;
+      ShippingDeliveryForm.value.documentClerk = state.optionss['sql_all_user']
+        .find(item => item.dictValue === shipping.documentClerk?.toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.isDeposit = shipping.isDeposit?.toString();
       // 运输相关字典映射（显示为名称）
       ShippingDeliveryForm.value.preCarriageTransport = state.optionss['hr_domestic_transport']
-        .find(item => item.dictValue === (response.data.shippingDeliveries.preCarriageTransport ?? '').toString())?.dictLabel || '';
+        .find(item => item.dictValue === (shipping.preCarriageTransport ?? '').toString())?.dictLabel || '';
       ShippingDeliveryForm.value.shippingAgent = state.optionss['hr_freight_forwarders']
-        .find(item => item.dictValue === (response.data.shippingDeliveries.shippingAgent ?? '').toString())?.dictLabel || '';
+        .find(item => item.dictValue === (shipping.shippingAgent ?? '').toString())?.dictLabel || '';
       ShippingDeliveryForm.value.courierCompaniesID = state.optionss['hr_courier_companies']
-        .find(item => item.dictValue === (response.data.shippingDeliveries.courierCompaniesID ?? '').toString())?.dictLabel || '';
+        .find(item => item.dictValue === (shipping.courierCompaniesID ?? '').toString())?.dictLabel || '';
       ShippingDeliveryForm.value.logisticsCompanyID = state.optionss['hr_logistics_companies']
-        .find(item => item.dictValue === (response.data.shippingDeliveries.logisticsCompanyID ?? '').toString())?.dictLabel || '';
-      ShippingDeliveryForm.value.remark = response.data.shippingDeliveries.remark;
+        .find(item => item.dictValue === (shipping.logisticsCompanyID ?? '').toString())?.dictLabel || '';
+      ShippingDeliveryForm.value.remark = shipping.remark;
 
       if (response.data.shippingDeliveryProducts.length > 0) {
         shippingDeliveryContrctProductTableData.value = response.data.shippingDeliveryProducts;
@@ -8135,84 +8146,32 @@ const viewRejectContract = (row) => {
 }
 
 /* 当日汇率显示样式 - 紧凑型 */
-.exchange-rate-header {
-  margin-bottom: 4px;
-  flex-shrink: 0;
-}
-
 .exchange-rate-container {
   width: 100%;
 }
 
 .exchange-rate-card {
-  border-radius: 6px;
-  border: 1px solid #e4e7ed;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  height: 120px;
 }
 
 .exchange-rate-content {
-  padding: 8px 12px;
+  padding: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 40px;
-  height: 40px;
-}
-
-.exchange-rate-title {
-  display: flex;
-  align-items: center;
-  font-size: 20px;
-  font-weight: 600;
-  margin-right: 12px;
-  white-space: nowrap;
-}
-
-.exchange-rate-icon {
-  margin-right: 8px;
-  font-size: 20px;
+  min-height: 64px;
+  width: 100%;
 }
 
 .exchange-rate-list {
   display: flex;
-  gap: 12px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  flex-direction: column;
+  gap: 2px;
   flex: 1;
 }
 
-.exchange-rate-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 60px;
-  flex-shrink: 0;
-}
-
-.currency-name {
-  font-size: 18px;
-  opacity: 0.9;
-  margin-bottom: 0px;
-  white-space: nowrap;
-  line-height: 1;
-}
-
-.exchange-rate-value {
-  font-size: 16px;
-  font-weight: bold;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 0px 2px;
-  border-radius: 1px;
-  backdrop-filter: blur(10px);
-  white-space: nowrap;
-  line-height: 1;
-}
-
 .no-exchange-rate {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 18px;
-  font-style: italic;
+  color: #909399;
+  font-size: 12px;
   line-height: 1;
 }
 

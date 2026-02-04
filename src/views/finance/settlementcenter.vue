@@ -35,12 +35,28 @@
 			<el-table :data="tableData" border stripe v-loading="loading"
 				:header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: 'bold' }"
 				style="width: 100%; margin-top: 20px;">
+				<el-table-column prop="settlementStatus" label="完结状态" width="100" align="center">
+					<template #default="scope">
+						<el-tag :type="scope.row.settlementStatus === 1 ? 'success' : 'warning'">
+							{{ scope.row.settlementStatus === 1 ? '已完结' : '未完结' }}
+						</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column prop="creator" label="创建人" width="130" align="center" />
 				<el-table-column prop="shippingDate" label="出运日期" width="120" align="center" />
 				<el-table-column prop="invoiceNumber" label="发票号码" width="150" align="center" />
 				<el-table-column prop="salesContract" label="销售合同" width="150" align="center" />
 				<el-table-column prop="customerName" label="客户名称" width="150" align="center" />
-				<el-table-column prop="foreignCurrency" label="外销币种" width="100" align="center" />
-				<el-table-column prop="priceTerms" label="价格条款" width="120" align="center" />
+				<el-table-column prop="foreignCurrency" label="外销币种" width="100" align="center">
+					<template #default="scope">
+						{{ getDictLabel('hr_export_currency', scope.row.foreignCurrency) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="priceTerms" label="价格条款" width="120" align="center">
+					<template #default="scope">
+						{{ getDictLabel('hr_pricing_term', scope.row.priceTerms) }}
+					</template>
+				</el-table-column>
 				<el-table-column prop="totalReceivable" label="应收货款" width="120" align="right">
 					<template #default="scope">
 						{{ formatAmount(scope.row.totalReceivable) }}
@@ -133,7 +149,7 @@
 						</span>
 					</template>
 				</el-table-column>
-				<el-table-column fixed="right" label="操作" width="120" align="center">
+				<el-table-column fixed="right" label="操作" width="120" align="center" v-if="false">
 					<template #default="scope">
 						<el-button type="primary" link size="small" @click="handleView(scope.row)">查看详情</el-button>
 					</template>
@@ -176,10 +192,21 @@ const totalItems = ref(0)
 // 字典数据
 const state = reactive({
 	optionss: {
-		sql_settlement_center_shipping: []
+		sql_settlement_center_shipping: [],
+		hr_export_currency: [],
+		hr_pricing_term: []
 	}
 })
 const { optionss } = toRefs(state)
+
+const getDictLabel = (dictType: string, value: any) => {
+	if (value === null || value === undefined || value === '') {
+		return ''
+	}
+	const normalized = value.toString()
+	const dict = state.optionss[dictType]?.find((item: any) => item.dictValue?.toString() === normalized)
+	return dict ? dict.dictLabel : value
+}
 
 // 格式化金额
 const formatAmount = (amount: any) => {
@@ -194,7 +221,9 @@ const formatAmount = (amount: any) => {
 const loadDictData = async () => {
 	try {
 		const dictParams = [
-			{ dictType: 'sql_settlement_center_shipping' }
+			{ dictType: 'sql_settlement_center_shipping' },
+			{ dictType: 'hr_export_currency' },
+			{ dictType: 'hr_pricing_term' }
 		]
 		if (proxy) {
 			const response = await (proxy as any).getDicts(dictParams)
@@ -213,7 +242,7 @@ const loadData = async () => {
 	try {
 		// TODO: 替换为实际的API接口
 		const response: any = await request({
-			url: 'ShippingDeliveries/GetSettlementList/GetList',
+			url: 'ShippingDeliveries/GetShippingDeliveriesSettlementList/GetList',
 			method: 'GET',
 			params: {
 				PageNum: currentPage.value,
