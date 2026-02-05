@@ -1696,11 +1696,14 @@
       <!-- 销售合同 -->
       <br><span style="font-size: 20px; font-weight: bold;">销售合同</span>
       <el-divider></el-divider>
-      <el-table :data="shippingDeliveryContrctProductTableData">
+      <el-table :data="shippingDeliveryContrctProductTableData"
+        style="width: 100%; margin-bottom: 15px; table-layout: fixed;"
+        :header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }">
         <el-table-column prop="contractNumber" label="销售合同" width="150"></el-table-column>
         <el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
-        <el-table-column prop="customerCode" label="客户货号" width="150"></el-table-column>
+        <el-table-column prop="customerCode" label="客户货号" width="180"></el-table-column>
         <el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
+        <el-table-column prop="chineseSpec" label="中文规格" width="150"></el-table-column>
         <el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
         <el-table-column prop="shipmentQuantity" label="出货数量" width="150"></el-table-column>
         <el-table-column prop="unit" label="计量单位" width="150"></el-table-column>
@@ -1708,6 +1711,7 @@
         <el-table-column prop="exportTotalPrice" label="外销总价" width="150"></el-table-column>
         <el-table-column prop="specialRequirements" label="特殊要求" width="150"></el-table-column>
         <el-table-column prop="outerBoxQuantity" label="外箱装量" width="150"></el-table-column>
+        <el-table-column prop="innerBoxQuantity" label="中包装量(内盒装量)" width="150"></el-table-column>
         <el-table-column prop="boxCount" label="箱数" width="150"></el-table-column>
         <el-table-column prop="outerBoxUnit" label="外箱单位" width="150"></el-table-column>
         <el-table-column prop="outerBoxLength" label="外箱长度" width="150"></el-table-column>
@@ -4879,37 +4883,27 @@ const openSaleContractDialog = (row) => {
             params: {
               CPID: item.contractProductId
             }
-          }).then(response => {
-            if (response.data != null && response.data.length > 0) {
-              // 找到当前产品在表格数据中的索引
+          }).then(resp => {
+            if (resp.data != null && resp.data.length > 0) {
               const index = shippingDeliveryContrctProductTableData.value.findIndex(
                 x => x.contractProductId === item.contractProductId
               );
               if (index !== -1) {
-                // 更新产品信息
-                const productData = response.data[0];
+                const productData = resp.data[0];
+                const existingRow = shippingDeliveryContrctProductTableData.value[index];
+                // 与 shippingdelivery.vue 一致：箱规从出运单详情保留，仅用合同产品补全品名/单位等
                 shippingDeliveryContrctProductTableData.value[index] = {
-                  ...shippingDeliveryContrctProductTableData.value[index], // 保留原有数据
+                  ...existingRow,
                   contractNumber: productData.contractNumber,
                   productCode: productData.productCode,
                   chineseName: productData.chineseName,
+                  chineseSpec: productData.chineseSpec ?? '',
                   contractQuantity: productData.contractQuantity,
-                  unit: state.optionss.hr_calculate_unit.find(u => u.dictValue === productData.unit.toString())?.dictLabel || '无',
+                  unit: state.optionss.hr_calculate_unit.find(u => u.dictValue === productData.unit?.toString())?.dictLabel || '无',
                   exportUnitPrice: productData.exportUnitPrice,
                   exportTotalPrice: productData.exportTotalPrice,
-                  specialRequirements: productData.specialRequirements,
-                  outerBoxQuantity: productData.outerBoxQuantity,
-                  boxCount: productData.boxCount,
-                  outerBoxUnit: state.optionss.hr_outerbox_unit.find(u => u.dictValue === productData.outerboxunit.toString())?.dictLabel || '无',
-                  outerBoxLength: productData.outerBoxLength,
-                  outerBoxWidth: productData.outerBoxWidth,
-                  outerBoxHeight: productData.outerBoxHeight,
-                  outerBoxVolume: productData.outerBoxVolume,
-                  totalVolume: productData.totalVolume,
-                  outerBoxNetWeight: productData.outerBoxNetWeight,
-                  outerBoxGrossWeight: productData.outerBoxGrossWeight,
-                  totalNetWeight: productData.totalNetWeight,
-                  totalGrossWeight: productData.totalGrossWeight
+                  specialRequirements: productData.specialRequirements || ''
+                  // 箱规(outerBoxQuantity/innerBoxQuantity/boxCount/outerBoxLength 等)保留 existingRow 即出运单详情返回
                 };
               }
             }

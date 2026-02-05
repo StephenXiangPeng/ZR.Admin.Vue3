@@ -393,6 +393,7 @@
 				<el-table-column prop="productCode" label="产品编号" width="150"></el-table-column>
 				<el-table-column prop="customerCode" label="客户货号" width="180"></el-table-column>
 				<el-table-column prop="chineseName" label="中文品名" width="150"></el-table-column>
+				<el-table-column prop="chineseSpec" label="中文规格" width="150"></el-table-column>
 				<el-table-column prop="contractQuantity" label="合同数量" width="150"></el-table-column>
 				<el-table-column prop="RemainingQuantityToBeShipped" label="剩余待出货数量" width="150"
 					vif="false"></el-table-column>
@@ -406,7 +407,20 @@
 				<el-table-column prop="exportUnitPrice" label="外销单价" width="150"></el-table-column>
 				<el-table-column prop="exportTotalPrice" label="外销总价" width="150"></el-table-column>
 				<el-table-column prop="specialRequirements" label="特殊要求" width="150"></el-table-column>
-				<el-table-column prop="outerBoxQuantity" label="外箱装量" width="150"></el-table-column>
+				<el-table-column prop="outerBoxQuantity" label="外箱装量" width="150">
+					<template #default="scope">
+						<el-input v-if="!IsEditable" v-model.number="scope.row.outerBoxQuantity" type="number"
+							size="small" @change="recalcSalesRowPackaging(scope.row)" />
+						<span v-else>{{ scope.row.outerBoxQuantity }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="innerBoxQuantity" label="中包装量" width="150">
+					<template #default="scope">
+						<el-input v-if="!IsEditable" v-model.number="scope.row.innerBoxQuantity" type="number"
+							size="small" />
+						<span v-else>{{ scope.row.innerBoxQuantity }}</span>
+					</template>
+				</el-table-column>
 				<el-table-column prop="boxCount" label="箱数" width="150"></el-table-column>
 				<el-table-column prop="outerBoxUnit" label="外箱单位" width="150">
 					<template #default="scope">
@@ -417,13 +431,43 @@
 							@blur="scope.row.editable = false" />
 					</template>
 				</el-table-column>
-				<el-table-column prop="outerBoxLength" label="外箱长度" width="150"></el-table-column>
-				<el-table-column prop="outerBoxWidth" label="外箱宽度" width="150"></el-table-column>
-				<el-table-column prop="outerBoxHeight" label="外箱高度" width="150"></el-table-column>
+				<el-table-column prop="outerBoxLength" label="外箱长度" width="150">
+					<template #default="scope">
+						<el-input v-if="!IsEditable" v-model.number="scope.row.outerBoxLength" type="number"
+							size="small" @change="recalcSalesRowPackaging(scope.row)" />
+						<span v-else>{{ scope.row.outerBoxLength }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="outerBoxWidth" label="外箱宽度" width="150">
+					<template #default="scope">
+						<el-input v-if="!IsEditable" v-model.number="scope.row.outerBoxWidth" type="number" size="small"
+							@change="recalcSalesRowPackaging(scope.row)" />
+						<span v-else>{{ scope.row.outerBoxWidth }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="outerBoxHeight" label="外箱高度" width="150">
+					<template #default="scope">
+						<el-input v-if="!IsEditable" v-model.number="scope.row.outerBoxHeight" type="number"
+							size="small" @change="recalcSalesRowPackaging(scope.row)" />
+						<span v-else>{{ scope.row.outerBoxHeight }}</span>
+					</template>
+				</el-table-column>
 				<el-table-column prop="outerBoxVolume" label="外箱体积" width="150"></el-table-column>
 				<el-table-column prop="totalVolume" label="总体积" width="150"></el-table-column>
-				<el-table-column prop="outerBoxNetWeight" label="外箱净重" width="150"></el-table-column>
-				<el-table-column prop="outerBoxGrossWeight" label="外箱毛重" width="150"></el-table-column>
+				<el-table-column prop="outerBoxNetWeight" label="外箱净重" width="150">
+					<template #default="scope">
+						<el-input v-if="!IsEditable" v-model.number="scope.row.outerBoxNetWeight" type="number"
+							size="small" @change="recalcSalesRowPackaging(scope.row)" />
+						<span v-else>{{ scope.row.outerBoxNetWeight }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="outerBoxGrossWeight" label="外箱毛重" width="150">
+					<template #default="scope">
+						<el-input v-if="!IsEditable" v-model.number="scope.row.outerBoxGrossWeight" type="number"
+							size="small" @change="recalcSalesRowPackaging(scope.row)" />
+						<span v-else>{{ scope.row.outerBoxGrossWeight }}</span>
+					</template>
+				</el-table-column>
 				<el-table-column prop="totalNetWeight" label="总净重" width="150"></el-table-column>
 				<el-table-column prop="totalGrossWeight" label="总毛重" width="150"></el-table-column>
 				<el-table-column prop="singlesalesrevenue" label="单个销售收入" width="150" vif="false"></el-table-column>
@@ -871,6 +915,7 @@ const getUnfinishedContractsList = async (customerId = 0) => {
 				productCode: item.productCode,
 				customerCode: item.customerCode,
 				chineseName: item.chineseName,
+				chineseSpec: item.chineseSpec,
 				contractQuantity: item.contractQuantity,
 				RemainingQuantityToBeShipped: item.contractQuantity,
 				shipmentQuantity: item.contractQuantity,
@@ -879,6 +924,7 @@ const getUnfinishedContractsList = async (customerId = 0) => {
 				exportTotalPrice: item.exportTotalPrice,
 				specialRequirements: item.specialRequirements,
 				outerBoxQuantity: item.outerBoxQuantity,
+				innerBoxQuantity: item.innerBoxQuantity,
 				boxCount: item.boxCount,
 				outerBoxUnit: item.outerboxunit ? state.optionss.hr_outerbox_unit.find(unitItem => unitItem.dictValue === item.outerboxunit.toString())?.dictLabel || '无' : '无',
 				outerBoxLength: item.outerBoxLength,
@@ -913,6 +959,7 @@ const getUnfinishedContractsList = async (customerId = 0) => {
 						row.RemainingQuantityToBeShipped = remainingQuantity;
 						row.shipmentQuantity = remainingQuantity;
 					});
+					shippingDeliveryContrctProductTableData.value.forEach(row => recalcSalesRowPackaging(row));
 				} catch (error) {
 					console.error('获取出货数量失败:', error);
 				}
@@ -1320,6 +1367,7 @@ const referenceContractNumberChange = async () => {
 								exportTotalPrice: element.exportTotalPrice,
 								specialRequirements: element.specialRequirements,
 								outerBoxQuantity: element.outerBoxQuantity,
+								innerBoxQuantity: element.innerBoxQuantity ?? element.innerBoxLoading ?? '',
 								boxCount: element.boxCount,
 								outerBoxUnit: element.outerboxunit ? state.optionss.hr_outerbox_unit.find(item => item.dictValue === element.outerboxunit.toString())?.dictLabel || '无' : '无',
 								outerBoxLength: element.outerBoxLength,
@@ -1335,6 +1383,7 @@ const referenceContractNumberChange = async () => {
 							};
 						});
 						shippingDeliveryContrctProductTableData.value = salesRows;
+						shippingDeliveryContrctProductTableData.value.forEach(row => recalcSalesRowPackaging(row));
 						// 获取时同步：采购出货数量与销售表一致（按销售合同ID+产品编号匹配）
 						shippingDeliveryPurchaseDetailsTableData.value.forEach(purchaseRow => {
 							const salesRow = shippingDeliveryContrctProductTableData.value.find(
@@ -1569,7 +1618,7 @@ const SaveClick = async (isDraft) => {
 			IsDraft: isDraft ? 1 : 0, // 是否草稿：1是，0否
 			shipmentTotalAmount: calculateShipmentTotalAmount(),
 
-			// 产品明细
+			// 产品明细（含箱规数据）
 			ShippingDeliveryProductItems: shippingDeliveryContrctProductTableData.value.map(item => ({
 				ContractId: item.contractId,
 				ContractProductId: item.contractProductId,
@@ -1578,7 +1627,21 @@ const SaveClick = async (isDraft) => {
 				RemainingQuantity: Number(item.contractQuantity) - Number(item.shipmentQuantity),
 				IsDelete: 0,
 				Remark: item.remark || '',
-				Singlesalesrevenue: Number(item.singlesalesrevenue || 0)
+				Singlesalesrevenue: Number(item.singlesalesrevenue || 0),
+				// 箱规数据
+				OuterBoxQuantity: Number(item.outerBoxQuantity) || 0,
+				InnerBoxQuantity: Number(item.innerBoxQuantity) || 0,
+				BoxCount: Number(item.boxCount) || 0,
+				OuterBoxLength: Number(item.outerBoxLength) || 0,
+				OuterBoxWidth: Number(item.outerBoxWidth) || 0,
+				OuterBoxHeight: Number(item.outerBoxHeight) || 0,
+				OuterBoxVolume: Number(item.outerBoxVolume) || 0,
+				outerboxunit: item.outerBoxUnit || '',
+				OuterBoxNetWeight: Number(item.outerBoxNetWeight) || 0,
+				OuterBoxGrossWeight: Number(item.outerBoxGrossWeight) || 0,
+				TotalVolume: Number(item.totalVolume) || 0,
+				TotalNetWeight: Number(item.totalNetWeight) || 0,
+				TotalGrossWeight: Number(item.totalGrossWeight) || 0
 			})),
 
 			// 采购明细（兼容 purchaseContractID/purchaseContractId、id/purchaseContractProductID 两种字段名）
@@ -1803,7 +1866,21 @@ const EditSaveClick = (isDraft) => {
 					RemainingQuantity: Number(item.contractQuantity || 0) - Number(item.shipmentQuantity || 0),
 					IsDelete: 0,
 					Remark: item.remark || '无备注',
-					Singlesalesrevenue: Number(item.singlesalesrevenue || 0)
+					Singlesalesrevenue: Number(item.singlesalesrevenue || 0),
+					// 箱规数据
+					OuterBoxQuantity: Number(item.outerBoxQuantity) || 0,
+					InnerBoxQuantity: Number(item.innerBoxQuantity) || 0,
+					BoxCount: Number(item.boxCount) || 0,
+					OuterBoxLength: Number(item.outerBoxLength) || 0,
+					OuterBoxWidth: Number(item.outerBoxWidth) || 0,
+					OuterBoxHeight: Number(item.outerBoxHeight) || 0,
+					OuterBoxVolume: Number(item.outerBoxVolume) || 0,
+					outerboxunit: item.outerBoxUnit || '',
+					OuterBoxNetWeight: Number(item.outerBoxNetWeight) || 0,
+					OuterBoxGrossWeight: Number(item.outerBoxGrossWeight) || 0,
+					TotalVolume: Number(item.totalVolume) || 0,
+					TotalNetWeight: Number(item.totalNetWeight) || 0,
+					TotalGrossWeight: Number(item.totalGrossWeight) || 0
 				})) : [{
 					id: 0,
 					ContractId: 0,
@@ -2098,8 +2175,10 @@ const CheckShipingDelivery = async (row) => {
 							const entry = finalShippingList.find(x => Number(x.contractId ?? x.ContractId) === Number(item.contractId) && Number(x.productId ?? x.ProductId) === Number(item.contractProductId));
 							const ShippingQuantity = entry ? Number(entry.shippingQuantity ?? entry.ShippingQuantity ?? 0) : 0;
 							const productData = resp.data[0];
+							const existingRow = shippingDeliveryContrctProductTableData.value[index];
+							// 已保存草稿或提交后查看详情：箱规从出运单详情(shippingDeliveryProducts)保留，仅用合同产品补全品名/单位等
 							shippingDeliveryContrctProductTableData.value[index] = {
-								...shippingDeliveryContrctProductTableData.value[index],
+								...existingRow,
 								id: productData.id,
 								contractNumber: productData.contractNumber,
 								productCode: productData.productCode,
@@ -2109,20 +2188,10 @@ const CheckShipingDelivery = async (row) => {
 								exportUnitPrice: productData.exportUnitPrice,
 								exportTotalPrice: productData.exportTotalPrice,
 								specialRequirements: productData.specialRequirements,
-								outerBoxQuantity: productData.outerBoxQuantity,
-								boxCount: productData.boxCount,
-								outerBoxUnit: productData.outerboxunit ? state.optionss.hr_outerbox_unit.find(u => u.dictValue === productData.outerboxunit.toString())?.dictLabel || '无' : '无',
-								outerBoxLength: productData.outerBoxLength,
-								outerBoxWidth: productData.outerBoxWidth,
-								outerBoxHeight: productData.outerBoxHeight,
-								outerBoxVolume: productData.outerBoxVolume,
-								totalVolume: productData.totalVolume,
-								outerBoxNetWeight: productData.outerBoxNetWeight,
-								outerBoxGrossWeight: productData.outerBoxGrossWeight,
-								totalNetWeight: productData.totalNetWeight,
-								totalGrossWeight: productData.totalGrossWeight,
 								singlesalesrevenue: item.singlesalesrevenue,
-								RemainingQuantityToBeShipped: productData.contractQuantity - ShippingQuantity
+								RemainingQuantityToBeShipped: productData.contractQuantity - ShippingQuantity,
+								outerBoxUnit: productData.outerboxunit ? state.optionss.hr_outerbox_unit.find(u => u.dictValue === productData.outerboxunit.toString())?.dictLabel || '无' : '无',
+								// 箱规(outerBoxQuantity/InnerBoxQuantity/boxCount/outerBoxLength 等)保留 existingRow 即出运单详情返回的数据，不覆盖为合同产品
 							};
 						}
 					}
@@ -2359,6 +2428,31 @@ const DeleteShippingDeliveryPurchaseDetails = (row) => {
 	});
 };
 
+// 销售行包装与总重/总体积计算（与销售合同页面公式一致）
+const recalcSalesRowPackaging = (row) => {
+	const L = Number(row.outerBoxLength) || 0;
+	const W = Number(row.outerBoxWidth) || 0;
+	const H = Number(row.outerBoxHeight) || 0;
+	const shipmentQty = Number(row.shipmentQuantity) || 0;
+	const outerQty = Number(row.outerBoxQuantity) || 1;
+	const outerNet = Number(row.outerBoxNetWeight) || 0;
+	const outerGross = Number(row.outerBoxGrossWeight) || 0;
+	// 外箱体积 = (外箱长度*外箱宽度*外箱高度)/1000000，保留4位小数
+	if (L && W && H) {
+		row.outerBoxVolume = (L * W * H / 1000000).toFixed(4);
+	}
+	const boxCount = outerQty > 0 ? Math.ceil(shipmentQty / outerQty) : 0;
+	row.boxCount = boxCount;
+	const outerVol = Number(row.outerBoxVolume) || 0;
+	// 总净重 = 外箱净重 x 箱数，保留1位小数
+	row.totalNetWeight = (outerNet * boxCount).toFixed(1);
+	// 总毛重 = 外箱毛重 x 箱数，保留1位小数
+	row.totalGrossWeight = (outerGross * boxCount).toFixed(1);
+	// 总体积 = 外箱体积 x 箱数，保留1位小数
+	row.totalVolume = (outerVol * boxCount).toFixed(1);
+	AddShippingDeliveryform.value.shipmentTotalAmount = Number(calculateShipmentTotalAmount());
+};
+
 // 发货数量变化处理
 const shipmentQuantityChange = (row) => {
 	try {
@@ -2378,11 +2472,7 @@ const shipmentQuantityChange = (row) => {
 			ElMessage.warning('请输入有效的数字')
 			row.shipmentQuantity = remainingQty
 			row.exportTotalPrice = (remainingQty * Number(row.exportUnitPrice)).toFixed(2);
-			row.boxCount = Math.ceil(remainingQty / Number(row.outerBoxQuantity));
-			row.totalVolume = (row.boxCount * Number(row.outerBoxVolume)).toFixed(3);
-			row.totalNetWeight = (remainingQty * Number(row.outerBoxNetWeight)).toFixed(2);
-			row.totalGrossWeight = (row.boxCount * Number(row.outerBoxGrossWeight)).toFixed(2);
-			AddShippingDeliveryform.value.shipmentTotalAmount = Number(calculateShipmentTotalAmount());
+			recalcSalesRowPackaging(row);
 			const salesContractIdRestore = row.contractId ?? row.id;
 			shippingDeliveryPurchaseDetailsTableData.value.filter(
 				item => (item.salesContractID == salesContractIdRestore || item.salesContractId == salesContractIdRestore) &&
@@ -2395,13 +2485,8 @@ const shipmentQuantityChange = (row) => {
 		if (shipmentQty <= 0) {
 			ElMessage.warning('出货数量必须大于0，已恢复为剩余待出货数量')
 			row.shipmentQuantity = remainingQty
-			// 恢复后重算该行并同步采购
 			row.exportTotalPrice = (remainingQty * Number(row.exportUnitPrice)).toFixed(2);
-			row.boxCount = Math.ceil(remainingQty / Number(row.outerBoxQuantity));
-			row.totalVolume = (row.boxCount * Number(row.outerBoxVolume)).toFixed(3);
-			row.totalNetWeight = (remainingQty * Number(row.outerBoxNetWeight)).toFixed(2);
-			row.totalGrossWeight = (row.boxCount * Number(row.outerBoxGrossWeight)).toFixed(2);
-			AddShippingDeliveryform.value.shipmentTotalAmount = Number(calculateShipmentTotalAmount());
+			recalcSalesRowPackaging(row);
 			const salesContractId = row.contractId ?? row.id;
 			shippingDeliveryPurchaseDetailsTableData.value.filter(
 				item => (item.salesContractID == salesContractId || item.salesContractId == salesContractId) &&
@@ -2417,16 +2502,9 @@ const shipmentQuantityChange = (row) => {
 				showClose: false
 			})
 		}
-		// 计算总金额
-		AddShippingDeliveryform.value.shipmentTotalAmount = Number(calculateShipmentTotalAmount())
-
-		// 更新相关计算
-		row.exportTotalPrice = (shipmentQty * Number(row.exportUnitPrice)).toFixed(2)
-
-		row.boxCount = Math.ceil(shipmentQty / Number(row.outerBoxQuantity));
-		row.totalVolume = (row.boxCount * Number(row.outerBoxVolume)).toFixed(3);
-		row.totalNetWeight = (shipmentQty * Number(row.outerBoxNetWeight)).toFixed(2);
-		row.totalGrossWeight = (row.boxCount * Number(row.outerBoxGrossWeight)).toFixed(2);
+		// 更新相关计算（总毛重/总体积/总净重与销售合同公式一致）
+		row.exportTotalPrice = (shipmentQty * Number(row.exportUnitPrice)).toFixed(2);
+		recalcSalesRowPackaging(row);
 
 		// 采购合同出货数量与销售合同实时同步：按销售合同ID+产品编号匹配并更新
 		const salesContractId = row.contractId ?? row.id;
