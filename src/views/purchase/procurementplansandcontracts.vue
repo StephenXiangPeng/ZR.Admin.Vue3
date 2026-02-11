@@ -117,6 +117,9 @@
 						<el-button type="text" size="small" @click="CheckDetails(scope.row)">查看详情</el-button>
 						<el-button v-if="isContractStatusApproved(scope.row)" type="text" size="small"
 							@click="GeneratePurchaseContract(scope.row)">生成采购合同PDF</el-button>
+						<el-button type="primary" size="small" link
+							v-if="!scope.row.isDraft && scope.row.contractStatus !== '已完结' && scope.row.originalContractStatus >= 3 && scope.row.originalContractStatus < 10 && scope.row.reviewStatusStr !== '审核中' && scope.row.purchaserId === useUserStore().userId.toString()"
+							@click="completePurchaseContractManually(scope.row)">申请完结</el-button>
 						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
 							link type="danger" size="small" @click="DeletePurchaseContract(scope.row)">删除</el-button>
 					</template>
@@ -160,12 +163,21 @@
 										disabled style="width: 300px" size="default"></el-date-picker>
 								</el-form-item>
 							</el-col>
-							<el-col :span="6">
+							<el-col :span="6" v-if="false">
 								<el-form-item label="采购币种">
 									<el-select v-model="Addcontractofpurchaseform.purchaseCurrency" style="width: 300px"
 										:disabled="isFormDisabled" size="default" clearable>
 										<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
 											:label="dict.dictLabel" :value="dict.dictValue" />
+									</el-select>
+								</el-form-item>
+							</el-col>
+							<el-col :span="6">
+								<el-form-item label="采购员">
+									<el-select disabled v-model="Addcontractofpurchaseform.purchaser"
+										placeholder="请选择采购员" style="width: 300px" size="default" clearable>
+										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
 								</el-form-item>
 							</el-col>
@@ -181,16 +193,7 @@
 									</el-select>
 								</el-form-item>
 							</el-col>
-							<el-col :span="6">
-								<el-form-item label="付款天数" prop="paymentDays">
-									<el-select v-model="Addcontractofpurchaseform.paymentDays" style="width: 300px"
-										:disabled="isFormDisabled" size="default" clearable>
-										<el-option v-for="dict in optionss.hr_purchase_payment_days"
-											:key="dict.dictCode" :label="dict.dictLabel"
-											:value="dict.dictValue"></el-option>
-									</el-select>
-								</el-form-item>
-							</el-col>
+
 							<el-col :span="6">
 								<el-form-item label="销售合同">
 									<el-select v-model="Addcontractofpurchaseform.salesContract" placeholder="请选择销售合同"
@@ -211,22 +214,23 @@
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item label="采购员">
-									<el-select disabled v-model="Addcontractofpurchaseform.purchaser"
-										placeholder="请选择采购员" style="width: 300px" size="default" clearable>
-										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
-											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+								<el-form-item label="付款天数" prop="paymentDays">
+									<el-select v-model="Addcontractofpurchaseform.paymentDays" style="width: 300px"
+										:disabled="isFormDisabled" size="default" clearable>
+										<el-option v-for="dict in optionss.hr_purchase_payment_days"
+											:key="dict.dictCode" :label="dict.dictLabel"
+											:value="dict.dictValue"></el-option>
 									</el-select>
 								</el-form-item>
 							</el-col>
-						</el-row>
-						<el-row>
 							<el-col :span="6">
 								<el-form-item label="交货地点">
 									<el-input v-model="Addcontractofpurchaseform.deliveryLocation" style="width: 300px"
 										:disabled="isFormDisabled" size="default"></el-input>
 								</el-form-item>
 							</el-col>
+						</el-row>
+						<el-row>
 							<el-col :span="6" v-if="false">
 								<el-form-item label="预付款金额">
 									<el-input v-model="Addcontractofpurchaseform.deposit"
@@ -289,6 +293,15 @@
 									@change="handleQuantityChange(scope.row)" placeholder="请输入数量"
 									:disabled="isFormDisabled">
 								</el-input>
+							</template>
+						</el-table-column>
+						<el-table-column prop="purchasecurrency" label="采购币种" width="120">
+							<template #default="scope">
+								<el-select v-model="scope.row.purchasecurrency" placeholder="选择币种" size="default"
+									:disabled="isFormDisabled" clearable>
+									<el-option v-for="dict in optionss.hr_export_currency" :key="dict.dictCode"
+										:label="dict.dictLabel" :value="dict.dictValue" />
+								</el-select>
 							</template>
 						</el-table-column>
 						<el-table-column prop="purchaseUnitPrice" label="采购单价" width="150">
@@ -683,6 +696,7 @@ const GeneratePurchaseContract = (row) => {
 						chineseSpecification: product.chineseSpec,
 						unit: state.optionss.hr_calculate_unit.find(item => item.dictValue === product.unit.toString())?.dictLabel || '无',
 						contractQuantity: product.contractQuantity,
+						purchasecurrency: (product.purchasecurrency ?? product.purchaseCurrency)?.toString() || '3',
 						purchaseUnitPrice: product.purchaseUnitPrice,
 						purchasePriceTerms: (product.purchasingPriceTerms ?? product.purchasePriceTerms ?? product.purchasepriceterms)?.toString() || '',
 						purchaseTotalPrice: product.purchaseTotalPrice,
@@ -1376,6 +1390,7 @@ const submitPurchaseContract = () => {
 		chineseSpec: product.chineseSpecification || '',
 		contractQuantity: parseFloat(product.contractQuantity),
 		unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
+		purchaseCurrency: parseInt(product.purchasecurrency || product.purchaseCurrency || '3'),
 		purchasePrice: parseFloat(product.purchaseUnitPrice),
 		PurchasingPriceTerms: parseInt(product.purchasePriceTerms) || 0,
 		purchaseTotalPrice: parseFloat(product.purchaseTotalPrice),
@@ -1545,6 +1560,7 @@ const saveEditContractData = async () => {
 		chineseSpec: product.chineseSpecification || '',
 		ContractQuantity: parseFloat(product.contractQuantity) || 0,
 		Unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
+		PurchaseCurrency: parseInt(product.purchasecurrency || product.purchaseCurrency || '3'),
 		PurchasePrice: parseFloat(product.purchaseUnitPrice),
 		PurchasingPriceTerms: parseInt(product.purchasePriceTerms) || 0,
 		PurchaseTotalPrice: parseFloat(product.purchaseTotalPrice),
@@ -1574,6 +1590,18 @@ const saveEditContractData = async () => {
 		IsDelete: 0
 	}));
 
+	// 解析必填项 ID：表单可能为 dictValue 或 dictLabel，确保提交时不为空
+	const resolveDictValue = (options, formVal, fallback) => {
+		if (formVal == null || formVal === '') return fallback;
+		const str = formVal.toString();
+		if (/^\d+$/.test(str)) return str;
+		const found = options?.find(item => item.dictLabel === str || item.dictValue === str);
+		return found?.dictValue ?? fallback;
+	};
+	const salesContractVal = resolveDictValue(state.optionss.sql_sale_contracts, Addcontractofpurchaseform.value.salesContract, '');
+	const salespersonVal = resolveDictValue(state.optionss.sql_hr_sale, Addcontractofpurchaseform.value.salesperson, '');
+	const purchaserVal = resolveDictValue(state.optionss.sql_all_user, Addcontractofpurchaseform.value.purchaser, (userId != null ? userId.toString() : useUserStore().userId?.toString()) || '');
+
 	// 构建请求数据
 	const purchaseContractsRequest = {
 		id: currentContractId.value,
@@ -1581,14 +1609,14 @@ const saveEditContractData = async () => {
 		ContractStatus: 1,
 		VendorCode: '',
 		VendorAbbreviation: '',
-		SalesContract: state.optionss.sql_sale_contracts.find(item => item.dictLabel === Addcontractofpurchaseform.value.salesContract.toString())?.dictValue,
+		SalesContract: salesContractVal,
 		CustomerContract: Addcontractofpurchaseform.value.customerContract,
 		CustomerAbbreviation: Addcontractofpurchaseform.value.customerAbbreviation,
 		DeliveryDate: Addcontractofpurchaseform.value.deliveryDate,
 		PurchaseCurrency: state.optionss.hr_export_currency.find(item => item.dictLabel === Addcontractofpurchaseform.value.purchaseCurrency.toString())?.dictValue,
 		Deposit: parseFloat(Addcontractofpurchaseform.value.deposit || '0'),
-		Salesperson: state.optionss.sql_hr_sale.find(item => item.dictLabel === Addcontractofpurchaseform.value.salesperson.toString())?.dictValue,
-		Purchaser: state.optionss.sql_all_user.find(item => item.dictLabel === Addcontractofpurchaseform.value.purchaser.toString())?.dictValue,
+		Salesperson: salespersonVal,
+		Purchaser: purchaserVal,
 		PaymentDays: parseInt(Addcontractofpurchaseform.value.paymentDays || '0'),
 		PriceTerms: Addcontractofpurchaseform.value.priceTerms,
 		TotalGoodsValue: parseFloat(Totalvalueofgoodsform.value.totalValue || '0'),
@@ -1684,6 +1712,7 @@ const submitForReview = () => {
 					chineseSpec: product.chineseSpec || '',
 					contractQuantity: parseFloat(product.contractQuantity),
 					unit: state.optionss.hr_calculate_unit.find(item => item.dictLabel === product.unit.toString())?.dictValue,
+					purchaseCurrency: parseInt(product.purchasecurrency || product.purchaseCurrency || '3'),
 					purchasePrice: parseFloat(product.purchaseUnitPrice),
 					PurchasingPriceTerms: parseInt(product.purchasePriceTerms) || 0,
 					purchaseTotalPrice: parseFloat(product.purchaseTotalPrice),
@@ -2003,7 +2032,8 @@ const reviewStatusMap = {
 	'0': '待提审',
 	'1': '审核中',
 	'2': '已批准',
-	'3': '已拒绝'
+	'3': '已拒绝',
+	'10': '申请完结'
 }
 function GetpurchaseContractList(start, end) {
 	return new Promise((resolve, reject) => { // Adjust the Promise constructor usage
@@ -2019,11 +2049,18 @@ function GetpurchaseContractList(start, end) {
 				contractofpurchasetableData.value = response.data.result;
 				// 绑定数据
 				contractofpurchasetableData.value.forEach(element => {
+					// 保存原始合同状态值用于判断（如申请完结按钮显示条件）
+					element.originalContractStatus = element.contractStatus != null && element.contractStatus !== '' ? parseInt(element.contractStatus) : 0;
 					// 添加空值检查和默认值
 					element.contractStatus = element.contractStatus ? optionss.value.hr_contract_status.find(item =>
 						item.dictValue == element.contractStatus.toString())?.dictLabel || '未知状态' : '未知状态';
 
 					// 移除供应商显示，因为不再使用基本信息中的供应商
+
+					// 保存销售合同、销售员、采购员原始ID，供编辑提交时使用（避免提交时缺失必填项）
+					element.salesContractId = element.salesContract != null && element.salesContract !== '' ? element.salesContract.toString() : '';
+					element.salespersonId = element.salesperson != null && element.salesperson !== '' ? element.salesperson.toString() : '';
+					element.purchaserId = element.purchaser != null && element.purchaser !== '' ? element.purchaser.toString() : '';
 
 					element.salesContract = element.salesContract ? optionss.value.sql_sale_contracts.find(item =>
 						item.dictValue == element.salesContract.toString())?.dictLabel || '未知合同' : '未知合同';
@@ -2145,7 +2182,8 @@ const CheckDetails = async (row) => {
 
 	Addcontractofpurchaseform.value.purchaseContract = row.purchaseContractNumber;
 	Addcontractofpurchaseform.value.contractStatus = row.contractStatus ? row.contractStatus.toString() : '';
-	Addcontractofpurchaseform.value.salesContract = row.salesContract;
+	// 使用保存的原始ID填充，确保提交时 Purchaser/SalesContract/Salesperson 必填项有值
+	Addcontractofpurchaseform.value.salesContract = row.salesContractId ?? row.salesContract ?? '';
 	Addcontractofpurchaseform.value.customerContract = row.customerContract;
 	Addcontractofpurchaseform.value.customerAbbreviation = row.customerAbbreviation;
 	Addcontractofpurchaseform.value.deliveryDate = row.deliveryDate;
@@ -2156,8 +2194,8 @@ const CheckDetails = async (row) => {
 		item.dictValue == row.paymentDays.toString())?.dictValue || '' : '';
 	// 根据预付款金额判断是否有预付款
 	Addcontractofpurchaseform.value.hasDeposit = parseFloat(row.deposit || '0') > 0;
-	Addcontractofpurchaseform.value.salesperson = row.salesperson;
-	Addcontractofpurchaseform.value.purchaser = row.purchaser;
+	Addcontractofpurchaseform.value.salesperson = row.salespersonId ?? row.salesperson ?? '';
+	Addcontractofpurchaseform.value.purchaser = row.purchaserId ?? row.purchaser ?? '';
 	Addcontractofpurchaseform.value.priceTerms = row.priceTerms;
 	Totalvalueofgoodsform.value.totalValue = row.totalGoodsValue;
 	Totalvalueofgoodsform.value.totalQuantity = row.totalQuantity;
@@ -2193,6 +2231,7 @@ const CheckDetails = async (row) => {
 						chineseSpecification: element.chineseSpecification,
 						unit: element.unit ? state.optionss.hr_calculate_unit.find(item => item.dictValue === element.unit.toString())?.dictLabel || '无' : '无',
 						contractQuantity: element.contractQuantity,
+						purchasecurrency: (element.purchasecurrency ?? element.purchaseCurrency)?.toString() || '3',
 						purchaseUnitPrice: element.purchasePrice,
 						purchasePriceTerms: (element.purchasingPriceTerms ?? element.purchasePriceTerms ?? element.purchasepriceterms)?.toString() || '',
 						purchaseTotalPrice: element.purchaseTotalPrice,
@@ -2238,8 +2277,8 @@ const CheckDetails = async (row) => {
 			// 异步获取审批流程并设置审核按钮状态
 			getApprovalFlow(row.id).then(() => {
 				const isCurrentUserApprover = checkIfCurrentUserIsApprover();
-				// 只有当前用户是审批人且合同在审核中时才显示审核按钮
-				if (isCurrentUserApprover && row.reviewStatusStr === '审核中') {
+				// 当前用户是审批人且合同在审核中或申请完结时显示审核按钮
+				if (isCurrentUserApprover && (row.reviewStatusStr === '审核中' || row.reviewStatusStr === '申请完结')) {
 					showApproveRejectBtn.value = true;
 					showApprovePassBtn.value = true;
 					// 设置文档类型（采购合同）
@@ -2362,6 +2401,7 @@ const getStatusType = (status: string) => {
 		case '审核中': return 'wait'
 		case '已批准': return 'success'
 		case '已拒绝': return 'error'
+		case '申请完结': return 'info'
 		default: return 'info'
 	}
 }
@@ -2552,6 +2592,34 @@ const getContractStatusValue = (row) => {
 	// 如果已经是数值，直接返回
 	return parseInt(row.contractStatus) || 0;
 }
+
+// 手动完结采购合同（申请完结）
+const completePurchaseContractManually = (row) => {
+	ElMessageBox.confirm('确定要申请完结该采购合同吗？提交后将进入完结审批流程。', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'PurchaseContracts/CompleteContractManually/CompleteContractManually',
+			method: 'post',
+			params: { purchaseContractId: row.id }
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage.success(response.msg || '采购合同已成功提交申请完结审批流程！');
+				const start = purchasecontractsTableDatacurrentPage.value;
+				const end = purchasecontractsTableDatapageSize.value;
+				GetpurchaseContractList(start, end);
+			} else {
+				ElMessage.error(response.msg || '申请完结失败');
+			}
+		}).catch(() => {
+			ElMessage.error('申请完结失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消操作');
+	});
+};
 </script>
 
 <style scoped>

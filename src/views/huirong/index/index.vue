@@ -4427,8 +4427,8 @@ const openSaleContractDialog = (row) => {
   ApproveDocumentRequest.StageID = row.stageID;
   ApproveDocumentRequest.ApproverID = row.approverID;
   ApproveDocumentRequest.DocumentType = row.documentType;
-  //获取销售合同详情
-  if (row.documentType == "1" || row.documentType == "7") {
+  //获取销售合同详情（1=销售合同审批 7=修改交货日期审批 9=销售合同手动完结审批）
+  if (row.documentType == "1" || row.documentType == "7" || row.documentType == "9") {
     request({
       url: 'Contracts/GetContractDetailsById/GetContractDetails',
       method: 'GET',
@@ -4617,7 +4617,7 @@ const openSaleContractDialog = (row) => {
     });
     contractDialog.value = true;
     contractform.id = row.documentID;
-  } else if (row.documentType == "2") {//获取采购合同详情
+  } else if (row.documentType == "2" || row.documentType == "10") {//获取采购合同详情（2=采购合同审批 10=采购合同手动完结审批）
     request({
       url: 'PurchaseContracts/GetPurchaseContractDetailsById/GetPurchaseContractDetails',
       method: 'GET',
@@ -5617,9 +5617,9 @@ const getPendingCount = () => {
         AgencyProcesstableData.value.forEach(item => {
           item.createBy = state.optionss['sql_all_user'].filter(user => user.dictValue == item.createBy).map(user => user.dictLabel).values().next().value;
           item.documentTypeName = state.optionss['hr_approval_document_type'].filter(user => user.dictValue == item.documentType).map(user => user.dictLabel).values().next().value;
-          if (item.documentType == "1" || item.documentType == "7") {
+          if (item.documentType == "1" || item.documentType == "7" || item.documentType == "9") {
             item.documentNumber = state.optionss['sql_sale_contracts'].filter(Salecontract => Salecontract.dictValue == item.documentID.toString()).map(Salecontract => Salecontract.dictLabel).values().next().value;
-          } else if (item.documentType == "2") {
+          } else if (item.documentType == "2" || item.documentType == "10") {
             item.documentNumber = state.optionss['sql_purchase_contract'].filter(Purchasecontract => Purchasecontract.dictValue == item.documentID.toString()).map(Purchasecontract => Purchasecontract.dictLabel).values().next().value;
           } else if (item.documentType == "5") {
             item.documentNumber = state.optionss['sql_payment_requests'].filter(Paymentrequests => Paymentrequests.dictValue == item.documentID.toString()).map(Paymentrequests => Paymentrequests.dictLabel).values().next().value;

@@ -160,6 +160,9 @@
 							<el-button type="warning" size="small" icon="Back" link
 								v-if="scope.row.contractReviewStatusStr === '审核中'"
 								@click="withdrawalApproval(scope.row)">撤回审批</el-button>
+							<el-button type="primary" size="small" link
+								v-if="!scope.row.isDraft && scope.row.contractStatus !== '已完结' && scope.row.originalContractStatus >= 3 && scope.row.originalContractStatus < 10 && scope.row.contractReviewStatusStr !== '审核中'"
+								@click="completeContractManually(scope.row)">申请完结</el-button>
 							<el-button
 								v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
 								type="danger" size="small" @click="DeleteContract(scope.row)">删除</el-button>
@@ -653,7 +656,8 @@
 						<el-table-column prop="purchasepriceterms" label="采购价格条款" width="180">
 							<template #default="{ row }">
 								<el-select v-model="row.purchasepriceterms" filterable placeholder="请选择采购价格条款"
-									style="width: 100%;" :disabled="isDisabled" clearable>
+									style="width: 100%;" :disabled="isDisabled" clearable
+									@change="onPurchasePriceTermsChange(row)">
 									<el-option v-for="dict in optionss.hr_purchase_pricing_term" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
 								</el-select>
@@ -693,7 +697,8 @@
 						</el-table-column>
 						<el-table-column prop="isInvoicingc" label="是否开票" width="120">
 							<template #default="scope">
-								<el-select v-model="scope.row.isInvoicingc" filterable placeholder="请选择"
+								<span v-if="isNoTaxNoFreight(scope.row)">—</span>
+								<el-select v-else v-model="scope.row.isInvoicingc" filterable placeholder="请选择"
 									style="width: 100%;" :disabled="isDisabled" clearable>
 									<el-option v-for="dict in optionss.hr_yes_no" :key="dict.dictCode"
 										:label="dict.dictLabel" :value="dict.dictValue" />
@@ -717,7 +722,9 @@
 						</el-table-column>
 						<el-table-column prop="rebaterate" label="退税率%" width="100">
 							<template #default="{ row }">
-								<el-input v-model="row.rebaterate" @change="calculateTotal" :disabled="isDisabled" />
+								<span v-if="isNoTaxNoFreight(row)">—</span>
+								<el-input v-else v-model="row.rebaterate" @change="calculateTotal"
+									:disabled="isDisabled" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="innerBoxLoading" label="内盒装量" width="100">
@@ -1967,6 +1974,26 @@ function formatNumber(row, key) {
 	}
 }
 
+// 采购价格条款为「不含税不含运费」时的 dictValue（按字典标签匹配）
+const getNoTaxNoFreightValue = () => {
+	const opt = state.optionss.hr_purchase_pricing_term?.find(item => item.dictLabel === '不含税不含运费');
+	return opt != null ? String(opt.dictValue) : null;
+};
+// 判断当前行是否为「不含税不含运费」
+const isNoTaxNoFreight = (row) => {
+	if (!row?.purchasepriceterms) return false;
+	const noTaxNoFreightValue = getNoTaxNoFreightValue();
+	return noTaxNoFreightValue != null && String(row.purchasepriceterms) === noTaxNoFreightValue;
+};
+// 采购价格条款变更：若选为「不含税不含运费」则清空退税率与是否开票
+const onPurchasePriceTermsChange = (row) => {
+	if (isNoTaxNoFreight(row)) {
+		row.rebaterate = 0;
+		row.isInvoicingc = '';
+	}
+	calculateTotal();
+};
+
 ///计算外销总价、计算外箱体积、计算总货值
 const calculateTotal = () => {
 	Newcontractform.TotalValueOfGoods = 0;
@@ -2003,9 +2030,14 @@ const calculateTotal = () => {
 		//外箱体积 =（外箱长度 x 外箱宽度 x 外箱高度）/1000000
 		item.outerboxvolume = (item.outerboxlength * item.outerboxwidth * item.outerboxheight / 1000000);
 		item.outerboxvolume = item.outerboxvolume.toFixed(4);//外箱体积保留4位小数
-		//单个销售收入A =	（采购单价 / (1+退税率）x 13% + 销售单价 x 汇率）
-		item.SinglesalesrevenueA = (item.purchaseunitprice / (1 + item.rebaterate / 100) * (item.rebaterate / 100) + item.exportunitprice * Number(Newcontractform.exchangeRate));
-		item.SinglesalesrevenueA = item.SinglesalesrevenueA.toFixed(3);//单个销售收入A保留3位小数
+		// 采购价格条款为「不含税不含运费」：单个销售收入A = 销售单价*汇率-采购单价；否则按原公式
+		if (isNoTaxNoFreight(item)) {
+			item.SinglesalesrevenueA = (Number(item.exportunitprice) * Number(Newcontractform.exchangeRate) - Number(item.purchaseunitprice)).toFixed(3);
+		} else {
+			//单个销售收入A =（采购单价 / (1+退税率）x 退税率 + 销售单价 x 汇率）
+			item.SinglesalesrevenueA = (item.purchaseunitprice / (1 + item.rebaterate / 100) * (item.rebaterate / 100) + item.exportunitprice * Number(Newcontractform.exchangeRate));
+			item.SinglesalesrevenueA = item.SinglesalesrevenueA.toFixed(3);
+		}
 		//单个产品体积=外箱体积/外箱装量
 		item.Singleproductvolume = (item.outerboxvolume / item.outerboxloading).toFixed(6).toString().replace(/(\.\d*?[1-9])0+$/, '$1');
 		//单个产品的港杂费=港杂费 x 单个产品体积
@@ -2064,8 +2096,8 @@ const calculateTotal = () => {
 		TotalVolume += Number(item.totalVolume);
 		TotalPurchases += Number(item.purchaseunitprice) * Number(item.contractQuantity);
 		OtherFees += Number(item.OtherFees);
-		// 如果退税率不为0，才计算该行的退税总额
-		if (item.rebaterate && Number(item.rebaterate) !== 0) {
+		// 如果退税率不为0且非「不含税不含运费」，才计算该行的退税总额
+		if (!isNoTaxNoFreight(item) && item.rebaterate && Number(item.rebaterate) !== 0) {
 			TotalTaxRefund += Number((item.purchaseunitprice / (1 + item.rebaterate / 100) * 0.13 * item.contractQuantity).toFixed(3));//采购单价*13%*合同数量
 		}
 		ProfitAmount += Number(item.ProfitAmount);
@@ -2662,6 +2694,10 @@ const GetcontractReviewStatusStr = (ReviewStatus) => {
 			return '已批准';
 		case 3:
 			return '已拒绝';
+		case 10:
+			return '申请完结';
+		default:
+			return '';
 	}
 }
 
@@ -3841,8 +3877,8 @@ const checkContractsDetails = async (row) => {
 			// 异步获取审批流程并设置审核按钮状态
 			getApprovalFlow(row.id).then(() => {
 				const isCurrentUserApprover = checkIfCurrentUserIsApprover();
-				// 只有当前用户是审批人且合同在审核中时才显示审核按钮
-				if (isCurrentUserApprover && row.contractReviewStatusStr === '审核中') {
+				// 当前用户是审批人且合同在审核中或申请完结时显示审核按钮
+				if (isCurrentUserApprover && (row.contractReviewStatusStr === '审核中' || row.contractReviewStatusStr === '申请完结')) {
 					showApprovalBtn.value = true;
 					showRejectBtn.value = true;
 					// 设置文档类型（销售合同）
@@ -4333,6 +4369,7 @@ const getStatusType = (status: string) => {
 		case '审核中': return 'danger'
 		case '已批准': return 'success'
 		case '已拒绝': return 'error'
+		case '申请完结': return 'info'
 		default: return 'info'
 	}
 }
@@ -4996,6 +5033,40 @@ onActivated(() => {
 		history.replaceState(null, '', route.path)
 	}
 })
+
+// 手动完结销售合同（申请完结）
+const completeContractManually = (row) => {
+	ElMessageBox.confirm('确定要申请完结该销售合同吗？提交后将进入完结审批流程。', '提示', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		type: 'warning'
+	}).then(() => {
+		request({
+			url: 'Contracts/CompleteContractManually/CompleteContractManually',
+			method: 'post',
+			params: { contractId: row.id }
+		}).then(response => {
+			if (response.code === 200) {
+				ElMessage.success(response.msg || '销售合同已成功提交申请完结审批流程！');
+				const contractId = row.id;
+				GetContractList(contractsTableDatacurrentPage.value, contractsTableDatapageSize.value).then(() => {
+					// 若当前打开的是本合同的详情弹窗，同步更新标题中的审批状态为实时状态
+					if (SelctedContractId.value !== contractId) return;
+					const updatedRow = contractsTableData.value.find(r => r.id === contractId);
+					contractReviewStatus.value = updatedRow ? updatedRow.contractReviewStatusStr : '申请完结';
+				}).catch(() => {
+					if (SelctedContractId.value === contractId) contractReviewStatus.value = '申请完结';
+				});
+			} else {
+				ElMessage.error(response.msg || '申请完结失败');
+			}
+		}).catch(() => {
+			ElMessage.error('申请完结失败，请稍后重试');
+		});
+	}).catch(() => {
+		ElMessage.info('已取消操作');
+	});
+};
 
 // 删除销售合同
 const DeleteContract = (row) => {

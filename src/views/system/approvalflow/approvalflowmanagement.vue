@@ -25,6 +25,55 @@
 		</el-table>
 		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
 			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+		<!-- 查看详情 Dialog -->
+		<el-dialog v-model="DetailDialogVisible" title="审批流程详情" width="720px" :close-on-click-modal="false"
+			destroy-on-close>
+			<el-descriptions :column="2" border size="default" v-if="DetailData.process">
+				<el-descriptions-item label="流程名称" :span="2">{{ DetailData.process.processName || '—'
+				}}</el-descriptions-item>
+				<el-descriptions-item label="单据类型">{{ DetailData.process.documentTypeLabel || '—'
+				}}</el-descriptions-item>
+				<el-descriptions-item label="创建时间">{{ DetailData.process.createTime || '—' }}</el-descriptions-item>
+				<el-descriptions-item label="触发条件" :span="2">{{ DetailData.process.triggerCondition || '—'
+				}}</el-descriptions-item>
+				<el-descriptions-item label="备注信息" :span="2">{{ DetailData.process.remark || '—'
+				}}</el-descriptions-item>
+				<el-descriptions-item label="美元/欧元" v-if="DetailData.process.showCustomFields">
+					{{ (DetailData.process.customFields1OperatorsLabel || '') + (DetailData.process.customFields1 ? ' '
+						+
+						DetailData.process.customFields1 : '') || '—' }}
+				</el-descriptions-item>
+				<el-descriptions-item label="人民币" v-if="DetailData.process.showCustomFields">
+					{{ (DetailData.process.customFields2OperatorsLabel || '') + (DetailData.process.customFields2 ? ' '
+						+
+						DetailData.process.customFields2 : '') || '—' }}
+				</el-descriptions-item>
+				<el-descriptions-item label="自定义条件3"
+					v-if="DetailData.process.showCustomFields && (DetailData.process.customFields3 || DetailData.process.customFields3OperatorsLabel)">
+					{{ (DetailData.process.customFields3OperatorsLabel || '') + (DetailData.process.customFields3 ? ' '
+						+
+						DetailData.process.customFields3 : '') || '—' }}
+				</el-descriptions-item>
+			</el-descriptions>
+			<div style="margin-top: 16px; font-weight: bold;">审批阶段</div>
+			<el-table :data="DetailData.stageList" border style="width: 100%; margin-top: 8px;" max-height="320">
+				<el-table-column type="index" label="序号" width="60" align="center" />
+				<el-table-column prop="stageName" label="阶段名称" min-width="100" align="center" />
+				<el-table-column prop="approverRoleLabel" label="审批角色" min-width="120" align="center" />
+				<el-table-column prop="profitmargin" label="低于利润率(%)" width="120" align="center">
+					<template #default="{ row }">{{ row.profitmargin != null && row.profitmargin !== '' ?
+						row.profitmargin : '—' }}</template>
+				</el-table-column>
+				<el-table-column prop="remark" label="备注" min-width="120" align="center">
+					<template #default="{ row }">{{ row.remark || '—' }}</template>
+				</el-table-column>
+			</el-table>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button @click="DetailDialogVisible = false">关闭</el-button>
+				</span>
+			</template>
+		</el-dialog>
 		<el-dialog v-model="ApprovalProcessDialog" title="新增/编辑审批流" :close-on-click-modal=false style="width: 50%;"
 			@close="CloseApprovalProcessDialog()">
 			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
@@ -134,7 +183,7 @@
 </template>
 <script setup lang="ts">
 import { createApp, getCurrentInstance, reactive, toRefs, ref } from 'vue'
-import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
+import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElDescriptions, ElDescriptionsItem, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
 import { FOCUSABLE_CHILDREN } from 'element-plus/es/directives/trap-focus';
 import request from '@/utils/request';
 
@@ -165,11 +214,9 @@ const totalItems = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(10);
 const NameText = ref('');
-const handlePageChange = async (newPage) => {
-	pageSize.value = newPage;
-	const start = newPage;
-	const end = pageSize.value;
-	const newData = await GetApprovalProcessList(start, end);
+const handlePageChange = (newPage) => {
+	currentPage.value = newPage;
+	GetApprovalProcessList(currentPage.value, pageSize.value);
 };
 
 GetApprovalProcessList(currentPage.value, pageSize.value);
@@ -183,16 +230,24 @@ function GetApprovalProcessList(start, end) {
 			PageSize: end
 		}
 	}).then(response => {
-		if (response.data.result.length > 0) {
+		if (response.data.result && response.data.result.length > 0) {
 			ApprovalProcessTableData.value = response.data.result;
 			ApprovalProcessTableData.value.forEach(element => {
 				element.documentType = state.optionss.hr_approval_document_type.find(item => item.dictValue == element.documentType).dictLabel;
 			});
 		} else {
-			ElMessage({
-				message: '暂无数据',
-				type: 'warning'
-			});
+			ApprovalProcessTableData.value = [];
+			if (start === 1) {
+				ElMessage({
+					message: '暂无数据',
+					type: 'warning'
+				});
+			}
+		}
+		// 从接口设置总条数，用于分页显示（兼容 total / totalNum / totalCount / page.totalCount）
+		const total = response.data?.total ?? response.data?.totalNum ?? response.data?.totalCount ?? response.data?.page?.totalCount;
+		if (typeof total === 'number') {
+			totalItems.value = total;
 		}
 	}).catch(error => {
 		console.error(error);
@@ -201,11 +256,7 @@ function GetApprovalProcessList(start, end) {
 			type: 'error'
 		});
 	});
-	// ApprovalProcessTableData.values = res.data.page.list;
-	// totalItems.value = res.data.page.totalCount;
-	// return res.data.page.list;
 }
-
 
 const ApprovalProcessTableData = ref([]);
 const isSaveBtnShow = ref(true);
@@ -235,12 +286,10 @@ const CloseApprovalProcessDialog = () => {
 	ApprovalProcessDialog.value = false;
 }
 
+// 需填写金额的单据类型：1销售合同审批 7修改交货日期审批 9销售合同完结审批 10采购合同完结审批
+const DOCUMENT_TYPES_WITH_AMOUNT = ['1', '7', '9', '10'];
 const DocumentTypeChange = () => {
-	if (ApprovalProcessForm.DocumentType == '1' || ApprovalProcessForm.DocumentType == '7') {
-		IsSaleOrderShow.value = true;
-	} else {
-		IsSaleOrderShow.value = false;
-	}
+	IsSaleOrderShow.value = DOCUMENT_TYPES_WITH_AMOUNT.includes(String(ApprovalProcessForm.DocumentType));
 }
 
 const SaveApprovalProcess = () => {
@@ -300,11 +349,7 @@ const editProcess = (row) => {
 			ApprovalProcessForm.CustomFields1operators = state.optionss.hr_operators.find(item => item.dictValue == response.data.process.customFields1Operators).dictValue;
 			ApprovalProcessForm.CustomFields2operators = state.optionss.hr_operators.find(item => item.dictValue == response.data.process.customFields2Operators).dictValue;
 			ApprovalProcessForm.CustomFields3operators = state.optionss.hr_operators.find(item => item.dictValue == response.data.process.customFields3Operators).dictValue;
-			if (response.data.process.documentType == '1' || response.data.process.documentType == '7') {
-				IsSaleOrderShow.value = true;
-			} else {
-				IsSaleOrderShow.value = false;
-			}
+			IsSaleOrderShow.value = DOCUMENT_TYPES_WITH_AMOUNT.includes(String(response.data.process.documentType));
 			response.data.stageList.forEach(element => {
 				const newRow = {
 					processID: response.data.process.processID,
@@ -365,10 +410,44 @@ const deleteProcess = (row) => {
 	});
 }
 
+// 查看详情：弹窗与数据
+const DetailDialogVisible = ref(false);
+const DetailData = ref({ process: null, stageList: [] });
+
 const viewDetails = (row) => {
-	ElMessageBox.alert('流程名称：' + row.processName + '<br>' + '单据类型：' + row.documentType + '<br>' + '触发条件：' +
-		row.triggerCondition + '<br>' + '备注信息：' + row.remark + '<br>' + '创建时间：' + row.createTime, '审批流程详情', {
-		dangerouslyUseHTMLString: true
+	request({
+		url: 'ApprovalFlow/GetApprovalProcessDetails/GetDetails',
+		method: 'GET',
+		params: { ProcessID: row.processID }
+	}).then(response => {
+		if (response.data == null) {
+			ElMessage({ message: '暂无数据', type: 'warning' });
+			return;
+		}
+		const process = response.data.process || {};
+		const stageList = response.data.stageList || [];
+		const docType = process.documentType;
+		const showCustomFields = DOCUMENT_TYPES_WITH_AMOUNT.includes(String(docType));
+		const documentTypeLabel = state.optionss.hr_approval_document_type.find(item => item.dictValue == docType)?.dictLabel || process.documentType;
+		const getOperatorLabel = (val) => (val != null && val !== '') ? (state.optionss.hr_operators.find(item => item.dictValue == val)?.dictLabel || val) : '';
+		DetailData.value = {
+			process: {
+				...process,
+				documentTypeLabel,
+				showCustomFields,
+				customFields1OperatorsLabel: getOperatorLabel(process.customFields1Operators),
+				customFields2OperatorsLabel: getOperatorLabel(process.customFields2Operators),
+				customFields3OperatorsLabel: getOperatorLabel(process.customFields3Operators)
+			},
+			stageList: stageList.map(stage => ({
+				...stage,
+				approverRoleLabel: state.optionss.sql_hr_allrole.find(item => item.dictValue == stage.approverRoleID)?.dictLabel || stage.approverRoleID || '—'
+			}))
+		};
+		DetailDialogVisible.value = true;
+	}).catch(error => {
+		console.error(error);
+		ElMessage({ message: '获取详情失败', type: 'error' });
 	});
 }
 //////////////////////////////审批阶段/////////////////////////////////////
