@@ -100,10 +100,9 @@
 				<el-table-column prop="state" label="最近联系" width="100" />
 				<el-table-column prop="state" label="原跟进人" width="100" />
 				<el-table-column prop="create_by" label="创建人" width="100" />
-				<el-table-column fixed="right" label="操作" width="200">
+				<el-table-column fixed="right" label="操作" width="260">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="viewDetails(scope.row)">查看详情</el-button>
-						<el-button type="text" size="small" @click="DelCustomerleads(scope.row)">删除</el-button>
 					</template>
 				</el-table-column>
 			</el-table>

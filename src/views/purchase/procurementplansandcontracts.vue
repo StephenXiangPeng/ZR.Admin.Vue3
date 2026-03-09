@@ -120,8 +120,11 @@
 						<el-button type="primary" size="small" link
 							v-if="!scope.row.isDraft && scope.row.contractStatus !== '已完结' && scope.row.originalContractStatus >= 3 && scope.row.originalContractStatus < 10 && scope.row.reviewStatusStr !== '审核中' && scope.row.purchaserId === useUserStore().userId.toString()"
 							@click="completePurchaseContractManually(scope.row)">申请完结</el-button>
-						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
-							link type="danger" size="small" @click="DeletePurchaseContract(scope.row)">删除</el-button>
+						<el-button v-if="useUserStore().roles.includes('admin')" link type="danger" size="small"
+							@click="DeletePurchaseContract(scope.row)">删除</el-button>
+						<el-button
+							v-if="!useUserStore().roles.includes('admin') && scope.row.purchaserId === useUserStore().userId.toString()"
+							type="text" size="small" @click="applyDeleteDocument(scope.row)">申请删除单据</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -2523,29 +2526,114 @@ const checkIfCurrentUserIsApprover = () => {
 	return false;
 }
 
-// 删除采购合同
+const confirmDeleteWithCountdown = (message) => {
+	return new Promise((resolve, reject) => {
+		let countdown = 15;
+		let timer = 0;
+		ElMessageBox.confirm(message, '二次确认', {
+			confirmButtonText: `确认删除(${countdown}s)`,
+			cancelButtonText: '取消',
+			type: 'warning',
+			distinguishCancelAndClose: true,
+			closeOnClickModal: false,
+			closeOnPressEscape: false
+		}).then(() => {
+			window.clearInterval(timer);
+			resolve(true);
+		}).catch((action) => {
+			window.clearInterval(timer);
+			reject(action);
+		});
+
+		setTimeout(() => {
+			const boxes = document.querySelectorAll('.el-message-box');
+			const currentBox = boxes[boxes.length - 1] as HTMLElement | undefined;
+			const confirmBtn = currentBox?.querySelector('.el-message-box__btns .el-button--primary') as HTMLButtonElement | null;
+			if (!confirmBtn) return;
+
+			confirmBtn.disabled = true;
+			confirmBtn.setAttribute('disabled', 'disabled');
+			confirmBtn.classList.add('is-disabled');
+			timer = window.setInterval(() => {
+				if (!confirmBtn.isConnected) {
+					window.clearInterval(timer);
+					return;
+				}
+				countdown -= 1;
+				if (countdown > 0) {
+					confirmBtn.textContent = `确认删除(${countdown}s)`;
+					return;
+				}
+				window.clearInterval(timer);
+				confirmBtn.disabled = false;
+				confirmBtn.removeAttribute('disabled');
+				confirmBtn.classList.remove('is-disabled');
+				confirmBtn.textContent = '确认删除';
+			}, 1000);
+		}, 0);
+	});
+};
+
+// 删除采购合同（与待删除单据删除接口一致）
 const DeletePurchaseContract = (row) => {
-	ElMessageBox.confirm('确定要删除该采购合同吗？', '提示', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'warning'
-	}).then(() => {
-		request({
-			url: 'PurchaseContracts/DeletePurchaseContracts/Delete',
-			method: 'post',
-			data: { PurchaseContractID: row.id }
+	confirmDeleteWithCountdown('确定要删除该采购合同吗？此操作不可恢复。').then(() => {
+		request.post('ApplyDeleteDocument/DelDocumentRequest/DelDocument', {
+			DocumentID: row.id,
+			DocumentType: DOCUMENT_TYPE_PURCHASE_CONTRACT
 		}).then(response => {
-			if (response.code === 200) {
-				ElMessage.success(response.msg || '删除成功');
-				GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
+			if (response != null) {
+				ElMessage({
+					message: response.msg || '单据删除成功',
+					type: response.code === 200 ? 'success' : 'error'
+				});
+				if (response.code === 200) {
+					GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
+				}
 			} else {
-				ElMessage.error(response.msg || '删除失败');
+				ElMessage({ message: '单据删除失败', type: 'error' });
 			}
-		}).catch(() => {
-			ElMessage.error('删除失败，请稍后重试');
+		}).catch(error => {
+			console.error('删除采购合同出错', error);
+			ElMessage({ message: '删除失败', type: 'error' });
 		});
 	}).catch(() => {
 		ElMessage.info('已取消删除');
+	});
+};
+
+const DOCUMENT_TYPE_PURCHASE_CONTRACT = 10
+
+const applyDeleteDocument = (row) => {
+	ElMessageBox.prompt('请输入申请删除备注：', '申请删除单据', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		inputType: 'textarea',
+		inputPlaceholder: '请输入备注（选填）',
+		inputValue: '',
+		type: 'warning'
+	}).then(({ value }) => {
+		request.post('ApplyDeleteDocument/AddSysDocumentDeleteRequest/AddApplyDeleteDocument', {
+			DocumentID: row.id,
+			DocumentType: DOCUMENT_TYPE_PURCHASE_CONTRACT,
+			Remark: value?.trim() || ''
+		}).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.msg || '单据申请删除提交成功，已进入审批阶段',
+					type: response.code === 200 ? 'success' : 'error'
+				});
+				if (response.code === 200) {
+					GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
+				}
+			} else {
+				ElMessage({ message: '单据申请删除提交失败', type: 'error' });
+			}
+		}).catch(error => {
+			console.error('申请删除单据出错', error);
+			ElMessage({ message: '申请删除单据失败', type: 'error' });
+		});
+	}).catch(() => {
+		ElMessage({ type: 'info', message: '已取消申请' });
 	});
 };
 

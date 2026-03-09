@@ -110,8 +110,6 @@
 				<el-table-column fixed="right" label="操作" width="150">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="CheckPaymentRequest(scope.row)">查看/编辑</el-button>
-						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
-							link type="danger" size="small" @click="DeleteCustomerProfile(scope.row)">删除</el-button>
 					</template>
 				</el-table-column>
 			</el-table>

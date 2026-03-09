@@ -58,8 +58,6 @@
 			<el-table-column fixed="right" prop="operate" label="操作" width="150">
 				<template v-slot:default="scope">
 					<el-button link type="primary" size="small" @click="handleView(scope.row.id)">查看/编辑</el-button>
-					<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft" link
-						type="danger" size="small" @click="DeleteProductSample(scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
 		</el-table>

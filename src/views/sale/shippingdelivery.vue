@@ -122,8 +122,10 @@
 				<el-table-column fixed="right" label="操作" width="150px">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="CheckShipingDelivery(scope.row)">查看/编辑</el-button>
-						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
-							link type="danger" size="small" @click="DeleteShipingDelivery(scope.row)">删除</el-button>
+						<el-button v-if="useUserStore().roles.includes('admin')" link type="danger" size="small"
+							@click="DeleteShipingDelivery(scope.row)">删除</el-button>
+						<el-button v-if="!useUserStore().roles.includes('admin')" type="text" size="small"
+							@click="applyDeleteDocument(scope.row)">申请删除单据</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -2800,32 +2802,114 @@ const ApproveReject = async () => {
 	}
 }
 
-// 删除出运发货单
+const confirmDeleteWithCountdown = (message) => {
+	return new Promise((resolve, reject) => {
+		let countdown = 15;
+		let timer = 0;
+		ElMessageBox.confirm(message, '二次确认', {
+			confirmButtonText: `确认删除(${countdown}s)`,
+			cancelButtonText: '取消',
+			type: 'warning',
+			distinguishCancelAndClose: true,
+			closeOnClickModal: false,
+			closeOnPressEscape: false
+		}).then(() => {
+			window.clearInterval(timer);
+			resolve(true);
+		}).catch((action) => {
+			window.clearInterval(timer);
+			reject(action);
+		});
+
+		setTimeout(() => {
+			const boxes = document.querySelectorAll('.el-message-box');
+			const currentBox = boxes[boxes.length - 1] as HTMLElement | undefined;
+			const confirmBtn = currentBox?.querySelector('.el-message-box__btns .el-button--primary') as HTMLButtonElement | null;
+			if (!confirmBtn) return;
+
+			confirmBtn.disabled = true;
+			confirmBtn.setAttribute('disabled', 'disabled');
+			confirmBtn.classList.add('is-disabled');
+			timer = window.setInterval(() => {
+				if (!confirmBtn.isConnected) {
+					window.clearInterval(timer);
+					return;
+				}
+				countdown -= 1;
+				if (countdown > 0) {
+					confirmBtn.textContent = `确认删除(${countdown}s)`;
+					return;
+				}
+				window.clearInterval(timer);
+				confirmBtn.disabled = false;
+				confirmBtn.removeAttribute('disabled');
+				confirmBtn.classList.remove('is-disabled');
+				confirmBtn.textContent = '确认删除';
+			}, 1000);
+		}, 0);
+	});
+};
+
+// 删除出运发货单（与待删除单据删除接口一致）
 const DeleteShipingDelivery = (row) => {
-	ElMessageBox.confirm('确定要删除该出运发货单吗？', '提示', {
-		confirmButtonText: '确定',
-		cancelButtonText: '取消',
-		type: 'warning'
-	}).then(() => {
-		request({
-			url: 'ShippingDeliveries/DeleteShippingDeliveries/Delete',
-			method: 'post',
-			data: { ShippingDeliveriesID: row.id }
+	confirmDeleteWithCountdown('确定要删除该出运发货单吗？此操作不可恢复。').then(() => {
+		request.post('ApplyDeleteDocument/DelDocumentRequest/DelDocument', {
+			DocumentID: row.id,
+			DocumentType: DOCUMENT_TYPE_SHIPPING_DELIVERY
 		}).then(response => {
-			if (response.code === 200) {
+			if (response != null) {
 				ElMessage({
-					message: '删除成功',
-					type: 'success'
+					message: response.msg || '单据删除成功',
+					type: response.code === 200 ? 'success' : 'error'
 				});
-				GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
+				if (response.code === 200) {
+					GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
+				}
 			} else {
-				ElMessage.error(response.msg || '删除失败');
+				ElMessage({ message: '单据删除失败', type: 'error' });
 			}
-		}).catch(() => {
-			ElMessage.error('删除失败，请稍后重试');
+		}).catch(error => {
+			console.error('删除出运发货单出错', error);
+			ElMessage({ message: '删除失败', type: 'error' });
 		});
 	}).catch(() => {
 		ElMessage.info('已取消删除');
+	});
+};
+
+const DOCUMENT_TYPE_SHIPPING_DELIVERY = 4
+
+const applyDeleteDocument = (row) => {
+	ElMessageBox.prompt('请输入申请删除备注：', '申请删除单据', {
+		confirmButtonText: '确定',
+		cancelButtonText: '取消',
+		inputType: 'textarea',
+		inputPlaceholder: '请输入备注（选填）',
+		inputValue: '',
+		type: 'warning'
+	}).then(({ value }) => {
+		request.post('ApplyDeleteDocument/AddSysDocumentDeleteRequest/AddApplyDeleteDocument', {
+			DocumentID: row.id,
+			DocumentType: DOCUMENT_TYPE_SHIPPING_DELIVERY,
+			Remark: value?.trim() || ''
+		}).then(response => {
+			if (response != null) {
+				ElMessage({
+					message: response.msg || '单据申请删除提交成功，已进入审批阶段',
+					type: response.code === 200 ? 'success' : 'error'
+				});
+				if (response.code === 200) {
+					GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value);
+				}
+			} else {
+				ElMessage({ message: '单据申请删除提交失败', type: 'error' });
+			}
+		}).catch(error => {
+			console.error('申请删除单据出错', error);
+			ElMessage({ message: '申请删除单据失败', type: 'error' });
+		});
+	}).catch(() => {
+		ElMessage({ type: 'info', message: '已取消申请' });
 	});
 };
 </script>

@@ -91,8 +91,6 @@
 				<el-table-column fixed="right" prop="operate" label="操作" :width="150">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small" @click="ChcekDetails(scope.row)">查看详情</el-button>
-						<el-button v-if="scope.row.createBy === useUserStore().userName && scope.row.isDraft" link
-							type="danger" size="small" @click="DeleteQuotation(scope.row)">删除</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -143,8 +141,12 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="有效期限" prop="validityperiod" data-field="validityperiod">
-									<el-input v-model="quotationDialogform.validityperiod" style="width: 300px;"
-										:disabled="isDisabled" size="default" />
+									<el-select v-model="quotationDialogform.validityperiod" filterable
+										placeholder="选择有效期限" style="width: 300px;" :disabled="isDisabled" size="default"
+										clearable>
+										<el-option v-for="dict in optionss.hr_quotationalidity" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" />
+									</el-select>
 								</el-form-item>
 							</el-col>
 						</el-row>
@@ -1418,7 +1420,8 @@ const state = reactive({
 		sql_hr_customer_abbreviation: [],
 		hr_packing: [],
 		hr_outerbox_unit: [],
-		sql_user_customers: []
+		sql_user_customers: [],
+		hr_quotationalidity: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -1434,7 +1437,7 @@ var dictParams = [
 	{ dictType: 'sql_hr_customer_contactperson' }, { dictType: 'sql_hr_all_quotationnum' },
 	{ dictType: 'sql_product' }, { dictType: 'sql_product_name' },
 	{ dictType: 'sql_hr_customer_abbreviation' }, { dicttype: 'hr_packing' },
-	{ dictType: 'hr_outerbox_unit' }]
+	{ dictType: 'hr_outerbox_unit' }, { dictType: 'hr_quotationalidity' }]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
 		state.optionss[element.dictType] = element.list
@@ -2538,6 +2541,8 @@ function GetQuotationList(start, end) {
 				quotationData.value.forEach((item) => {
 					item.quotationStatus = state.optionss['hr_quotation_status'].filter(hr_quotation_status => hr_quotation_status.dictValue == item.quotationStatus).map(item => item.dictLabel).values().next().value;
 					item.createBy = optionss.value.sql_all_user.find(sql_all_user => sql_all_user.dictValue === item.createBy)?.dictLabel;
+					// 有效期限显示字典标签
+					item.validityPeriod = state.optionss['hr_quotationalidity']?.find(d => d.dictValue == item.validityPeriod)?.dictLabel ?? item.validityPeriod;
 				});
 				resolve(response.data.result);
 			} else {
@@ -2584,7 +2589,8 @@ const ChcekDetails = async (row) => {
 	quotationDialogform.quotationnum = row.quotationNum;
 	quotationDialogform.inquirydate = row.inquiryDate;
 	quotationDialogform.realquotationdate = row.realQuotationDate;
-	quotationDialogform.validityperiod = row.validityPeriod;
+	// 有效期限：从 hr_quotationalidity 字典匹配（列表可能为 dictLabel 或 dictValue），确保 el-select 能显示对应 dictLabel
+	quotationDialogform.validityperiod = state.optionss.hr_quotationalidity?.find(item => item.dictLabel === row.validityPeriod)?.dictValue ?? state.optionss.hr_quotationalidity?.find(item => item.dictValue == row.validityPeriod)?.dictValue ?? row.validityPeriod?.toString() ?? row.validityPeriod;
 	quotationDialogform.quorationstatus = optionss.value.hr_quotation_status.find(item => item.dictLabel === row.quotationStatus)?.dictValue || '0';
 	quotationDialogform.contactpersonEmail = row.contactPersonEmail;
 	quotationDialogform.customerlevel = state.optionss.hr_customer_level.find(item => item.dictValue == row.customerLevel)?.dictValue;

@@ -92,7 +92,7 @@
             <div class="metric-row">
               <span class="metric-label">待您处理</span>
               <el-button type="text" class="metric-value primary" @click="showPendingEmails">
-                {{ pendingEmailCount }}
+                {{ workPendingTotalCount }}
               </el-button>
             </div>
             <div class="metric-row">
@@ -196,6 +196,7 @@
               <el-tabs v-model="tasksActiveTab" class="compact-tabs">
                 <el-tab-pane label="提醒事项" name="reminders"></el-tab-pane>
                 <el-tab-pane label="财务任务" name="financial"></el-tab-pane>
+                <el-tab-pane v-if="isAdminRole()" label="待删除单据" name="documentDeleteRequest"></el-tab-pane>
               </el-tabs>
             </div>
           </template>
@@ -237,6 +238,39 @@
             <el-pagination v-model:current-page="FinancialTasksTableCurrentPage"
               v-model:page-size="FinancialTasksTablePageSize" :total="FinancialTasksTableTotalItems"
               @current-change="FinancialTasksTableshandlePageChange" layout="total, prev, pager, next" size="small" />
+          </div>
+          <!-- 待删除单据（管理员） -->
+          <div v-if="tasksActiveTab === 'documentDeleteRequest' && isAdminRole()" class="tasks-content">
+            <el-table :data="documentDeleteRequestList" size="small" :max-height="200">
+              <el-table-column prop="documentType" label="单据类型" width="130">
+                <template #default="{ row }">
+                  <span>{{ getDeleteRequestDocumentTypeLabel(row.documentType) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="documentNo" label="单据编号" width="140" />
+              <el-table-column prop="applyReason" label="申请原因" min-width="160" show-overflow-tooltip />
+              <el-table-column prop="approveRemark" label="备注" min-width="140" show-overflow-tooltip />
+              <el-table-column prop="applyUser" label="申请人" width="100">
+                <template #default="{ row }">
+                  <span>{{ getDeleteRequestApplyUserLabel(row.applyUser) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="approveStatus" label="审批状态" width="100" v-if="false">
+                <template #default="{ row }">
+                  <el-tag :type="getDeleteRequestApproveStatusType(row.approveStatus)">
+                    {{ getDeleteRequestApproveStatusLabel(row.approveStatus) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="100" align="center" fixed="right">
+                <template #default="{ row }">
+                  <el-button type="danger" link size="small" @click="handleDelDocumentRequest(row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-pagination v-model:current-page="documentDeleteRequestCurrentPage"
+              v-model:page-size="documentDeleteRequestPageSize" :total="documentDeleteRequestTotalItems"
+              @current-change="documentDeleteRequestHandlePageChange" layout="total, prev, pager, next" size="small" />
           </div>
         </el-card>
       </div>
@@ -983,7 +1017,7 @@
             <el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="160">
               <template #default="scope">
                 <span :class="{ 'red-text': scope.row.isPriceChanged }">{{ scope.row.singleProductGrossProfitTotal
-                }}</span>
+                  }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="grossProfitRate" label="毛利率%" width="110">
@@ -3101,6 +3135,10 @@ const isFinanceRole = () => {
     );
   }
   return false;
+};
+
+const isAdminRole = () => {
+  return Array.isArray(userStore.roles) && userStore.roles.includes('admin');
 };
 
 const isSalesRole = () => {
@@ -5404,6 +5442,7 @@ const loadLogisticsCompanySelectsForIndex = async () => {
 var dictParams = [
   { dictType: 'sql_all_user' },
   { dictType: 'hr_approval_document_type' },
+  { dictType: 'hr_business_documents' },
   { dictType: 'sql_sale_contracts' },
   { dictType: 'hr_export_currency' },
   { dictType: 'hr_outerbox_unit' },
@@ -6486,6 +6525,11 @@ const pendingEmailDialogVisible = ref(false)
 const overdueEmailDialogVisible = ref(false)
 const userStore = useUserStore()
 const pendingTaskPlanItemList = ref([])
+const workPendingTotalCount = computed(() => {
+  const workCount = Number(pendingEmailCount.value) || 0
+  const deleteCount = isAdminRole() ? (Number(documentDeleteRequestTotalItems.value) || 0) : 0
+  return workCount + deleteCount
+})
 console.log(userStore.userInfo);
 // 获取代处理的计划任务列表
 const GetPlantTaskItemList = async () => {
@@ -6572,6 +6616,9 @@ onMounted(async () => {
     getWithin24hoursEmailCount();
     getOutside24hoursEmailCount();
     getOverduePendingTaskPlanItemList();
+    if (isAdminRole()) {
+      getDocumentDeleteRequestList();
+    }
   });
   try {
     // 首先加载字典数据
@@ -6623,12 +6670,18 @@ onUnmounted(() => {
 });
 
 const showPendingEmails = async () => {
-  if (pendingEmailCount.value === 0) {
+  if (workPendingTotalCount.value === 0) {
     ElMessage.warning('没有待处理工作任务')
     return;
-  } else {
+  }
+  if (pendingEmailCount.value > 0) {
     await getWithin24hoursEmailCount();
     pendingEmailDialogVisible.value = true
+    return
+  }
+  if (isAdminRole() && documentDeleteRequestTotalItems.value > 0) {
+    tasksActiveTab.value = 'documentDeleteRequest'
+    ElMessage.info('已切换到待删除单据')
   }
 }
 
@@ -6695,6 +6748,168 @@ const paymentTaskList = ref([])
 
 // 采购价格变更合同列表数据
 const purchasePriceChangeList = ref([])
+// 待删除单据列表数据（管理员）
+const documentDeleteRequestList = ref([])
+const documentDeleteRequestTotalItems = ref(0)
+const documentDeleteRequestCurrentPage = ref(1)
+const documentDeleteRequestPageSize = ref(10)
+
+const getDeleteRequestDocumentTypeLabel = (documentType) => {
+  if (documentType === null || documentType === undefined || documentType === '') {
+    return '—'
+  }
+  const label = state.optionss['hr_business_documents']
+    ?.find(item => item.dictValue == documentType)?.dictLabel
+  return label || String(documentType)
+}
+
+const getDeleteRequestApplyUserLabel = (applyUser) => {
+  if (applyUser === null || applyUser === undefined || applyUser === '') {
+    return '—'
+  }
+  const label = state.optionss['sql_all_user']
+    ?.find(item => item.dictValue == applyUser)?.dictLabel
+  return label || String(applyUser)
+}
+
+const getDeleteRequestApproveStatusLabel = (approveStatus) => {
+  const statusMap = {
+    0: '待审批',
+    1: '通过',
+    2: '驳回'
+  }
+  return statusMap[approveStatus] ?? String(approveStatus ?? '—')
+}
+
+const getDeleteRequestApproveStatusType = (approveStatus) => {
+  const typeMap = {
+    0: 'warning',
+    1: 'success',
+    2: 'danger'
+  }
+  return typeMap[approveStatus] ?? 'info'
+}
+
+const getDocumentDeleteRequestList = async (showError = false) => {
+  try {
+    const response = await request({
+      url: 'ApplyDeleteDocument/GetDocumentDeleteRequestList/GetList',
+      method: 'GET',
+      params: {
+        PageNum: documentDeleteRequestCurrentPage.value,
+        PageSize: documentDeleteRequestPageSize.value
+      }
+    })
+    if (response.code === 200) {
+      const list = response.data?.result ?? response.data ?? []
+      documentDeleteRequestList.value = Array.isArray(list) ? list : []
+      documentDeleteRequestTotalItems.value = Number(
+        response.data?.total ?? response.data?.totalNum ?? response.data?.totalCount ?? 0
+      )
+      documentDeleteRequestCurrentPage.value = Number(
+        response.data?.pageIndex ?? documentDeleteRequestCurrentPage.value
+      )
+      documentDeleteRequestPageSize.value = Number(
+        response.data?.pageSize ?? documentDeleteRequestPageSize.value
+      )
+      return documentDeleteRequestList.value
+    }
+    documentDeleteRequestList.value = []
+    documentDeleteRequestTotalItems.value = 0
+    if (showError) {
+      ElMessage.error('获取待删除单据失败')
+    }
+  } catch (error) {
+    console.error('获取待删除单据失败:', error)
+    documentDeleteRequestList.value = []
+    documentDeleteRequestTotalItems.value = 0
+    if (showError) {
+      ElMessage.error('获取待删除单据失败，请稍后重试')
+    }
+  }
+  return []
+}
+
+const documentDeleteRequestHandlePageChange = (newPage) => {
+  documentDeleteRequestCurrentPage.value = newPage
+  getDocumentDeleteRequestList(true)
+}
+
+// 带读秒的二次确认（15秒后可点击确认删除）
+const confirmDeleteWithCountdown = (message) => {
+  return new Promise((resolve, reject) => {
+    let countdown = 15
+    let timer = 0
+    ElMessageBox.confirm(message, '二次确认', {
+      confirmButtonText: `确认删除(${countdown}s)`,
+      cancelButtonText: '取消',
+      type: 'warning',
+      distinguishCancelAndClose: true,
+      closeOnClickModal: false,
+      closeOnPressEscape: false
+    }).then(() => {
+      window.clearInterval(timer)
+      resolve(true)
+    }).catch((action) => {
+      window.clearInterval(timer)
+      reject(action)
+    })
+
+    setTimeout(() => {
+      const boxes = document.querySelectorAll('.el-message-box')
+      const currentBox = boxes[boxes.length - 1]
+      const confirmBtn = currentBox?.querySelector('.el-message-box__btns .el-button--primary')
+      if (!confirmBtn) return
+
+      confirmBtn.disabled = true
+      confirmBtn.setAttribute('disabled', 'disabled')
+      confirmBtn.classList.add('is-disabled')
+      timer = window.setInterval(() => {
+        if (!confirmBtn.isConnected) {
+          window.clearInterval(timer)
+          return
+        }
+        countdown -= 1
+        if (countdown > 0) {
+          confirmBtn.textContent = `确认删除(${countdown}s)`
+          return
+        }
+        window.clearInterval(timer)
+        confirmBtn.disabled = false
+        confirmBtn.removeAttribute('disabled')
+        confirmBtn.classList.remove('is-disabled')
+        confirmBtn.textContent = '确认删除'
+      }, 1000)
+    }, 0)
+  })
+}
+
+// 删除单据删除申请（逻辑删除）
+const handleDelDocumentRequest = (row) => {
+  confirmDeleteWithCountdown('确定要删除该单据删除申请吗？删除后将逻辑删除对应单据。').then(() => {
+    request.post('ApplyDeleteDocument/DelDocumentRequest/DelDocument', {
+      DocumentID: row.sourceId,
+      DocumentType: row.documentType
+    }).then(response => {
+      if (response != null) {
+        ElMessage({
+          message: response.msg || '单据删除成功',
+          type: response.code === 200 ? 'success' : 'error'
+        });
+        if (response.code === 200) {
+          getDocumentDeleteRequestList(true)
+        }
+      } else {
+        ElMessage({ message: '单据删除失败', type: 'error' });
+      }
+    }).catch(error => {
+      console.error('删除单据删除申请出错', error);
+      ElMessage({ message: '删除失败', type: 'error' });
+    });
+  }).catch(() => {
+    ElMessage.info('已取消删除');
+  });
+}
 
 // 获取询价列表
 const getInquiryList = async () => {
@@ -6889,11 +7104,20 @@ onMounted(async () => {
     GetRejectPurchaseContractList();
     GetProcurementequirements();
   }
+  if (isAdminRole()) {
+    getDocumentDeleteRequestList();
+  }
 
   // 监听更新待办数量事件
   eventBus.on('updatePendingCount', () => {
     calculatePendingCount();
   });
+})
+
+watch(tasksActiveTab, (tabName) => {
+  if (tabName === 'documentDeleteRequest' && isAdminRole()) {
+    getDocumentDeleteRequestList(true)
+  }
 })
 
 const overduePendingTaskPlanItemList = ref([])

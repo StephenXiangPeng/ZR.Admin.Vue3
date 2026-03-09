@@ -111,8 +111,6 @@
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small"
 							@click=OpenCustomerProfileDetailDialog(scope.row)>查看详情</el-button>
-						<el-button v-if="scope.row.create_by === useUserStore().userName && scope.row.isDraft" link
-							type="danger" size="small" @click="DeleteCustomerProfile(scope.row)">删除</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -779,20 +777,23 @@
 								<el-table-column label="收支" align="center">
 									<el-table-column prop="income.rmb" label="人民币" width="120" align="right">
 										<template #default="scope">
-											<span v-if="scope.row.income.rmb > 0">{{ formatFinanceAmount(scope.row.income.rmb)
-											}}</span>
+											<span v-if="scope.row.income.rmb > 0">{{
+												formatFinanceAmount(scope.row.income.rmb)
+												}}</span>
 										</template>
 									</el-table-column>
 									<el-table-column prop="income.usd" label="美元" width="120" align="right">
 										<template #default="scope">
-											<span v-if="scope.row.income.usd > 0">{{ formatFinanceAmount(scope.row.income.usd)
-											}}</span>
+											<span v-if="scope.row.income.usd > 0">{{
+												formatFinanceAmount(scope.row.income.usd)
+												}}</span>
 										</template>
 									</el-table-column>
 									<el-table-column prop="income.eur" label="欧元" width="120" align="right">
 										<template #default="scope">
-											<span v-if="scope.row.income.eur > 0">{{ formatFinanceAmount(scope.row.income.eur)
-											}}</span>
+											<span v-if="scope.row.income.eur > 0">{{
+												formatFinanceAmount(scope.row.income.eur)
+												}}</span>
 										</template>
 									</el-table-column>
 								</el-table-column>
@@ -1137,7 +1138,8 @@ const state = reactive({
 		sql_user_customers: [],
 		sql_sale_contracts: [],
 		sql_shippingdeliveries: [],
-		customer_contract_data: []
+		customer_contract_data: [],
+		hr_quotationalidity: []
 	}
 })
 const { optionss } = toRefs(state)
@@ -1159,7 +1161,8 @@ var dictParams = [
 	{ dictType: 'hr_ourcompany' },
 	{ dictType: 'sql_sale_contracts' },
 	{ dictType: 'sql_shippingdeliveries' },
-	{ dictType: 'customer_contract_data' }
+	{ dictType: 'customer_contract_data' },
+	{ dictType: 'hr_quotationalidity' }
 ]
 proxy.getDicts(dictParams).then((response) => {
 	response.data.forEach((element) => {
@@ -2645,8 +2648,12 @@ const loadQuotationHistory = async (customerId: number, pageNum: number = 1, pag
 			QuotationRecordCurrentPage.value = response.data.pageIndex || pageNum
 			QuotationRecordPageSize.value = response.data.pageSize || pageSize
 			QuotationRecordTotalItems.value = response.data.totalNum || 0
-			// 转换数据
-			QuotationRecordData.value = response.data.result;
+			// 转换数据，有效期使用 hr_quotationalidity 字典标签
+			const result = response.data.result || [];
+			QuotationRecordData.value = result.map(item => ({
+				...item,
+				validityPeriod: state.optionss['hr_quotationalidity']?.find(d => d.dictValue == item.validityPeriod)?.dictLabel ?? item.validityPeriod
+			}));
 		} else {
 			ElMessage.error((response as any).msg || '获取报价历史失败');
 		}

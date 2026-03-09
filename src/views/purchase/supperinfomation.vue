@@ -85,8 +85,6 @@
 				<el-table-column fixed="right" label="操作" width="200">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="checkSupplierDetails(scope.row)">查看详情</el-button>
-						<el-button v-if="scope.row.createBy === useUserStore().userId.toString() && scope.row.isDraft"
-							link type="danger" size="small" @click="DeleteSupplier(scope.row)">删除</el-button>
 					</template>
 				</el-table-column>
 			</el-table>

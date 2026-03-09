@@ -85,10 +85,6 @@
 					<template v-slot:default="scope">
 						<el-button type="text" size="small"
 							@click=CheckCustomerCollectionDetails(scope.row)>查看详情</el-button>
-						<el-button v-if="!scope.row.isCollected" type="text" size="small"
-							@click="handleDelete(scope.row)">
-							删除
-						</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
