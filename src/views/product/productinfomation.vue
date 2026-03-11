@@ -438,8 +438,8 @@
 				<el-button type="primary" @click="AddSubProduct()"
 					v-if="showAddSubProductButton && (userId.toString() === '1' || userDepartment === 210)"
 					:disabled="isDisabled" size="default">添加子产品</el-button>
-				<el-table :data="SubProductTableData" style="width: 100%; max-height: 550px; table-layout: fixed;"
-					stripe :header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				<el-table :data="SubProductTableData" :max-height="550" style="width: 100%; table-layout: fixed;" stripe
+					:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 					:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 					<el-table-column prop="mainProductCode" label="主产品编号" width="150" align="center" v-if="false">
 						<template #default="scope">
