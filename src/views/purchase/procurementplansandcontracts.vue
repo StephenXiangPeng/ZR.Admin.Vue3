@@ -112,11 +112,14 @@
 				<el-table-column prop="paymentDays" label="付款天数" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="deposit" label="预付款金额" width="150" v-if="false"></el-table-column>
 				<el-table-column prop="hasDeposit" label="有无预付款" width="150" v-if="false"></el-table-column>
-				<el-table-column fixed="right" label="操作" width="280">
+				<el-table-column fixed="right" label="操作" width="320">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="CheckDetails(scope.row)">查看详情</el-button>
 						<el-button v-if="isContractStatusApproved(scope.row)" type="text" size="small"
 							@click="GeneratePurchaseContract(scope.row)">生成采购合同PDF</el-button>
+						<el-button type="warning" size="small" icon="Back" link
+							v-if="scope.row.reviewStatusStr === '审核中'"
+							@click="withdrawalApproval(scope.row)">撤回审批</el-button>
 						<el-button type="primary" size="small" link
 							v-if="!scope.row.isDraft && scope.row.contractStatus !== '已完结' && scope.row.originalContractStatus >= 3 && scope.row.originalContractStatus < 10 && scope.row.reviewStatusStr !== '审核中' && scope.row.purchaserId === useUserStore().userId.toString()"
 							@click="completePurchaseContractManually(scope.row)">申请完结</el-button>
@@ -2572,6 +2575,40 @@ const confirmDeleteWithCountdown = (message) => {
 			}, 1000);
 		}, 0);
 	});
+};
+
+// 撤回审批（制单人采购合同撤回审批）
+const withdrawalApproval = async (row) => {
+	try {
+		await ElMessageBox.confirm(
+			'确定要撤回该采购合同的审批吗？',
+			'提示',
+			{
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning',
+			}
+		);
+
+		const res = await request({
+			url: 'PurchaseContracts/WithdrawalApprovalPurchaseContract/WithdrawalApproval',
+			method: 'get',
+			params: {
+				documentID: row.id
+			}
+		});
+
+		if (res.code === 200) {
+			ElMessage.success(res.msg);
+			GetpurchaseContractList(purchasecontractsTableDatacurrentPage.value, purchasecontractsTableDatapageSize.value);
+		} else {
+			ElMessage.error(res.msg);
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('撤回审批失败:', error);
+		}
+	}
 };
 
 // 删除采购合同（与待删除单据删除接口一致）

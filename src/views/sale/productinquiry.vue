@@ -237,7 +237,7 @@
 					<el-table-column prop="priceterms" label="价格条款" width="170" align="center">
 						<template #default="{ row }">
 							<el-select v-if="!isEditable" v-model="row.priceterms" filterable placeholder="选择价格条款"
-								clearable disabled>
+								clearable>
 								<el-option v-for="dict in optionss.
 									hr_purchase_pricing_term" :key="dict.dictCode" :label="dict.dictLabel" :value="dict.dictValue" />
 							</el-select>

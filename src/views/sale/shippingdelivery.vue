@@ -119,13 +119,17 @@
 				<el-table-column prop="settlementMethod" label="结汇方式" width="90"></el-table-column>
 				<el-table-column prop="transportationMethod" label="运输方式" width="90"></el-table-column>
 				<el-table-column prop="receivableDate" label="应收汇日" width="150"></el-table-column>
-				<el-table-column fixed="right" label="操作" width="150px">
+				<el-table-column fixed="right" label="操作" width="200px">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="CheckShipingDelivery(scope.row)">查看/编辑</el-button>
+						<el-button type="warning" size="small" icon="Back" link
+							v-if="scope.row.reviewStatusStr === '审核中' && (scope.row.createBy != null && scope.row.createBy.toString() === useUserStore().userId.toString())"
+							@click="withdrawalApproval(scope.row)">撤回审批</el-button>
 						<el-button v-if="useUserStore().roles.includes('admin')" link type="danger" size="small"
 							@click="DeleteShipingDelivery(scope.row)">删除</el-button>
-						<el-button v-if="!useUserStore().roles.includes('admin')" type="text" size="small"
-							@click="applyDeleteDocument(scope.row)">申请删除单据</el-button>
+						<el-button
+							v-if="!useUserStore().roles.includes('admin') && (scope.row.createBy != null && scope.row.createBy.toString() === useUserStore().userId.toString())"
+							type="text" size="small" @click="applyDeleteDocument(scope.row)">申请删除单据</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -2022,6 +2026,40 @@ async function GetShippingDeliveriesList(start, end) {
 	} catch (error) {
 		console.error(error);
 		return [];
+	}
+}
+
+// 撤回审批（制单人出运合同撤回审批）
+const withdrawalApproval = async (row: any) => {
+	try {
+		await ElMessageBox.confirm(
+			'确定要撤回该出运合同的审批吗？',
+			'提示',
+			{
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning',
+			}
+		)
+
+		const res = await request({
+			url: 'ShippingDeliveries/WithdrawalApprovalShippingDeliverContract/WithdrawalApproval',
+			method: 'get',
+			params: {
+				documentID: row.id
+			}
+		})
+
+		if (res.code === 200) {
+			ElMessage.success(res.msg)
+			GetShippingDeliveriesList(ShippingDeliveriesTableDataCurrentPage.value, ShippingDeliveriesTableDataPageSize.value)
+		} else {
+			ElMessage.error(res.msg)
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('撤回审批失败:', error)
+		}
 	}
 }
 

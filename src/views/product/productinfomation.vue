@@ -639,7 +639,7 @@
 							</el-select>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subrecentQuotation" label="最近报价" width="150" align="center">
+					<el-table-column prop="subrecentQuotation" label="最近报价" width="150" align="center" v-if="false">
 						<template #default="scope">
 							<el-select v-model="scope.row.subrecentQuotation" placeholder="请选择" style="width: 90px;"
 								clearable>
@@ -648,7 +648,8 @@
 							</el-select>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subrecentTransactionDate" label="最近成交日期" width="200" align="center">
+					<el-table-column prop="subrecentTransactionDate" label="最近成交日期" width="200" align="center"
+						v-if="false">
 						<template #default="scope">
 							<el-date-picker v-model="scope.row.subrecentTransactionDate" type="date" placeholder="请选择"
 								style="width: 140px;" />

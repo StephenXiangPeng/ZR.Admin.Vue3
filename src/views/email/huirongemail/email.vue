@@ -2819,6 +2819,7 @@ const CheckShowEmailDetail = async () => {
 
 // 下载附件
 const downloadAttachment = (id, fileName, fileUrl) => {
+	alert(fileUrl);
 	if (fileUrl) {
 		const link = document.createElement('a')
 		link.href = fileUrl

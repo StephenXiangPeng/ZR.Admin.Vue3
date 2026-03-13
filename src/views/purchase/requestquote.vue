@@ -43,7 +43,7 @@
 					</template>
 				</el-table-column>
 				<el-table-column prop="subject" label="询价主题" width="200"></el-table-column>
-				<el-table-column prop="salePerson" label="销售员" width="130"></el-table-column>
+				<el-table-column prop="salePerson" label="询价人" width="130"></el-table-column>
 				<el-table-column prop="status" label="状态" width="100">
 					<template #default="scope">
 						<el-tag
@@ -91,7 +91,7 @@
 								</el-form-item>
 							</el-col>
 							<el-col :span="6">
-								<el-form-item label="销售员">
+								<el-form-item label="询价人">
 									<el-input v-model="dialogForm.salePerson" disabled style="width: 300px"
 										size="default" />
 								</el-form-item>
