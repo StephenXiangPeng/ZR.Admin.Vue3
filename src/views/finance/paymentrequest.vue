@@ -13,8 +13,8 @@
 				</el-row>
 			</div>
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-select v-model="SearchPaymentRequsetID" filterable placeholder="选择付款申请单号" size="default"
 							style="width: 100%" clearable>
@@ -47,7 +47,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="paymentrequesttableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="paymentrequesttableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="applicationNumber" label="申请单号" width="120">

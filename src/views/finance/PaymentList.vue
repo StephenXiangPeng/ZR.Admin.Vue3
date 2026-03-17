@@ -3,8 +3,8 @@
 		<!-- 付款列表 -->
 		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-select v-model="searchForm.paymentCategory" filterable placeholder="选择付款类别" size="default"
 							style="width: 100%" clearable>
@@ -34,7 +34,7 @@
 							size="default" style="width: 100%" />
 					</el-col>
 				</el-row>
-				<el-row :gutter="15">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="24" style="text-align: right;">
 						<el-button type="primary" plain @click="handleSearch()" size="default">查询</el-button>
 						<el-button @click="handleReset()" size="default">重置</el-button>
@@ -43,7 +43,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="tableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="tableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="paymentCategory" label="付款类别" width="120" align="left"></el-table-column>
@@ -72,7 +72,7 @@
 				</el-table-column>
 			</el-table>
 			<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
-				:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 50, 100]"
+				:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
 				background layout="total, sizes, prev, pager, next, jumper"
 				style="margin-top: 10px; text-align: right;" />
 		</div>
@@ -110,7 +110,7 @@ const tableData = ref<any[]>([])
 
 // 分页相关
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(30)
 const totalItems = ref(0)
 
 

@@ -14,8 +14,8 @@
 				</el-row>
 			</div>
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-input v-model="inquirynumber" clearable placeholder="输入询价单号" size="default" />
 					</el-col>
@@ -37,7 +37,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="InquityTableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="InquityTableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="inquiry_number" label="询价单号" :width="120">
@@ -70,9 +70,10 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="SearchInquiryhandlePageChange" :current-page="SearchInquirycurrentPage"
-				:page-size="SearchInquirypageSize" :total="SearchInquirytotalItems" background
-				layout="prev, pager, next" style="margin-top: 5px;" />
+			<el-pagination @current-change="SearchInquiryhandlePageChange" @size-change="SearchInquiryhandleSizeChange"
+				:current-page="SearchInquirycurrentPage" :page-size="SearchInquirypageSize" :total="SearchInquirytotalItems"
+				:page-sizes="[10, 20, 30, 50]" background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 		<el-dialog :modal="false" :modal-penetrable="true" v-model="CreateInquiryDialog" title="创建询价单"
 			:close-on-click-modal=false style="width: 75%;" @close="CloseInquiryDialog">
@@ -461,9 +462,10 @@
 				<el-table-column prop="englishSpecification" label="英文规格" width="180" />
 				<el-table-column prop="unitOfMeasurement" label="计量单位" width="120" />
 			</el-table>
-			<el-pagination @current-change="SearchProducthandlePageChange" :current-page="SearchProductCurrentPage"
-				:page-size="SearchProductpageSize" :total="SearchProducttotalItems" background
-				layout="prev, pager, next" style="margin-top: 5px;" />
+			<el-pagination @current-change="SearchProducthandlePageChange" @size-change="SearchProducthandleSizeChange"
+				:current-page="SearchProductCurrentPage" :page-size="SearchProductpageSize" :total="SearchProducttotalItems"
+				:page-sizes="[10, 20, 30, 50]" background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="danger" @click="SearchProcutDialog = false">
@@ -505,11 +507,16 @@ const productData = ref([])
 //分页组件
 const SearchProducttotalItems = ref(0);
 const SearchProductCurrentPage = ref(1);
-const SearchProductpageSize = ref(10);
+const SearchProductpageSize = ref(30);
 const searchProductNameText = ref('');
 const SearchProducthandlePageChange = async (newPage) => {
-	SearchProductCurrentPage.value = newPage; // 修改这里，直接使用newPage作为当前页
+	SearchProductCurrentPage.value = newPage;
 	await GetProductInfoList(newPage, SearchProductpageSize.value);
+};
+const SearchProducthandleSizeChange = async (size) => {
+	SearchProductpageSize.value = size;
+	SearchProductCurrentPage.value = 1;
+	await GetProductInfoList(1, size);
 };
 GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
 //获取产品信息列表
@@ -1029,7 +1036,7 @@ const InquityTableData = ref([])
 //分页组件
 const SearchInquirytotalItems = ref(0);
 const SearchInquirycurrentPage = ref(1);
-const SearchInquirypageSize = ref(10);
+const SearchInquirypageSize = ref(30);
 const searchInquiryNameText = ref('');
 const SearchInquiryhandlePageChange = async (newPage) => {
 	try {
@@ -1038,6 +1045,11 @@ const SearchInquiryhandlePageChange = async (newPage) => {
 		console.error('分页加载失败:', error);
 		ElMessage.error('加载数据失败，请重试');
 	}
+};
+const SearchInquiryhandleSizeChange = async (size) => {
+	SearchInquirypageSize.value = size;
+	SearchInquirycurrentPage.value = 1;
+	await GetInquiryList(1, size);
 };
 //GetInquiryList(SearchInquirycurrentPage.value, SearchInquirypageSize.value);
 function GetInquiryList(start, end) {

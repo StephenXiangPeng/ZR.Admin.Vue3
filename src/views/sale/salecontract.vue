@@ -13,8 +13,8 @@
 				</el-row>
 			</div>
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-input v-model="quotationNum" clearable placeholder="请输入合同编号" size="default" />
 					</el-col>
@@ -51,7 +51,7 @@
 							size="default" />
 					</el-col>
 				</el-row>
-				<el-row :gutter="15">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-date-picker v-model="quotationDate" type="date" placeholder="请选择合同日期止" style="width: 100%"
 							size="default" />
@@ -66,7 +66,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="contractsTableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="contractsTableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
@@ -177,9 +177,11 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="contractsTableDatahandlePageChange"
+			<el-pagination @current-change="contractsTableDatahandlePageChange" @size-change="contractsTableDatahandleSizeChange"
 				:current-page="contractsTableDatacurrentPage" :page-size="contractsTableDatapageSize"
-				:total="contractsTableDatatotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+				:total="contractsTableDatatotalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 
 		<el-dialog :modal="false" modal-penetrable v-model="contractDialog" title="创建销售合同" :close-on-click-modal=false
@@ -1119,10 +1121,11 @@
 						</el-table-column>
 						<el-table-column prop="unitPrice" label="最新采购单价" width="120" />
 					</el-table>
-					<el-pagination @current-change="SearchProducthandlePageChange"
+					<el-pagination @current-change="SearchProducthandlePageChange" @size-change="SearchProducthandleSizeChange"
 						:current-page="SearchProductCurrentPage" :page-size="SearchProductpageSize"
-						:total="SearchProducttotalItems" background layout="prev, pager, next"
-						style="margin-top: 5px;" />
+						:total="SearchProducttotalItems" :page-sizes="[10, 20, 30, 50]"
+						background layout="total, sizes, prev, pager, next, jumper"
+						style="margin-top: 10px; text-align: right;" />
 				</el-tab-pane>
 				<el-tab-pane label="历史成交产品记录" name="productImageTab">
 					<template v-if="selectedCustomerId">
@@ -1144,10 +1147,11 @@
 							</el-table-column>
 							<el-table-column prop="contractDate" label="成交日期" width="120" />
 						</el-table>
-						<el-pagination @current-change="historyProductHandlePageChange"
+						<el-pagination @current-change="historyProductHandlePageChange" @size-change="historyProductHandleSizeChange"
 							:current-page="historyProductCurrentPage" :page-size="historyProductPageSize"
-							:total="historyProductTotalItems" background layout="prev, pager, next"
-							style="margin-top: 10px;" />
+							:total="historyProductTotalItems" :page-sizes="[10, 20, 30, 50]"
+							background layout="total, sizes, prev, pager, next, jumper"
+							style="margin-top: 10px; text-align: right;" />
 					</template>
 					<template v-else>
 						<div style="display: flex; justify-content: center; align-items: center; height: 200px;">
@@ -1732,11 +1736,16 @@ const productData = ref([])
 //分页组件
 const SearchProducttotalItems = ref(0);
 const SearchProductCurrentPage = ref(1);
-const SearchProductpageSize = ref(10);
+const SearchProductpageSize = ref(30);
 const searchProductNameText = ref('');
 const SearchProducthandlePageChange = async (newPage) => {
-	SearchProductCurrentPage.value = newPage; // 修改这里，直接使用newPage作为当前页
+	SearchProductCurrentPage.value = newPage;
 	await GetProductInfoList(newPage, SearchProductpageSize.value);
+};
+const SearchProducthandleSizeChange = async (size) => {
+	SearchProductpageSize.value = size;
+	SearchProductCurrentPage.value = 1;
+	await GetProductInfoList(1, size);
 };
 GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
 
@@ -2542,12 +2551,15 @@ const contractsTableData = ref([])
 //销售合同列表分页组件
 const contractsTableDatatotalItems = ref(0);
 const contractsTableDatacurrentPage = ref(1);
-const contractsTableDatapageSize = ref(20);
+const contractsTableDatapageSize = ref(30);
 const contractsTableDatahandlePageChange = async (newPage) => {
 	contractsTableDatacurrentPage.value = newPage;
-	const start = newPage;
-	const end = contractsTableDatapageSize.value;
-	const newData = await GetContractList(start, end);
+	await GetContractList(newPage, contractsTableDatapageSize.value);
+};
+const contractsTableDatahandleSizeChange = async (size) => {
+	contractsTableDatapageSize.value = size;
+	contractsTableDatacurrentPage.value = 1;
+	await GetContractList(1, size);
 };
 
 function GetContractList(start, end) {
@@ -4815,8 +4827,13 @@ const handleHistoricalProductRowDblClick = (row) => {
 const historyProductSearchText = ref('');
 const historyProductHandlePageChange = (newPage) => {
 	loadHistoricalProducts(selectedCustomerId.value, newPage, searchProductNameText.value);
-}
-const historyProductPageSize = ref(10);
+};
+const historyProductHandleSizeChange = (size) => {
+	historyProductPageSize.value = size;
+	historyProductCurrentPage.value = 1;
+	loadHistoricalProducts(selectedCustomerId.value, 1, historyProductSearchText.value || searchProductNameText.value);
+};
+const historyProductPageSize = ref(30);
 const historyProductTotalItems = ref(0);
 const historyProductCurrentPage = ref(1);
 const searchHistoryProductTextChange = () => {

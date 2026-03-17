@@ -13,8 +13,8 @@
 				</el-row>
 			</div>
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-select v-model="SearchQuotationNum" filterable clearable placeholder="选择报价单号（可输入查询）"
 							size="default">
@@ -49,7 +49,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="quotationData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="quotationData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="id" label="ID" :width="100" v-if="false"></el-table-column>
@@ -94,8 +94,10 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-				:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+			<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
+				:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 
 		<el-dialog :modal="false" modal-penetrable v-model="quotationDialog" title="创建报价单" :close-on-click-modal=false
@@ -836,9 +838,10 @@
 				<el-table-column prop="unitOfMeasurement" label="计量单位" width="120" />
 				<el-table-column prop="unitPrice" label="最新采购单价" width="120" />
 			</el-table>
-			<el-pagination @current-change="SearchProducthandlePageChange" :current-page="SearchProductCurrentPage"
-				:page-size="SearchProductpageSize" :total="SearchProducttotalItems" background
-				layout="prev, pager, next" style="margin-top: 5px;" />
+			<el-pagination @current-change="SearchProducthandlePageChange" @size-change="SearchProducthandleSizeChange"
+				:current-page="SearchProductCurrentPage" :page-size="SearchProductpageSize" :total="SearchProducttotalItems"
+				:page-sizes="[10, 20, 30, 50]" background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="danger" @click="SearchProcutDialog = false">
@@ -1519,11 +1522,16 @@ const productData = ref([])
 //分页组件
 const SearchProducttotalItems = ref(0);
 const SearchProductCurrentPage = ref(1);
-const SearchProductpageSize = ref(10);
+const SearchProductpageSize = ref(30);
 const searchProductNameText = ref('');
 const SearchProducthandlePageChange = async (newPage) => {
-	SearchProductCurrentPage.value = newPage; // 修改这里，直接使用newPage作为当前页
+	SearchProductCurrentPage.value = newPage;
 	await GetProductInfoList(newPage, SearchProductpageSize.value);
+};
+const SearchProducthandleSizeChange = async (size) => {
+	SearchProductpageSize.value = size;
+	SearchProductCurrentPage.value = 1;
+	await GetProductInfoList(1, size);
 };
 GetProductInfoList(SearchProductCurrentPage.value, SearchProductpageSize.value);
 
@@ -2508,14 +2516,17 @@ const quotationData = ref([])
 //分页组件
 const totalItems = ref(0);
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(30);
 //产品信息表格
 const ProductInfoTableData = ref([])
 const handlePageChange = async (newPage) => {
 	currentPage.value = newPage;
-	const start = newPage;
-	const end = pageSize.value;
-	const newData = await GetQuotationList(start, end);
+	await GetQuotationList(newPage, pageSize.value);
+};
+const handleSizeChange = async (size) => {
+	pageSize.value = size;
+	currentPage.value = 1;
+	await GetQuotationList(1, size);
 };
 function GetQuotationList(start, end) {
 	return new Promise((resolve, reject) => {

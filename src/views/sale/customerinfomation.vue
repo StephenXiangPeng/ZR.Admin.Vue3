@@ -114,8 +114,10 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-				:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+			<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
+				:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 		<el-dialog :modal="false" :modal-penetrable="true" v-model="CustomerProfileDialog" title="客户建档"
 			:close-on-click-modal=false style="width: 75%;" @close="resetCustomerProfileDialog()">
@@ -376,10 +378,11 @@
 				<el-table-column prop="involvingBusiness" label="涉及业务" width="150" />
 				<el-table-column prop="create_by" label="创建人" width="120" />
 			</el-table>
-			<el-pagination @current-change="CustomerLeadsTableDatahandlePageChange"
+			<el-pagination @current-change="CustomerLeadsTableDatahandlePageChange" @size-change="CustomerLeadsTableDatahandleSizeChange"
 				:current-page="CustomerLeadsTableDatacurrentPage" :page-size="CustomerLeadsTableDatapageSize"
-				:total="CustomerLeadsTableDatatotalItems" background layout="prev, pager, next"
-				style="margin-top: 5px;" />
+				:total="CustomerLeadsTableDatatotalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</el-dialog>
 		<el-dialog :modal="false" modal-penetrable v-model="CustomerDuplicationCheckDialog" title="客户查重"
 			:close-on-click-modal=false style="width: 75%;">
@@ -703,10 +706,11 @@
 									</template>
 								</el-table-column>
 							</el-table>
-							<el-pagination @current-change="ContactLogTablehandlePageChange"
+							<el-pagination @current-change="ContactLogTablehandlePageChange" @size-change="ContactLogTablehandleSizeChange"
 								:current-page="ContactLogTablecurrentPage" :page-size="ContactLogTablepageSize"
-								:total="ContactLogTabletotalItems" background layout="prev, pager, next"
-								style="margin-top: 5px;" />
+								:total="ContactLogTabletotalItems" :page-sizes="[10, 20, 30, 50]"
+								background layout="total, sizes, prev, pager, next, jumper"
+								style="margin-top: 10px; text-align: right;" />
 						</el-tab-pane>
 						<el-tab-pane label="报价记录" name="QuoteRecordTable">
 							<el-table :data="QuotationRecordData" @row-dblclick="handleQuoteRowDblClick"
@@ -728,10 +732,11 @@
 								<el-table-column prop="realQuotationDate" label="报价日期" width="150" />
 								<el-table-column prop="validityPeriod" label="有效期" width="150" />
 							</el-table>
-							<el-pagination @current-change="QuotationRecordHandlePageChange"
+							<el-pagination @current-change="QuotationRecordHandlePageChange" @size-change="QuotationRecordHandleSizeChange"
 								:current-page="QuotationRecordCurrentPage" :page-size="QuotationRecordPageSize"
-								:total="QuotationRecordTotalItems" background layout="prev, pager, next, total"
-								style="margin-top: 5px;" :pager-count="5" :hide-on-single-page="false" />
+								:total="QuotationRecordTotalItems" :page-sizes="[10, 20, 30, 50]"
+								background layout="total, sizes, prev, pager, next, jumper"
+								style="margin-top: 10px; text-align: right;" />
 						</el-tab-pane>
 						<el-tab-pane label="销售记录" name="saleRecordTable">
 							<el-table :data="SalesContractRecordData" @row-dblclick="handleSalesContractRowDblClick"
@@ -744,10 +749,11 @@
 								<el-table-column prop="deliveryDate" label="交货日期" width="150" />
 								<el-table-column prop="goodsValue" label="货值合计" width="150" />
 							</el-table>
-							<el-pagination @current-change="SalesContractRecordHandlePageChange"
+							<el-pagination @current-change="SalesContractRecordHandlePageChange" @size-change="SalesContractRecordHandleSizeChange"
 								:current-page="SalesContractRecordCurrentPage" :page-size="SalesContractRecordPageSize"
-								:total="SalesContractRecordTotalItems" background layout="prev, pager, next"
-								style="margin-top: 5px;" />
+								:total="SalesContractRecordTotalItems" :page-sizes="[10, 20, 30, 50]"
+								background layout="total, sizes, prev, pager, next, jumper"
+								style="margin-top: 10px; text-align: right;" />
 						</el-tab-pane>
 						<el-tab-pane label="收寄样历史" name="SampleCollectionHistory">
 							<el-table :data="CustomerSendSampleData" style="width: 100%; table-layout: fixed;"
@@ -769,10 +775,11 @@
 								</el-table-column>
 								<el-table-column prop="remark" label="备注"></el-table-column>
 							</el-table>
-							<el-pagination @current-change="CustomerSendSampleHandlePageChange"
+							<el-pagination @current-change="CustomerSendSampleHandlePageChange" @size-change="CustomerSendSampleHandleSizeChange"
 								:current-page="CustomerSendSampleCurrentPage" :page-size="CustomerSendSamplePageSize"
-								:total="CustomerSendSampleTotalItems" background layout="prev, pager, next"
-								style="margin-top: 5px;" />
+								:total="CustomerSendSampleTotalItems" :page-sizes="[10, 20, 30, 50]"
+								background layout="total, sizes, prev, pager, next, jumper"
+								style="margin-top: 10px; text-align: right;" />
 						</el-tab-pane>
 						<el-tab-pane label="财务" name="FinanceLedgerTable">
 							<el-table v-loading="financeLedgerLoading" :data="financeLedgerPaginatedData"
@@ -849,10 +856,11 @@
 									</el-table-column>
 								</el-table-column>
 							</el-table>
-							<el-pagination @current-change="handleFinanceLedgerPageChange"
+							<el-pagination @current-change="handleFinanceLedgerPageChange" @size-change="handleFinanceLedgerSizeChange"
 								:current-page="financeLedgerCurrentPage" :page-size="financeLedgerPageSize"
-								:total="financeLedgerTotalRecords" background layout="prev, pager, next, total"
-								style="margin-top: 5px;" />
+								:total="financeLedgerTotalRecords" :page-sizes="[10, 20, 30, 50]"
+								background layout="total, sizes, prev, pager, next, jumper"
+								style="margin-top: 10px; text-align: right;" />
 						</el-tab-pane>
 						<el-tab-pane label="出货记录" name="ShippingRecordTable">
 							<el-table :data="ShipRecoreData" style="width: 100%; table-layout: fixed;"
@@ -1122,7 +1130,7 @@ const proxy = getCurrentInstance().proxy as any
 const financeLedgerLoading = ref(false)
 const financeLedgerData = ref<FinanceLedgerItem[]>([])
 const financeLedgerCurrentPage = ref(1)
-const financeLedgerPageSize = ref(10)
+const financeLedgerPageSize = ref(30)
 const financeLedgerTotalRecords = computed(() => financeLedgerData.value.length)
 const financeLedgerPaginatedData = computed(() => {
 	const start = (financeLedgerCurrentPage.value - 1) * financeLedgerPageSize.value
@@ -1236,15 +1244,17 @@ const OpenLeadImportDialog = () => {
 //线索表格分页组件
 const CustomerLeadsTableDatatotalItems = ref(0);
 const CustomerLeadsTableDatacurrentPage = ref(1);
-const CustomerLeadsTableDatapageSize = ref(10);
+const CustomerLeadsTableDatapageSize = ref(30);
 //线索信息表格
 const CustomerLeadsTableData = ref([])
 const CustomerLeadsTableDatahandlePageChange = async (newPage) => {
-	// Fetch new data based on the new page and update currentTableData
-	currentPage.value = newPage;
-	const start = newPage;
-	const end = pageSize.value;
-	const newData = await GetCustomeleadList(start, end);  // Assume fetchData is a function that fetches data from the server
+	CustomerLeadsTableDatacurrentPage.value = newPage;
+	await GetCustomeleadList(newPage, CustomerLeadsTableDatapageSize.value);
+};
+const CustomerLeadsTableDatahandleSizeChange = async (size) => {
+	CustomerLeadsTableDatapageSize.value = size;
+	CustomerLeadsTableDatacurrentPage.value = 1;
+	await GetCustomeleadList(1, size);
 };
 //获取线索信息列表
 GetCustomeleadList(CustomerLeadsTableDatacurrentPage.value, CustomerLeadsTableDatapageSize.value);
@@ -2241,17 +2251,18 @@ const handleDownload = (file: UploadFile) => {
 //分页组件
 const totalItems = ref(0);
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(30);
 //客户基本信息表格
 const CunstomeinfotableData = ref([])
 const handlePageChange = async (newPage) => {
-	// Fetch new data based on the new page and update currentTableData
 	currentPage.value = newPage;
-	const start = newPage;
-	const end = pageSize.value;
-	const newData = await GetCustomeInfoList(start, end);  // Assume fetchData is a function that fetches data from the server
+	await GetCustomeInfoList(newPage, pageSize.value);
 };
-
+const handleSizeChange = async (size) => {
+	pageSize.value = size;
+	currentPage.value = 1;
+	await GetCustomeInfoList(1, size);
+};
 
 //获取客户信息列表
 function GetCustomeInfoList(start, end) {
@@ -2451,6 +2462,10 @@ const transformFinanceLedgerData = (apiRows: FinanceApiRow[]): FinanceLedgerItem
 
 const handleFinanceLedgerPageChange = (page: number) => {
 	financeLedgerCurrentPage.value = page
+}
+const handleFinanceLedgerSizeChange = (size: number) => {
+	financeLedgerPageSize.value = size
+	financeLedgerCurrentPage.value = 1
 }
 
 const loadFinanceLedger = async (customerId: number) => {
@@ -3116,18 +3131,24 @@ const submitContactLog = async (formEl: FormInstance | undefined) => {
 
 
 const ContactLogTablecurrentPage = ref(1)
-const ContactLogTablepageSize = ref(2)
+const ContactLogTablepageSize = ref(30)
 const ContactLogTabletotalItems = ref(0)
 const ContactLogTablehandlePageChange = async (newPage: number) => {
-	// Get email addresses from contact persons
 	const emailAddresses = ContactPersonData.value
 		.filter(person => person.email && person.email.trim() !== '')
 		.map(person => person.email)
 		.join(',')
 	ContactLogTablecurrentPage.value = newPage;
-	const start = newPage;
-	const end = ContactLogTablepageSize.value;
-	loadCustomerContactLogs(selectCustomerID.value, emailAddresses, start, end)
+	loadCustomerContactLogs(selectCustomerID.value, emailAddresses, newPage, ContactLogTablepageSize.value)
+}
+const ContactLogTablehandleSizeChange = async (size: number) => {
+	ContactLogTablepageSize.value = size;
+	ContactLogTablecurrentPage.value = 1;
+	const emailAddresses = ContactPersonData.value
+		.filter(person => person.email && person.email.trim() !== '')
+		.map(person => person.email)
+		.join(',')
+	loadCustomerContactLogs(selectCustomerID.value, emailAddresses, 1, size)
 }
 
 // 加载客户联系日志
@@ -3710,29 +3731,44 @@ const DeleteCustomerProfile = (row) => {
 
 // 报价记录分页
 const QuotationRecordCurrentPage = ref(1)
-const QuotationRecordPageSize = ref(10)
+const QuotationRecordPageSize = ref(30)
 const QuotationRecordTotalItems = ref(0)
 const QuotationRecordHandlePageChange = async (newPage) => {
 	QuotationRecordCurrentPage.value = newPage
 	await loadQuotationHistory(selectCustomerID.value, newPage, QuotationRecordPageSize.value)
 }
+const QuotationRecordHandleSizeChange = async (size) => {
+	QuotationRecordPageSize.value = size
+	QuotationRecordCurrentPage.value = 1
+	await loadQuotationHistory(selectCustomerID.value, 1, size)
+}
 
 // 销售合同记录分页
 const SalesContractRecordCurrentPage = ref(1)
-const SalesContractRecordPageSize = ref(10)
+const SalesContractRecordPageSize = ref(30)
 const SalesContractRecordTotalItems = ref(0)
 const SalesContractRecordHandlePageChange = async (newPage) => {
 	SalesContractRecordCurrentPage.value = newPage
 	await loadContractHistory(selectCustomerID.value, newPage, SalesContractRecordPageSize.value)
 }
+const SalesContractRecordHandleSizeChange = async (size) => {
+	SalesContractRecordPageSize.value = size
+	SalesContractRecordCurrentPage.value = 1
+	await loadContractHistory(selectCustomerID.value, 1, size)
+}
 
 // 收寄样历史分页
 const CustomerSendSampleCurrentPage = ref(1)
-const CustomerSendSamplePageSize = ref(10)
+const CustomerSendSamplePageSize = ref(30)
 const CustomerSendSampleTotalItems = ref(0)
 const CustomerSendSampleHandlePageChange = async (newPage) => {
 	CustomerSendSampleCurrentPage.value = newPage
 	await loadCustomerSendSampleHistory(selectCustomerID.value, newPage, CustomerSendSamplePageSize.value)
+}
+const CustomerSendSampleHandleSizeChange = async (size) => {
+	CustomerSendSamplePageSize.value = size
+	CustomerSendSampleCurrentPage.value = 1
+	await loadCustomerSendSampleHistory(selectCustomerID.value, 1, size)
 }
 </script>
 

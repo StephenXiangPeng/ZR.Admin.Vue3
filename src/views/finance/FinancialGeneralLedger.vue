@@ -3,8 +3,8 @@
 		<!-- 财务总账列表 -->
 		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-select v-model="searchForm.customerId" filterable placeholder="选择客户" size="default"
 							style="width: 100%" clearable>
@@ -27,7 +27,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table v-loading="loading" :data="paginatedData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" v-loading="loading" :data="paginatedData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }" border :summary-method="getSummaries"
 				show-summary>
@@ -93,7 +93,7 @@
 				</el-table-column>
 			</el-table>
 			<el-pagination @current-change="handleCurrentChange" @size-change="handleSizeChange"
-				:current-page="currentPage" :page-size="pageSize" :total="totalRecords" :page-sizes="[5, 10, 20, 50]"
+				:current-page="currentPage" :page-size="pageSize" :total="totalRecords" :page-sizes="[10, 20, 30, 50]"
 				background layout="total, sizes, prev, pager, next, jumper"
 				style="margin-top: 10px; text-align: right;" />
 		</div>
@@ -165,7 +165,7 @@ interface ApiResponse {
 
 // 分页相关变量
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(30)
 
 // 表格数据
 const ledgerData = ref<LedgerItem[]>([])

@@ -87,9 +87,10 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="handlePageChange" :current-page="queryParams.pageNum"
-				:page-size="queryParams.pageSize" :total="total" background layout="prev, pager, next"
-				style="margin-top: 5px;" />
+			<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
+				:current-page="queryParams.pageNum" :page-size="queryParams.pageSize" :total="total"
+				:page-sizes="[10, 20, 30, 50]" background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 
 		<el-dialog :modal="false" :modal-penetrable="true" v-model="PlanTaskDialogVisible" title="新建计划/任务" width="75%">
@@ -1315,7 +1316,7 @@ const loading = ref(false);
 const total = ref(0);
 const queryParams = reactive({
 	pageNum: 1,
-	pageSize: 10,
+	pageSize: 30,
 	queryText: ''
 });
 const dataPlanTasks = ref<PlanTask[]>([]);

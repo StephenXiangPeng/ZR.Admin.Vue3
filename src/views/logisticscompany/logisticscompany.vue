@@ -14,8 +14,8 @@
 				</el-row>
 			</div>
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-input v-model="queryParams.simpleCompanyName" clearable placeholder="请输入公司简称"
 							size="default" />
@@ -37,7 +37,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table v-loading="loading" :data="logisticsCompanyList" @selection-change="handleSelectionChange"
+			<el-table class="customer-info-table" v-loading="loading" :data="logisticsCompanyList" @selection-change="handleSelectionChange"
 				style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
@@ -59,9 +59,10 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="handlePageChange" :current-page="queryParams.pageNum"
-				:page-size="queryParams.pageSize" :total="total" background layout="prev, pager, next"
-				style="margin-top: 5px;" />
+			<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
+				:current-page="queryParams.pageNum" :page-size="queryParams.pageSize" :total="total"
+				:page-sizes="[10, 20, 30, 50]" background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 
 		<!-- 添加或修改物流公司对话框 -->
@@ -129,7 +130,7 @@
 						<div class="mb10">
 							<el-button type="primary" icon="Plus" @click="addContact" size="default">添加联系人</el-button>
 						</div>
-						<el-table :data="contactsTableData" style="width: 100%; table-layout: fixed;" stripe
+						<el-table class="customer-info-table" :data="contactsTableData" style="width: 100%; table-layout: fixed;" stripe
 							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 							<el-table-column label="联系人姓名" prop="name">
@@ -172,7 +173,7 @@
 							<el-button type="primary" icon="Plus" @click="addBankAccount"
 								size="default">添加银行账号</el-button>
 						</div>
-						<el-table :data="bankAccountTableData" style="width: 100%; table-layout: fixed;" stripe
+						<el-table class="customer-info-table" :data="bankAccountTableData" style="width: 100%; table-layout: fixed;" stripe
 							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 							<el-table-column label="开户名称" prop="bankAccountName">
@@ -331,9 +332,11 @@
 						</el-table-column>
 					</el-table-column>
 				</el-table>
-				<el-pagination @current-change="handleFinanceLedgerPageChange" :current-page="financeLedgerCurrentPage"
-					:page-size="financeLedgerPageSize" :total="financeLedgerTotalRecords" background
-					layout="prev, pager, next, total" style="margin-top: 5px;" />
+				<el-pagination @current-change="handleFinanceLedgerPageChange" @size-change="handleFinanceLedgerSizeChange"
+					:current-page="financeLedgerCurrentPage" :page-size="financeLedgerPageSize"
+					:total="financeLedgerTotalRecords" :page-sizes="[10, 20, 30, 50]"
+					background layout="total, sizes, prev, pager, next, jumper"
+					style="margin-top: 10px; text-align: right;" />
 			</div>
 
 			<template #footer>
@@ -403,7 +406,7 @@ const open = ref(false)
 // 查询参数
 const queryParams = ref({
 	pageNum: 1,
-	pageSize: 10,
+	pageSize: 30,
 	simpleCompanyName: undefined,
 	companyName: undefined,
 	companyType: undefined
@@ -499,7 +502,7 @@ interface FinanceApiRow {
 const financeLedgerLoading = ref(false)
 const financeLedgerData = ref<FinanceLedgerItem[]>([])
 const financeLedgerCurrentPage = ref(1)
-const financeLedgerPageSize = ref(10)
+const financeLedgerPageSize = ref(30)
 const financeLedgerTotalRecords = computed(() => financeLedgerData.value.length)
 const financeLedgerPaginatedData = computed(() => {
 	const start = (financeLedgerCurrentPage.value - 1) * financeLedgerPageSize.value
@@ -554,7 +557,7 @@ function handleQuery() {
 function resetQuery() {
 	queryParams.value = {
 		pageNum: 1,
-		pageSize: 10,
+		pageSize: 30,
 		simpleCompanyName: undefined,
 		companyName: undefined,
 		companyType: undefined
@@ -565,6 +568,13 @@ function resetQuery() {
 /** 分页处理 */
 function handlePageChange(page) {
 	queryParams.value.pageNum = page
+	getList()
+}
+
+/** 每页条数变化 */
+function handleSizeChange(size) {
+	queryParams.value.pageSize = size
+	queryParams.value.pageNum = 1
 	getList()
 }
 
@@ -821,6 +831,10 @@ const transformFinanceLedgerData = (apiRows: FinanceApiRow[]): FinanceLedgerItem
 
 const handleFinanceLedgerPageChange = (page: number) => {
 	financeLedgerCurrentPage.value = page
+}
+const handleFinanceLedgerSizeChange = (size: number) => {
+	financeLedgerPageSize.value = size
+	financeLedgerCurrentPage.value = 1
 }
 
 const loadLogisticsFinanceLedger = async (companyId: number, companyLabel: string) => {

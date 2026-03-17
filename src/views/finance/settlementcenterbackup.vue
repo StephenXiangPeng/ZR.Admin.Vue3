@@ -3,8 +3,8 @@
 		<!-- 结算中心表 -->
 		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="6">
 						<el-select v-model="settlement_center_shipping" filterable placeholder="请选出运发货单号" clearable
 							style="width: 100%" size="default">
@@ -19,7 +19,7 @@
 						</div>
 					</el-col>
 				</el-row>
-				<el-row :gutter="15">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="6">
 						<el-button type="warning" @click="CloseSettlement" :disabled="isCloseButtonDisabled"
 							size="default">关账</el-button>

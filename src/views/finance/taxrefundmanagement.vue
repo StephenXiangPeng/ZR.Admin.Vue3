@@ -5,8 +5,8 @@
 			<div class="subtitle">管理退税信息，快速追踪已退税信息</div>
 		</div>
 
-		<div class="filter-card">
-			<el-row :gutter="16">
+		<div class="filter-card customer-search-area">
+			<el-row :gutter="16" class="search-row">
 				<el-col :span="7">
 					<el-input v-model="SearchInvoiceNumber" placeholder="请输入发票号码" clearable size="default" />
 				</el-col>
@@ -31,8 +31,8 @@
 			<div class="table-actions">
 				<div class="table-count">共 {{ tableCount }} 条记录</div>
 			</div>
-			<el-table :data="TaxrefundtableData" style="width: 100%; table-layout: fixed;" stripe
-				:header-cell-style="{ background: '#f8f9fb', color: '#374151', fontWeight: '600' }"
+			<el-table class="customer-info-table" :data="TaxrefundtableData" style="width: 100%; table-layout: fixed;"
+				stripe :header-cell-style="{ background: '#f8f9fb', color: '#374151', fontWeight: '600' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '6px 0' }">
 				<el-table-column prop="invoiceNumber" label="发票号码" width="120">
 					<template #default="scope">
@@ -90,9 +90,11 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="TaxrefundtableDataHandlePageChange"
+			<el-pagination @current-change="TaxrefundtableDataHandlePageChange" @size-change="TaxrefundtableDataHandleSizeChange"
 				:current-page="TaxrefundtableDataCurrentPage" :page-size="TaxrefundtableDataPageSize"
-				:total="TaxrefundtableDataTotalItems" background layout="prev, pager, next" />
+				:total="TaxrefundtableDataTotalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 		<el-dialog class="taxrefund-dialog" :modal="false" modal-penetrable v-model="addctaxrefunddialog"
 			:close-on-click-modal=false width="560px" @close="clearTaxrefundDialog()">
@@ -663,12 +665,15 @@ const openRegisterTaxRefund = async (row) => {
 
 const TaxrefundtableDataTotalItems = ref(0);
 const TaxrefundtableDataCurrentPage = ref(1);
-const TaxrefundtableDataPageSize = ref(10);
+const TaxrefundtableDataPageSize = ref(30);
 const TaxrefundtableDataHandlePageChange = async (newPage) => {
 	TaxrefundtableDataCurrentPage.value = newPage;
-	const start = newPage;
-	const end = TaxrefundtableDataPageSize.value;
-	const newData = await GetTaxRefundList(start, end);
+	await GetTaxRefundList(newPage, TaxrefundtableDataPageSize.value);
+};
+const TaxrefundtableDataHandleSizeChange = async (size) => {
+	TaxrefundtableDataPageSize.value = size;
+	TaxrefundtableDataCurrentPage.value = 1;
+	await GetTaxRefundList(1, size);
 };
 function GetTaxRefundList(start, end) {
 	request({

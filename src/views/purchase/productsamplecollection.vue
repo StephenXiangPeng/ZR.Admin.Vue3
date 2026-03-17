@@ -61,8 +61,10 @@
 				</template>
 			</el-table-column>
 		</el-table>
-		<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-			:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+		<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
+			:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
+			background layout="total, sizes, prev, pager, next, jumper"
+			style="margin-top: 10px; text-align: right;" />
 
 		<el-dialog :modal="false" :modal-penetrable="true" v-model="CreateDialog" title="创建收样/寄样"
 			:close-on-click-modal=false style="width: 70%;" @closed="handleDialogClosed">
@@ -287,12 +289,15 @@ const ProductSampleTableData = ref([]);
 //分页组件
 const totalItems = ref(0);
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(30);
 const handlePageChange = async (newPage) => {
 	currentPage.value = newPage;
-	const start = newPage;
-	const end = pageSize.value;
-	const newData = await GetProductSampleList(start, end);
+	await GetProductSampleList(newPage, pageSize.value);
+};
+const handleSizeChange = async (size) => {
+	pageSize.value = size;
+	currentPage.value = 1;
+	await GetProductSampleList(1, size);
 };
 // 重置搜索条件
 const SearchHandleReset = () => {

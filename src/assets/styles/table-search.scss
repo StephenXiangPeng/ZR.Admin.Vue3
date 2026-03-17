@@ -1,0 +1,41 @@
+/* 统一列表筛选区域 + 列表表格样式（参考 sale/customerinfomation.vue） */
+
+.customer-search-area {
+  background: #f8f9fa;
+  padding: 8px 15px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.customer-search-area .search-row {
+  margin-bottom: 4px !important;
+}
+
+.customer-search-area .search-row:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* 表头高度减半 */
+.customer-info-table .el-table__header th.el-table__cell {
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  line-height: 1.2;
+}
+
+/* 表体行高与 customerinfomation 主列表一致：22px */
+.customer-info-table .el-table__body tr.el-table__row {
+  height: 22px !important;
+}
+.customer-info-table .el-table__body td.el-table__cell {
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+  height: 22px !important;
+  box-sizing: border-box;
+}
+
+/* 表体单元格内容行高 */
+.customer-info-table .el-table__body .cell {
+  line-height: 1.25;
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+}
+

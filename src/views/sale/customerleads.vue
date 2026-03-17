@@ -13,8 +13,8 @@
 				</el-row>
 			</div>
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-input v-model="clueNoInput" clearable placeholder="请输入线索编号" size="default" />
 					</el-col>
@@ -42,7 +42,7 @@
 						</el-select>
 					</el-col>
 				</el-row>
-				<el-row :gutter="15">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-select filterable v-model="customerLevelSelect" placeholder="请选择客户等级" style="width: 100%"
 							size="default" clearable>
@@ -80,7 +80,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="CustomerLeadsTableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="CustomerLeadsTableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="id" label="线索编号" width="100">
@@ -106,8 +106,10 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-				:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+			<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
+				:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 
 		<el-dialog :modal="false" modal-penetrable v-model="dialogFormVisible" title="新建线索" :close-on-click-modal=false
@@ -340,15 +342,17 @@ proxy.getDicts(dictParams).then((response) => {
 
 const totalItems = ref(0);
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(30);
 const CustomerLeadsTableData = ref([])
 GetCustomeleadList(currentPage.value, pageSize.value);
 const handlePageChange = async (newPage) => {
-	// Fetch new data based on the new page and update currentTableData
 	currentPage.value = newPage;
-	const start = newPage;
-	const end = pageSize.value;
-	const newData = await GetCustomeleadList(start, end);  // Assume fetchData is a function that fetches data from the server
+	await GetCustomeleadList(newPage, pageSize.value);
+};
+const handleSizeChange = async (size) => {
+	pageSize.value = size;
+	currentPage.value = 1;
+	await GetCustomeleadList(1, size);
 };
 
 const dialogFormVisible = ref(false)

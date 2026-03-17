@@ -13,8 +13,8 @@
 				</el-row>
 			</div>
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-select v-model="Searchsupplierselect" filterable placeholder="选择供应商（可输入查询）"
 							style="width: 100%" size="default" clearable>
@@ -54,7 +54,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="SupplierInfoTableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="SupplierInfoTableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="Id" label="供应商ID" width="150" v-if="false"></el-table-column>
@@ -88,10 +88,11 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="SupplierInfoTableDatahandlePageChange"
+			<el-pagination @current-change="SupplierInfoTableDatahandlePageChange" @size-change="SupplierInfoTableDatahandleSizeChange"
 				:current-page="SupplierInfoTableDatacurrentPage" :page-size="SupplierInfoTableDatapageSize"
-				:total="SupplierInfoTableDatatotalItems" background layout="prev, pager, next"
-				style="margin-top: 5px;" />
+				:total="SupplierInfoTableDatatotalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 		<el-dialog :modal="false" modal-penetrable v-model="AddSupperDialog" title="添加供应商" :close-on-click-modal=false
 			style="width: 75%;" @close="Closeaddsupperdialog">
@@ -521,10 +522,11 @@
 									</el-table-column>
 								</el-table-column>
 							</el-table>
-							<el-pagination @current-change="handleFinanceLedgerPageChange"
+							<el-pagination @current-change="handleFinanceLedgerPageChange" @size-change="handleFinanceLedgerSizeChange"
 								:current-page="financeLedgerCurrentPage" :page-size="financeLedgerPageSize"
-								:total="financeLedgerTotalRecords" background layout="prev, pager, next, total"
-								style="margin-top: 5px;" />
+								:total="financeLedgerTotalRecords" :page-sizes="[10, 20, 30, 50]"
+								background layout="total, sizes, prev, pager, next, jumper"
+								style="margin-top: 10px; text-align: right;" />
 						</div>
 					</el-tab-pane>
 					<el-tab-pane label="往来邮件" name="emailHistory">
@@ -830,7 +832,7 @@ const isSubmitbtnVisible = ref(true)
 const financeLedgerLoading = ref(false)
 const financeLedgerData = ref<FinanceLedgerItem[]>([])
 const financeLedgerCurrentPage = ref(1)
-const financeLedgerPageSize = ref(10)
+const financeLedgerPageSize = ref(30)
 const financeLedgerTotalRecords = computed(() => financeLedgerData.value.length)
 const financeLedgerPaginatedData = computed(() => {
 	const start = (financeLedgerCurrentPage.value - 1) * financeLedgerPageSize.value
@@ -1216,12 +1218,15 @@ const SupplierInfoTableData = ref([]);
 //分页组件
 const SupplierInfoTableDatatotalItems = ref(0);
 const SupplierInfoTableDatacurrentPage = ref(1);
-const SupplierInfoTableDatapageSize = ref(10);
+const SupplierInfoTableDatapageSize = ref(30);
 const SupplierInfoTableDatahandlePageChange = async (newPage) => {
 	SupplierInfoTableDatacurrentPage.value = newPage;
-	const start = newPage;
-	const end = SupplierInfoTableDatapageSize.value;
-	const newData = await GetSupplierInfoList(start, end);
+	await GetSupplierInfoList(newPage, SupplierInfoTableDatapageSize.value);
+};
+const SupplierInfoTableDatahandleSizeChange = async (size) => {
+	SupplierInfoTableDatapageSize.value = size;
+	SupplierInfoTableDatacurrentPage.value = 1;
+	await GetSupplierInfoList(1, size);
 };
 GetSupplierInfoList(SupplierInfoTableDatacurrentPage.value, SupplierInfoTableDatapageSize.value);
 function GetSupplierInfoList(start, end) {
@@ -1611,6 +1616,10 @@ const transformFinanceLedgerData = (apiRows: FinanceApiRow[]): FinanceLedgerItem
 
 const handleFinanceLedgerPageChange = (page: number) => {
 	financeLedgerCurrentPage.value = page
+}
+const handleFinanceLedgerSizeChange = (size: number) => {
+	financeLedgerPageSize.value = size
+	financeLedgerCurrentPage.value = 1
 }
 
 const loadSupplierFinanceLedger = async (supplierId: number, supplierLabel: string) => {

@@ -14,8 +14,8 @@
 				</el-row>
 			</div>
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-select v-model="SearchReceiptNumber" filterable placeholder="选择收款单号" style="width: 100%"
 							size="default" clearable>
@@ -48,7 +48,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="customercollectiontableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="customercollectiontableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="receiptNumber" label="收款单号" width="120">
@@ -88,8 +88,10 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-				:total="totalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+			<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
+				:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 		<el-dialog :modal="false" modal-penetrable v-model="addcustomercollectiondialog"
 			:title="isReadOnly ? '查看收款单据' : (isEdit ? '编辑收款单据' : '新增收款单据')" :close-on-click-modal=false
@@ -1404,14 +1406,17 @@ const clearAll = () => {
 //分页组件
 const totalItems = ref(0);
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(30);
 //收款单据表格
 const customercollectiontableData = ref([])
 const handlePageChange = async (newPage) => {
 	currentPage.value = newPage;
-	const start = newPage;
-	const end = pageSize.value;
-	const newData = await GetCustomerCollectionsList(start, end);
+	await GetCustomerCollectionsList(newPage, pageSize.value);
+};
+const handleSizeChange = async (size) => {
+	pageSize.value = size;
+	currentPage.value = 1;
+	await GetCustomerCollectionsList(1, size);
 };
 //获取收款单据列表
 function GetCustomerCollectionsList(start, end) {

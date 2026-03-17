@@ -3,8 +3,8 @@
 		<!-- 询价单表 -->
 		<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="16" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="16" class="search-row">
 					<el-col :span="3">
 						<el-radio-group v-model="searchParams.status" @change="searchInquiries" size="default">
 							<el-radio-button :label="0">待处理</el-radio-button>
@@ -32,7 +32,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="inquiryList" style="width: 100%; table-layout: fixed;" stripe v-loading="loading"
+			<el-table class="customer-info-table" :data="inquiryList" style="width: 100%; table-layout: fixed;" stripe v-loading="loading"
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="inquiry_number" label="询价单号" width="120">
@@ -64,8 +64,9 @@
 				</el-table-column>
 			</el-table>
 			<el-pagination @current-change="handleCurrentChange" @size-change="handleSizeChange"
-				:current-page="currentPage" :page-size="pageSize" :page-sizes="[5, 10, 15, 20]" :total="total"
-				background layout="total, sizes, prev, pager, next, jumper" style="margin-top: 5px;" />
+				:current-page="currentPage" :page-size="pageSize" :page-sizes="[10, 20, 30, 50]" :total="total"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 
 		<!-- 处理询价单弹窗 -->
@@ -450,7 +451,7 @@ const formRef = ref<FormInstance>();
 
 // 分页相关
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(30);
 const total = ref(0);
 
 // 搜索参数

@@ -162,8 +162,10 @@
 							</el-table-column>
 						</el-table>
 					</div>
-					<el-pagination @current-change="handlePageChange" :current-page="currentPage" :page-size="pageSize"
-						:total="totalItems" background layout="prev, pager, next" style="margin-top: 15px;" />
+					<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
+						:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
+						background layout="total, sizes, prev, pager, next, jumper"
+						style="margin-top: 10px; text-align: right;" />
 				</div>
 			</div>
 		</div>
@@ -2126,7 +2128,7 @@ const uploadSubProductFile = async (file) => {
 //分页组件
 const totalItems = ref(0);
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(30);
 
 // 排序参数
 const sortParams = ref({
@@ -2152,6 +2154,11 @@ const ProductInfoTableData = ref([])
 const handlePageChange = async (newPage) => {
 	currentPage.value = newPage;
 	await GetProductInfoList(newPage, pageSize.value);
+};
+const handleSizeChange = async (size) => {
+	pageSize.value = size;
+	currentPage.value = 1;
+	await GetProductInfoList(1, size);
 };
 const Search_ProductCode = ref('');	// 查询产品编号
 const Search_StartTransactionDate = ref('');	// 查询最近成交日期

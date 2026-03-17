@@ -14,8 +14,8 @@
 				</el-row>
 			</div>
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-select filterable v-model="SearchSaleContractID" placeholder="选择销售合同（可输入查询）"
 							style="width: 100%" size="default" clearable>
@@ -56,7 +56,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="shippingDeliveryTableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="shippingDeliveryTableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="id" label="出运发货单ID" width="150px" v-if="false"></el-table-column>
@@ -133,10 +133,11 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="paymentrequesttableDataHandlePageChange"
+			<el-pagination @current-change="paymentrequesttableDataHandlePageChange" @size-change="ShippingDeliveriesTableDataHandleSizeChange"
 				:current-page="ShippingDeliveriesTableDataCurrentPage" :page-size="ShippingDeliveriesTableDataPageSize"
-				:total="ShippingDeliveriesTableDataTotalItems" background layout="prev, pager, next"
-				style="margin-top: 5px;" />
+				:total="ShippingDeliveriesTableDataTotalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 		<el-dialog :modal="false" modal-penetrable v-model="CreateshippingdeliveryDialog" title="创建出运发货单"
 			:close-on-click-modal=false style="width: 75%;" @close="CreateshippingdeliveryDialogClose()">
@@ -1968,12 +1969,15 @@ const EditSaveClick = (isDraft) => {
 ///出运发货单表格数据
 const ShippingDeliveriesTableDataTotalItems = ref(0);
 const ShippingDeliveriesTableDataCurrentPage = ref(1);
-const ShippingDeliveriesTableDataPageSize = ref(10);
+const ShippingDeliveriesTableDataPageSize = ref(30);
 const paymentrequesttableDataHandlePageChange = async (newPage) => {
 	ShippingDeliveriesTableDataCurrentPage.value = newPage;
-	const start = newPage;
-	const end = ShippingDeliveriesTableDataPageSize.value;
-	const newData = await GetShippingDeliveriesList(start, end);
+	await GetShippingDeliveriesList(newPage, ShippingDeliveriesTableDataPageSize.value);
+};
+const ShippingDeliveriesTableDataHandleSizeChange = async (size) => {
+	ShippingDeliveriesTableDataPageSize.value = size;
+	ShippingDeliveriesTableDataCurrentPage.value = 1;
+	await GetShippingDeliveriesList(1, size);
 };
 async function GetShippingDeliveriesList(start, end) {
 	try {

@@ -8,7 +8,7 @@
 			</template>
 
 			<!-- 查询条件区域 -->
-			<div class="search-area">
+			<div class="customer-search-area">
 				<el-form :inline="true" :model="searchForm" class="search-form">
 					<el-form-item label="出运发货单号">
 						<el-select v-model="searchForm.shippingDeliveriesId" filterable placeholder="请选出运发货单号" clearable
@@ -32,7 +32,7 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="tableData" border stripe v-loading="loading"
+			<el-table class="customer-info-table" :data="tableData" border stripe v-loading="loading"
 				:header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: 'bold' }"
 				style="width: 100%; margin-top: 20px;">
 				<el-table-column prop="settlementStatus" label="完结状态" width="100" align="center">
@@ -158,9 +158,10 @@
 
 			<!-- 分页组件 -->
 			<div class="pagination-container">
-				<el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
-					:page-sizes="[10, 20, 50, 100]" :total="totalItems" layout="total, sizes, prev, pager, next, jumper"
-					@size-change="handleSizeChange" @current-change="handleCurrentChange" />
+				<el-pagination @current-change="handleCurrentChange" @size-change="handleSizeChange"
+					:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
+					background layout="total, sizes, prev, pager, next, jumper"
+					style="margin-top: 10px; text-align: right;" />
 			</div>
 		</el-card>
 	</div>
@@ -186,7 +187,7 @@ const searchForm = reactive({
 const tableData = ref([])
 const loading = ref(false)
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(30)
 const totalItems = ref(0)
 
 // 字典数据

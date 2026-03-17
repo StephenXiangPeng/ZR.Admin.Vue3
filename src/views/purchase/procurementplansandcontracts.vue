@@ -13,7 +13,7 @@
 				</el-row>
 			</div>
 			<!-- 表格区域 -->
-			<el-table :data="shoppinglisttableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="shoppinglisttableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }" :span-method="mergeCells">
 				<el-table-column prop="procurementId" label="ID" width="150" v-if="false"></el-table-column>
@@ -37,9 +37,11 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="contractsTableDatahandlePageChange"
+			<el-pagination @current-change="contractsTableDatahandlePageChange" @size-change="contractsTableDatahandleSizeChange"
 				:current-page="contractsTableDatacurrentPage" :page-size="contractsTableDatapageSize"
-				:total="contractsTableDatatotalItems" background layout="prev, pager, next" style="margin-top: 5px;" />
+				:total="contractsTableDatatotalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 
 		<!-- 采购合同表 -->
@@ -55,7 +57,7 @@
 				</el-row>
 			</div>
 			<!-- 表格区域 -->
-			<el-table :data="contractofpurchasetableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="contractofpurchasetableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="id" label="ID" width="150" v-if="false"></el-table-column>
@@ -131,10 +133,11 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="purchasecontractsTableDatahandlePageChange"
+			<el-pagination @current-change="purchasecontractsTableDatahandlePageChange" @size-change="purchasecontractsTableDatahandleSizeChange"
 				:current-page="purchasecontractsTableDatacurrentPage" :page-size="purchasecontractsTableDatapageSize"
-				:total="purchasecontractsTableDatatotalItems" background layout="prev, pager, next"
-				style="margin-top: 5px;" />
+				:total="purchasecontractsTableDatatotalItems" :page-sizes="[10, 20, 30, 50]"
+				background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</div>
 
 		<el-dialog :modal="false" modal-penetrable v-model="Addcontractofpurchasedialog" title="新增采购合同"
@@ -256,7 +259,7 @@
 			</el-collapse>
 			<el-tabs v-model="activeName" class="demo-tabs" @tab-click="handleClick">
 				<el-tab-pane label="产品资料" name="productinfo">
-					<el-table :data="productinfotableData" style="width: 100%; table-layout: fixed;" stripe
+					<el-table class="customer-info-table" :data="productinfotableData" style="width: 100%; table-layout: fixed;" stripe
 						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 						<el-table-column prop="productCode" label="产品编号" width="110"></el-table-column>
@@ -369,7 +372,7 @@
 							新增费用
 						</el-button>
 					</div>
-					<el-table :data="CustomerRelaterExoensesTableData" style="width: 100%; table-layout: fixed;" stripe
+					<el-table class="customer-info-table" :data="CustomerRelaterExoensesTableData" style="width: 100%; table-layout: fixed;" stripe
 						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 						<el-table-column prop="expenseName" label="费用名称" width="150">
@@ -535,7 +538,7 @@
 		</el-dialog>
 		<!-- 添加新的查看详情对话框 -->
 		<el-dialog v-model="viewDetailsDialog" title="采购需求详情" :close-on-click-modal=false style="width: 75%;">
-			<el-table :data="detailsTableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="detailsTableData" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="SaleContractID" label="采购合同ID" width="150" v-if="false"></el-table-column>
@@ -1906,7 +1909,7 @@ const productSuppliersMap = ref(new Map())
 const shoppinglisttableData = ref([])
 const contractsTableDatatotalItems = ref(0)
 const contractsTableDatacurrentPage = ref(1)
-const contractsTableDatapageSize = ref(10)
+const contractsTableDatapageSize = ref(30)
 
 // 处理页码变化
 const contractsTableDatahandlePageChange = async (newPage) => {
@@ -1917,6 +1920,11 @@ const contractsTableDatahandlePageChange = async (newPage) => {
 		console.error('页码切换失败:', error)
 		ElMessage.error('获取数据失败，请重试')
 	}
+}
+const contractsTableDatahandleSizeChange = async (size) => {
+	contractsTableDatapageSize.value = size
+	contractsTableDatacurrentPage.value = 1
+	await ProcurementRequirements(1, size)
 }
 // 获取采购需求列表数据
 const ProcurementRequirements = async (pageNum, pageSize) => {
@@ -2027,12 +2035,15 @@ const isGeneratedFromRequirement = ref(false); // 是否通过生成采购合同
 const contractofpurchasetableData = ref([])
 const purchasecontractsTableDatatotalItems = ref(0);
 const purchasecontractsTableDatacurrentPage = ref(1);
-const purchasecontractsTableDatapageSize = ref(10);
+const purchasecontractsTableDatapageSize = ref(30);
 const purchasecontractsTableDatahandlePageChange = async (newPage) => {
 	purchasecontractsTableDatacurrentPage.value = newPage;
-	const start = newPage;
-	const end = purchasecontractsTableDatapageSize.value;
-	const newData = await GetpurchaseContractList(start, end);
+	await GetpurchaseContractList(newPage, purchasecontractsTableDatapageSize.value);
+};
+const purchasecontractsTableDatahandleSizeChange = async (size) => {
+	purchasecontractsTableDatapageSize.value = size;
+	purchasecontractsTableDatacurrentPage.value = 1;
+	await GetpurchaseContractList(1, size);
 };
 const reviewStatusMap = {
 	'0': '待提审',
