@@ -16,8 +16,8 @@
 			</div>
 
 			<!-- 过滤条件区域 -->
-			<div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-				<el-row :gutter="15" style="margin-bottom: 10px;">
+			<div class="customer-search-area" style="background: #f8f9fa; padding: 8px 15px; border-bottom: 1px solid #e5e7eb;">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-input v-model="Search_CustomerEmail_input" clearable placeholder="请输入邮箱地址" size="default" />
 					</el-col>
@@ -54,7 +54,7 @@
 						</el-select>
 					</el-col>
 				</el-row>
-				<el-row :gutter="15">
+				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-select filterable v-model="Search_CustomerSource_Select" placeholder="请选择客户来源"
 							size="default" style="width: 100%;" clearable>
@@ -83,10 +83,10 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table :data="CunstomeinfotableData" @row-dblclick="CunstomeinfotableDatahandleRowDblClick"
+			<el-table class="customer-info-table" :data="CunstomeinfotableData" @row-dblclick="CunstomeinfotableDatahandleRowDblClick"
 				style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
-				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				:row-style="{ height: '22px' }" :cell-style="{ padding: '1px 0' }">
 				<el-table-column prop="customerNo" label="客户编号" width="90">
 					<template #default="scope">
 						<span>{{ scope.row.customerNo }}</span>
@@ -3737,11 +3737,27 @@ const CustomerSendSampleHandlePageChange = async (newPage) => {
 </script>
 
 <style scoped>
+/* 搜索区：缩小行间距 */
+.customer-search-area .search-row {
+	margin-bottom: 4px !important;
+}
+.customer-search-area .search-row:last-child {
+	margin-bottom: 0 !important;
+}
+
 /* 列表表头高度减半（默认约 12px 上下内边距改为 6px） */
 :deep(.el-table th.el-table__cell) {
 	padding-top: 6px !important;
 	padding-bottom: 6px !important;
 	line-height: 1.2;
+}
+
+/* 列表表格：缩小行间距与单元格内行高（含客户简称等多行内容） */
+.customer-info-table :deep(.el-table__body td.el-table__cell),
+.customer-info-table :deep(.el-table__body .cell) {
+	line-height: 1.25;
+	padding-top: 1px !important;
+	padding-bottom: 1px !important;
 }
 
 /* 联系日志中邮件记录的联系内容可双击跳转，显示手型 */
