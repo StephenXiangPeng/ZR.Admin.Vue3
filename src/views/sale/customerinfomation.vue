@@ -675,7 +675,15 @@
 										}}
 									</template>
 								</el-table-column>
-								<el-table-column prop="contactDetails" label="联系内容" show-overflow-tooltip />
+								<el-table-column prop="contactDetails" label="联系内容" show-overflow-tooltip
+									min-width="120">
+									<template #default="{ row }">
+										<span :class="{ 'contact-content-link': row.logSouce === '邮件记录' }"
+											@dblclick.stop="handleContactContentDblClick(row)">
+											{{ row.contactDetails }}
+										</span>
+									</template>
+								</el-table-column>
 								<el-table-column label="图片" width="100">
 									<template #default="{ row }">
 										<el-image v-if="row.images && row.images.length > 0"
@@ -779,21 +787,21 @@
 										<template #default="scope">
 											<span v-if="scope.row.income.rmb > 0">{{
 												formatFinanceAmount(scope.row.income.rmb)
-												}}</span>
+											}}</span>
 										</template>
 									</el-table-column>
 									<el-table-column prop="income.usd" label="美元" width="120" align="right">
 										<template #default="scope">
 											<span v-if="scope.row.income.usd > 0">{{
 												formatFinanceAmount(scope.row.income.usd)
-												}}</span>
+											}}</span>
 										</template>
 									</el-table-column>
 									<el-table-column prop="income.eur" label="欧元" width="120" align="right">
 										<template #default="scope">
 											<span v-if="scope.row.income.eur > 0">{{
 												formatFinanceAmount(scope.row.income.eur)
-												}}</span>
+											}}</span>
 										</template>
 									</el-table-column>
 								</el-table-column>
@@ -1052,6 +1060,8 @@ interface ContactLog {
 	contactDetails: string;
 	relatedDocumentType: number;
 	relatedDocumentID: number;
+	/** 邮件记录时的邮件ID，部分接口可能用此字段 */
+	emailID?: number;
 	images?: string;
 	attachments?: string;
 }
@@ -3563,6 +3573,21 @@ const handleContactLogRowDblClick = (row) => {
 	contactLogDetailDialogVisible.value = true
 }
 
+// 联系内容列双击：来源为邮件记录时跳转邮件页面并打开该邮件
+const handleContactContentDblClick = (row: ContactLog) => {
+	if (row.logSouce === '邮件记录') {
+		const emailID = row.emailID ?? row.relatedDocumentID
+		if (emailID) {
+			router.push({ path: '/email', query: { id: String(emailID) } })
+		} else {
+			ElMessage.warning('该邮件记录缺少邮件ID，无法打开')
+		}
+	} else {
+		selectedContactLog.value = row
+		contactLogDetailDialogVisible.value = true
+	}
+}
+
 onMounted(() => {
 	console.log('sql_sale_contracts:', state.optionss.sql_sale_contracts)
 });
@@ -3687,6 +3712,11 @@ const CustomerSendSampleHandlePageChange = async (newPage) => {
 </script>
 
 <style scoped>
+/* 联系日志中邮件记录的联系内容可双击跳转，显示手型 */
+.contact-content-link {
+	cursor: pointer;
+}
+
 /* 客户信息页面dialog中的表单组件间距减少一半，与销售合同页面保持一致 */
 .el-dialog .el-form-item {
 	margin-bottom: 5px !important;

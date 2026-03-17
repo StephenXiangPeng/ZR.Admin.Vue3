@@ -248,7 +248,8 @@
 					<el-table-column prop="taxincluded" label="含税+/-(%)" width="120" align="center">
 						<template #default="{ row }">
 							<el-input v-if="!isEditable" v-model="row.taxincluded" disabled />
-							<span v-else-if="row.status === 1" class="highlight-field">{{ row.taxincluded }}</span>
+							<span v-else-if="row.status === 1" class="highlight-field">{{
+								formatTaxIncluded(row.taxincluded) }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="QuoteQuantity" label="报价数量" width="120" align="center">
@@ -749,6 +750,24 @@ const getPackingLabel = (packingValue) => {
 	return packing ? packing.dictLabel : packingValue;
 };
 
+// 含税显示时加上%号
+const formatTaxIncluded = (val) => {
+	if (val == null || val === '') return '';
+	const s = String(val).trim();
+	return s.endsWith('%') ? s : s + '%';
+};
+
+// 将询价人转为编号 dictValue（支持当前已是 dictValue 或为 dictLabel 的情况）
+const inquirerToDictValue = (val) => {
+	if (val == null || val === '') return val;
+	const list = state.optionss.sql_hr_sale;
+	if (!list?.length) return val;
+	const byValue = list.find(opt => String(opt.dictValue) === String(val));
+	if (byValue) return byValue.dictValue;
+	const byLabel = list.find(opt => opt.dictLabel === String(val));
+	return byLabel?.dictValue ?? val;
+};
+
 /*创建询价单Dialog中的Button*/
 const isEditBtnVisible = ref(false);
 const isEditSaveBtnVisible = ref(false);
@@ -966,14 +985,16 @@ const uploadFilesAndSaveInquiry = async () => {
 		})
 		NewprudctInquityDetailsform.isDraft = 1;
 		try {
+			// 确保提交时 Inquirer 为编号 dictValue，而非姓名字符串
+			const payload = { ...NewprudctInquityDetailsform, Inquirer: inquirerToDictValue(NewprudctInquityDetailsform.Inquirer) };
 			// 判断是新建还是编辑状态
 			let response;
 			if (NewprudctInquityDetailsform.Id > 0) {
 				// 编辑状态，使用Edit接口
-				response = await request.post('Inquiry/EditInquiry/Edit', NewprudctInquityDetailsform)
+				response = await request.post('Inquiry/EditInquiry/Edit', payload)
 			} else {
 				// 新建状态，使用Add接口
-				response = await request.post('Inquiry/AddInquiry/Add', NewprudctInquityDetailsform)
+				response = await request.post('Inquiry/AddInquiry/Add', payload)
 			}
 
 			if (response.code === 200) {
@@ -1078,7 +1099,9 @@ const ChcekDetails = (row) => {
 	NewprudctInquityDetailsform.inquiry_number = row.inquiry_number;
 	NewprudctInquityDetailsform.Subject = row.subject;
 	NewprudctInquityDetailsform.Date = row.date;
-	NewprudctInquityDetailsform.Inquirer = row.inquirer;
+	// 列表里 inquirer 已被改成 dictLabel 展示，编辑时需转回 dictValue（编号）以便下拉匹配并正确提交
+	const inquirerCode = state.optionss.sql_hr_sale?.find(opt => opt.dictLabel === row.inquirer)?.dictValue;
+	NewprudctInquityDetailsform.Inquirer = inquirerCode != null ? inquirerCode : row.inquirer;
 	NewprudctInquityDetailsform.Description = row.description;
 	CreateInquiryDialog.value = true;
 	isShowUpload.value = false
@@ -1333,7 +1356,7 @@ const EditSaveInquiry = async () => {
 		}
 
 		dataToSend.isDraft = 0;
-		dataToSend.Inquirer = state.optionss.sql_hr_sale.find(option => option.dictLabel === NewprudctInquityDetailsform.Inquirer.toString())?.dictValue;
+		dataToSend.Inquirer = inquirerToDictValue(NewprudctInquityDetailsform.Inquirer);
 		// 发送编辑请求
 		const response = await request.post('Inquiry/EditInquiry/Edit', dataToSend);
 

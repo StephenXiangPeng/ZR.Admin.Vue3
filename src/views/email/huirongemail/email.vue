@@ -4189,13 +4189,21 @@ const autoOpenEmailDetail = async (emailId) => {
 			background: 'rgba(0, 0, 0, 0.7)'
 		})
 
-		// 首先尝试通过API直接获取邮件详情
+		// 首先尝试通过API直接获取邮件详情（不依赖当前列表，即使页面上没有该条记录也能打开）
 		try {
 			const response = await request({
 				url: 'Email/GetEmailById/GetEmailById',
 				method: 'GET',
 				params: { id: emailId }
 			})
+
+			// 接口明确返回不存在或无数据：直接提示并返回收件箱，不再查当前列表
+			if (response.code === 404 || (response.code === 200 && !response.data)) {
+				loading.close()
+				ElMessage.warning('该邮件不存在或已被删除，已返回收件箱')
+				await MenuClick(1)
+				return
+			}
 
 			if (response.code === 200 && response.data) {
 				const emailData = response.data
@@ -4258,6 +4266,15 @@ const autoOpenEmailDetail = async (emailId) => {
 				ElMessage.warning('邮件数据格式异常，尝试其他方式获取')
 			}
 		} catch (apiError) {
+			// 若为 404 等“不存在”类错误，直接提示并返回收件箱
+			const status = apiError?.response?.status
+			const code = apiError?.response?.data?.code
+			if (status === 404 || code === 404) {
+				loading.close()
+				ElMessage.warning('该邮件不存在或已被删除，已返回收件箱')
+				await MenuClick(1)
+				return
+			}
 			console.log('API获取邮件失败，尝试在现有列表中搜索:', apiError)
 			ElMessage.warning('API获取失败，尝试在现有列表中搜索')
 		}
@@ -4309,8 +4326,9 @@ const autoOpenEmailDetail = async (emailId) => {
 			await handleRowClick(targetEmail, {}, {})
 			ElMessage.success(`邮件详情已打开 (ID: ${emailId})`)
 		} else {
+			// API 未返回数据且当前列表也没有：邮件不存在或不在当前视图
 			console.warn('在所有邮件文件夹中未找到对应的邮件，ID:', emailId)
-			ElMessage.warning(`未找到邮件 (ID: ${emailId})，可能已被删除或移动，已返回收件箱`)
+			ElMessage.warning('该邮件不存在或已被删除，已返回收件箱')
 
 			// 返回收件箱
 			await MenuClick(1)

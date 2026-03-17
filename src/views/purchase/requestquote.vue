@@ -122,11 +122,7 @@
 						</el-tag>
 					</template>
 				</el-table-column>
-				<el-table-column prop="productName" label="产品名称" width="200" align="center">
-					<template #default="{ row }">
-						<span>{{ row.productName }}</span>
-					</template>
-				</el-table-column>
+
 				<el-table-column prop="productimage" label="询价产品图片" width="150" align="center">
 					<template #default="scope">
 						<div v-if="scope.row.productimage">
@@ -153,12 +149,17 @@
 						<span>{{ row.productCode }}</span>
 					</template>
 				</el-table-column>
+				<el-table-column prop="productName" label="产品名称" width="200" align="center">
+					<template #default="{ row }">
+						<span>{{ row.productName }}</span>
+					</template>
+				</el-table-column>
 				<el-table-column prop="productspecifications" label="规格" width="150" align="center">
 					<template #default="{ row }">
 						<span>{{ row.productspecifications }}</span>
 					</template>
 				</el-table-column>
-				<el-table-column prop="mainmaterials" label="主要材料" width="150" align="center">
+				<el-table-column prop="mainmaterials" label="主要材料" width="150" align="center" v-if="false">
 					<template #default="{ row }">
 						<span>{{ row.mainmaterials }}</span>
 					</template>
@@ -186,12 +187,7 @@
 							row.supplierOptions) }}</span>
 					</template>
 				</el-table-column>
-				<el-table-column prop="quoteNotes" label="备注" width="200" align="center">
-					<template #default="{ row }">
-						<el-input v-if="dialogEditMode" v-model="row.quoteNotes" style="width: 100%" size="default" />
-						<span v-else>{{ row.quoteNotes }}</span>
-					</template>
-				</el-table-column>
+
 				<el-table-column prop="variousminimumorderquantities" label="各种起订量" width="120" align="center">
 					<el-table-column prop="moq" label="MOQ" width="120" align="center">
 						<template #default="{ row }">
@@ -227,7 +223,7 @@
 				<el-table-column prop="taxincluded" label="含税+/-(%)" width="120" align="center">
 					<template #default="{ row }">
 						<el-input v-if="dialogEditMode" v-model="row.taxincluded" size="default" />
-						<span v-else>{{ row.taxincluded }}</span>
+						<span v-else>{{ formatTaxIncluded(row.taxincluded) }}</span>
 					</template>
 				</el-table-column>
 				<el-table-column prop="quoteQuantity" label="报价数量" width="120" align="center">
@@ -315,7 +311,7 @@
 					</el-table-column>
 					<el-table-column prop="outerboxvolume" label="体积m³" width="120" align="center">
 						<template #default="{ row }">
-							<span>{{ row.outerboxvolume }}</span>
+							<span>{{ getDisplayVolume(row) }}</span>
 						</template>
 					</el-table-column>
 					<el-table-column prop="outerboxgrossweight" label="毛重KGS" width="120" align="center">
@@ -324,6 +320,12 @@
 							<span v-else>{{ row.outerboxgrossweight }}</span>
 						</template>
 					</el-table-column>
+				</el-table-column>
+				<el-table-column prop="quoteNotes" label="备注" width="200" align="center">
+					<template #default="{ row }">
+						<el-input v-if="dialogEditMode" v-model="row.quoteNotes" style="width: 100%" size="default" />
+						<span v-else>{{ row.quoteNotes }}</span>
+					</template>
 				</el-table-column>
 			</el-table>
 			<span style="font-size: 20px; font-weight: bold;">询价单附件</span>
@@ -528,6 +530,13 @@ const getPackingLabel = (packingValue) => {
 	return packing ? packing.dictLabel : packingValue;
 };
 
+// 含税显示时加上%号
+const formatTaxIncluded = (val) => {
+	if (val == null || val === '') return '';
+	const s = String(val).trim();
+	return s.endsWith('%') ? s : s + '%';
+};
+
 // 计算体积
 const calculateVolume = (row) => {
 	const length = parseFloat(row.outerboxlength) || 0;
@@ -537,6 +546,15 @@ const calculateVolume = (row) => {
 	// 计算体积 (长 * 宽 * 高) / 1000000 转换为立方米
 	const volume = (length * width * height) / 1000000;
 	row.outerboxvolume = volume.toFixed(4);
+};
+
+// 体积列显示计算结果（长*宽*高/1000000）
+const getDisplayVolume = (row) => {
+	const length = parseFloat(row.outerboxlength) || 0;
+	const width = parseFloat(row.outerboxwidth) || 0;
+	const height = parseFloat(row.outerboxheight) || 0;
+	const volume = (length * width * height) / 1000000;
+	return volume > 0 ? volume.toFixed(4) : (row.outerboxvolume ?? '');
 };
 
 // 悬停图片相关
@@ -946,7 +964,7 @@ const loadInquiryDocuments = async (inquiryId) => {
 						productID: product.productID,
 						status: product.status,
 						productimage: product.productImage || '',
-						productName: product.productNumber || '',
+						productName: product.productName || '',
 						productCode: product.productNumber || '',
 						productspecifications: product.productSpecifications || '',
 						mainmaterials: product.mainMaterials || '',

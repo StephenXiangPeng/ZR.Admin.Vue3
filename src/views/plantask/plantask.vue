@@ -8,7 +8,7 @@
 					<el-col :span="12">
 						<div style="text-align: left;">
 							<el-button type="primary" @click="OpenPlanTaskDialog" size="default">新建计划/任务</el-button>
-							<el-button type="success" @click="OpenExchangeRateTaskDialog"
+							<el-button v-if="!isPurchaseDept" type="success" @click="OpenExchangeRateTaskDialog"
 								size="default">汇率更新任务</el-button>
 						</div>
 					</el-col>
@@ -647,7 +647,7 @@
 	</div>
 </template>
 <script setup lang="ts">
-import { reactive, ref, getCurrentInstance, watch, onMounted } from 'vue'
+import { reactive, ref, computed, getCurrentInstance, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import {
 	ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElMessage, DrawerProps, ElDrawer,
@@ -667,6 +667,14 @@ interface ApiResponse<T = any> {
 
 const userStore = useUserStore()
 const currentUser = ref(userStore.userId)
+// 用户部门为采购时不显示汇率更新任务按钮
+const isPurchaseDept = computed(() => {
+	if (userStore.userInfo.deptId == 210) {
+		return true
+	} else {
+		return false
+	}
+})
 // 添加确认对话框相关的响应式变量
 const confirmDialogVisible = ref(false)
 const currentTask = ref(null)
