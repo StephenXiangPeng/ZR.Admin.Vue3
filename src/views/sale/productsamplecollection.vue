@@ -889,14 +889,18 @@ const removeSampleRow = (index: number) => {
 	SampleProductData.value.splice(index, 1);
 };
 
+const IMAGE_MAX_SIZE = 1 * 1024 * 1024; // 每张照片最大 1M
 // 修改图片选择处理函数
 const handleImageSelect = (file, index) => {
 	if (!file) {
-		console.error('No file selected');
 		ElMessage.error('请选择图片文件');
 		return;
 	}
-
+	const raw = file.raw || file;
+	if (raw.size > IMAGE_MAX_SIZE) {
+		ElMessage.warning('每张图片不能超过 1M');
+		return;
+	}
 	const reader = new FileReader();
 	reader.onload = (e) => {
 		if (!SampleProductData.value[index].subproductImages) {

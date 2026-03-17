@@ -243,10 +243,8 @@
 							<el-col :span="24">
 								<el-form-item label="附件上传">
 									<el-upload multiple :auto-upload="false" v-model:file-list="attachmentList"
-										:limit="5" :disabled="isReadOnly || attachmentList.length >= 5"
 										@change="handleAttachmentChange" :action="UploadUrl"
-										:before-upload="handleBeforeAttachmentUpload"
-										:on-exceed="handleAttachmentExceed" :show-file-list="true"
+										:show-file-list="true"
 										:file-list="attachmentList" class="attachment-upload">
 										<el-button type="primary" :disabled="isReadOnly">
 											<el-icon>
@@ -256,7 +254,7 @@
 										</el-button>
 										<template #tip>
 											<div class="el-upload__tip">
-												支持上传文档、图片等文件，单个文件不超过10MB，最多5个文件
+												支持上传文档、图片等文件，附件总大小不超过 50M
 											</div>
 										</template>
 									</el-upload>
@@ -1030,16 +1028,18 @@ const attachmentList = ref([]);  // 附件列表
 const attachmentUrlStr = ref('');  // 附件URL字符串
 const uploadedAttachments = ref([]);  // 已上传的附件
 
+const IMAGE_MAX_SIZE = 1 * 1024 * 1024; // 每张照片最大 1M
 // 检查上传客户图片数量
 const handleChange = (file, fileList) => {
-	// 先检查文件数量限制
+	if (file.raw && file.raw.size > IMAGE_MAX_SIZE) {
+		ElMessage.error('每张图片不能超过 1M');
+		fileList.splice(fileList.findIndex(f => f.uid === file.uid), 1);
+		return;
+	}
 	if (fileList.length > 3) {
-		ElMessage({
-			type: 'info',
-			message: '最多上传3张图片！'
-		});
-		fileList.splice(3); // 保留前三个文件，移除其余文件
-		return; // 不再继续执行后面的代码
+		ElMessage({ type: 'info', message: '最多上传3张图片！' });
+		fileList.splice(3);
+		return;
 	}
 	const duplicate = uploadedFiles.value.findIndex(fileItem => fileItem.name === file.name);
 	if (duplicate !== -1) {
@@ -1122,57 +1122,17 @@ const handleRemove = (file: UploadFile) => {
 	});
 };
 
-// 附件上传前验证
-const handleBeforeAttachmentUpload = (file) => {
-	// 检查文件大小（10MB限制）
-	const isLt10M = file.size / 1024 / 1024 < 10;
-	if (!isLt10M) {
-		ElMessage.error('上传文件大小不能超过 10MB!');
-		return false;
-	}
+const ATTACHMENT_TOTAL_MAX = 50 * 1024 * 1024; // 附件总量不超过 50M
+const getAttachmentTotalSize = (list) => (list || []).reduce((sum, f) => sum + (f.raw ? f.raw.size : 0), 0);
 
-	// 检查文件类型（允许常见文档和图片格式）
-	const allowedTypes = [
-		'application/pdf',
-		'application/msword',
-		'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-		'application/vnd.ms-excel',
-		'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-		'application/vnd.ms-powerpoint',
-		'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-		'text/plain',
-		'image/jpeg',
-		'image/png',
-		'image/gif',
-		'image/bmp',
-		'image/webp'
-	];
-
-	const fileExtension = file.name.split('.').pop().toLowerCase();
-	const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-
-	if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-		ElMessage.error('不支持的文件格式，请上传文档或图片文件!');
-		return false;
-	}
-
-	return true;
-};
-
-// 附件数量超出限制
-const handleAttachmentExceed = () => {
-	ElMessage.warning('最多只能上传5个附件!');
-};
-
-// 附件变化处理
+// 附件变化处理（数量不限，总量不超过 50M）
 const handleAttachmentChange = (file, fileList) => {
-	// 检查文件数量限制
-	if (fileList.length > 5) {
-		ElMessage.warning('最多只能上传5个附件!');
-		fileList.splice(5);
+	const totalSize = getAttachmentTotalSize(fileList);
+	if (totalSize > ATTACHMENT_TOTAL_MAX) {
+		ElMessage.error('附件总大小不能超过 50M');
+		attachmentList.value = fileList.filter(f => f.uid !== file.uid);
 		return;
 	}
-
 	// 检查重复文件
 	const duplicate = uploadedAttachments.value.findIndex(fileItem => fileItem.name === file.name);
 	if (duplicate !== -1) {

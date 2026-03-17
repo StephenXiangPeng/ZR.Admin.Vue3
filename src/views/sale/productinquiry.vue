@@ -689,12 +689,16 @@ const hoverImageVisible = ref(false);
 const hoverImageSrc = ref('');
 const hoverImagePosition = ref({ x: 0, y: 0 });
 
+const IMAGE_MAX_SIZE = 1 * 1024 * 1024; // 每张照片最大 1M
 const handleImageSelect = (event, index) => {
-	if (isEditable.value) return; // 如果不可编辑，直接返回
-	const file = event.raw || event; // 兼容不同的事件对象格式
+	if (isEditable.value) return;
+	const file = event.raw || event;
 	if (!file) {
-		console.error('No file selected');
 		ElMessage.error('请选择图片文件');
+		return;
+	}
+	if (file.size > IMAGE_MAX_SIZE) {
+		ElMessage.warning('每张图片不能超过 1M');
 		return;
 	}
 	const reader = new FileReader();
@@ -838,19 +842,20 @@ const NewprudctInquityDetailsform = reactive({
 const uploadRef = ref(null);
 const uploadData = ref({}); // 这里定义上传时需要附带的数据
 const uploadfileList = ref([]);//询价单附件列表
+const ATTACHMENT_TOTAL_MAX = 50 * 1024 * 1024; // 附件总量不超过 50M
+const getAttachmentTotalSize = (list) => (list || []).reduce((sum, f) => sum + (f.raw ? f.raw.size : 0), 0);
 // 处理文件改变事件
 const handleFileChange = (file, fileList) => {
+	const totalSize = getAttachmentTotalSize(fileList);
+	if (totalSize > ATTACHMENT_TOTAL_MAX) {
+		ElMessage.error('附件总大小不能超过 50M');
+		uploadfileList.value = fileList.filter(f => f.uid !== file.uid);
+		return;
+	}
 	if (!file.isExisting) {
-		// 这是新上传的文件
-		const newFile = {
-			fileName: file.name,
-			file: file.raw,
-			isNew: true,
-			remark: '默认备注' // 添加默认备注
-		};
+		const newFile = { fileName: file.name, file: file.raw, isNew: true, remark: '默认备注' };
 		inquiryDocumentList.value.push(newFile);
 	}
-	// 更新 uploadfileList
 	uploadfileList.value = fileList;
 };
 

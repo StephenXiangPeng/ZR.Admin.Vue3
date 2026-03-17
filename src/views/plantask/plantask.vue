@@ -689,7 +689,12 @@ const currentAttachments = ref<string[]>([])
 // 文件上传相关
 const mainTaskFileList = ref([])
 const handleMainTaskFileChange = (file, fileList) => {
-	// 如果是编辑模式，保留原有的文件列表
+	const totalSize = getAttachmentTotalSize(fileList);
+	if (totalSize > ATTACHMENT_TOTAL_MAX) {
+		ElMessage.error('附件总大小不能超过 50M');
+		mainTaskFileList.value = fileList.filter(f => f.uid !== file.uid);
+		return;
+	}
 	if (isEditMode.value && selectedTask.value?.attachmentUrls) {
 		const existingFiles = selectedTask.value.attachmentUrls.split(',').map(url => ({
 			name: getFileNameFromUrl(url),
@@ -709,12 +714,19 @@ const handleMainTaskFileRemove = (file) => {
 	}
 }
 
+const ATTACHMENT_TOTAL_MAX_PLANTASK = 50 * 1024 * 1024; // 附件总量不超过 50M
+const getAttachmentTotalSizePlantask = (list) => (list || []).reduce((sum, f) => sum + (f.raw ? f.raw.size : 0), 0);
 // 处理事项文件变更
 const handleItemFileChange = (stageIndex, itemIndex, file, fileList) => {
+	const totalSize = getAttachmentTotalSizePlantask(fileList);
+	if (totalSize > ATTACHMENT_TOTAL_MAX_PLANTASK) {
+		ElMessage.error('附件总大小不能超过 50M');
+		stages.value[stageIndex].items[itemIndex].fileList = fileList.filter(f => f.uid !== file.uid);
+		return;
+	}
 	if (!stages.value[stageIndex].items[itemIndex].fileList) {
 		stages.value[stageIndex].items[itemIndex].fileList = []
 	}
-
 	// 如果是编辑模式，保留原有的文件列表
 	if (isEditMode.value && selectedTaskPhases.value) {
 		const phase = selectedTaskPhases.value[stageIndex];
@@ -895,6 +907,12 @@ const handleTaskExpediting = async (task) => {
 
 // 处理任务完成附件变更
 const handleCompletionFileChange = (file, fileList) => {
+	const totalSize = getAttachmentTotalSize(fileList);
+	if (totalSize > ATTACHMENT_TOTAL_MAX) {
+		ElMessage.error('附件总大小不能超过 50M');
+		completionFileList.value = fileList.filter(f => f.uid !== file.uid);
+		return;
+	}
 	completionFileList.value = fileList;
 }
 
@@ -1395,15 +1413,19 @@ const dialogVisible = ref(false)
 const disabled = ref(false)
 const formData = { filePath: 'planTask' }
 
+const IMAGE_MAX_SIZE = 1 * 1024 * 1024; // 每张照片最大 1M
+const ATTACHMENT_TOTAL_MAX = 50 * 1024 * 1024; // 附件总量不超过 50M
+const getAttachmentTotalSize = (list) => (list || []).reduce((sum, f) => sum + (f.raw ? f.raw.size : 0), 0);
 // 处理图片变更
 const handleImageChange = (file, fileList) => {
-	// 先检查文件数量限制
+	if (file.raw && file.raw.size > IMAGE_MAX_SIZE) {
+		ElMessage.error('每张图片不能超过 1M');
+		planTaskImages.value = fileList.filter(f => f.uid !== file.uid);
+		return;
+	}
 	if (fileList.length > 3) {
-		ElMessage({
-			type: 'info',
-			message: '最多上传3张图片!'
-		});
-		fileList.splice(3); // 保留前三个文件，移除其余文件
+		ElMessage({ type: 'info', message: '最多上传3张图片!' });
+		fileList.splice(3);
 		return;
 	}
 	// 如果是编辑模式，保留已存在的图片

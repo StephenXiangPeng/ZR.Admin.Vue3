@@ -1043,18 +1043,27 @@ const handleDownload = (file) => {
 	window.open(fullUrl, '_blank');
 };
 
+// 附件总量不超过 50M
+const ATTACHMENT_TOTAL_MAX = 50 * 1024 * 1024;
+const getAttachmentTotalSize = (list) => {
+	return (list || []).reduce((sum, f) => sum + (f.raw ? f.raw.size : 0), 0);
+};
 const handleFileChange = (file, fileList) => {
+	const totalSize = getAttachmentTotalSize(fileList);
+	if (totalSize > ATTACHMENT_TOTAL_MAX) {
+		ElMessage.error('附件总大小不能超过 50M');
+		uploadfileList.value = fileList.filter(f => f.uid !== file.uid);
+		return;
+	}
 	if (!file.isExisting) {
-		// 这是新上传的文件
 		const newFile = {
 			fileName: file.name,
 			file: file.raw,
 			isNew: true,
-			remark: '默认备注' // 添加默认备注
+			remark: '默认备注'
 		};
 		inquiryDocumentList.value.push(newFile);
 	}
-	// 更新 uploadfileList
 	uploadfileList.value = fileList;
 };
 

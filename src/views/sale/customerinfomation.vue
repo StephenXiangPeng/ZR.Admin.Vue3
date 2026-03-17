@@ -954,7 +954,7 @@
 				</el-form-item>
 				<el-form-item label="图片">
 					<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="contactLogImages"
-						:action="UploadUrl" accept="image/*" @preview="handleImagePreview">
+						:limit="3" :action="UploadUrl" accept="image/*" @change="handleContactLogImageChange" @preview="handleImagePreview">
 						<el-icon>
 							<Plus />
 						</el-icon>
@@ -966,10 +966,10 @@
 				</el-form-item>
 				<el-form-item label="附件">
 					<el-upload :auto-upload="false" v-model:file-list="contactLogAttachments" :action="UploadUrl"
-						style="width: 100%">
+						@change="handleContactLogAttachmentChange" style="width: 100%">
 						<el-button type="primary">选择文件</el-button>
 						<template #tip>
-							<div class="el-upload__tip">可上传任意类型文件</div>
+							<div class="el-upload__tip">可上传任意类型文件，附件总大小不超过 50M</div>
 						</template>
 					</el-upload>
 				</el-form-item>
@@ -1618,13 +1618,17 @@ const handleRemove = (file: CustomUploadFile) => {
 	});
 };
 
+// 照片每张最大 1M
+const IMAGE_MAX_SIZE = 1 * 1024 * 1024;
 // 检查上传客户图片数量
 const handleChange = (file: CustomUploadFile, fileList: CustomUploadFile[]) => {
+	if (file.raw && file.raw.size > IMAGE_MAX_SIZE) {
+		ElMessage.error('每张图片不能超过 1M');
+		fileList.splice(fileList.findIndex(f => f.uid === file.uid), 1);
+		return;
+	}
 	if (fileList.length > 3) {
-		ElMessage({
-			type: 'info',
-			message: '最多上传3张图片！'
-		});
+		ElMessage({ type: 'info', message: '最多上传3张图片！' });
 		fileList.splice(3);
 		return;
 	}
@@ -2937,6 +2941,27 @@ const AddContactLog = async () => {
 	contactLogDialogVisible.value = true
 }
 
+// 联系记录图片：最多3张，每张1M
+const handleContactLogImageChange = (file, fileList) => {
+	if (file.raw && file.raw.size > IMAGE_MAX_SIZE) {
+		ElMessage.error('每张图片不能超过 1M')
+		contactLogImages.value = fileList.filter(f => f.uid !== file.uid)
+		return
+	}
+	if (fileList.length > 3) {
+		ElMessage.warning('最多上传3张图片')
+		contactLogImages.value = fileList.slice(0, 3)
+	}
+}
+// 联系记录附件：总量不超过 50M
+const ATTACHMENT_TOTAL_MAX = 50 * 1024 * 1024
+const getAttachmentTotalSize = (list) => (list || []).reduce((sum, f) => sum + (f.raw ? f.raw.size : 0), 0)
+const handleContactLogAttachmentChange = (file, fileList) => {
+	if (getAttachmentTotalSize(fileList) > ATTACHMENT_TOTAL_MAX) {
+		ElMessage.error('附件总大小不能超过 50M')
+		contactLogAttachments.value = fileList.filter(f => f.uid !== file.uid)
+	}
+}
 // 图片预览
 const handleImagePreview = (file) => {
 	previewImageUrl.value = file.url || URL.createObjectURL(file.raw)

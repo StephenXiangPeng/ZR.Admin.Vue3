@@ -404,17 +404,18 @@ const handleRemove = (file: UploadFile) => {
 	});
 };
 
+const IMAGE_MAX_SIZE = 1 * 1024 * 1024; // 每张照片最大 1M
 const handleChange = (file, fileList) => {
-	// 检查文件数量限制
+	if (file.raw && file.raw.size > IMAGE_MAX_SIZE) {
+		ElMessage.error('每张图片不能超过 1M');
+		fileList.splice(fileList.findIndex(f => f.uid === file.uid), 1);
+		return;
+	}
 	if (fileList.length > 3) {
-		ElMessage({
-			type: 'info',
-			message: '最多上传3张图片！'
-		});
+		ElMessage({ type: 'info', message: '最多上传3张图片！' });
 		fileList.splice(3);
 		return;
 	}
-
 	// 检查是否是新文件
 	if (!file.isExisting) {
 		const isDuplicate = uploadedFiles.value.some(f => f.name === file.name);

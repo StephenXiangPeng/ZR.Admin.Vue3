@@ -217,7 +217,7 @@
 							<el-row>
 								<el-form-item label="供应商图片">
 									<el-upload list-type="picture-card" :auto-upload="false"
-										v-model:file-list="fileList" limit="5" :disabled="fileList.length >= 5"
+										v-model:file-list="fileList" :limit="3" :disabled="fileList.length >= 3"
 										@change="handleChange" :action="UploadUrl" :data="formData">
 										<el-icon>
 											<Plus />
@@ -1112,16 +1112,21 @@ const SaveSupperinfo = () => {
 	});
 }
 
+// 照片每张最大 1M
+const IMAGE_MAX_SIZE = 1 * 1024 * 1024;
 // 上传文件
 const handleChange = (file, fileList) => {
-	// 先检查文件数量限制
-	if (fileList.length > 5) {
-		ElMessage({
-			type: 'info',
-			message: '最多上传3张图片！'
-		});
-		fileList.splice(3); // 保留前三个文件，移除其余文件
-		return; // 不再继续执行后面的代码
+	// 检查单张图片大小（每张最大 1M）
+	if (file.raw && file.raw.size > IMAGE_MAX_SIZE) {
+		ElMessage.error('每张图片不能超过 1M');
+		fileList.pop();
+		return;
+	}
+	// 先检查文件数量限制（最多 3 张）
+	if (fileList.length > 3) {
+		ElMessage({ type: 'info', message: '最多上传3张图片！' });
+		fileList.splice(3);
+		return;
 	}
 	const duplicate = uploadedFiles.value.findIndex(fileItem => fileItem.name === file.name);
 	if (duplicate !== -1) {

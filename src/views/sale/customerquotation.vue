@@ -3288,16 +3288,19 @@ const uploadImageToServer = async (file) => {
 	}
 }
 
+const IMAGE_MAX_SIZE = 1 * 1024 * 1024; // 每张照片最大 1M
 // 图片处理函数
 const handleImageSelect = async (event, index) => {
-	if (isDisabled.value) return; // 如果不可编辑，直接返回
-	const file = event.raw || event; // 兼容不同的事件对象格式
+	if (isDisabled.value) return;
+	const file = event.raw || event;
 	if (!file) {
-		console.error('No file selected');
 		ElMessage.error('请选择图片文件');
 		return;
 	}
-
+	if (file.size > IMAGE_MAX_SIZE) {
+		ElMessage.warning('每张图片不能超过 1M');
+		return;
+	}
 	// 上传图片到服务器
 	const imageUrl = await uploadImageToServer(file);
 	if (imageUrl) {

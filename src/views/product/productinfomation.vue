@@ -1203,10 +1203,15 @@ watch(() => SubProductTableData.value?.map(p => p.subproductImages), (newVal, ol
 }, { deep: true });
 
 
+const IMAGE_MAX_SIZE = 1 * 1024 * 1024; // 每张照片最大 1M
 const handleImageSelect = (file, index) => {
 	if (!file) {
-		console.error('No file selected');
 		ElMessage.error('请选择图片文件');
+		return;
+	}
+	const raw = file.raw || file;
+	if (raw.size > IMAGE_MAX_SIZE) {
+		ElMessage.warning('每张图片不能超过 1M');
 		return;
 	}
 	const reader = new FileReader();
@@ -1351,14 +1356,15 @@ const clearProductform = () => {
 
 //  上传主产品图片
 const handleChange = (file, fileList) => {
-	// 先检查文件数量限制
+	if (file.raw && file.raw.size > IMAGE_MAX_SIZE) {
+		ElMessage.error('每张图片不能超过 1M');
+		fileList.splice(fileList.findIndex(f => f.uid === file.uid), 1);
+		return;
+	}
 	if (fileList.length > 3) {
-		ElMessage({
-			type: 'info',
-			message: '最多上传3张图片!'
-		});
-		fileList.splice(3); // 保留前三个文件，移除其余文件
-		return; // 不再继续执行后面的代码
+		ElMessage({ type: 'info', message: '最多上传3张图片!' });
+		fileList.splice(3);
+		return;
 	}
 	const duplicate = uploadedFiles.value.findIndex(fileItem => fileItem.name === file.name);
 	if (duplicate !== -1) {
