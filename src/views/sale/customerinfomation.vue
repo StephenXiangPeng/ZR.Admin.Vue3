@@ -3737,6 +3737,13 @@ const CustomerSendSampleHandlePageChange = async (newPage) => {
 </script>
 
 <style scoped>
+/* 列表表头高度减半（默认约 12px 上下内边距改为 6px） */
+:deep(.el-table th.el-table__cell) {
+	padding-top: 6px !important;
+	padding-bottom: 6px !important;
+	line-height: 1.2;
+}
+
 /* 联系日志中邮件记录的联系内容可双击跳转，显示手型 */
 .contact-content-link {
 	cursor: pointer;
