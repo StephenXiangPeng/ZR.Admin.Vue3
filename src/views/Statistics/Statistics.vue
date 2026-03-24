@@ -13,7 +13,29 @@
 						:label="dict.dictLabel" :value="dict.dictValue" />
 				</el-select>
 			</div>
-			<div ref="chartRef" class="chart-wrap" />
+			<div v-if="isTradingCountryDimension" class="dual-charts dual-charts-row">
+				<div class="chart-panel">
+					<div class="chart-block-head">
+						<div class="chart-block-title">大洲分布</div>
+						<div class="chart-hint">点击某一洲可筛选右侧国家</div>
+					</div>
+					<div ref="continentChartRef" class="chart-wrap chart-wrap-half" />
+				</div>
+				<div class="chart-panel">
+					<div class="chart-block-head">
+						<div class="chart-block-title">
+							<span>国家分布</span>
+							<el-button v-if="selectedContinentFilter" type="primary" link class="chart-reset-btn"
+								@click="clearContinentFilter">
+								显示全部国家
+							</el-button>
+						</div>
+						<div class="chart-hint chart-hint--spacer" aria-hidden="true">&nbsp;</div>
+					</div>
+					<div ref="countryChartRef" class="chart-wrap chart-wrap-half" />
+				</div>
+			</div>
+			<div v-else ref="chartRef" class="chart-wrap" />
 		</el-card>
 	</div>
 </template>
@@ -25,7 +47,11 @@ import request from '@/utils/request'
 
 const proxy = getCurrentInstance().proxy
 const chartRef = ref(null)
+const continentChartRef = ref(null)
+const countryChartRef = ref(null)
 let chartInstance = null
+let continentChartInstance = null
+let countryChartInstance = null
 
 const state = reactive({
 	optionss: {
@@ -39,6 +65,8 @@ const { optionss } = toRefs(state)
 
 const selectedDimension = ref('')
 const statisticsPayload = ref(null)
+/** 点击洲后筛选国家饼图：{ continentId, continentName } */
+const selectedContinentFilter = ref(null)
 
 const dictParams = [
 	{ dictType: 'hr_customer_source_statistics_dimension' },
@@ -47,7 +75,7 @@ const dictParams = [
 	{ dictType: 'hr_nation' },
 ]
 
-/** 字典 dictValue 与饼图数据字段对应；1=业务范围 2=国家 3=来源；也支持 dictLabel 关键词匹配 */
+/** 字典 dictValue 与饼图数据字段对应；1=业务范围 2=国家地区 3=来源 */
 const DIMENSION_TO_STATS_KEY = {
 	customerSourceStats: 'customerSourceStats',
 	businessScopeStats: 'businessScopeStats',
@@ -74,7 +102,6 @@ function pickArray(obj, keys) {
 	return []
 }
 
-/** 兼容 camelCase / PascalCase、以及 data 多包一层 */
 function normalizeStatisticsPayload(raw) {
 	if (raw == null) return null
 	let d = raw
@@ -107,10 +134,12 @@ function resolveStatsKey(dimension) {
 		const lab = String(hit.dictLabel)
 		if (/来源|source/i.test(lab)) return 'customerSourceStats'
 		if (/业务|范围|scope/i.test(lab)) return 'businessScopeStats'
-		if (/国|国家|贸易|country/i.test(lab)) return 'tradingCountryStats'
+		if (/国|国家|贸易|country|地区/i.test(lab)) return 'tradingCountryStats'
 	}
 	return null
 }
+
+const isTradingCountryDimension = computed(() => resolveStatsKey(selectedDimension.value) === 'tradingCountryStats')
 
 function getStatsList(payload, statsKey) {
 	if (!payload || !statsKey) return []
@@ -123,7 +152,6 @@ function getNationDictRow(countryKey) {
 	return (state.optionss.hr_nation || []).find((o) => String(o.dictValue) === key)
 }
 
-/** 接口未返回 continentName 时：用国家字典 remark，再无则「其他」 */
 function continentLabelForNation(countryKey) {
 	const row = getNationDictRow(countryKey)
 	const r = row?.remark != null ? String(row.remark).trim() : ''
@@ -179,35 +207,87 @@ function rowsToPieData(statsKey, list) {
 		.filter((x) => x.name && !Number.isNaN(x.value))
 }
 
-/** 国家维度：内层国家、外层按洲汇总 */
-function tradingCountryRowsToContinentDoublePie(list) {
-	if (!Array.isArray(list)) return { innerData: [], outerData: [] }
-	const continentTotals = new Map()
-	const innerData = []
+/** 按洲汇总；扇区 data 带 continentId 供点击筛选 */
+function tradingStatsToContinentPieData(list) {
+	if (!Array.isArray(list)) return []
+	const map = new Map()
 	for (const item of list) {
+		const value = Number(item.customerCount ?? item.CustomerCount ?? 0)
+		if (Number.isNaN(value) || value <= 0) continue
+		const countryKey = item.tradingCountry ?? item.TradingCountry
+		const cid = item.continentId ?? item.ContinentId
+		const cnameRaw = item.continentName ?? item.ContinentName
+		const cname =
+			cnameRaw != null && String(cnameRaw).trim() !== ''
+				? String(cnameRaw).trim()
+				: continentNameFromTradingRow(item, countryKey)
+		const key = cid != null && cid !== '' ? `id:${cid}` : `n:${cname}`
+		const prev = map.get(key)
+		if (prev) {
+			prev.value += value
+		} else {
+			map.set(key, {
+				name: cname,
+				value,
+				continentId: cid,
+			})
+		}
+	}
+	return [...map.values()].sort((a, b) => b.value - a.value)
+}
+
+/** filter 有值时只保留该洲下的国家；无 filter 显示全部国家 */
+function tradingStatsToCountryPieData(list, filter) {
+	if (!Array.isArray(list)) return []
+	let rows = list
+	if (filter) {
+		const fid = filter.continentId
+		if (fid !== undefined && fid !== null && fid !== '') {
+			rows = list.filter((item) => String(item.continentId ?? item.ContinentId ?? '') === String(fid))
+		} else if (filter.continentName) {
+			const fn = String(filter.continentName).trim()
+			rows = list.filter((item) => {
+				const cn = String(item.continentName ?? item.ContinentName ?? '').trim()
+				return cn === fn
+			})
+		}
+	}
+	const out = []
+	for (const item of rows) {
 		const countryKey = item.tradingCountry ?? item.TradingCountry
 		const value = Number(item.customerCount ?? item.CustomerCount ?? 0)
 		if (Number.isNaN(value) || value <= 0) continue
 		const name = labelForSlice('tradingCountryStats', countryKey)
 		if (!name) continue
-		innerData.push({ name, value })
-		const cont = continentNameFromTradingRow(item, countryKey)
-		continentTotals.set(cont, (continentTotals.get(cont) || 0) + value)
+		out.push({ name, value })
 	}
-	const outerData = [...continentTotals.entries()]
-		.map(([name, value]) => ({ name, value }))
-		.sort((a, b) => b.value - a.value)
-	innerData.sort((a, b) => b.value - a.value)
-	return { innerData, outerData }
+	out.sort((a, b) => b.value - a.value)
+	return out
 }
 
-function initChart() {
-	if (!chartRef.value || chartInstance) return
-	chartInstance = echarts.init(chartRef.value)
+function disposeAllCharts() {
+	chartInstance?.dispose()
+	chartInstance = null
+	continentChartInstance?.off('click')
+	continentChartInstance?.dispose()
+	continentChartInstance = null
+	countryChartInstance?.dispose()
+	countryChartInstance = null
+}
+
+const pieItemStyle = {
+	borderRadius: 4,
+	borderColor: '#fff',
+	borderWidth: 2,
+}
+
+const titleTextStyle = {
+	fontSize: 14,
+	fontWeight: 600,
+	color: 'var(--el-text-color-primary)',
 }
 
 function renderPie(pieData, seriesName) {
-	if (!chartInstance) initChart()
 	if (!chartInstance) return
 	chartInstance.clear()
 	chartInstance.setOption(
@@ -216,7 +296,7 @@ function renderPie(pieData, seriesName) {
 				text: seriesName || '统计分布',
 				left: 'center',
 				top: 8,
-				textStyle: { fontSize: 14, fontWeight: 600, color: 'var(--el-text-color-primary)' },
+				textStyle: titleTextStyle,
 			},
 			tooltip: {
 				trigger: 'item',
@@ -243,55 +323,38 @@ function renderPie(pieData, seriesName) {
 	)
 }
 
-const pieItemStyle = {
-	borderRadius: 4,
-	borderColor: '#fff',
-	borderWidth: 2,
-}
-
-function renderContinentCountryDoublePie(innerData, outerData, cardTitle) {
-	if (!chartInstance) initChart()
-	if (!chartInstance) return
-	chartInstance.clear()
-	chartInstance.setOption(
+function renderContinentChart(list) {
+	if (!continentChartInstance) return
+	const data = tradingStatsToContinentPieData(list)
+	continentChartInstance.clear()
+	continentChartInstance.setOption(
 		{
 			title: {
-				text: cardTitle || '统计分布',
+				text: '大洲分布',
 				left: 'center',
-				top: 8,
-				textStyle: { fontSize: 14, fontWeight: 600, color: 'var(--el-text-color-primary)' },
+				top: 4,
+				textStyle: titleTextStyle,
 			},
 			tooltip: {
 				trigger: 'item',
-				formatter: '{a}<br/>{b}：{c}（{d}%）',
+				formatter: '{b}：{c}（{d}%）',
 			},
 			legend: {
 				orient: 'horizontal',
 				bottom: 0,
 				type: 'scroll',
-				padding: [8, 24, 0, 24],
+				padding: [4, 16, 0, 16],
 			},
 			series: [
 				{
-					name: '国家',
-					type: 'pie',
-					radius: [0, '32%'],
-					center: ['50%', '52%'],
-					avoidLabelOverlap: true,
-					itemStyle: pieItemStyle,
-					label: { show: innerData.length <= 12, fontSize: 11 },
-					labelLine: { show: innerData.length <= 12 },
-					data: innerData,
-				},
-				{
 					name: '大洲',
 					type: 'pie',
-					radius: ['38%', '58%'],
+					radius: ['36%', '60%'],
 					center: ['50%', '52%'],
 					avoidLabelOverlap: true,
 					itemStyle: pieItemStyle,
 					label: { show: true },
-					data: outerData,
+					data,
 				},
 			],
 		},
@@ -299,24 +362,113 @@ function renderContinentCountryDoublePie(innerData, outerData, cardTitle) {
 	)
 }
 
+function renderCountryChart(list) {
+	if (!countryChartInstance) return
+	const data = tradingStatsToCountryPieData(list, selectedContinentFilter.value)
+	const sub = selectedContinentFilter.value?.continentName
+		? ` — ${selectedContinentFilter.value.continentName}`
+		: ''
+	countryChartInstance.clear()
+	countryChartInstance.setOption(
+		{
+			title: {
+				text: `国家分布${sub}`,
+				left: 'center',
+				top: 4,
+				textStyle: titleTextStyle,
+			},
+			tooltip: {
+				trigger: 'item',
+				formatter: '{b}：{c}（{d}%）',
+			},
+			legend: {
+				orient: 'horizontal',
+				bottom: 0,
+				type: 'scroll',
+				padding: [4, 16, 0, 16],
+			},
+			series: [
+				{
+					name: '国家',
+					type: 'pie',
+					radius: ['36%', '60%'],
+					center: ['50%', '52%'],
+					avoidLabelOverlap: true,
+					itemStyle: pieItemStyle,
+					label: { show: data.length <= 16, fontSize: 11 },
+					labelLine: { show: data.length <= 16 },
+					data,
+				},
+			],
+		},
+		{ notMerge: true }
+	)
+}
+
+function bindContinentChartClick() {
+	if (!continentChartInstance) return
+	continentChartInstance.off('click')
+	continentChartInstance.on('click', (params) => {
+		const d = params.data
+		if (!d) return
+		selectedContinentFilter.value = {
+			continentId: d.continentId ?? d.ContinentId ?? null,
+			continentName: d.name ?? '',
+		}
+		const list = getStatsList(statisticsPayload.value, 'tradingCountryStats')
+		renderCountryChart(list)
+	})
+}
+
+function clearContinentFilter() {
+	selectedContinentFilter.value = null
+	const list = getStatsList(statisticsPayload.value, 'tradingCountryStats')
+	renderCountryChart(list)
+}
+
+function initSingleChartAndRender(pieData) {
+	if (!chartRef.value) return
+	chartInstance = echarts.init(chartRef.value)
+	renderPie(pieData, chartTitle.value)
+}
+
+function initDualChartsAndRender(list) {
+	if (!continentChartRef.value || !countryChartRef.value) return
+	continentChartInstance = echarts.init(continentChartRef.value)
+	countryChartInstance = echarts.init(countryChartRef.value)
+	bindContinentChartClick()
+	renderContinentChart(list)
+	renderCountryChart(list)
+}
+
 function applyChartFromSelection() {
+	disposeAllCharts()
+
 	if (selectedDimension.value === '' || selectedDimension.value == null) {
-		renderPie([], chartTitle.value)
+		nextTick(() => initSingleChartAndRender([]))
 		return
 	}
 	const statsKey = resolveStatsKey(selectedDimension.value)
 	if (!statsKey || !statisticsPayload.value) {
-		renderPie([], chartTitle.value)
+		nextTick(() => initSingleChartAndRender([]))
 		return
 	}
 	const list = getStatsList(statisticsPayload.value, statsKey)
+
 	if (statsKey === 'tradingCountryStats') {
-		const { innerData, outerData } = tradingCountryRowsToContinentDoublePie(list)
-		renderContinentCountryDoublePie(innerData, outerData, chartTitle.value)
+		nextTick(() => {
+			if (continentChartRef.value && countryChartRef.value) {
+				initDualChartsAndRender(list)
+			} else {
+				nextTick(() => initDualChartsAndRender(list))
+			}
+		})
 		return
 	}
-	const pieData = rowsToPieData(statsKey, list)
-	renderPie(pieData, chartTitle.value)
+
+	nextTick(() => {
+		initSingleChartAndRender(rowsToPieData(statsKey, list))
+	})
 }
 
 async function loadCustomerSourceStatistics() {
@@ -340,9 +492,12 @@ async function loadCustomerSourceStatistics() {
 
 function onResize() {
 	chartInstance?.resize()
+	continentChartInstance?.resize()
+	countryChartInstance?.resize()
 }
 
 watch(selectedDimension, () => {
+	selectedContinentFilter.value = null
 	applyChartFromSelection()
 })
 
@@ -355,7 +510,6 @@ proxy.getDicts(dictParams).then((response) => {
 		state.optionss[el.dictType] = el.list
 	})
 	nextTick(async () => {
-		initChart()
 		const list = state.optionss.hr_customer_source_statistics_dimension
 		if (list?.length) {
 			selectedDimension.value = list[0].dictValue
@@ -366,8 +520,7 @@ proxy.getDicts(dictParams).then((response) => {
 
 onBeforeUnmount(() => {
 	window.removeEventListener('resize', onResize)
-	chartInstance?.dispose()
-	chartInstance = null
+	disposeAllCharts()
 })
 </script>
 
@@ -387,6 +540,66 @@ onBeforeUnmount(() => {
 .chart-wrap {
 	height: 420px;
 	width: 100%;
+}
+
+.dual-charts {
+	margin-top: 4px;
+}
+
+.dual-charts-row {
+	display: flex;
+	flex-flow: row nowrap;
+	align-items: stretch;
+	gap: 16px;
+	width: 100%;
+}
+
+.chart-panel {
+	flex: 1 1 0;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.chart-block-head {
+	flex-shrink: 0;
+	min-height: 48px;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+}
+
+.chart-block-title {
+	font-weight: 600;
+	font-size: 14px;
+	margin-bottom: 2px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.chart-hint {
+	font-size: 12px;
+	color: var(--el-text-color-secondary);
+	line-height: 1.4;
+	min-height: 1.4em;
+}
+
+.chart-hint--spacer {
+	visibility: hidden;
+	user-select: none;
+}
+
+.chart-reset-btn {
+	font-size: 13px;
+}
+
+.chart-wrap-half {
+	flex: 1 1 auto;
+	width: 100%;
+	min-height: 360px;
+	height: 380px;
 }
 
 .card-header {
