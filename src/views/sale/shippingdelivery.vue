@@ -56,7 +56,8 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table class="customer-info-table" :data="shippingDeliveryTableData" style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="shippingDeliveryTableData"
+				style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="id" label="出运发货单ID" width="150px" v-if="false"></el-table-column>
@@ -119,9 +120,10 @@
 				<el-table-column prop="settlementMethod" label="结汇方式" width="90"></el-table-column>
 				<el-table-column prop="transportationMethod" label="运输方式" width="90"></el-table-column>
 				<el-table-column prop="receivableDate" label="应收汇日" width="150"></el-table-column>
-				<el-table-column fixed="right" label="操作" width="200px">
+				<el-table-column fixed="right" label="操作" width="280px">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="CheckShipingDelivery(scope.row)">查看/编辑</el-button>
+						<el-button type="primary" link size="small" @click="handleTestExcel">测试excel</el-button>
 						<el-button type="warning" size="small" icon="Back" link
 							v-if="scope.row.reviewStatusStr === '审核中' && (scope.row.createBy != null && scope.row.createBy.toString() === useUserStore().userId.toString())"
 							@click="withdrawalApproval(scope.row)">撤回审批</el-button>
@@ -133,11 +135,11 @@
 					</template>
 				</el-table-column>
 			</el-table>
-			<el-pagination @current-change="paymentrequesttableDataHandlePageChange" @size-change="ShippingDeliveriesTableDataHandleSizeChange"
+			<el-pagination @current-change="paymentrequesttableDataHandlePageChange"
+				@size-change="ShippingDeliveriesTableDataHandleSizeChange"
 				:current-page="ShippingDeliveriesTableDataCurrentPage" :page-size="ShippingDeliveriesTableDataPageSize"
-				:total="ShippingDeliveriesTableDataTotalItems" :page-sizes="[10, 20, 30, 50]"
-				background layout="total, sizes, prev, pager, next, jumper"
-				style="margin-top: 10px; text-align: right;" />
+				:total="ShippingDeliveriesTableDataTotalItems" :page-sizes="[10, 20, 30, 50]" background
+				layout="total, sizes, prev, pager, next, jumper" style="margin-top: 10px; text-align: right;" />
 		</div>
 		<el-dialog :modal="false" modal-penetrable v-model="CreateshippingdeliveryDialog" title="创建出运发货单"
 			:close-on-click-modal=false style="width: 75%;" @close="CreateshippingdeliveryDialogClose()">
@@ -653,7 +655,7 @@
 import { createApp, getCurrentInstance, reactive, toRefs, ref, nextTick } from 'vue'
 import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
 import type { Action } from 'element-plus'
-import request from '@/utils/request';
+import request, { downFile } from '@/utils/request';
 import { get } from 'sortablejs';
 import Supperinfomation from '../purchase/supperinfomation.vue';
 import dayjs from 'dayjs';
@@ -2114,6 +2116,11 @@ const RemoveShippingDeliveriesContractEditLock = async (contractId) => {
 var CreateByUser;
 //出运发货单选中数据ID
 var ShippingDeliveriesID = ref(0);
+
+const handleTestExcel = () => {
+	downFile('ShippingDeliveries/TestExcel/test-excel', {}, undefined);
+};
+
 //检查出运发货单
 const CheckShipingDelivery = async (row) => {
 	ShippingDeliveriesID.value = row.id;
