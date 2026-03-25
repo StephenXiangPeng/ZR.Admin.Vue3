@@ -105,43 +105,52 @@
 			</div>
 		</el-card>
 
-		<el-card shadow="never" class="section-card">
+		<el-card shadow="never" class="section-card trend-section-card">
 			<template #header>
-				<div class="card-header">
-					<span>产品销售趋势统计</span>
+				<div class="trend-card-header">
+					<span class="trend-card-title">产品销售趋势统计</span>
+					<div class="trend-header-toolbar">
+						<el-select v-model="trendTimeType" class="trend-header-item" style="width: 100px">
+							<el-option label="按季度" value="quarter" />
+							<el-option label="按年" value="year" />
+						</el-select>
+						<span class="trend-toolbar-label">年</span>
+						<el-input-number v-model="trendYear" :min="2000" :max="2099" controls-position="right"
+							class="trend-header-item trend-year-input" />
+						<template v-if="trendTimeType === 'quarter'">
+							<span class="trend-toolbar-label">季</span>
+							<el-select v-model="trendQuarter" class="trend-header-item" style="width: 92px">
+								<el-option v-for="q in 4" :key="q" :label="`Q${q}`" :value="q" />
+							</el-select>
+						</template>
+						<span class="trend-toolbar-label">指标</span>
+						<el-radio-group v-model="trendMetric" class="trend-header-item trend-radio-group">
+							<el-radio-button label="amount">金额</el-radio-button>
+							<el-radio-button label="quantity">数量</el-radio-button>
+						</el-radio-group>
+						<span class="trend-toolbar-label">大洲</span>
+						<el-select v-model="trendSelectedContinentId" class="trend-header-item trend-cascade-select" clearable
+							filterable placeholder="大洲" @clear="onTrendContinentClear">
+							<el-option v-for="opt in trendContinentOptions" :key="'c-' + opt.value" :label="opt.label"
+								:value="opt.value" />
+						</el-select>
+						<span class="trend-toolbar-label">国家</span>
+						<el-select v-model="trendSelectedCountryId" class="trend-header-item trend-cascade-select" clearable
+							filterable placeholder="国家" :disabled="trendSelectedContinentId == null"
+							@clear="onTrendCountryClear">
+							<el-option v-for="opt in trendCountryOptions" :key="'n-' + opt.value" :label="opt.label"
+								:value="opt.value" />
+						</el-select>
+						<span class="trend-toolbar-label">分类</span>
+						<el-select v-model="trendSelectedCategoryId" class="trend-header-item trend-cascade-select" clearable
+							filterable placeholder="分类" :disabled="trendSelectedCountryId == null">
+							<el-option v-for="opt in trendCategoryOptions" :key="'g-' + opt.value" :label="opt.label"
+								:value="opt.value" />
+						</el-select>
+						<span v-if="salesTrendLoading" class="trend-loading-hint">加载中…</span>
+					</div>
 				</div>
 			</template>
-			<div class="toolbar sales-toolbar">
-				<el-select v-model="trendTimeType" class="sales-toolbar-item" style="width: 120px">
-					<el-option label="按季度" value="quarter" />
-					<el-option label="按年" value="year" />
-				</el-select>
-				<span class="toolbar-label">年份</span>
-				<el-input-number v-model="trendYear" :min="2000" :max="2099" controls-position="right"
-					class="sales-toolbar-item sales-year-input" />
-				<template v-if="trendTimeType === 'quarter'">
-					<span class="toolbar-label">季度</span>
-					<el-select v-model="trendQuarter" class="sales-toolbar-item" style="width: 120px">
-						<el-option v-for="q in 4" :key="q" :label="`第 ${q} 季度`" :value="q" />
-					</el-select>
-				</template>
-				<span class="toolbar-label">维度</span>
-				<el-radio-group v-model="trendDimension" class="sales-toolbar-item trend-radio-group">
-					<el-radio-button label="continent">大洲</el-radio-button>
-					<el-radio-button label="country">国家</el-radio-button>
-					<el-radio-button label="category">产品分类</el-radio-button>
-				</el-radio-group>
-				<span v-if="trendDimension === 'category'" class="trend-chart-desc">各分类单独一条曲线</span>
-				<span class="toolbar-label">指标</span>
-				<el-radio-group v-model="trendMetric" class="sales-toolbar-item trend-radio-group">
-					<el-radio-button label="amount">金额（¥）</el-radio-button>
-					<el-radio-button label="quantity">数量</el-radio-button>
-				</el-radio-group>
-				<el-button type="primary" class="sales-toolbar-item" :loading="salesTrendLoading"
-					@click="loadSalesTrendData">
-					查询
-				</el-button>
-			</div>
 			<div v-if="salesTrendMetaText" class="sales-range-hint">{{ salesTrendMetaText }}</div>
 			<div ref="salesTrendChartRef" class="chart-wrap trend-chart-wrap" />
 		</el-card>
@@ -196,7 +205,10 @@ const productCategoryLabelMap = ref(new Map())
 const trendTimeType = ref('quarter')
 const trendYear = ref(new Date().getFullYear())
 const trendQuarter = ref(Math.floor(new Date().getMonth() / 3) + 1)
-const trendDimension = ref('continent')
+/** 级联：null 表示未选；0 为合法 id */
+const trendSelectedContinentId = ref(null)
+const trendSelectedCountryId = ref(null)
+const trendSelectedCategoryId = ref(null)
 const trendMetric = ref('amount')
 const salesTrendPayload = ref(null)
 const salesTrendLoading = ref(false)
@@ -753,124 +765,191 @@ async function loadRegionSalesPieData() {
 	}
 }
 
+function normalizeTrendDetailRow(r) {
+	if (!r || typeof r !== 'object') return null
+	return {
+		month: r.month ?? r.Month,
+		continentId: r.continentId ?? r.ContinentId ?? 0,
+		tradeCountry: r.tradeCountry ?? r.TradeCountry ?? 0,
+		productCategoryId: r.productCategoryId ?? r.ProductCategoryId ?? 0,
+		productCategoryName: String(r.productCategoryName ?? r.ProductCategoryName ?? '').trim(),
+		quantity: Number(r.quantity ?? r.Quantity ?? 0) || 0,
+		amount: Number(r.amount ?? r.Amount ?? 0) || 0,
+	}
+}
+
 function normalizeSalesTrendPayload(raw) {
 	if (raw == null || typeof raw !== 'object') return null
 	const d = raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data) ? raw.data : raw
 	const xa = d.xAxis ?? d.XAxis
+	const det = pickArray(d, ['details', 'Details'])
+	const xk = d.xAxisKeys ?? d.XAxisKeys
 	return {
 		...d,
 		xAxis: Array.isArray(xa) ? xa : [],
-		continentSeries: pickArray(d, ['continentSeries', 'ContinentSeries']),
-		countrySeries: pickArray(d, ['countrySeries', 'CountrySeries']),
-		categorySeries: pickArray(d, ['categorySeries', 'CategorySeries']),
+		xAxisKeys: Array.isArray(xk) && xk.length ? xk : null,
+		details: (Array.isArray(det) ? det : []).map(normalizeTrendDetailRow).filter(Boolean),
 		startTime: d.startTime ?? d.StartTime,
 		endTime: d.endTime ?? d.EndTime,
 	}
 }
 
-function normalizeTrendSeriesRow(s) {
-	if (!s || typeof s !== 'object') return null
-	const qty = s.quantityData ?? s.QuantityData
-	const amt = s.amountData ?? s.AmountData
-	return {
-		key: s.key ?? s.Key ?? '',
-		name: s.name ?? s.Name ?? '',
-		quantityData: Array.isArray(qty) ? qty.map((n) => Number(n) || 0) : [],
-		amountData: Array.isArray(amt) ? amt.map((n) => Number(n) || 0) : [],
+function trendMonthBucketKey(v) {
+	if (v === null || v === undefined) return ''
+	return String(v).trim()
+}
+
+/** 按 X 轴顺序对齐：优先 xAxisKeys 与 Month 一致，否则用 xAxis 标签与 Month 字符串匹配 */
+function buildTrendLineDataFromDetails(payload, filteredRows, metric) {
+	const xLabels = Array.isArray(payload?.xAxis) ? payload.xAxis : []
+	const xKeys =
+		payload?.xAxisKeys?.length === xLabels.length ? payload.xAxisKeys : xLabels
+	const valKey = metric === 'amount' ? 'amount' : 'quantity'
+	const byKey = new Map()
+	for (const row of filteredRows) {
+		const mk = trendMonthBucketKey(row.month)
+		if (mk === '') continue
+		byKey.set(mk, (byKey.get(mk) || 0) + (Number(row[valKey]) || 0))
 	}
-}
-
-function getTrendSeriesRawList(payload, dimension) {
-	if (!payload) return []
-	let arr = []
-	if (dimension === 'continent') arr = payload.continentSeries
-	else if (dimension === 'country') arr = payload.countrySeries
-	else arr = payload.categorySeries
-	if (!Array.isArray(arr)) return []
-	return arr.map(normalizeTrendSeriesRow).filter(Boolean)
-}
-
-function categoryTrendSeriesDisplayName(s) {
-	const nm = s.name != null && String(s.name).trim() !== '' ? String(s.name).trim() : ''
-	return nm || productCategoryLabel(s.key)
-}
-
-function trendSeriesDisplayName(s, dimension) {
-	const k = s.key
-	if (dimension === 'continent') return continentLabelByDictId(Number(k) || k)
-	if (dimension === 'country') return labelForSlice('tradingCountryStats', k)
-	return categoryTrendSeriesDisplayName(s)
-}
-
-function sumNumberArray(arr) {
-	if (!Array.isArray(arr)) return 0
-	return arr.reduce((acc, b) => acc + (Number(b) || 0), 0)
-}
-
-function mergeTrendSeriesData(seriesRows, dataKey) {
-	const len = seriesRows[0]?.[dataKey]?.length ?? 0
-	const out = Array.from({ length: len }, () => 0)
-	for (const row of seriesRows) {
-		const d = row[dataKey] || []
-		for (let i = 0; i < len; i++) out[i] += Number(d[i]) || 0
+	const data = xKeys.map((k) => byKey.get(trendMonthBucketKey(k)) ?? 0)
+	const any = data.some((v) => v !== 0)
+	if (any) return data
+	// 兜底：按 Month 排序后与 X 轴等长时按序对齐
+	const keysSorted = [...byKey.keys()].sort((a, b) => {
+		const na = Number(a)
+		const nb = Number(b)
+		if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb
+		return String(a).localeCompare(String(b), 'zh-CN')
+	})
+	if (keysSorted.length === xLabels.length) {
+		return keysSorted.map((k) => byKey.get(k) || 0)
 	}
-	return out
+	return data
 }
 
-const TREND_MAX_LINES = 14
+function getTrendFilteredDetailRows(payload) {
+	const rows = payload?.details || []
+	const cId = trendSelectedContinentId.value
+	const nId = trendSelectedCountryId.value
+	const gId = trendSelectedCategoryId.value
+	if (cId == null || nId == null || gId == null) return []
+	return rows.filter(
+		(row) =>
+			String(row.continentId) === String(cId) &&
+			String(row.tradeCountry) === String(nId) &&
+			String(row.productCategoryId) === String(gId)
+	)
+}
 
-/** 大洲 / 国家：取合计额 Top N，其余合并为「其他」 */
-function buildTrimmedTrendSeriesForChart(payload, dimension, metric) {
-	const raw = getTrendSeriesRawList(payload, dimension)
-	if (!raw.length) return []
-	const dataKey = metric === 'amount' ? 'amountData' : 'quantityData'
-	const withSum = raw.map((s) => ({
-		...s,
-		displayName: trendSeriesDisplayName(s, dimension),
-		_sum: sumNumberArray(s[dataKey]),
-	}))
-	const nonZero = withSum.filter((x) => x._sum > 0)
-	nonZero.sort((a, b) => b._sum - a._sum)
-	const top = nonZero.slice(0, TREND_MAX_LINES)
-	const rest = nonZero.slice(TREND_MAX_LINES)
-	const result = top.map(({ _sum, ...r }) => r)
-	if (rest.length) {
-		result.push({
-			key: '__other__',
-			name: '其他',
-			displayName: '其他',
-			quantityData: mergeTrendSeriesData(rest, 'quantityData'),
-			amountData: mergeTrendSeriesData(rest, 'amountData'),
+function salesTrendSeriesTitle() {
+	const cId = trendSelectedContinentId.value
+	const nId = trendSelectedCountryId.value
+	const gId = trendSelectedCategoryId.value
+	if (cId == null || nId == null || gId == null) return '销售趋势'
+	const cname = continentLabelByDictId(cId)
+	const nname = labelForSlice('tradingCountryStats', nId)
+	const row = (salesTrendPayload.value?.details || []).find(
+		(r) =>
+			String(r.continentId) === String(cId) &&
+			String(r.tradeCountry) === String(nId) &&
+			String(r.productCategoryId) === String(gId)
+	)
+	const gname =
+		row?.productCategoryName ||
+		productCategoryLabel(gId)
+	return `${cname} · ${nname} · ${gname}`
+}
+
+const trendContinentOptions = computed(() => {
+	const details = salesTrendPayload.value?.details || []
+	if (!details.length) return []
+	const seen = new Set()
+	const opts = []
+	for (const r of details) {
+		const id = r.continentId
+		const s = String(id)
+		if (seen.has(s)) continue
+		seen.add(s)
+		opts.push({ value: id, label: continentLabelByDictId(id) })
+	}
+	opts.sort((a, b) => String(a.label).localeCompare(String(b.label), 'zh-CN'))
+	return opts
+})
+
+const trendCountryOptions = computed(() => {
+	const details = salesTrendPayload.value?.details || []
+	const cId = trendSelectedContinentId.value
+	if (cId == null || !details.length) return []
+	const seen = new Set()
+	const opts = []
+	for (const r of details) {
+		if (String(r.continentId) !== String(cId)) continue
+		const tid = r.tradeCountry
+		const s = String(tid)
+		if (seen.has(s)) continue
+		seen.add(s)
+		opts.push({
+			value: tid,
+			label: labelForSlice('tradingCountryStats', tid),
 		})
 	}
-	return result
-}
+	opts.sort((a, b) => String(a.label).localeCompare(String(b.label), 'zh-CN'))
+	return opts
+})
 
-/** 产品分类：每个分类一条线，不合并截断 */
-function buildCategoryTrendSeriesForChart(payload, metric) {
-	const raw = getTrendSeriesRawList(payload, 'category')
-	if (!raw.length) return []
-	const dataKey = metric === 'amount' ? 'amountData' : 'quantityData'
-	return raw
-		.map((s) => ({
-			...s,
-			displayName: trendSeriesDisplayName(s, 'category'),
-		}))
-		.filter((s) => sumNumberArray(s[dataKey]) > 0)
-}
-
-function buildSalesTrendLinesForChart(payload, dimension, metric) {
-	if (dimension === 'category') {
-		return buildCategoryTrendSeriesForChart(payload, metric)
+const trendCategoryOptions = computed(() => {
+	const details = salesTrendPayload.value?.details || []
+	const cId = trendSelectedContinentId.value
+	const nId = trendSelectedCountryId.value
+	if (cId == null || nId == null || !details.length) return []
+	const seen = new Set()
+	const opts = []
+	for (const r of details) {
+		if (String(r.continentId) !== String(cId)) continue
+		if (String(r.tradeCountry) !== String(nId)) continue
+		const pid = r.productCategoryId
+		const s = String(pid)
+		if (seen.has(s)) continue
+		seen.add(s)
+		const lab = r.productCategoryName || productCategoryLabel(pid)
+		opts.push({ value: pid, label: lab || `分类（${s}）` })
 	}
-	return buildTrimmedTrendSeriesForChart(payload, dimension, metric)
+	opts.sort((a, b) => String(a.label).localeCompare(String(b.label), 'zh-CN'))
+	return opts
+})
+
+function onTrendContinentClear() {
+	trendSelectedCountryId.value = null
+	trendSelectedCategoryId.value = null
 }
 
-function salesTrendChartTitle(dimension) {
-	if (dimension === 'continent') return '大洲销售趋势'
-	if (dimension === 'country') return '国家销售趋势'
-	return '产品分类销售趋势'
+function onTrendCountryClear() {
+	trendSelectedCategoryId.value = null
 }
+
+watch(trendSelectedContinentId, (v) => {
+	if (v == null) {
+		trendSelectedCountryId.value = null
+		trendSelectedCategoryId.value = null
+	} else {
+		const opts = trendCountryOptions.value
+		if (!opts.some((o) => String(o.value) === String(trendSelectedCountryId.value))) {
+			trendSelectedCountryId.value = null
+			trendSelectedCategoryId.value = null
+		}
+	}
+})
+
+watch(trendSelectedCountryId, (v) => {
+	if (v == null) {
+		trendSelectedCategoryId.value = null
+	} else {
+		const opts = trendCategoryOptions.value
+		if (!opts.some((o) => String(o.value) === String(trendSelectedCategoryId.value))) {
+			trendSelectedCategoryId.value = null
+		}
+	}
+})
 
 function renderSalesTrendChart() {
 	if (!salesTrendChartRef.value) return
@@ -879,23 +958,16 @@ function renderSalesTrendChart() {
 	}
 	const p = salesTrendPayload.value
 	const xLabels = Array.isArray(p?.xAxis) ? p.xAxis : []
-	const trimmed = p ? buildSalesTrendLinesForChart(p, trendDimension.value, trendMetric.value) : []
-	const dataKey = trendMetric.value === 'amount' ? 'amountData' : 'quantityData'
 	const isAmount = trendMetric.value === 'amount'
 	const yAxisName = isAmount ? '金额（¥）' : '数量'
-
-	const series = trimmed.map((s) => ({
-		name: s.displayName || s.name || String(s.key),
-		type: 'line',
-		smooth: true,
-		symbol: 'circle',
-		symbolSize: 6,
-		showSymbol: xLabels.length <= 18,
-		data: (s[dataKey] || []).map((v) => (Number.isFinite(Number(v)) ? Number(v) : 0)),
-	}))
+	const cId = trendSelectedContinentId.value
+	const nId = trendSelectedCountryId.value
+	const gId = trendSelectedCategoryId.value
+	const cascadeReady = cId != null && nId != null && gId != null
 
 	salesTrendChartInstance.clear()
-	if (!xLabels.length && !series.length) {
+
+	if (!p || !xLabels.length) {
 		salesTrendChartInstance.setOption(
 			{
 				title: {
@@ -913,10 +985,75 @@ function renderSalesTrendChart() {
 		return
 	}
 
+	if (!cascadeReady) {
+		salesTrendChartInstance.setOption(
+			{
+				title: {
+					text: '请先选择大洲、国家与产品分类',
+					left: 'center',
+					top: 'center',
+					textStyle: { fontSize: 14, color: 'var(--el-text-color-secondary)' },
+				},
+				xAxis: { type: 'category', data: xLabels, axisLabel: { rotate: xLabels.length > 10 ? 35 : 0 } },
+				yAxis: { type: 'value', name: yAxisName },
+				series: [],
+			},
+			{ notMerge: true }
+		)
+		return
+	}
+
+	const filtered = getTrendFilteredDetailRows(p)
+	const lineData = buildTrendLineDataFromDetails(p, filtered, trendMetric.value)
+	const seriesName = salesTrendSeriesTitle()
+	const hasPoints = lineData.some((v) => v !== 0)
+
+	const series = [
+		{
+			name: seriesName,
+			type: 'line',
+			smooth: true,
+			symbol: 'circle',
+			symbolSize: 6,
+			showSymbol: xLabels.length <= 18,
+			data: lineData.map((v) => (Number.isFinite(Number(v)) ? Number(v) : 0)),
+		},
+	]
+
+	if (!hasPoints) {
+		salesTrendChartInstance.setOption(
+			{
+				title: {
+					text: '该组合暂无数据',
+					left: 'center',
+					top: 6,
+					textStyle: { fontSize: 13, color: 'var(--el-text-color-secondary)' },
+				},
+				grid: { left: 56, right: 24, top: 48, bottom: 80 },
+				xAxis: {
+					type: 'category',
+					boundaryGap: false,
+					data: xLabels,
+					axisLabel: { rotate: xLabels.length > 10 ? 35 : 0 },
+				},
+				yAxis: {
+					type: 'value',
+					name: yAxisName,
+					axisLabel: {
+						formatter: (v) => (isAmount ? formatMoneyAmount(v) : String(v)),
+					},
+				},
+				series,
+			},
+			{ notMerge: true }
+		)
+		return
+	}
+
 	salesTrendChartInstance.setOption(
 		{
 			title: {
-				text: salesTrendChartTitle(trendDimension.value),
+				text: seriesName,
 				left: 'center',
 				top: 6,
 				textStyle: { fontSize: 14, fontWeight: 600, color: 'var(--el-text-color-primary)' },
@@ -980,6 +1117,9 @@ async function loadSalesTrendData() {
 			salesTrendPayload.value = null
 		} else {
 			salesTrendPayload.value = normalizeSalesTrendPayload(res.data ?? res)
+			trendSelectedContinentId.value = null
+			trendSelectedCountryId.value = null
+			trendSelectedCategoryId.value = null
 		}
 	} catch {
 		salesTrendPayload.value = null
@@ -1000,11 +1140,27 @@ async function loadSalesTrendData() {
 	}
 }
 
-watch([trendDimension, trendMetric], () => {
-	if (salesTrendPayload.value) {
-		nextTick(() => renderSalesTrendChart())
-	}
+let salesTrendReloadTimer = null
+function scheduleLoadSalesTrendData() {
+	if (salesTrendReloadTimer != null) clearTimeout(salesTrendReloadTimer)
+	salesTrendReloadTimer = window.setTimeout(() => {
+		salesTrendReloadTimer = null
+		loadSalesTrendData()
+	}, 320)
+}
+
+watch([trendTimeType, trendYear, trendQuarter], () => {
+	scheduleLoadSalesTrendData()
 })
+
+watch(
+	[trendMetric, trendSelectedContinentId, trendSelectedCountryId, trendSelectedCategoryId],
+	() => {
+		if (salesTrendPayload.value) {
+			nextTick(() => renderSalesTrendChart())
+		}
+	}
+)
 
 function disposeSalesTrendChart() {
 	salesTrendChartInstance?.dispose()
@@ -1279,6 +1435,10 @@ proxy.getDicts(dictParams).then((response) => {
 })
 
 onBeforeUnmount(() => {
+	if (salesTrendReloadTimer != null) {
+		clearTimeout(salesTrendReloadTimer)
+		salesTrendReloadTimer = null
+	}
 	window.removeEventListener('resize', onResize)
 	disposeAllCharts()
 	disposeSalesCharts()
@@ -1413,6 +1573,52 @@ onBeforeUnmount(() => {
 .trend-chart-wrap {
 	height: 440px;
 	margin-top: 4px;
+}
+
+.trend-section-card :deep(.el-card__header) {
+	padding: 12px 16px 10px;
+}
+
+.trend-card-header {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	align-items: stretch;
+}
+
+.trend-card-title {
+	font-weight: 600;
+	font-size: 15px;
+	line-height: 1.35;
+	color: var(--el-text-color-primary);
+}
+
+.trend-header-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+}
+
+.trend-toolbar-label {
+	font-size: 13px;
+	color: var(--el-text-color-regular);
+	flex-shrink: 0;
+}
+
+.trend-header-item.trend-cascade-select {
+	width: 118px;
+	max-width: 30vw;
+}
+
+.trend-year-input {
+	width: 104px;
+}
+
+.trend-loading-hint {
+	font-size: 12px;
+	color: var(--el-color-primary);
+	margin-left: 4px;
 }
 
 .trend-radio-group {
