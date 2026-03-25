@@ -37,6 +37,73 @@
 			</div>
 			<div v-else ref="chartRef" class="chart-wrap" />
 		</el-card>
+
+		<el-card shadow="never" class="section-card">
+			<template #header>
+				<div class="card-header">
+					<span>产品销售统计（地区 · 金额：人民币）</span>
+				</div>
+			</template>
+			<div class="toolbar sales-toolbar">
+				<el-select v-model="salesTimeType" class="sales-toolbar-item" style="width: 120px">
+					<el-option label="按月" value="month" />
+					<el-option label="按季" value="quarter" />
+					<el-option label="按年" value="year" />
+				</el-select>
+				<span class="toolbar-label">年份</span>
+				<el-input-number v-model="salesYear" :min="2000" :max="2099" controls-position="right"
+					class="sales-toolbar-item sales-year-input" />
+				<template v-if="salesTimeType === 'month'">
+					<span class="toolbar-label">月份</span>
+					<el-select v-model="salesMonth" class="sales-toolbar-item" style="width: 100px">
+						<el-option v-for="m in 12" :key="m" :label="`${m} 月`" :value="m" />
+					</el-select>
+				</template>
+				<template v-if="salesTimeType === 'quarter'">
+					<span class="toolbar-label">季度</span>
+					<el-select v-model="salesQuarter" class="sales-toolbar-item" style="width: 120px">
+						<el-option v-for="q in 4" :key="q" :label="`第 ${q} 季度`" :value="q" />
+					</el-select>
+				</template>
+				<el-button type="primary" class="sales-toolbar-item" :loading="salesRegionLoading"
+					@click="loadRegionSalesPieData">
+					查询
+				</el-button>
+			</div>
+			<div v-if="regionSalesMetaText" class="sales-range-hint">{{ regionSalesMetaText }}</div>
+			<div class="dual-charts dual-charts-row">
+				<div class="chart-panel">
+					<div class="chart-block-head">
+						<div class="chart-block-title">销售额 — 大洲</div>
+						<div class="chart-hint">点击某一洲可筛选右侧国家</div>
+					</div>
+					<div ref="salesContinentChartRef" class="chart-wrap chart-wrap-half" />
+				</div>
+				<div class="chart-panel">
+					<div class="chart-block-head">
+						<div class="chart-block-title">
+							<span>销售额 — 国家</span>
+							<el-button v-if="selectedSalesContinentFilter" type="primary" link class="chart-reset-btn"
+								@click="clearSalesContinentFilter">
+								显示全部国家
+							</el-button>
+						</div>
+						<div class="chart-hint chart-hint--spacer" aria-hidden="true">&nbsp;</div>
+					</div>
+					<div ref="salesCountryChartRef" class="chart-wrap chart-wrap-half" />
+					<div v-if="salesCountryCategoryTableRows.length" class="sales-cat-table-wrap">
+						<div class="sales-cat-table-title">各国家 · 产品分类明细（数量 / 金额 ¥）</div>
+						<el-table :data="salesCountryCategoryTableRows" border stripe size="small" max-height="260"
+							class="sales-cat-table">
+							<el-table-column prop="country" label="国家" min-width="100" show-overflow-tooltip />
+							<el-table-column prop="category" label="产品分类" min-width="120" show-overflow-tooltip />
+							<el-table-column prop="quantity" label="数量" width="100" align="right" />
+							<el-table-column prop="amountDisplay" label="金额（¥）" width="128" align="right" />
+						</el-table>
+					</div>
+				</div>
+			</div>
+		</el-card>
 	</div>
 </template>
 
@@ -49,9 +116,13 @@ const proxy = getCurrentInstance().proxy
 const chartRef = ref(null)
 const continentChartRef = ref(null)
 const countryChartRef = ref(null)
+const salesContinentChartRef = ref(null)
+const salesCountryChartRef = ref(null)
 let chartInstance = null
 let continentChartInstance = null
 let countryChartInstance = null
+let salesContinentChartInstance = null
+let salesCountryChartInstance = null
 
 const state = reactive({
 	optionss: {
@@ -59,6 +130,7 @@ const state = reactive({
 		hr_business_scope: [],
 		sys_customer_source: [],
 		hr_nation: [],
+		hr_continent: [],
 	},
 })
 const { optionss } = toRefs(state)
@@ -68,11 +140,22 @@ const statisticsPayload = ref(null)
 /** 点击洲后筛选国家饼图：{ continentId, continentName } */
 const selectedContinentFilter = ref(null)
 
+const salesTimeType = ref('month')
+const salesYear = ref(new Date().getFullYear())
+const salesMonth = ref(new Date().getMonth() + 1)
+const salesQuarter = ref(Math.floor(new Date().getMonth() / 3) + 1)
+const regionSalesPayload = ref(null)
+const selectedSalesContinentFilter = ref(null)
+const salesRegionLoading = ref(false)
+/** 产品分类 id → 名称（来自 GetAllProductCategories） */
+const productCategoryLabelMap = ref(new Map())
+
 const dictParams = [
 	{ dictType: 'hr_customer_source_statistics_dimension' },
 	{ dictType: 'hr_business_scope' },
 	{ dictType: 'sys_customer_source' },
 	{ dictType: 'hr_nation' },
+	{ dictType: 'hr_continent' },
 ]
 
 /** 字典 dictValue 与饼图数据字段对应；1=业务范围 2=国家地区 3=来源 */
@@ -115,10 +198,64 @@ function normalizeStatisticsPayload(raw) {
 	}
 }
 
+function formatRangeDate(v) {
+	if (v == null || v === '') return ''
+	const str = typeof v === 'string' ? v : String(v)
+	if (str.includes('T')) return str.slice(0, 10)
+	return str.length >= 10 ? str.slice(0, 10) : str
+}
+
+function formatMoneyAmount(val) {
+	const num = typeof val === 'number' ? val : Number(val)
+	if (!Number.isFinite(num)) return String(val ?? '—')
+	return num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function productCategoryLabel(id) {
+	if (id == null || id === '' || Number(id) === 0) return '未分类'
+	const key = String(id)
+	return productCategoryLabelMap.value.get(key) ?? `分类（${key}）`
+}
+
+function flattenProductCategoriesToMap(nodes, map) {
+	if (!Array.isArray(nodes)) return
+	for (const n of nodes) {
+		const id = n.value ?? n.id
+		const label = n.label ?? n.name
+		if (id != null && id !== '') map.set(String(id), String(label ?? id))
+		if (n.children?.length) flattenProductCategoriesToMap(n.children, map)
+	}
+}
+
+async function loadProductCategoryLabels() {
+	try {
+		const res = await request({
+			url: 'ProductInformation/GetProductCategories/GetAllProductCategories',
+			method: 'get',
+		})
+		if (res.code != null && res.code != 200) return
+		const map = new Map()
+		const root = res.data ?? res
+		flattenProductCategoriesToMap(Array.isArray(root) ? root : [], map)
+		productCategoryLabelMap.value = map
+	} catch {
+		/* 无映射时仍展示分类 ID 占位 */
+	}
+}
+
 const chartTitle = computed(() => {
 	const list = state.optionss.hr_customer_source_statistics_dimension || []
 	const hit = list.find((d) => String(d.dictValue) === String(selectedDimension.value))
 	return hit?.dictLabel || '统计分布'
+})
+
+const regionSalesMetaText = computed(() => {
+	const p = regionSalesPayload.value
+	if (!p) return ''
+	const s = p.startTime ?? p.StartTime
+	const e = p.endTime ?? p.EndTime
+	if (s == null || e == null) return ''
+	return `统计区间：${formatRangeDate(s)} ～ ${formatRangeDate(e)}`
 })
 
 function resolveStatsKey(dimension) {
@@ -140,6 +277,40 @@ function resolveStatsKey(dimension) {
 }
 
 const isTradingCountryDimension = computed(() => resolveStatsKey(selectedDimension.value) === 'tradingCountryStats')
+
+const salesCountryCategoryTableRows = computed(() => {
+	if (!regionSalesPayload.value?.countryData?.length) return []
+	let list = [...regionSalesPayload.value.countryData]
+	const f = selectedSalesContinentFilter.value
+	if (f && f.continentId != null && f.continentId !== '') {
+		list = list.filter((item) => String(item.continentId ?? item.ContinentId ?? '') === String(f.continentId))
+	}
+	const rows = []
+	for (const item of list) {
+		const tid = item.tradeCountry ?? item.TradeCountry
+		const country = labelForSlice('tradingCountryStats', tid)
+		const cats = item.categories ?? item.Categories ?? []
+		if (!cats.length) {
+			rows.push({
+				country,
+				category: '—',
+				quantity: item.quantity ?? item.Quantity ?? '—',
+				amountDisplay: formatMoneyAmount(item.amount ?? item.Amount ?? 0),
+			})
+			continue
+		}
+		for (const c of cats) {
+			const pid = c.productCategoryId ?? c.ProductCategoryId
+			rows.push({
+				country,
+				category: productCategoryLabel(pid),
+				quantity: c.quantity ?? c.Quantity ?? '—',
+				amountDisplay: formatMoneyAmount(c.amount ?? c.Amount ?? 0),
+			})
+		}
+	}
+	return rows
+})
 
 function getStatsList(payload, statsKey) {
 	if (!payload || !statsKey) return []
@@ -263,6 +434,270 @@ function tradingStatsToCountryPieData(list, filter) {
 	}
 	out.sort((a, b) => b.value - a.value)
 	return out
+}
+
+function normalizeRegionSalesPayload(raw) {
+	if (raw == null || typeof raw !== 'object') return null
+	const d = raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data) ? raw.data : raw
+	return {
+		...d,
+		continentData: pickArray(d, ['continentData', 'ContinentData']),
+		countryData: pickArray(d, ['countryData', 'CountryData']),
+		startTime: d.startTime ?? d.StartTime,
+		endTime: d.endTime ?? d.EndTime,
+	}
+}
+
+function continentLabelByDictId(id) {
+	if (id === null || id === undefined || id === '') return '未归类'
+	const key = String(id)
+	if (key === '0') return '未归类'
+	const hit = (state.optionss.hr_continent || []).find((o) => String(o.dictValue) === key)
+	return hit?.dictLabel ?? `大洲（${key}）`
+}
+
+function buildRegionSalesContinentPieData() {
+	const list = regionSalesPayload.value?.continentData || []
+	return list
+		.map((item) => {
+			const cid = item.continentId ?? item.ContinentId ?? 0
+			const amount = Number(item.amount ?? item.Amount ?? 0)
+			return {
+				name: continentLabelByDictId(cid),
+				value: amount,
+				continentId: cid,
+			}
+		})
+		.filter((x) => !Number.isNaN(x.value) && x.value > 0)
+		.sort((a, b) => b.value - a.value)
+}
+
+function buildRegionSalesCountryPieData() {
+	let list = regionSalesPayload.value?.countryData || []
+	const f = selectedSalesContinentFilter.value
+	if (f && f.continentId != null && f.continentId !== '') {
+		list = list.filter((item) => String(item.continentId ?? item.ContinentId ?? '') === String(f.continentId))
+	}
+	return list
+		.map((item) => {
+			const tid = item.tradeCountry ?? item.TradeCountry
+			const amount = Number(item.amount ?? item.Amount ?? 0)
+			const name = labelForSlice('tradingCountryStats', tid)
+			const catsRaw = item.categories ?? item.Categories ?? []
+			const categoryRows = catsRaw.map((c) => ({
+				productCategoryId: c.productCategoryId ?? c.ProductCategoryId,
+				quantity: Number(c.quantity ?? c.Quantity ?? 0),
+				amount: Number(c.amount ?? c.Amount ?? 0),
+			}))
+			const totalQty = Number(item.quantity ?? item.Quantity ?? NaN)
+			return {
+				name,
+				value: amount,
+				tradeCountry: tid,
+				countryTotalQuantity: Number.isFinite(totalQty) ? totalQty : null,
+				categoryRows,
+			}
+		})
+		.filter((x) => !Number.isNaN(x.value) && x.value > 0 && x.name)
+		.sort((a, b) => b.value - a.value)
+}
+
+function salesPieTooltipFormatter(params) {
+	const v = params.value
+	const txt = formatMoneyAmount(v)
+	return `${params.marker}${params.seriesName}<br/>${params.name}：¥${txt}（${params.percent}%）`
+}
+
+function salesCountryPieTooltipFormatter(params) {
+	const d = params.data || {}
+	const pct = params.percent != null ? params.percent : '—'
+	const money = formatMoneyAmount(params.value)
+	const lines = [
+		`${params.marker}<span style="font-weight:600">${params.name}</span>`,
+		`销售合计：¥${money}（${pct}%）`,
+	]
+	if (d.countryTotalQuantity != null && Number.isFinite(d.countryTotalQuantity)) {
+		lines.push(`总数量：${d.countryTotalQuantity}`)
+	}
+	const rows = d.categoryRows || []
+	if (rows.length) {
+		lines.push('')
+		lines.push('<span style="font-weight:600">按产品分类</span>')
+		for (const r of rows) {
+			const cname = productCategoryLabel(r.productCategoryId)
+			const q = Number.isFinite(r.quantity) ? r.quantity : r.quantity ?? '—'
+			const a = formatMoneyAmount(r.amount)
+			lines.push(`· ${cname} — 数量 ${q}，金额 ¥${a}`)
+		}
+	} else {
+		lines.push('<span style="color:#999;font-size:12px">无分类明细</span>')
+	}
+	return lines.join('<br/>')
+}
+
+function ensureSalesChartInstances() {
+	if (!salesContinentChartRef.value || !salesCountryChartRef.value) return false
+	if (!salesContinentChartInstance) {
+		salesContinentChartInstance = echarts.init(salesContinentChartRef.value)
+		salesCountryChartInstance = echarts.init(salesCountryChartRef.value)
+		bindSalesContinentChartClick()
+	}
+	return true
+}
+
+function renderSalesContinentChart() {
+	if (!salesContinentChartInstance) return
+	const data = buildRegionSalesContinentPieData()
+	salesContinentChartInstance.clear()
+	salesContinentChartInstance.setOption(
+		{
+			title: {
+				text: '销售额 — 大洲',
+				left: 'center',
+				top: 4,
+				textStyle: titleTextStyle,
+			},
+			tooltip: {
+				trigger: 'item',
+				formatter: salesPieTooltipFormatter,
+			},
+			legend: {
+				orient: 'horizontal',
+				bottom: 0,
+				type: 'scroll',
+				padding: [4, 16, 0, 16],
+			},
+			series: [
+				{
+					name: '大洲',
+					type: 'pie',
+					radius: ['36%', '60%'],
+					center: ['50%', '52%'],
+					avoidLabelOverlap: true,
+					itemStyle: pieItemStyle,
+					label: { show: true, formatter: (p) => p.name },
+					data,
+				},
+			],
+		},
+		{ notMerge: true }
+	)
+}
+
+function renderSalesCountryChart() {
+	if (!salesCountryChartInstance) return
+	const data = buildRegionSalesCountryPieData()
+	const sub = selectedSalesContinentFilter.value?.continentName
+		? ` — ${selectedSalesContinentFilter.value.continentName}`
+		: ''
+	salesCountryChartInstance.clear()
+	salesCountryChartInstance.setOption(
+		{
+			title: {
+				text: `销售额 — 国家${sub}`,
+				left: 'center',
+				top: 4,
+				textStyle: titleTextStyle,
+			},
+			tooltip: {
+				trigger: 'item',
+				formatter: salesCountryPieTooltipFormatter,
+				confine: true,
+			},
+			legend: {
+				orient: 'horizontal',
+				bottom: 0,
+				type: 'scroll',
+				padding: [4, 16, 0, 16],
+			},
+			series: [
+				{
+					name: '国家',
+					type: 'pie',
+					radius: ['36%', '60%'],
+					center: ['50%', '52%'],
+					avoidLabelOverlap: true,
+					itemStyle: pieItemStyle,
+					label: {
+						show: data.length <= 16,
+						fontSize: 11,
+						formatter: (p) => p.name,
+					},
+					labelLine: { show: data.length <= 16 },
+					data,
+				},
+			],
+		},
+		{ notMerge: true }
+	)
+}
+
+function bindSalesContinentChartClick() {
+	if (!salesContinentChartInstance) return
+	salesContinentChartInstance.off('click')
+	salesContinentChartInstance.on('click', (params) => {
+		const d = params.data
+		if (!d) return
+		selectedSalesContinentFilter.value = {
+			continentId: d.continentId ?? d.ContinentId ?? null,
+			continentName: d.name ?? '',
+		}
+		renderSalesCountryChart()
+	})
+}
+
+function clearSalesContinentFilter() {
+	selectedSalesContinentFilter.value = null
+	renderSalesCountryChart()
+}
+
+async function loadRegionSalesPieData() {
+	salesRegionLoading.value = true
+	selectedSalesContinentFilter.value = null
+	try {
+		const params = {
+			TimeType: salesTimeType.value,
+			Year: Number(salesYear.value),
+		}
+		if (salesTimeType.value === 'month') params.Month = Number(salesMonth.value)
+		if (salesTimeType.value === 'quarter') params.Quarter = Number(salesQuarter.value)
+
+		const res = await request({
+			url: 'Statistics/GetRegionSalesPieData/GetRegionSalesPieData',
+			method: 'get',
+			params,
+		})
+		if (res.code != null && res.code != 200) {
+			regionSalesPayload.value = null
+		} else {
+			regionSalesPayload.value = normalizeRegionSalesPayload(res.data ?? res)
+		}
+	} catch {
+		regionSalesPayload.value = null
+	} finally {
+		salesRegionLoading.value = false
+		nextTick(() => {
+			let attempts = 0
+			const tryRender = () => {
+				attempts += 1
+				if (ensureSalesChartInstances()) {
+					renderSalesContinentChart()
+					renderSalesCountryChart()
+				} else if (attempts < 6) {
+					nextTick(tryRender)
+				}
+			}
+			tryRender()
+		})
+	}
+}
+
+function disposeSalesCharts() {
+	salesContinentChartInstance?.off('click')
+	salesContinentChartInstance?.dispose()
+	salesContinentChartInstance = null
+	salesCountryChartInstance?.dispose()
+	salesCountryChartInstance = null
 }
 
 function disposeAllCharts() {
@@ -494,6 +929,8 @@ function onResize() {
 	chartInstance?.resize()
 	continentChartInstance?.resize()
 	countryChartInstance?.resize()
+	salesContinentChartInstance?.resize()
+	salesCountryChartInstance?.resize()
 }
 
 watch(selectedDimension, () => {
@@ -514,13 +951,16 @@ proxy.getDicts(dictParams).then((response) => {
 		if (list?.length) {
 			selectedDimension.value = list[0].dictValue
 		}
+		await loadProductCategoryLabels()
 		await loadCustomerSourceStatistics()
+		await loadRegionSalesPieData()
 	})
 })
 
 onBeforeUnmount(() => {
 	window.removeEventListener('resize', onResize)
 	disposeAllCharts()
+	disposeSalesCharts()
 })
 </script>
 
@@ -604,5 +1044,47 @@ onBeforeUnmount(() => {
 
 .card-header {
 	font-weight: 600;
+}
+
+.section-card {
+	margin-top: 20px;
+}
+
+.sales-toolbar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	margin-bottom: 4px;
+}
+
+.sales-toolbar .toolbar-label {
+	margin-right: 0;
+}
+
+.sales-year-input {
+	width: 120px;
+}
+
+.sales-range-hint {
+	font-size: 12px;
+	color: var(--el-text-color-secondary);
+	margin: 0 0 10px;
+}
+
+.sales-cat-table-wrap {
+	margin-top: 8px;
+	width: 100%;
+}
+
+.sales-cat-table-title {
+	font-size: 13px;
+	font-weight: 600;
+	margin-bottom: 8px;
+	color: var(--el-text-color-regular);
+}
+
+.sales-cat-table {
+	width: 100%;
 }
 </style>
