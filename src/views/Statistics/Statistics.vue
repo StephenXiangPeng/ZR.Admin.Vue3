@@ -131,6 +131,7 @@
 					<el-radio-button label="country">国家</el-radio-button>
 					<el-radio-button label="category">产品分类</el-radio-button>
 				</el-radio-group>
+				<span v-if="trendDimension === 'category'" class="trend-chart-desc">各分类单独一条曲线</span>
 				<span class="toolbar-label">指标</span>
 				<el-radio-group v-model="trendMetric" class="sales-toolbar-item trend-radio-group">
 					<el-radio-button label="amount">金额（¥）</el-radio-button>
@@ -789,12 +790,16 @@ function getTrendSeriesRawList(payload, dimension) {
 	return arr.map(normalizeTrendSeriesRow).filter(Boolean)
 }
 
+function categoryTrendSeriesDisplayName(s) {
+	const nm = s.name != null && String(s.name).trim() !== '' ? String(s.name).trim() : ''
+	return nm || productCategoryLabel(s.key)
+}
+
 function trendSeriesDisplayName(s, dimension) {
 	const k = s.key
 	if (dimension === 'continent') return continentLabelByDictId(Number(k) || k)
 	if (dimension === 'country') return labelForSlice('tradingCountryStats', k)
-	const nm = s.name != null && String(s.name).trim() !== '' ? String(s.name).trim() : ''
-	return nm || productCategoryLabel(k)
+	return categoryTrendSeriesDisplayName(s)
 }
 
 function sumNumberArray(arr) {
@@ -814,6 +819,7 @@ function mergeTrendSeriesData(seriesRows, dataKey) {
 
 const TREND_MAX_LINES = 14
 
+/** 大洲 / 国家：取合计额 Top N，其余合并为「其他」 */
 function buildTrimmedTrendSeriesForChart(payload, dimension, metric) {
 	const raw = getTrendSeriesRawList(payload, dimension)
 	if (!raw.length) return []
@@ -840,6 +846,32 @@ function buildTrimmedTrendSeriesForChart(payload, dimension, metric) {
 	return result
 }
 
+/** 产品分类：每个分类一条线，不合并截断 */
+function buildCategoryTrendSeriesForChart(payload, metric) {
+	const raw = getTrendSeriesRawList(payload, 'category')
+	if (!raw.length) return []
+	const dataKey = metric === 'amount' ? 'amountData' : 'quantityData'
+	return raw
+		.map((s) => ({
+			...s,
+			displayName: trendSeriesDisplayName(s, 'category'),
+		}))
+		.filter((s) => sumNumberArray(s[dataKey]) > 0)
+}
+
+function buildSalesTrendLinesForChart(payload, dimension, metric) {
+	if (dimension === 'category') {
+		return buildCategoryTrendSeriesForChart(payload, metric)
+	}
+	return buildTrimmedTrendSeriesForChart(payload, dimension, metric)
+}
+
+function salesTrendChartTitle(dimension) {
+	if (dimension === 'continent') return '大洲销售趋势'
+	if (dimension === 'country') return '国家销售趋势'
+	return '产品分类销售趋势'
+}
+
 function renderSalesTrendChart() {
 	if (!salesTrendChartRef.value) return
 	if (!salesTrendChartInstance) {
@@ -847,7 +879,7 @@ function renderSalesTrendChart() {
 	}
 	const p = salesTrendPayload.value
 	const xLabels = Array.isArray(p?.xAxis) ? p.xAxis : []
-	const trimmed = p ? buildTrimmedTrendSeriesForChart(p, trendDimension.value, trendMetric.value) : []
+	const trimmed = p ? buildSalesTrendLinesForChart(p, trendDimension.value, trendMetric.value) : []
 	const dataKey = trendMetric.value === 'amount' ? 'amountData' : 'quantityData'
 	const isAmount = trendMetric.value === 'amount'
 	const yAxisName = isAmount ? '金额（¥）' : '数量'
@@ -884,7 +916,7 @@ function renderSalesTrendChart() {
 	salesTrendChartInstance.setOption(
 		{
 			title: {
-				text: '销售趋势',
+				text: salesTrendChartTitle(trendDimension.value),
 				left: 'center',
 				top: 6,
 				textStyle: { fontSize: 14, fontWeight: 600, color: 'var(--el-text-color-primary)' },
@@ -1385,5 +1417,12 @@ onBeforeUnmount(() => {
 
 .trend-radio-group {
 	flex-wrap: wrap;
+}
+
+.trend-chart-desc {
+	font-size: 12px;
+	color: var(--el-text-color-secondary);
+	line-height: 32px;
+	margin-right: 8px;
 }
 </style>
