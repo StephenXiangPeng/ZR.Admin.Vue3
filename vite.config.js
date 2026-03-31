@@ -63,6 +63,10 @@ export default defineConfig(({ mode, command }) => {
         '/CustomerCollection': {
           target: env.VITE_APP_API_HOST,
           changeOrigin: true
+        },
+        '/email_inline': {
+          target: env.VITE_APP_API_HOST,
+          changeOrigin: true
         }
       }
     }
