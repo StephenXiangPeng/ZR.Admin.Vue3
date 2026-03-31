@@ -123,18 +123,29 @@
 			</el-dialog>
 
 			<el-container>
-				<el-header style="text-align: left; font-size: 12px; height: 50px;">
-					<div class="search-container" style="width: 70%;">
-						<el-input v-model="input1" style="width: 100%" size="large" placeholder="搜索邮件"
-							@input="handleLocalSearch" clearable @clear="clearLocalSearch">
-							<template #suffix>
-								<el-tooltip content="高级搜索" placement="bottom">
-									<el-icon class="cursor-pointer" @click="showAdvancedSearch = true">
-										<Operation />
-									</el-icon>
-								</el-tooltip>
-							</template>
-						</el-input>
+				<el-header class="email-list-header" style="text-align: left; font-size: 12px;">
+					<div class="email-header-primary">
+						<div class="search-container" style="width: 70%;">
+							<el-input v-model="input1" style="width: 100%" size="large" placeholder="搜索邮件"
+								@input="handleLocalSearch" clearable @clear="clearLocalSearch">
+								<template #suffix>
+									<el-tooltip content="高级搜索" placement="bottom">
+										<el-icon class="cursor-pointer" @click="showAdvancedSearch = true">
+											<Operation />
+										</el-icon>
+									</el-tooltip>
+								</template>
+							</el-input>
+						</div>
+						<div v-if="activeMenu === '4' && !showEmailDetail" class="trash-toolbar">
+							<el-button type="danger" plain :disabled="totalItems === 0" :loading="isEmptyingTrash"
+								@click="handleEmptyTrash">
+								<el-icon>
+									<Delete />
+								</el-icon>
+								清空垃圾箱
+							</el-button>
+						</div>
 					</div>
 					<div class="toolbar">
 						<el-dropdown>
@@ -207,7 +218,7 @@
 											</el-icon>
 											移动至
 										</el-button>
-										<el-button type="danger" @click="handleBatchDelete"
+										<el-button v-if="activeMenu !== '4'" type="danger" @click="handleBatchDelete"
 											:loading="isBatchProcessing">
 											<el-icon>
 												<Delete />
@@ -354,7 +365,8 @@
 											</div>
 										</div>
 									</el-popover>
-									<el-button icon="Delete" circle title="删除" @click="handleMoveEmail('4')" />
+									<el-button v-if="activeMenu !== '4'" icon="Delete" circle title="删除"
+										@click="handleMoveEmail('4')" />
 								</el-button-group>
 							</div>
 						</div>
@@ -1164,6 +1176,7 @@ const pageSize = ref(20)
 const totalItems = ref(0)
 const selectedRows = ref([])
 const isBatchProcessing = ref(false)
+const isEmptyingTrash = ref(false)
 
 // 搜索相关
 const input1 = ref('')
@@ -1665,17 +1678,17 @@ const markAsRead = async (row) => {
 		return
 	}
 	try {
-		if (row.isRead == 1) {
+		if (row.isRead == 0) {
 			const response = await request({
 				url: 'Email/EditEmailIsRead/EditEmailIsRead',
 				method: 'POST',
 				data: {
 					id: row.id,
-					isRead: 0
+					isRead: 1
 				}
 			})
 			if (response.code === 200) {
-				row.isRead = 0
+				row.isRead = 1
 			} else {
 				ElMessage.error(response.msg || '标记已读失败')
 			}
@@ -1698,7 +1711,7 @@ const markAsUnread = async (emailId) => {
 			method: 'POST',
 			data: {
 				id: emailId,
-				isRead: 1
+				isRead: 0
 			}
 		})
 
@@ -1821,6 +1834,20 @@ const EmailTagcheckboxoptions = ref([])
 const UserEmailTagList = ref([])
 const newEmailTagName = ref('')
 const isLoadingTags = ref(false)
+/** 打开详情时已与服务端一致的标签 id 列表（排序后），用于返回时避免重复保存与重复成功提示 */
+const emailDetailSavedTagIds = ref(null)
+
+const normalizeTagIdList = (ids) => {
+	if (!ids || !ids.length) return []
+	return [...ids].map(Number).filter((n) => !isNaN(n)).sort((a, b) => a - b)
+}
+
+const isEmailTagsDirty = () => {
+	const current = normalizeTagIdList(EmailTagcheckboxGroup.value)
+	const saved = emailDetailSavedTagIds.value
+	if (saved === null) return true
+	return JSON.stringify(current) !== JSON.stringify(saved)
+}
 
 // 获取用户邮件标签列表
 const GetUserEmailTagList = () => {
@@ -2015,6 +2042,8 @@ const EditEmailTags = async () => {
 				message: response.msg,
 				type: 'success'
 			})
+
+			emailDetailSavedTagIds.value = normalizeTagIdList(EmailTagcheckboxGroup.value)
 
 			// 标签更新成功后，同步更新前端数据
 			await updateLocalEmailTags(EmailModel.id, EmailTagcheckboxGroup.value)
@@ -2627,6 +2656,8 @@ const handleRowClick = async (row, column, event) => {
 		isLoadingTags.value = true
 		markAsRead(row)
 
+		emailDetailSavedTagIds.value = null
+
 		// 清空并重新获取标签
 		EmailTagcheckboxGroup.value = []
 		EmailTagcheckboxoptions.value = []
@@ -2653,6 +2684,7 @@ const handleRowClick = async (row, column, event) => {
 			}
 		}
 
+		emailDetailSavedTagIds.value = normalizeTagIdList(EmailTagcheckboxGroup.value)
 		showEmailDetail.value = true
 	} catch (error) {
 		console.error('获取标签列表失败:', error)
@@ -2747,7 +2779,12 @@ const CheckShowEmailDetail = async () => {
 		if (currentEmail.value) {
 			// 先检查前端是否已经选择了标签
 			if (EmailTagcheckboxGroup.value && EmailTagcheckboxGroup.value.length > 0) {
-				// 如果前端有标签，说明用户已经选择了标签（即使还没保存），需要先保存标签到后端
+				// 与打开详情时一致则无需再调保存接口，避免每次返回都弹出「打标签成功」
+				if (!isEmailTagsDirty()) {
+					resolve(true)
+					return
+				}
+				// 标签有变更，需要先保存到后端
 				try {
 					await EditEmailTags()
 					// 保存成功，允许返回
@@ -3111,7 +3148,7 @@ const clearSelection = () => {
 const tableRowClassName = ({ row }) => {
 	const classes = []
 
-	if (row.isRead === 1) {
+	if (row.isRead === 0) {
 		classes.push('unread-row')
 	}
 
@@ -3222,6 +3259,45 @@ const handleBatchDelete = async () => {
 		}
 	} finally {
 		isBatchProcessing.value = false
+	}
+}
+
+// 清空垃圾箱（需后端提供 Email/EmptyTrash/EmptyTrash；若路径不同请改此处）
+const handleEmptyTrash = async () => {
+	if (totalItems.value === 0) {
+		ElMessage.info('垃圾箱已是空的')
+		return
+	}
+	try {
+		await ElMessageBox.confirm(
+			'确定要清空垃圾箱吗？清空后邮件将永久删除且不可恢复。',
+			'清空垃圾箱',
+			{
+				confirmButtonText: '确定清空',
+				cancelButtonText: '取消',
+				type: 'warning'
+			}
+		)
+		isEmptyingTrash.value = true
+		const response = await request({
+			url: 'Email/EmptyTrash/EmptyTrash',
+			method: 'Get'
+		})
+		if (response.code === 200) {
+			ElMessage.success(response.msg || '垃圾箱已清空')
+			clearSelection()
+			currentPage.value = 1
+			await refreshCurrentView()
+		} else {
+			ElMessage.error(response.msg || '清空垃圾箱失败')
+		}
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('清空垃圾箱失败:', error)
+			ElMessage.error('清空垃圾箱失败，请重试')
+		}
+	} finally {
+		isEmptyingTrash.value = false
 	}
 }
 // #endregion
@@ -5715,6 +5791,34 @@ watch(emailFolders, () => {
 
 .search-container {
 	margin-left: 10px;
+}
+
+/* 搜索与「清空垃圾箱」同属左侧列，百分比宽度与左缘一致；高度随两行内容增高 */
+.layout-container-demo .el-header.email-list-header {
+	min-height: var(--el-header-height, 60px);
+	height: auto !important;
+	box-sizing: border-box;
+}
+
+.email-header-primary {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 8px;
+	margin-left: 10px;
+}
+
+.email-header-primary .search-container {
+	margin-left: 0;
+}
+
+.trash-toolbar {
+	margin-bottom: 0;
+	width: 70%;
+	max-width: 100%;
+	box-sizing: border-box;
 }
 
 /* 确保 header 内容垂直居中 */
