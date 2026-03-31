@@ -2289,7 +2289,7 @@ const findFolderDataById = (folders, id) => {
 	const result = searchInFolders(folders, id)
 
 	if (!result) {
-		console.warn('❌ 未找到文件夹数据，ID:', id)
+		console.warn('未找到文件夹数据，ID:', id)
 		console.log('可用的文件夹列表:', folders.map(f => ({
 			id: f.id,
 			dataId: f.dataId,
@@ -2297,7 +2297,7 @@ const findFolderDataById = (folders, id) => {
 			type: f.type
 		})))
 	} else {
-		console.log('✅ 成功找到文件夹数据:', result)
+		console.log('成功找到文件夹数据:', result)
 	}
 
 	return result
