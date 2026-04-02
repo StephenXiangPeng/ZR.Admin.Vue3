@@ -30,16 +30,16 @@
 								<Position />
 							</el-icon>已发邮件
 						</el-menu-item>
-						<el-menu-item index="6" @click="MenuClick(6)">
+						<el-menu-item index="6" @click="MenuClick(6)" v-if="false">
 							<el-icon>
 								<Box />
 							</el-icon>归档邮件
 						</el-menu-item>
 						<!-- 添加分隔线 -->
-						<el-divider />
+						<el-divider v-if="false" />
 
 						<!-- Labels 部分 -->
-						<div class="menu-section-title">
+						<div class="menu-section-title" v-if="false">
 							<span>标签</span>
 							<el-button class="add-button" link size="small" @click="showNewFolderDialog = true">
 								<el-icon>
@@ -47,8 +47,8 @@
 								</el-icon>
 							</el-button>
 						</div>
-						<el-menu-item v-for="tag in UserEmailTagList" :key="tag.id" :index="`tag-${tag.id}`"
-							@click="filterByTag(tag.id)" class="tag-menu-item">
+						<el-menu-item v-if="false" v-for="tag in UserEmailTagList" :key="tag.id"
+							:index="`tag-${tag.id}`" @click="filterByTag(tag.id)" class="tag-menu-item">
 							<div class="tag-content">
 								<div class="tag-left">
 									<el-icon>
@@ -1499,17 +1499,21 @@ const refreshCurrentView = async () => {
 	try {
 		console.log('刷新当前视图, activeMenu:', activeMenu.value)
 
-		// 清除搜索状态
+		// 搜索模式下只刷新搜索结果，勿清空 lastSearchParams / 勿用 activeMenu 覆盖 currentFolderState（否则 type 会被改写成 system 等）
+		if (isSearchMode.value && lastSearchParams.value) {
+			await handleAdvancedSearchRequest()
+			return
+		}
+
 		isSearchMode.value = false
 		lastSearchParams.value = null
 
-		// 与 activeMenu 对齐，避免仅刷新列表后 currentFolderState.type 仍为 null 导致分页报错
-		restoreStateFromActiveMenu()
+		// 仅当初始未同步过时根据侧边栏补齐，避免每次刷新都 setCurrentFolderState 导致 type 与当前视图不一致
+		if (!currentFolderState.value.type) {
+			restoreStateFromActiveMenu()
+		}
 
-		if (isSearchMode.value && lastSearchParams.value) {
-			// 搜索模式
-			await handleAdvancedSearchRequest()
-		} else if (activeMenu.value.startsWith('tag-')) {
+		if (activeMenu.value.startsWith('tag-')) {
 			// 标签模式
 			const tagId = activeMenu.value.replace('tag-', '')
 			EmailTagIndex.value = Number(tagId)
@@ -2379,6 +2383,8 @@ const resetSearchForm = () => {
 	currentPage.value = 1
 	pageSize.value = 20
 
+	// 退出搜索后必须与侧边栏对齐，否则 currentFolderState.type 仍为 search 会干扰后续刷新/分页
+	restoreStateFromActiveMenu()
 	refreshCurrentView()
 }
 
@@ -2445,8 +2451,9 @@ const handleAdvancedSearch = async () => {
 			searchParams.startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 		}
 
-		// 设置搜索状态
-		setCurrentFolderState('search', 'advanced', '高级搜索结果', null, lastSearchParams.value)
+		// 设置搜索状态（先写入参数再 setState，避免 params 仍为上一次/空）
+		lastSearchParams.value = searchParams
+		setCurrentFolderState('search', 'advanced', '高级搜索结果', null, searchParams)
 		isSearchMode.value = true
 		currentPage.value = 1
 
@@ -5029,6 +5036,7 @@ const setCurrentFolderState = (type, id, name = null, folderData = null, params 
 		folderName.value = null
 		EmailTagIndex.value = 0
 	}
+	// type === 'search'：不修改 activeMenu / EmailTagIndex，避免分页或刷新时侧边栏态与搜索态互相覆盖
 }
 
 // 监听文件夹数据变化
