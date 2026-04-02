@@ -1503,6 +1503,9 @@ const refreshCurrentView = async () => {
 		isSearchMode.value = false
 		lastSearchParams.value = null
 
+		// 与 activeMenu 对齐，避免仅刷新列表后 currentFolderState.type 仍为 null 导致分页报错
+		restoreStateFromActiveMenu()
+
 		if (isSearchMode.value && lastSearchParams.value) {
 			// 搜索模式
 			await handleAdvancedSearchRequest()
@@ -2464,6 +2467,10 @@ const handleCurrentChange = async (newPage) => {
 		console.log('📄 分页切换 - 当前状态:', currentFolderState.value, '新页码:', newPage)
 		currentPage.value = newPage
 
+		if (!currentFolderState.value.type) {
+			restoreStateFromActiveMenu()
+		}
+
 		const state = currentFolderState.value
 
 		if (state.type === 'search') {
@@ -2484,8 +2491,23 @@ const handleCurrentChange = async (newPage) => {
 		} else if (state.type === 'system') {
 			// 系统文件夹分页
 			await getInboxEmail(newPage, pageSize.value, state.id)
+		} else if (isSearchMode.value && lastSearchParams.value) {
+			await handleAdvancedSearchRequest()
+		} else if (activeMenu.value.startsWith('folder-')) {
+			const folderId = activeMenu.value.replace('folder-', '')
+			const folderData = findFolderDataById(emailFolders.value, folderId)
+			if (folderData?.type) {
+				await getEmailArchiveList(newPage, pageSize.value, folderData.type, folderId)
+			} else {
+				throw new Error('文件夹数据丢失')
+			}
 		} else {
-			throw new Error('未知的分页模式')
+			let emailType = activeMenu.value
+			if (activeMenu.value.startsWith('tag-')) {
+				emailType = '1'
+				EmailTagIndex.value = Number(activeMenu.value.replace('tag-', ''))
+			}
+			await getInboxEmail(newPage, pageSize.value, emailType)
 		}
 	} catch (error) {
 		console.error('❌ 分页处理失败:', error)
@@ -2578,7 +2600,7 @@ const handleSizeChange = async (newSize) => {
 }
 
 
-// 10. 页面刷新时的状态恢复（可选）
+// 10. 根据侧边栏选中项恢复 currentFolderState（与 handleSizeChange / 分页逻辑一致）
 const restoreStateFromActiveMenu = () => {
 	if (activeMenu.value.startsWith('folder-')) {
 		const folderId = activeMenu.value.replace('folder-', '')
@@ -2589,9 +2611,8 @@ const restoreStateFromActiveMenu = () => {
 	} else if (activeMenu.value.startsWith('tag-')) {
 		const tagId = activeMenu.value.replace('tag-', '')
 		const tagData = UserEmailTagList.value.find(tag => tag.id == tagId)
-		if (tagData) {
-			setCurrentFolderState('tag', tagId, tagData.emailTagName, tagData)
-		}
+		const tagName = tagData?.emailTagName || `标签${tagId}`
+		setCurrentFolderState('tag', tagId, tagName, tagData || null)
 	} else {
 		const systemFolderNames = {
 			'1': '收件箱',
@@ -2600,7 +2621,8 @@ const restoreStateFromActiveMenu = () => {
 			'4': '垃圾箱',
 			'6': '归档邮件'
 		}
-		setCurrentFolderState('system', activeMenu.value, systemFolderNames[activeMenu.value])
+		const key = String(activeMenu.value)
+		setCurrentFolderState('system', activeMenu.value, systemFolderNames[key] || '邮件')
 	}
 }
 
