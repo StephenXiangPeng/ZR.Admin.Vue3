@@ -10,13 +10,20 @@
 							<el-button type="primary" @click=openCustomerProfileDialog() size="default">客户建档</el-button>
 							<el-button type="primary" @click="CustomerDuplicationCheckDialog = true"
 								size="default">客户查重</el-button>
+							<el-button type="primary" @click="openCustomerPublicSeaDialog"
+								size="default">客户公海</el-button>
+							<el-button type="primary" @click="openPendingCustomerRatingDialog"
+								:disabled="PendingCustomerRatingTableDatatotalItems === 0" size="default">
+								待评级客户({{ PendingCustomerRatingTableDatatotalItems }})
+							</el-button>
 						</div>
 					</el-col>
 				</el-row>
 			</div>
 
 			<!-- 过滤条件区域 -->
-			<div class="customer-search-area" style="background: #f8f9fa; padding: 8px 15px; border-bottom: 1px solid #e5e7eb;">
+			<div class="customer-search-area"
+				style="background: #f8f9fa; padding: 8px 15px; border-bottom: 1px solid #e5e7eb;">
 				<el-row :gutter="15" class="search-row">
 					<el-col :span="4">
 						<el-input v-model="Search_CustomerEmail_input" clearable placeholder="请输入邮箱地址" size="default" />
@@ -83,8 +90,8 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table class="customer-info-table" :data="CunstomeinfotableData" @row-dblclick="CunstomeinfotableDatahandleRowDblClick"
-				style="width: 100%; table-layout: fixed;" stripe
+			<el-table class="customer-info-table" :data="CunstomeinfotableData"
+				@row-dblclick="CunstomeinfotableDatahandleRowDblClick" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '22px' }" :cell-style="{ padding: '1px 0' }">
 				<el-table-column prop="customerNo" label="客户编号" width="90">
@@ -98,19 +105,32 @@
 				<el-table-column prop="customerLevel" label="客户等级" width="90" />
 				<el-table-column prop="customerAbbreviation" label="客户简称" width="150" />
 				<el-table-column prop="tradingCountry" label="贸易国别" width="90" />
-				<el-table-column prop="Lastcontactdate" label="最近联系时间" width="140" />
+				<el-table-column prop="lastContactTime" label="最近联系时间" width="140">
+					<template #default="scope">
+						{{ formatDate(scope.row.lastContactTime) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="nextFollowUpTime" label="下次跟进时间" width="140">
+					<template #default="scope">
+						<span :style="{ color: getFollowUpTimeColor(scope.row.nextFollowUpTime) }">
+							{{ formatDate(scope.row.nextFollowUpTime) }}
+						</span>
+					</template>
+				</el-table-column>
 				<el-table-column prop="create_time" label="建档时间" width="110">
 					<template #default="scope">
 						{{ formatDate(scope.row.create_time) }}
 					</template>
 				</el-table-column>
 				<el-table-column prop="salesPerson" label="所属销售员" width="130" />
-				<el-table-column prop="Originalfollower" label="原跟进人" width="130" />
+				<el-table-column prop="lastbindSalePerson" label="原跟进人" width="130" />
 				<el-table-column prop="create_by" label="创建人" width="130" />
-				<el-table-column fixed="right" prop="operate" label="操作" width="200">
+				<el-table-column fixed="right" prop="operate" label="操作" width="280">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small"
 							@click=OpenCustomerProfileDetailDialog(scope.row)>查看详情</el-button>
+						<el-button v-if="isCurrentUserSalesPerson(scope.row._salesPersonValue)" link type="danger"
+							size="small" @click.stop="releaseCustomerToPool(scope.row.id)">释放到公海</el-button>
 					</template>
 				</el-table-column>
 			</el-table>
@@ -378,10 +398,10 @@
 				<el-table-column prop="involvingBusiness" label="涉及业务" width="150" />
 				<el-table-column prop="create_by" label="创建人" width="120" />
 			</el-table>
-			<el-pagination @current-change="CustomerLeadsTableDatahandlePageChange" @size-change="CustomerLeadsTableDatahandleSizeChange"
-				:current-page="CustomerLeadsTableDatacurrentPage" :page-size="CustomerLeadsTableDatapageSize"
-				:total="CustomerLeadsTableDatatotalItems" :page-sizes="[10, 20, 30, 50]"
-				background layout="total, sizes, prev, pager, next, jumper"
+			<el-pagination @current-change="CustomerLeadsTableDatahandlePageChange"
+				@size-change="CustomerLeadsTableDatahandleSizeChange" :current-page="CustomerLeadsTableDatacurrentPage"
+				:page-size="CustomerLeadsTableDatapageSize" :total="CustomerLeadsTableDatatotalItems"
+				:page-sizes="[10, 20, 30, 50]" background layout="total, sizes, prev, pager, next, jumper"
 				style="margin-top: 10px; text-align: right;" />
 		</el-dialog>
 		<el-dialog :modal="false" modal-penetrable v-model="CustomerDuplicationCheckDialog" title="客户查重"
@@ -471,6 +491,88 @@
 					</el-table>
 				</el-collapse-item>
 			</el-collapse>
+		</el-dialog>
+		<el-dialog v-model="CustomerPublicSeaDialog" title="客户公海" :close-on-click-modal="false" style="width: 75%;">
+			<el-table :data="CustomerPublicSeaTableData" style="width: 100%; table-layout: fixed;" stripe
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column prop="customerNo" label="客户编号" width="120" />
+				<el-table-column prop="customerStatus" label="客户状态" width="120" />
+				<el-table-column prop="customerLevel" label="客户等级" width="100" />
+				<el-table-column prop="customerAbbreviation" label="客户简称" width="150" />
+				<el-table-column prop="tradingCountry" label="贸易国别" width="120" />
+				<el-table-column prop="businessScope" label="市场" width="120" />
+				<el-table-column prop="Lastcontactdate" label="最近联系时间" width="140" />
+				<el-table-column prop="create_time" label="建档时间" width="140">
+					<template #default="scope">
+						{{ formatDate(scope.row.create_time) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="lastbindSalePerson" label="原属业务员" width="120" />
+				<el-table-column fixed="right" label="操作" width="120">
+					<template #default="scope">
+						<el-button link type="primary" size="small" @click="claimPublicSeaCustomer(scope.row)">
+							领取
+						</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="CustomerPublicSeaTableDatahandlePageChange"
+				@size-change="CustomerPublicSeaTableDatahandleSizeChange"
+				:current-page="CustomerPublicSeaTableDatacurrentPage" :page-size="CustomerPublicSeaTableDatapageSize"
+				:total="CustomerPublicSeaTableDatatotalItems" :page-sizes="[10, 20, 30, 50]" background
+				layout="total, sizes, prev, pager, next, jumper" style="margin-top: 10px; text-align: right;" />
+		</el-dialog>
+		<el-dialog v-model="PendingCustomerRatingDialog" title="待评级客户" :close-on-click-modal="false"
+			style="width: 88%;">
+			<div style="margin-bottom: 10px;">
+				<el-button type="primary" @click="batchRecalculateCustomerLevel"
+					:disabled="PendingCustomerRatingSelectedCustomerIds.length === 0">
+					批量处理
+				</el-button>
+			</div>
+			<el-table :data="PendingCustomerRatingTableData" style="width: 100%; table-layout: fixed;" stripe
+				@selection-change="handlePendingCustomerRatingSelectionChange"
+				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+				<el-table-column type="selection" width="50" />
+				<el-table-column prop="id" label="ID" width="90" v-if="false" />
+				<el-table-column prop="customerId" label="客户ID" width="100" v-if="false" />
+				<el-table-column prop="customerName" label="客户名称" width="180" />
+				<el-table-column prop="salesPerson" label="当前所属业务员" width="130" />
+				<el-table-column prop="targetSalesPerson" label="目标业务员" width="120" />
+				<el-table-column prop="oldLevel" label="原客户等级" width="120" />
+				<el-table-column prop="targetLevel" label="目标客户等级" width="120" />
+				<el-table-column prop="failType" label="失败类型" width="140" v-if="false" />
+				<el-table-column prop="failReason" label="失败原因" width="260" show-overflow-tooltip />
+				<el-table-column prop="statusText" label="处理状态" width="100" />
+				<el-table-column prop="remark" label="备注" width="200" show-overflow-tooltip />
+				<el-table-column prop="create_by" label="创建人" width="120" v-if="false" />
+				<el-table-column prop="create_time" label="创建时间" width="170">
+					<template #default="scope">
+						{{ formatDateTime(scope.row.create_time) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="update_by" label="更新人" width="120" v-if="false" />
+				<el-table-column prop="update_time" label="更新时间" width="170" v-if="false">
+					<template #default="scope">
+						{{ formatDateTime(scope.row.update_time) }}
+					</template>
+				</el-table-column>
+				<el-table-column prop="isDelete" label="是否删除" width="90" v-if="false" />
+				<el-table-column fixed="right" label="操作" width="120">
+					<template #default="scope">
+						<el-button link type="primary" size="small"
+							@click="recalculateSingleCustomerLevel(scope.row.customerId)">手动评级</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+			<el-pagination @current-change="PendingCustomerRatingTableDatahandlePageChange"
+				@size-change="PendingCustomerRatingTableDatahandleSizeChange"
+				:current-page="PendingCustomerRatingTableDatacurrentPage"
+				:page-size="PendingCustomerRatingTableDatapageSize" :total="PendingCustomerRatingTableDatatotalItems"
+				:page-sizes="[10, 20, 30, 50]" background layout="total, sizes, prev, pager, next, jumper"
+				style="margin-top: 10px; text-align: right;" />
 		</el-dialog>
 		<el-dialog :modal="false" :modal-penetrable="true" v-model="CustomerProfileDetailDialog" title="客户详情"
 			:close-on-click-modal=false style="width: 75%;">
@@ -706,10 +808,11 @@
 									</template>
 								</el-table-column>
 							</el-table>
-							<el-pagination @current-change="ContactLogTablehandlePageChange" @size-change="ContactLogTablehandleSizeChange"
+							<el-pagination @current-change="ContactLogTablehandlePageChange"
+								@size-change="ContactLogTablehandleSizeChange"
 								:current-page="ContactLogTablecurrentPage" :page-size="ContactLogTablepageSize"
-								:total="ContactLogTabletotalItems" :page-sizes="[10, 20, 30, 50]"
-								background layout="total, sizes, prev, pager, next, jumper"
+								:total="ContactLogTabletotalItems" :page-sizes="[10, 20, 30, 50]" background
+								layout="total, sizes, prev, pager, next, jumper"
 								style="margin-top: 10px; text-align: right;" />
 						</el-tab-pane>
 						<el-tab-pane label="报价记录" name="QuoteRecordTable">
@@ -732,10 +835,11 @@
 								<el-table-column prop="realQuotationDate" label="报价日期" width="150" />
 								<el-table-column prop="validityPeriod" label="有效期" width="150" />
 							</el-table>
-							<el-pagination @current-change="QuotationRecordHandlePageChange" @size-change="QuotationRecordHandleSizeChange"
+							<el-pagination @current-change="QuotationRecordHandlePageChange"
+								@size-change="QuotationRecordHandleSizeChange"
 								:current-page="QuotationRecordCurrentPage" :page-size="QuotationRecordPageSize"
-								:total="QuotationRecordTotalItems" :page-sizes="[10, 20, 30, 50]"
-								background layout="total, sizes, prev, pager, next, jumper"
+								:total="QuotationRecordTotalItems" :page-sizes="[10, 20, 30, 50]" background
+								layout="total, sizes, prev, pager, next, jumper"
 								style="margin-top: 10px; text-align: right;" />
 						</el-tab-pane>
 						<el-tab-pane label="销售记录" name="saleRecordTable">
@@ -749,10 +853,11 @@
 								<el-table-column prop="deliveryDate" label="交货日期" width="150" />
 								<el-table-column prop="goodsValue" label="货值合计" width="150" />
 							</el-table>
-							<el-pagination @current-change="SalesContractRecordHandlePageChange" @size-change="SalesContractRecordHandleSizeChange"
+							<el-pagination @current-change="SalesContractRecordHandlePageChange"
+								@size-change="SalesContractRecordHandleSizeChange"
 								:current-page="SalesContractRecordCurrentPage" :page-size="SalesContractRecordPageSize"
-								:total="SalesContractRecordTotalItems" :page-sizes="[10, 20, 30, 50]"
-								background layout="total, sizes, prev, pager, next, jumper"
+								:total="SalesContractRecordTotalItems" :page-sizes="[10, 20, 30, 50]" background
+								layout="total, sizes, prev, pager, next, jumper"
 								style="margin-top: 10px; text-align: right;" />
 						</el-tab-pane>
 						<el-tab-pane label="收寄样历史" name="SampleCollectionHistory">
@@ -775,10 +880,11 @@
 								</el-table-column>
 								<el-table-column prop="remark" label="备注"></el-table-column>
 							</el-table>
-							<el-pagination @current-change="CustomerSendSampleHandlePageChange" @size-change="CustomerSendSampleHandleSizeChange"
+							<el-pagination @current-change="CustomerSendSampleHandlePageChange"
+								@size-change="CustomerSendSampleHandleSizeChange"
 								:current-page="CustomerSendSampleCurrentPage" :page-size="CustomerSendSamplePageSize"
-								:total="CustomerSendSampleTotalItems" :page-sizes="[10, 20, 30, 50]"
-								background layout="total, sizes, prev, pager, next, jumper"
+								:total="CustomerSendSampleTotalItems" :page-sizes="[10, 20, 30, 50]" background
+								layout="total, sizes, prev, pager, next, jumper"
 								style="margin-top: 10px; text-align: right;" />
 						</el-tab-pane>
 						<el-tab-pane label="财务" name="FinanceLedgerTable">
@@ -856,10 +962,11 @@
 									</el-table-column>
 								</el-table-column>
 							</el-table>
-							<el-pagination @current-change="handleFinanceLedgerPageChange" @size-change="handleFinanceLedgerSizeChange"
-								:current-page="financeLedgerCurrentPage" :page-size="financeLedgerPageSize"
-								:total="financeLedgerTotalRecords" :page-sizes="[10, 20, 30, 50]"
-								background layout="total, sizes, prev, pager, next, jumper"
+							<el-pagination @current-change="handleFinanceLedgerPageChange"
+								@size-change="handleFinanceLedgerSizeChange" :current-page="financeLedgerCurrentPage"
+								:page-size="financeLedgerPageSize" :total="financeLedgerTotalRecords"
+								:page-sizes="[10, 20, 30, 50]" background
+								layout="total, sizes, prev, pager, next, jumper"
 								style="margin-top: 10px; text-align: right;" />
 						</el-tab-pane>
 						<el-tab-pane label="出货记录" name="ShippingRecordTable">
@@ -885,6 +992,10 @@
 				<span class="dialog-footer">
 					<el-button type="warning" @click="EditCustomerInfoClick"
 						:disabled="!canEditSelectedCustomer">编辑</el-button>
+					<el-button
+						v-if="CustomerProfileDetailDialogform.id && isCurrentUserSalesPerson(CustomerProfileDetailDialogform.salesPerson)"
+						type="danger" plain
+						@click="releaseCustomerToPool(CustomerProfileDetailDialogform.id)">释放到公海</el-button>
 					<!-- <el-button type="primary">保存</el-button> -->
 				</span>
 			</template>
@@ -962,7 +1073,8 @@
 				</el-form-item>
 				<el-form-item label="图片">
 					<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="contactLogImages"
-						:limit="3" :action="UploadUrl" accept="image/*" @change="handleContactLogImageChange" @preview="handleImagePreview">
+						:limit="3" :action="UploadUrl" accept="image/*" @change="handleContactLogImageChange"
+						@preview="handleImagePreview">
 						<el-icon>
 							<Plus />
 						</el-icon>
@@ -1188,6 +1300,7 @@ proxy.getDicts(dictParams).then((response) => {
 	})
 	//获取客户基本信息列表
 	GetCustomeInfoList(currentPage.value, pageSize.value);
+	refreshPendingCustomerRatingCount();
 })
 
 // 获取用户相关的客户数据
@@ -1354,7 +1467,10 @@ const handleRowDblClick = (row) => {
 //客户建档窗体
 const CustomerProfileDialog = ref(false)
 
-const openCustomerProfileDialog = () => {
+const openCustomerProfileDialog = async () => {
+	if (!(await assertPotentialCanAddForNewCustomerArchive())) {
+		return;
+	}
 	GetNextCustomerNo();
 	clearUploadfile();
 	// 设置默认销售人员为当前登录用户
@@ -1372,6 +1488,19 @@ const clearUploadfile = () => {
 const CustomerProfileDetailDialog = ref(false)
 //客户查重窗体
 const CustomerDuplicationCheckDialog = ref(false)
+//客户公海窗体
+const CustomerPublicSeaDialog = ref(false)
+const CustomerPublicSeaTableData = ref([])
+const CustomerPublicSeaTableDatatotalItems = ref(0)
+const CustomerPublicSeaTableDatacurrentPage = ref(1)
+const CustomerPublicSeaTableDatapageSize = ref(30)
+//待处理客户窗体
+const PendingCustomerRatingDialog = ref(false)
+const PendingCustomerRatingTableData = ref([])
+const PendingCustomerRatingTableDatatotalItems = ref(0)
+const PendingCustomerRatingTableDatacurrentPage = ref(1)
+const PendingCustomerRatingTableDatapageSize = ref(30)
+const PendingCustomerRatingSelectedCustomerIds = ref<number[]>([])
 //查询条件
 const Search_CustomerBusiness_input = ref('')
 const Search_CustomerContactPerson_input = ref('')
@@ -1384,6 +1513,231 @@ const Search_CustomerLevel_Select = ref('')
 const Search_CustomerSource_Select = ref('')
 const Search_StartDate_Select = ref('')
 const Search_EndDate_Select = ref('')
+
+const loadCustomerPublicSeaData = async (pageNum = CustomerPublicSeaTableDatacurrentPage.value, pageSizeNum = CustomerPublicSeaTableDatapageSize.value) => {
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetOpenSeaCustomerInfoList/GetList',
+			method: 'GET',
+			params: {
+				PageNum: pageNum,
+				PageSize: pageSizeNum
+			}
+		})
+		const result = response?.data?.result || []
+		CustomerPublicSeaTableDatacurrentPage.value = response?.data?.pageIndex || pageNum
+		CustomerPublicSeaTableDatapageSize.value = response?.data?.pageSize || pageSizeNum
+		CustomerPublicSeaTableDatatotalItems.value = response?.data?.totalNum || 0
+		CustomerPublicSeaTableData.value = result.map(item => ({
+			...item,
+			_customerLevelValue: item.customerLevel,
+			customerStatus:
+				item.customerStatus === 0 || item.customerStatus === '0'
+					? '暂未更新状态'
+					: state.optionss['hr_customer_status'].filter(option => option.dictValue == item.customerStatus).map(option => option.dictLabel).values().next().value || item.customerStatus,
+			customerLevel: state.optionss['hr_customer_level'].filter(option => option.dictValue == item.customerLevel).map(option => option.dictLabel).values().next().value || item.customerLevel,
+			tradingCountry: state.optionss['hr_nation'].filter(option => option.dictValue == item.tradingCountry).map(option => option.dictLabel).values().next().value || item.tradingCountry,
+			businessScope: state.optionss['hr_business_scope'].filter(option => option.dictValue == item.businessScope).map(option => option.dictLabel).values().next().value || item.businessScope,
+			salesPerson: state.optionss['sql_hr_sale'].filter(option => option.dictValue == item.salesPerson).map(option => option.dictLabel).values().next().value || item.salesPerson,
+			create_by: state.optionss['sql_all_user'].filter(option => option.dictValue == item.create_by).map(option => option.dictLabel).values().next().value || item.create_by,
+			lastbindSalePerson: state.optionss['sql_hr_sale'].filter(option => option.dictValue == item.lastbindSalePerson).map(option => option.dictLabel).values().next().value || item.lastbindSalePerson
+		}))
+	} catch (error) {
+		console.error('获取公海客户列表失败:', error)
+		ElMessage.error('获取公海客户列表失败')
+		CustomerPublicSeaTableData.value = []
+		CustomerPublicSeaTableDatatotalItems.value = 0
+	}
+}
+
+const openCustomerPublicSeaDialog = async () => {
+	CustomerPublicSeaTableDatacurrentPage.value = 1
+	await loadCustomerPublicSeaData(1, CustomerPublicSeaTableDatapageSize.value)
+	CustomerPublicSeaDialog.value = true
+}
+
+const loadPendingCustomerRatingData = async (
+	pageNum = PendingCustomerRatingTableDatacurrentPage.value,
+	pageSizeNum = PendingCustomerRatingTableDatapageSize.value
+) => {
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetCustomerRatingFailedRecords/GetList',
+			method: 'GET',
+			params: {
+				PageNum: pageNum,
+				PageSize: pageSizeNum
+			}
+		})
+		const data = response?.data || {}
+		const result = data?.result || []
+		PendingCustomerRatingTableDatacurrentPage.value = data?.pageIndex || pageNum
+		PendingCustomerRatingTableDatapageSize.value = data?.pageSize || pageSizeNum
+		PendingCustomerRatingTableDatatotalItems.value = data?.totalNum || 0
+		PendingCustomerRatingTableData.value = result.map(item => ({
+			...item,
+			salesPerson: state.optionss['sql_hr_sale'].filter(option => option.dictValue == item.salesPerson).map(option => option.dictLabel).values().next().value || item.salesPerson,
+			targetSalesPerson: state.optionss['sql_hr_sale'].filter(option => option.dictValue == item.targetSalesPerson).map(option => option.dictLabel).values().next().value || item.targetSalesPerson,
+			oldLevel: state.optionss['hr_customer_level'].filter(option => option.dictValue == item.oldLevel).map(option => option.dictLabel).values().next().value || item.oldLevel,
+			targetLevel: state.optionss['hr_customer_level'].filter(option => option.dictValue == item.targetLevel).map(option => option.dictLabel).values().next().value || item.targetLevel,
+			statusText: item.status === 0 ? '未处理' : item.status === 1 ? '已处理' : item.status === 2 ? '已忽略' : item.status
+		}))
+	} catch (error) {
+		console.error('获取待处理客户列表失败:', error)
+		ElMessage.error('获取待处理客户列表失败')
+		PendingCustomerRatingTableData.value = []
+		PendingCustomerRatingTableDatatotalItems.value = 0
+	}
+}
+
+const refreshPendingCustomerRatingCount = async () => {
+	try {
+		const response = await request({
+			url: 'CustomerInfoMation/GetCustomerRatingFailedRecords/GetList',
+			method: 'GET',
+			params: {
+				PageNum: 1,
+				PageSize: 1
+			}
+		})
+		PendingCustomerRatingTableDatatotalItems.value = response?.data?.totalNum || 0
+	} catch (error) {
+		console.error('获取待处理客户数量失败:', error)
+		PendingCustomerRatingTableDatatotalItems.value = 0
+	}
+}
+
+const openPendingCustomerRatingDialog = async () => {
+	if (PendingCustomerRatingTableDatatotalItems.value === 0) {
+		return
+	}
+	PendingCustomerRatingSelectedCustomerIds.value = []
+	PendingCustomerRatingTableDatacurrentPage.value = 1
+	await loadPendingCustomerRatingData(1, PendingCustomerRatingTableDatapageSize.value)
+	PendingCustomerRatingDialog.value = true
+}
+
+const handlePendingCustomerRatingSelectionChange = (rows: any[]) => {
+	PendingCustomerRatingSelectedCustomerIds.value = (rows || [])
+		.map(item => Number(item?.customerId))
+		.filter(id => !Number.isNaN(id) && id > 0)
+}
+
+const recalculateSingleCustomerLevel = async (customerId: number | string) => {
+	const id = Number(customerId)
+	if (!id) {
+		ElMessage.warning('客户ID无效，无法处理')
+		return
+	}
+	try {
+		const response: any = await request({
+			url: 'CustomerInfoMation/RecalculateCustomerLevel/RecalculateCustomerLevel',
+			method: 'POST',
+			params: { customerId: id }
+		})
+		if (response?.code == 200 || response?.code === '200') {
+			ElMessage.success((typeof response?.data === 'string' && response.data) || response?.msg || '处理成功')
+			await loadPendingCustomerRatingData(PendingCustomerRatingTableDatacurrentPage.value, PendingCustomerRatingTableDatapageSize.value)
+			await refreshPendingCustomerRatingCount()
+			await GetCustomeInfoList(currentPage.value, pageSize.value)
+		}
+	} catch {
+		// 失败提示由请求拦截器处理
+	}
+}
+
+const batchRecalculateCustomerLevel = async () => {
+	const ids = Array.from(new Set(PendingCustomerRatingSelectedCustomerIds.value))
+	if (ids.length === 0) {
+		ElMessage.warning('请先选择需要处理的客户')
+		return
+	}
+	try {
+		const response: any = await request({
+			url: 'CustomerInfoMation/BatchRecalculateCustomerLevel/BatchRecalculateCustomerLevel',
+			method: 'POST',
+			data: ids
+		})
+		if (response?.code == 200 || response?.code === '200') {
+			const summary = response?.data
+			const msg = summary && typeof summary === 'object'
+				? `批量处理完成：总数${summary.TotalCount ?? ids.length}，成功${summary.SuccessCount ?? 0}，失败${summary.FailCount ?? 0}`
+				: (response?.msg || '批量处理成功')
+			ElMessage.success(msg)
+			PendingCustomerRatingSelectedCustomerIds.value = []
+			await loadPendingCustomerRatingData(PendingCustomerRatingTableDatacurrentPage.value, PendingCustomerRatingTableDatapageSize.value)
+			await refreshPendingCustomerRatingCount()
+			await GetCustomeInfoList(currentPage.value, pageSize.value)
+		}
+	} catch {
+		// 失败提示由请求拦截器处理
+	}
+}
+
+const PendingCustomerRatingTableDatahandlePageChange = async (newPage) => {
+	PendingCustomerRatingTableDatacurrentPage.value = newPage
+	await loadPendingCustomerRatingData(newPage, PendingCustomerRatingTableDatapageSize.value)
+}
+
+const PendingCustomerRatingTableDatahandleSizeChange = async (size) => {
+	PendingCustomerRatingTableDatapageSize.value = size
+	PendingCustomerRatingTableDatacurrentPage.value = 1
+	await loadPendingCustomerRatingData(1, size)
+}
+
+const CustomerPublicSeaTableDatahandlePageChange = async (newPage) => {
+	CustomerPublicSeaTableDatacurrentPage.value = newPage
+	await loadCustomerPublicSeaData(newPage, CustomerPublicSeaTableDatapageSize.value)
+}
+
+const CustomerPublicSeaTableDatahandleSizeChange = async (size) => {
+	CustomerPublicSeaTableDatapageSize.value = size
+	CustomerPublicSeaTableDatacurrentPage.value = 1
+	await loadCustomerPublicSeaData(1, size)
+}
+
+const claimPublicSeaCustomer = async (row) => {
+	if (!row || !row.id) return
+	try {
+		const lim = await fetchCustomerLimitStatus()
+		const bucket = getPublicSeaClaimLimitBucket(row._customerLevelValue)
+		const potential = lim?.Potential ?? lim?.potential
+		const activeLost = lim?.ActiveAndLost ?? lim?.activeAndLost
+		const seg = bucket === 'potential' ? potential : activeLost
+		const canAdd = seg?.CanAdd ?? seg?.canAdd
+		if (!canAdd) {
+			const c = seg?.Count ?? seg?.count
+			const l = seg?.Limit ?? seg?.limit
+			const name = bucket === 'potential' ? '潜在客户' : '成交客户与流失风险客户'
+			ElMessage.warning(`${name}数量已达上限（${c}/${l}），无法从公海领取`)
+			return
+		}
+	} catch (e: any) {
+		ElMessage.error(e?.message || '获取客户数量上限失败')
+		return
+	}
+	try {
+		const response: any = await request({
+			url: 'CustomerInfoMation/ClaimCustomerFromPool/ClaimCustomerFromPool',
+			method: 'POST',
+			params: { customerID: row.id }
+		})
+		if (response?.code == 200 || response?.code === '200') {
+			const okMsg =
+				typeof response?.data === 'string' && response.data
+					? response.data
+					: response?.msg
+			ElMessage.success(okMsg || '领取成功')
+			await loadCustomerPublicSeaData(
+				CustomerPublicSeaTableDatacurrentPage.value,
+				CustomerPublicSeaTableDatapageSize.value
+			)
+			await GetCustomeInfoList(currentPage.value, pageSize.value)
+		}
+	} catch {
+		// 业务失败等已由 request 响应拦截器提示
+	}
+}
 
 //查询条件重置功能
 const resetSearch = () => {
@@ -1434,6 +1788,52 @@ const getContactPersonCountByEmail = async (emailAddress) => {
 		return response.data;
 	}
 	throw new Error(response?.msg || '验证联系人邮箱失败');
+};
+
+/** 当前用户客户数量及上限（与后端 GetCustomerLimitStatus 一致，JSON 可能为 camelCase） */
+const fetchCustomerLimitStatus = async () => {
+	const response: any = await request({
+		url: 'CustomerInfoMation/GetCustomerLimitStatus/GetCustomerLimitStatus',
+		method: 'GET'
+	});
+	if (response?.code == 200) {
+		return response.data;
+	}
+	throw new Error(response?.msg || '获取客户数量上限失败');
+};
+
+/** 公海领取：按字典标签判断走潜在客户上限还是成交+流失风险上限 */
+const getPublicSeaClaimLimitBucket = (customerLevelValue: string | number | null | undefined): 'potential' | 'activeAndLost' => {
+	const levels = state.optionss?.['hr_customer_level'] || [];
+	const v = customerLevelValue != null && customerLevelValue !== '' ? String(customerLevelValue) : '';
+	const opt = levels.find(o => String(o.dictValue) === v);
+	const label = (opt?.dictLabel || '').toString();
+	if (label.includes('潜在')) {
+		return 'potential';
+	}
+	if (label.includes('成交') || label.includes('流失')) {
+		return 'activeAndLost';
+	}
+	return 'potential';
+};
+
+/** 新增客户档案：潜在客户上限预校验（点击建档与正式保存共用） */
+const assertPotentialCanAddForNewCustomerArchive = async (): Promise<boolean> => {
+	try {
+		const lim = await fetchCustomerLimitStatus();
+		const potential = lim?.Potential ?? lim?.potential;
+		const canAdd = potential?.CanAdd ?? potential?.canAdd;
+		if (!canAdd) {
+			const c = potential?.Count ?? potential?.count;
+			const l = potential?.Limit ?? potential?.limit;
+			ElMessage.warning(`潜在客户数量已达上限（${c}/${l}），无法新增客户档案`);
+			return false;
+		}
+		return true;
+	} catch (e: any) {
+		ElMessage.error(e?.message || '获取客户数量上限失败');
+		return false;
+	}
 };
 
 const isCustomerContactPersonTableDataCount = ref(0);
@@ -1963,7 +2363,7 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 		confirmButtonText: '确定',
 		cancelButtonText: '取消',
 		type: 'warning'
-	}).then(() => {
+	}).then(async () => {
 		if (CustomerProfileform.customerStatus == null) {
 			CustomerProfileform.customerStatus = 0;
 		}
@@ -1980,6 +2380,9 @@ const submitForm = async (formEl: FormInstance | undefined) => {
 			addCustomerInfo.customerInfo.collectionPeriod = 0;
 		}
 		if (isEditCustomerInfo.value == false) {
+			if (!(await assertPotentialCanAddForNewCustomerArchive())) {
+				return;
+			}
 			if (isImport.value == false) {
 				// 处理文件上传 - 使用与SaveCustomerDraft相同的逻辑
 				let filelistUrlStr = '';
@@ -2289,6 +2692,7 @@ function GetCustomeInfoList(start, end) {
 			if (response.data.result.length > 0) {
 				CunstomeinfotableData.value = response.data.result;
 				CunstomeinfotableData.value.forEach(item => {
+					item._salesPersonValue = item.salesPerson;
 					item.customerStatus = state.optionss['hr_customer_status'].filter(option => option.dictValue == item.customerStatus).map(option => option.dictLabel).values().next().value;
 					item.customerLevel = state.optionss['hr_customer_level'].filter(option => option.dictValue == item.customerLevel).map(option => option.dictLabel).values().next().value;
 					item.tradingCountry = state.optionss['hr_nation'].filter(option => option.dictValue == item.tradingCountry).map(option => option.dictLabel).values().next().value;
@@ -2296,6 +2700,7 @@ function GetCustomeInfoList(start, end) {
 					item.businessScope = state.optionss['hr_business_scope'].filter(option => option.dictValue == item.businessScope).map(option => option.dictLabel).values().next().value;
 					item.salesPerson = state.optionss['sql_hr_sale'].filter(option => option.dictValue == item.salesPerson).map(option => option.dictLabel).values().next().value;
 					item.create_by = state.optionss['sql_all_user'].filter(option => option.dictValue == item.create_by).map(option => option.dictLabel).values().next().value;
+					item.lastbindSalePerson = state.optionss['sql_hr_sale'].filter(option => option.dictValue == item.lastbindSalePerson).map(option => option.dictLabel).values().next().value;
 				});
 				resolve(response.data);
 			} else {
@@ -2377,6 +2782,44 @@ const OpenCustomerProfileDetailDialog = (row) => {
 	CustomerProfileDetailDialog.value = true;
 }
 
+/** 将客户释放到公海（仅后端校验所属销售员，前端仅控制按钮显示） */
+const releaseCustomerToPool = async (customerId: number) => {
+	if (!customerId) return;
+	try {
+		await ElMessageBox.confirm(
+			'确定将该客户释放到客户公海吗？释放后将不再归属于当前销售人员。',
+			'提示',
+			{
+				confirmButtonText: '确定',
+				cancelButtonText: '取消',
+				type: 'warning'
+			}
+		);
+	} catch {
+		return;
+	}
+	try {
+		const response: any = await request({
+			url: 'CustomerInfoMation/ReleaseCustomerToPool/ReleaseCustomerToPool',
+			method: 'GET',
+			params: { customerId }
+		});
+		if (response?.code == 200 || response?.code === '200') {
+			const okMsg =
+				typeof response?.data === 'string' && response.data
+					? response.data
+					: response?.msg;
+			ElMessage.success(okMsg || '操作成功');
+			CustomerProfileDetailDialog.value = false;
+			await GetCustomeInfoList(currentPage.value, pageSize.value);
+		} else {
+			ElMessage.error(response?.msg || '释放失败');
+		}
+	} catch (e: any) {
+		ElMessage.error(e?.message || '释放失败');
+	}
+};
+
 const loadCustomerContractPerson = (customerId) => {
 	request({
 		url: 'CustomerInfoMation/GetCustomerContractPersonListByCustomerID/GetContractPersonData',
@@ -2428,6 +2871,23 @@ const formatDate = (dateTimeStr) => {
 	const month = String(date.getMonth() + 1).padStart(2, '0');
 	const day = String(date.getDate()).padStart(2, '0');
 	return `${year}-${month}-${day}`;
+}
+
+const getFollowUpTimeColor = (dateTimeStr) => {
+	if (!dateTimeStr) return '';
+	const followUpDate = new Date(dateTimeStr);
+	if (Number.isNaN(followUpDate.getTime())) return '';
+
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	followUpDate.setHours(0, 0, 0, 0);
+	const days = Math.floor((followUpDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+	if (days < 0) return 'red';
+	if (days <= 2) return 'red';
+	if (days <= 7) return 'orange';
+	if (days <= 15) return 'blue';
+	return 'green';
 }
 
 const formatFinanceAmount = (amount: number): string => {
@@ -3777,6 +4237,7 @@ const CustomerSendSampleHandleSizeChange = async (size) => {
 .customer-search-area .search-row {
 	margin-bottom: 4px !important;
 }
+
 .customer-search-area .search-row:last-child {
 	margin-bottom: 0 !important;
 }
