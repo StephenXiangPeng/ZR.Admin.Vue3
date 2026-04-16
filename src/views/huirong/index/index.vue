@@ -3767,7 +3767,7 @@ interface BusinessSummarySummary {
 const scopeLabelMap: Record<CustomerStatisticsScope, string> = {
   Self: '本人',
   Group: '本组',
-  Department: '本部门',
+  Department: '本组',//由于当前实际数据结构显示，故将“本部门”暂定为“本组”的数据，以后待组织架构确定后，再根据实际情况调整
   Company: '本公司'
 }
 
