@@ -105,6 +105,165 @@
         </el-card>
       </el-col>
     </el-row>
+    <el-row v-if="isSalesDeptUser()" :gutter="12" class="dashboard-header dashboard-equal-height-row">
+      <el-col :lg="12" :md="12" :sm="24" class="mb8">
+        <el-card class="dashboard-card customer-statistics-card" shadow="hover" v-loading="customerStatisticsLoading">
+          <div class="card-header customer-statistics-header">
+            <div class="customer-statistics-title">
+              <el-icon class="card-icon">
+                <List />
+              </el-icon>
+              <span class="card-title">客户统计</span>
+            </div>
+            <el-select v-model="selectedCustomerScope" class="customer-scope-select" size="small"
+              :disabled="customerScopeOptions.length === 0" @change="handleCustomerScopeChange">
+              <el-option v-for="item in customerScopeOptions" :key="item.value" :label="item.label"
+                :value="item.value" />
+            </el-select>
+          </div>
+          <div class="card-content customer-statistics-content">
+            <div class="metric-row">
+              <span class="metric-label">客户数</span>
+              <span class="metric-value primary">{{ customerStatisticsSummary.customerCount }}</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">成交客户数</span>
+              <span class="metric-value primary">{{ customerStatisticsSummary.dealCustomerCount }}</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">复购客户数</span>
+              <span class="metric-value primary">{{ customerStatisticsSummary.repurchaseCustomerCount }}</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">流失客户数</span>
+              <span class="metric-value danger">{{ customerStatisticsSummary.lostCustomerCount }}</span>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :lg="12" :md="12" :sm="24" class="mb8">
+        <el-card class="dashboard-card sales-conversion-card" shadow="hover" v-loading="salesConversionLoading">
+          <div class="card-header sales-conversion-header">
+            <div class="sales-conversion-title">
+              <el-icon class="card-icon">
+                <List />
+              </el-icon>
+              <span class="card-title">销售转化统计</span>
+            </div>
+            <div class="sales-conversion-filters">
+              <el-select v-model="selectedSalesConversionScope" class="sales-conversion-filter" size="small"
+                :disabled="salesConversionScopeOptions.length === 0">
+                <el-option v-for="item in salesConversionScopeOptions" :key="item.value" :label="item.label"
+                  :value="item.value" />
+              </el-select>
+              <el-select v-model="selectedSalesConversionStatType" class="sales-conversion-filter" size="small">
+                <el-option v-for="item in salesConversionStatTypeOptions" :key="item.value" :label="item.label"
+                  :value="item.value" />
+              </el-select>
+              <el-select v-model="selectedSalesConversionYear" class="sales-conversion-filter" size="small">
+                <el-option v-for="item in salesConversionYearOptions" :key="item" :label="`${item}年`" :value="item" />
+              </el-select>
+              <el-select v-if="selectedSalesConversionStatType === 'Month'" v-model="selectedSalesConversionMonth"
+                class="sales-conversion-filter" size="small">
+                <el-option v-for="item in salesConversionMonthOptions" :key="item.value" :label="item.label"
+                  :value="item.value" />
+              </el-select>
+              <el-select v-if="selectedSalesConversionStatType === 'Quarter'" v-model="selectedSalesConversionQuarter"
+                class="sales-conversion-filter" size="small">
+                <el-option v-for="item in salesConversionQuarterOptions" :key="item.value" :label="item.label"
+                  :value="item.value" />
+              </el-select>
+            </div>
+          </div>
+          <div class="card-content sales-conversion-content">
+            <div class="metric-row">
+              <span class="metric-label">询盘数</span>
+              <span class="metric-value primary">{{ salesConversionSummary.inquiryCount }}</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">报价数</span>
+              <span class="metric-value primary">{{ salesConversionSummary.quoteCount }}</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">沟通中</span>
+              <span class="metric-value primary">{{ salesConversionSummary.communicatingCount }}</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">再报价</span>
+              <span class="metric-value primary">{{ salesConversionSummary.requoteCount }}</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">成交数</span>
+              <span class="metric-value primary">{{ salesConversionSummary.dealCount }}</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">流失数</span>
+              <span class="metric-value danger">{{ salesConversionSummary.lostCount }}</span>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+    <el-row v-if="isSalesDeptUser()" :gutter="12" class="dashboard-header">
+      <el-col :lg="24" :md="24" :sm="24" class="mb8">
+        <el-card class="dashboard-card business-summary-card" shadow="hover" v-loading="businessSummaryLoading">
+          <div class="card-header business-summary-header">
+            <div class="business-summary-title">
+              <el-icon class="card-icon">
+                <List />
+              </el-icon>
+              <span class="card-title">经营数据统计</span>
+            </div>
+            <div class="business-summary-filters">
+              <el-select v-model="selectedBusinessSummaryScope" class="business-summary-filter" size="small"
+                :disabled="businessSummaryScopeOptions.length === 0">
+                <el-option v-for="item in businessSummaryScopeOptions" :key="item.value" :label="item.label"
+                  :value="item.value" />
+              </el-select>
+              <el-select v-model="selectedBusinessSummaryYear" class="business-summary-filter" size="small">
+                <el-option v-for="item in businessSummaryYearOptions" :key="item" :label="`${item}年`" :value="item" />
+              </el-select>
+            </div>
+          </div>
+
+          <div class="business-summary-totals">
+            <div class="business-summary-total-item">
+              <div class="business-summary-total-label">本年总成交</div>
+              <div class="business-summary-total-value">{{
+                formatBusinessAmountDisplay(businessSummarySummary.totalDealAmount) }}</div>
+            </div>
+            <div class="business-summary-total-item">
+              <div class="business-summary-total-label">已出运</div>
+              <div class="business-summary-total-value">{{
+                formatBusinessAmountDisplay(businessSummarySummary.shippedAmount) }}</div>
+            </div>
+            <div class="business-summary-total-item">
+              <div class="business-summary-total-label">预估毛利</div>
+              <div class="business-summary-total-value">{{
+                formatBusinessAmountDisplay(businessSummarySummary.estimatedGrossProfit) }}</div>
+            </div>
+          </div>
+
+          <div class="business-summary-chart-wrap">
+            <svg class="business-summary-chart" viewBox="0 0 1000 240" preserveAspectRatio="none">
+              <polyline class="business-summary-line deal-line" :points="businessSummaryDealLinePoints" />
+              <polyline class="business-summary-line shipped-line" :points="businessSummaryShippedLinePoints" />
+            </svg>
+            <div class="business-summary-month-labels">
+              <span v-for="month in 12" :key="month" class="business-summary-month-item">{{ month }}</span>
+            </div>
+            <div class="business-summary-legend">
+              <span class="business-summary-legend-item deal">
+                绿色是 月度成交金额
+              </span>
+              <span class="business-summary-legend-item shipped">
+                橙色是 月度出运金额
+              </span>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
 
     <!-- 主要内容区域 -->
     <div class="main-content">
@@ -277,7 +436,7 @@
 
 
       <!-- 右侧：商机看板 -->
-      <div v-if="!isPurchaseRole()" class="right-panel">
+      <div v-if="isSalesDeptUser()" class="right-panel">
         <el-card class="opportunities-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -1017,7 +1176,7 @@
             <el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="160">
               <template #default="scope">
                 <span :class="{ 'red-text': scope.row.isPriceChanged }">{{ scope.row.singleProductGrossProfitTotal
-                  }}</span>
+                }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="grossProfitRate" label="毛利率%" width="110">
@@ -3141,6 +3300,12 @@ const isAdminRole = () => {
   return Array.isArray(userStore.roles) && userStore.roles.includes('admin');
 };
 
+const salesDeptIds = new Set([206, 207, 208, 209])
+const isSalesDeptUser = () => {
+  const deptId = Number(userStore.userInfo?.deptId)
+  return Number.isFinite(deptId) && salesDeptIds.has(deptId)
+}
+
 const isSalesRole = () => {
   if (userStore.roles && userStore.roles.length > 0) {
     return userStore.roles.some(role =>
@@ -3557,6 +3722,457 @@ function getContractConfirmedKanBanData() {
     method: 'get'
   })
 }
+
+type CustomerStatisticsScope = 'Self' | 'Group' | 'Department' | 'Company'
+
+interface CustomerStatisticsSummary {
+  customerCount: number
+  dealCustomerCount: number
+  repurchaseCustomerCount: number
+  lostCustomerCount: number
+}
+
+type SalesConversionStatType = 'Month' | 'Quarter' | 'Year'
+
+interface SalesConversionSummary {
+  inquiryCount: number
+  quoteCount: number
+  communicatingCount: number
+  requoteCount: number
+  dealCount: number
+  lostCount: number
+}
+
+interface BusinessSummarySummary {
+  totalDealAmount: number
+  shippedAmount: number
+  estimatedGrossProfit: number
+}
+
+const scopeLabelMap: Record<CustomerStatisticsScope, string> = {
+  Self: '本人',
+  Group: '本组',
+  Department: '本部门',
+  Company: '本公司'
+}
+
+const selectedCustomerScope = ref<CustomerStatisticsScope>('Self')
+const customerScopeOptions = ref<{ value: CustomerStatisticsScope; label: string }[]>([])
+const customerStatisticsLoading = ref(false)
+const customerStatisticsSummary = ref<CustomerStatisticsSummary>({
+  customerCount: 0,
+  dealCustomerCount: 0,
+  repurchaseCustomerCount: 0,
+  lostCustomerCount: 0
+})
+const salesConversionStatTypeOptions: Array<{ value: SalesConversionStatType; label: string }> = [
+  { value: 'Month', label: '按月' },
+  { value: 'Quarter', label: '按季' },
+  { value: 'Year', label: '按年' }
+]
+const salesConversionMonthOptions = Array.from({ length: 12 }, (_, index) => ({
+  value: index + 1,
+  label: `${index + 1}月`
+}))
+const salesConversionQuarterOptions = [
+  { value: 1, label: '第一季度' },
+  { value: 2, label: '第二季度' },
+  { value: 3, label: '第三季度' },
+  { value: 4, label: '第四季度' }
+]
+const currentYear = new Date().getFullYear()
+const salesConversionYearOptions = Array.from({ length: 6 }, (_, index) => currentYear - index)
+const selectedSalesConversionScope = ref<CustomerStatisticsScope>('Self')
+const salesConversionScopeOptions = ref<{ value: CustomerStatisticsScope; label: string }[]>([])
+const selectedSalesConversionStatType = ref<SalesConversionStatType>('Month')
+const selectedSalesConversionYear = ref<number>(currentYear)
+const selectedSalesConversionMonth = ref<number>(new Date().getMonth() + 1)
+const selectedSalesConversionQuarter = ref<number>(Math.floor(new Date().getMonth() / 3) + 1)
+const salesConversionLoading = ref(false)
+const salesConversionReady = ref(false)
+const salesConversionSummary = ref<SalesConversionSummary>({
+  inquiryCount: 0,
+  quoteCount: 0,
+  communicatingCount: 0,
+  requoteCount: 0,
+  dealCount: 0,
+  lostCount: 0
+})
+const businessSummaryYearOptions = Array.from({ length: 6 }, (_, index) => currentYear - index)
+const selectedBusinessSummaryScope = ref<CustomerStatisticsScope>('Self')
+const businessSummaryScopeOptions = ref<{ value: CustomerStatisticsScope; label: string }[]>([])
+const selectedBusinessSummaryYear = ref<number>(currentYear)
+const businessSummaryLoading = ref(false)
+const businessSummaryReady = ref(false)
+const businessSummarySummary = ref<BusinessSummarySummary>({
+  totalDealAmount: 0,
+  shippedAmount: 0,
+  estimatedGrossProfit: 0
+})
+const businessSummaryMonthlyDealAmounts = ref<number[]>(Array.from({ length: 12 }, () => 0))
+const businessSummaryMonthlyShippedAmounts = ref<number[]>(Array.from({ length: 12 }, () => 0))
+
+const mapCustomerStatisticsSummary = (summary: any): CustomerStatisticsSummary => {
+  const numberValue = (value: unknown) => {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return {
+    customerCount: numberValue(summary?.customerCount ?? summary?.totalCustomerCount ?? summary?.customerTotal),
+    dealCustomerCount: numberValue(summary?.dealCustomerCount ?? summary?.transactionCustomerCount),
+    repurchaseCustomerCount: numberValue(summary?.repurchaseCustomerCount ?? summary?.repeatPurchaseCustomerCount),
+    lostCustomerCount: numberValue(summary?.lostCustomerCount ?? summary?.churnedCustomerCount)
+  }
+}
+
+const mapCustomerScopeOptions = (scopes: any[]) => {
+  const fallbackOptions: Array<{ value: CustomerStatisticsScope; label: string }> = [
+    { value: 'Self', label: scopeLabelMap.Self },
+    { value: 'Group', label: scopeLabelMap.Group },
+    { value: 'Department', label: scopeLabelMap.Department },
+    { value: 'Company', label: scopeLabelMap.Company }
+  ]
+
+  if (!Array.isArray(scopes) || scopes.length === 0) {
+    return fallbackOptions
+  }
+
+  return scopes
+    .map((item) => {
+      const scopeType = item?.scopeType as CustomerStatisticsScope
+      if (!scopeType || !scopeLabelMap[scopeType]) return null
+      return {
+        value: scopeType,
+        label: item?.scopeName || scopeLabelMap[scopeType]
+      }
+    })
+    .filter(Boolean) as Array<{ value: CustomerStatisticsScope; label: string }>
+}
+
+const mapSalesConversionSummary = (summary: any): SalesConversionSummary => {
+  const numberValue = (value: unknown) => {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return {
+    inquiryCount: numberValue(summary?.inquiryCount ?? summary?.inquiryNum ?? summary?.inquiryTotal),
+    quoteCount: numberValue(summary?.quoteCount ?? summary?.quotationCount ?? summary?.quotedCount),
+    communicatingCount: numberValue(summary?.communicatingCount ?? summary?.communicationCount ?? summary?.communicateCount),
+    requoteCount: numberValue(summary?.requoteCount ?? summary?.requoteNum ?? summary?.reQuotationCount),
+    dealCount: numberValue(summary?.dealCount ?? summary?.transactionCount ?? summary?.contractCount),
+    lostCount: numberValue(summary?.lostCount ?? summary?.lossCount ?? summary?.lostNum)
+  }
+}
+
+const mapBusinessSummary = (data: any) => {
+  const numberValue = (value: unknown) => {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  const summaryData = data?.summary || data || {}
+  const monthlyDataRaw = Array.isArray(data?.monthlyData)
+    ? data.monthlyData
+    : (Array.isArray(data?.monthData) ? data.monthData : (Array.isArray(data?.monthlyDetails) ? data.monthlyDetails : []))
+
+  const dealAmounts = Array.from({ length: 12 }, (_, index) => {
+    const monthData = monthlyDataRaw.find((item: any) => Number(item?.month) === index + 1) || {}
+    return numberValue(monthData?.dealAmount ?? monthData?.monthlyDealAmount ?? monthData?.成交金额)
+  })
+
+  const shippedAmounts = Array.from({ length: 12 }, (_, index) => {
+    const monthData = monthlyDataRaw.find((item: any) => Number(item?.month) === index + 1) || {}
+    return numberValue(monthData?.shippedAmount ?? monthData?.monthlyShippedAmount ?? monthData?.出运金额)
+  })
+
+  return {
+    summary: {
+      totalDealAmount: numberValue(summaryData?.totalDealAmount ?? summaryData?.yearDealAmount ?? summaryData?.totalTransactionAmount),
+      shippedAmount: numberValue(summaryData?.shippedAmount ?? summaryData?.totalShippedAmount ?? summaryData?.yearShipmentAmount),
+      estimatedGrossProfit: numberValue(summaryData?.estimatedGrossProfit ?? summaryData?.grossProfitAmount ?? summaryData?.totalEstimatedGrossProfit)
+    },
+    dealAmounts,
+    shippedAmounts
+  }
+}
+
+const formatBusinessAmountDisplay = (amount: number) => {
+  return `￥ ${formatAmount(amount)}`
+}
+
+const buildBusinessSummaryLinePoints = (values: number[]) => {
+  const width = 1000
+  const height = 240
+  const paddingX = 18
+  const paddingY = 18
+  const innerWidth = width - paddingX * 2
+  const innerHeight = height - paddingY * 2
+  const safeValues = values.length === 12 ? values : Array.from({ length: 12 }, (_, index) => Number(values[index] || 0))
+  const maxValue = Math.max(...safeValues, 1)
+  return safeValues
+    .map((value, index) => {
+      const x = paddingX + (index * innerWidth) / 11
+      const y = paddingY + innerHeight - (Number(value || 0) / maxValue) * innerHeight
+      return `${x},${y}`
+    })
+    .join(' ')
+}
+
+const businessSummaryDealLinePoints = computed(() => buildBusinessSummaryLinePoints(businessSummaryMonthlyDealAmounts.value))
+const businessSummaryShippedLinePoints = computed(() => buildBusinessSummaryLinePoints(businessSummaryMonthlyShippedAmounts.value))
+
+const getCustomerStatisticsHomeData = async () => {
+  return request({
+    url: 'CustomerInfoMation/GetCustomerStatisticsHomeData/GetCustomerStatisticsHomeData',
+    method: 'get'
+  })
+}
+
+const getCustomerStatistics = async (scopeType: CustomerStatisticsScope) => {
+  return request({
+    url: 'CustomerInfoMation/GetCustomerStatistics/GetCustomerStatistics',
+    method: 'get',
+    params: { scopeType }
+  })
+}
+
+const getSalesConversionStatisticsHomeData = async () => {
+  return request({
+    url: 'BusinessOpportunity/GetSalesConversionStatisticsHomeData/GetSalesConversionStatisticsHomeData',
+    method: 'get'
+  })
+}
+
+const getSalesConversionStatistics = async (params: {
+  scopeType: CustomerStatisticsScope
+  statType: SalesConversionStatType
+  year?: number
+  month?: number
+  quarter?: number
+}) => {
+  return request({
+    url: 'BusinessOpportunity/GetSalesConversionStatistics/GetSalesConversionStatistics',
+    method: 'get',
+    params
+  })
+}
+
+const getBusinessSummaryStatistics = async (params: {
+  scopeType: CustomerStatisticsScope
+  year?: number
+}) => {
+  return request({
+    url: 'BusinessOpportunity/GetBusinessSummaryStatistics/GetBusinessSummaryStatistics',
+    method: 'get',
+    params
+  })
+}
+
+const loadCustomerStatisticsHomeData = async () => {
+  customerStatisticsLoading.value = true
+  try {
+    const response = await getCustomerStatisticsHomeData()
+    if (response?.code !== 200) {
+      ElMessage.error(response?.msg || '获取客户统计首页数据失败')
+      return
+    }
+
+    const homeData = response.data || {}
+    const options = mapCustomerScopeOptions(homeData.availableScopes)
+    customerScopeOptions.value = options
+
+    const defaultScope = (homeData.defaultScope || 'Self') as CustomerStatisticsScope
+    selectedCustomerScope.value = options.some(x => x.value === defaultScope) ? defaultScope : options[0]?.value || 'Self'
+    customerStatisticsSummary.value = mapCustomerStatisticsSummary(homeData.summary || {})
+  } catch (error) {
+    console.error('获取客户统计首页数据失败:', error)
+    ElMessage.error('获取客户统计首页数据失败')
+  } finally {
+    customerStatisticsLoading.value = false
+  }
+}
+
+const handleCustomerScopeChange = async (scopeType: CustomerStatisticsScope) => {
+  customerStatisticsLoading.value = true
+  try {
+    const response = await getCustomerStatistics(scopeType)
+    if (response?.code !== 200) {
+      ElMessage.error(response?.msg || '获取客户统计失败')
+      return
+    }
+
+    customerStatisticsSummary.value = mapCustomerStatisticsSummary(response?.data?.summary || {})
+  } catch (error) {
+    console.error('获取客户统计失败:', error)
+    ElMessage.error('获取客户统计失败')
+  } finally {
+    customerStatisticsLoading.value = false
+  }
+}
+
+const loadSalesConversionStatisticsHomeData = async () => {
+  salesConversionLoading.value = true
+  try {
+    const response = await getSalesConversionStatisticsHomeData()
+    if (response?.code !== 200) {
+      ElMessage.error(response?.msg || '获取销售转化统计首页数据失败')
+      return
+    }
+
+    const homeData = response.data || {}
+    const options = mapCustomerScopeOptions(homeData.availableScopes)
+    salesConversionScopeOptions.value = options
+
+    const defaultScope = (homeData.defaultScope || 'Self') as CustomerStatisticsScope
+    selectedSalesConversionScope.value = options.some(x => x.value === defaultScope) ? defaultScope : options[0]?.value || 'Self'
+
+    const defaultStatType = (homeData.defaultStatType || 'Month') as SalesConversionStatType
+    selectedSalesConversionStatType.value = salesConversionStatTypeOptions.some(x => x.value === defaultStatType)
+      ? defaultStatType
+      : 'Month'
+
+    selectedSalesConversionYear.value = currentYear
+    selectedSalesConversionMonth.value = new Date().getMonth() + 1
+    selectedSalesConversionQuarter.value = Math.floor(new Date().getMonth() / 3) + 1
+    salesConversionSummary.value = mapSalesConversionSummary(homeData.summary || {})
+    salesConversionReady.value = true
+  } catch (error) {
+    console.error('获取销售转化统计首页数据失败:', error)
+    ElMessage.error('获取销售转化统计首页数据失败')
+  } finally {
+    salesConversionLoading.value = false
+  }
+}
+
+const loadSalesConversionStatistics = async () => {
+  salesConversionLoading.value = true
+  try {
+    const params: {
+      scopeType: CustomerStatisticsScope
+      statType: SalesConversionStatType
+      year?: number
+      month?: number
+      quarter?: number
+    } = {
+      scopeType: selectedSalesConversionScope.value,
+      statType: selectedSalesConversionStatType.value,
+      year: selectedSalesConversionYear.value
+    }
+
+    if (selectedSalesConversionStatType.value === 'Month') {
+      params.month = selectedSalesConversionMonth.value
+    } else if (selectedSalesConversionStatType.value === 'Quarter') {
+      params.quarter = selectedSalesConversionQuarter.value
+    }
+
+    const response = await getSalesConversionStatistics(params)
+    if (response?.code !== 200) {
+      ElMessage.error(response?.msg || '获取销售转化统计失败')
+      return
+    }
+
+    salesConversionSummary.value = mapSalesConversionSummary(response?.data?.summary || response?.data || {})
+  } catch (error) {
+    console.error('获取销售转化统计失败:', error)
+    ElMessage.error('获取销售转化统计失败')
+  } finally {
+    salesConversionLoading.value = false
+  }
+}
+
+const loadBusinessSummaryStatistics = async () => {
+  businessSummaryLoading.value = true
+  try {
+    const params = {
+      scopeType: selectedBusinessSummaryScope.value,
+      year: selectedBusinessSummaryYear.value
+    }
+    const response = await getBusinessSummaryStatistics(params)
+    if (response?.code !== 200) {
+      ElMessage.error(response?.msg || '获取经营数据统计失败')
+      return
+    }
+
+    const mapped = mapBusinessSummary(response?.data || {})
+    businessSummarySummary.value = mapped.summary
+    businessSummaryMonthlyDealAmounts.value = mapped.dealAmounts
+    businessSummaryMonthlyShippedAmounts.value = mapped.shippedAmounts
+  } catch (error) {
+    console.error('获取经营数据统计失败:', error)
+    ElMessage.error('获取经营数据统计失败')
+  } finally {
+    businessSummaryLoading.value = false
+  }
+}
+
+const loadBusinessSummaryHomeData = async () => {
+  businessSummaryLoading.value = true
+  try {
+    const response = await getBusinessSummaryStatistics({
+      scopeType: 'Self',
+      year: currentYear
+    })
+    if (response?.code !== 200) {
+      ElMessage.error(response?.msg || '获取经营数据统计失败')
+      return
+    }
+
+    businessSummaryScopeOptions.value = customerScopeOptions.value.length > 0
+      ? customerScopeOptions.value
+      : mapCustomerScopeOptions([])
+    selectedBusinessSummaryScope.value = businessSummaryScopeOptions.value.some(x => x.value === 'Self')
+      ? 'Self'
+      : (businessSummaryScopeOptions.value[0]?.value || 'Self')
+    selectedBusinessSummaryYear.value = currentYear
+
+    const mapped = mapBusinessSummary(response?.data || {})
+    businessSummarySummary.value = mapped.summary
+    businessSummaryMonthlyDealAmounts.value = mapped.dealAmounts
+    businessSummaryMonthlyShippedAmounts.value = mapped.shippedAmounts
+    businessSummaryReady.value = true
+  } catch (error) {
+    console.error('获取经营数据统计失败:', error)
+    ElMessage.error('获取经营数据统计失败')
+  } finally {
+    businessSummaryLoading.value = false
+  }
+}
+
+watch(
+  customerScopeOptions,
+  (options) => {
+    if (!Array.isArray(options) || options.length === 0) return
+    businessSummaryScopeOptions.value = options
+    if (!options.some(x => x.value === selectedBusinessSummaryScope.value)) {
+      selectedBusinessSummaryScope.value = options[0].value
+    }
+  },
+  { deep: true }
+)
+
+watch(
+  [
+    selectedSalesConversionScope,
+    selectedSalesConversionStatType,
+    selectedSalesConversionYear,
+    selectedSalesConversionMonth,
+    selectedSalesConversionQuarter
+  ],
+  () => {
+    if (!isSalesDeptUser() || !salesConversionReady.value) return
+    loadSalesConversionStatistics()
+  }
+)
+
+watch(
+  [selectedBusinessSummaryScope, selectedBusinessSummaryYear],
+  () => {
+    if (!isSalesDeptUser() || !businessSummaryReady.value) return
+    loadBusinessSummaryStatistics()
+  }
+)
 
 // 定义固定的阶段顺序
 const stageOrder = ['询盘', '初次报价', '沟通需求', '再次报价', '合同确定']
@@ -6642,9 +7258,13 @@ onMounted(async () => {
       getUserCustomerData()
     ];
 
-    // 只有非采购角色才获取商机看板数据
-    if (!isPurchaseRole()) {
-      dataPromises.push(fetchDashboardData());
+    if (isSalesDeptUser()) {
+      dataPromises.push(
+        loadCustomerStatisticsHomeData(),
+        loadSalesConversionStatisticsHomeData(),
+        loadBusinessSummaryHomeData(),
+        fetchDashboardData()
+      );
     }
 
     await Promise.all(dataPromises);
@@ -8407,6 +9027,206 @@ const viewRejectContract = (row) => {
   height: 120px;
   transition: all 0.3s ease;
   flex-shrink: 0;
+}
+
+.dashboard-equal-height-row .el-col {
+  display: flex;
+}
+
+.dashboard-equal-height-row .dashboard-card {
+  width: 100%;
+  height: 100%;
+}
+
+.customer-statistics-card {
+  min-height: 170px;
+}
+
+.customer-statistics-header {
+  justify-content: space-between;
+}
+
+.customer-statistics-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.customer-scope-select {
+  width: 140px;
+}
+
+.customer-statistics-content {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.customer-statistics-content .metric-row {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+}
+
+.sales-conversion-card {
+  min-height: 170px;
+}
+
+.sales-conversion-header {
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.sales-conversion-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sales-conversion-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sales-conversion-filter {
+  width: 120px;
+}
+
+.sales-conversion-content {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sales-conversion-content .metric-row {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+}
+
+.business-summary-card {
+  height: auto;
+  min-height: 280px;
+}
+
+.business-summary-header {
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.business-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.business-summary-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.business-summary-filter {
+  width: 120px;
+}
+
+.business-summary-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #ebeef5;
+  border-left: 1px solid #ebeef5;
+  margin-top: 6px;
+}
+
+.business-summary-total-item {
+  border-right: 1px solid #ebeef5;
+  border-bottom: 1px solid #ebeef5;
+  padding: 10px 12px;
+}
+
+.business-summary-total-label {
+  font-size: 14px;
+  color: #303133;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.business-summary-total-value {
+  font-size: 32px;
+  color: #111;
+  font-weight: 700;
+}
+
+.business-summary-chart-wrap {
+  border-left: 1px solid #ebeef5;
+  border-right: 1px solid #ebeef5;
+  border-bottom: 1px solid #ebeef5;
+  padding: 6px 10px 10px;
+}
+
+.business-summary-chart {
+  width: 100%;
+  height: 150px;
+  display: block;
+}
+
+.business-summary-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.business-summary-line.deal-line {
+  stroke: #67c23a;
+}
+
+.business-summary-line.shipped-line {
+  stroke: #e6a23c;
+}
+
+.business-summary-month-labels {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  margin-top: 4px;
+}
+
+.business-summary-month-item {
+  text-align: center;
+  font-size: 12px;
+  color: #606266;
+}
+
+.business-summary-legend {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.business-summary-legend-item {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.business-summary-legend-item.deal {
+  color: #67c23a;
+}
+
+.business-summary-legend-item.shipped {
+  color: #e6a23c;
 }
 
 .dashboard-card:hover {
