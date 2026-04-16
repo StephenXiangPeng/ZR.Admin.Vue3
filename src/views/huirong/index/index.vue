@@ -1176,7 +1176,7 @@
             <el-table-column prop="singleProductGrossProfitTotal" label="单个产品毛利合计" width="160">
               <template #default="scope">
                 <span :class="{ 'red-text': scope.row.isPriceChanged }">{{ scope.row.singleProductGrossProfitTotal
-                }}</span>
+                  }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="grossProfitRate" label="毛利率%" width="110">
@@ -3297,19 +3297,34 @@ const isFinanceRole = () => {
 };
 
 const isAdminRole = () => {
-  return Array.isArray(userStore.roles) && userStore.roles.includes('admin');
+  return Array.isArray(userStore.roles) && userStore.roles.some(role => {
+    const normalized = String(role || '').toLowerCase()
+    return normalized.includes('admin')
+  });
 };
 
+const hasRole = (targetRoles) => {
+  const roles = userStore.roles || [];
+  if (!Array.isArray(roles) || roles.length === 0) {
+    return false;
+  }
+  // 统一转成数组
+  const roleList = Array.isArray(targetRoles) ? targetRoles : [targetRoles];
+
+  // 判断是否命中任意一个角色
+  return roles.some(role => roleList.includes(role));
+};
 const salesDeptIds = new Set([206, 207, 208, 209])
 const isSalesDeptUser = () => {
   const deptId = Number(userStore.userInfo?.deptId)
-  return Number.isFinite(deptId) && salesDeptIds.has(deptId)
+  return isAdminRole() || (Number.isFinite(deptId) && salesDeptIds.has(deptId))
 }
 
 const isSalesRole = () => {
+
   if (userStore.roles && userStore.roles.length > 0) {
     return userStore.roles.some(role =>
-      role.includes('销售') ||
+      role.includes('admin') ||
       role.includes('业务') ||
       role.includes('sales') ||
       role.includes('SALE')
