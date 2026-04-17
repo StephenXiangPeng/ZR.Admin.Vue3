@@ -295,43 +295,15 @@
 						<!-- 返回按钮和工具栏 -->
 						<div class="detail-header">
 							<div class="left-actions">
-								<el-button @click="backToList" icon="Back" style="margin-right: 5px;">返回</el-button>
-								<!-- 只在非草稿箱时显示这些按钮 -->
-								<template v-if="activeMenu != '3'">
-									<el-button icon="Box" circle title="归档" style="margin-right: 5px;"
-										@click="MoveEmail(6)" />
-									<el-dropdown trigger="click" @command="handleMoveEmail" style="margin-right: 5px;">
-										<el-button icon="Folder" circle title="移至" />
-										<template #dropdown>
-											<el-dropdown-menu>
-												<!-- 系统默认文件夹 -->
-												<el-dropdown-item command="1">收件箱</el-dropdown-item>
-												<el-dropdown-item command="2">已发送</el-dropdown-item>
-												<el-dropdown-item command="3">草稿箱</el-dropdown-item>
-												<el-dropdown-item command="4">垃圾箱</el-dropdown-item>
-											</el-dropdown-menu>
-										</template>
-									</el-dropdown>
-									<el-button :icon="Message" circle title="标记为未读"
-										@click="markAsUnread(currentEmail.id)" />
-									<el-button icon="Bell" circle title="设置提醒"
-										@click="openReminderDialog(currentEmail)" />
-								</template>
-							</div>
-							<div class="right-actions" v-if="activeMenu != '3'">
-								<el-button-group>
-									<!-- 在非已发邮件时显示回复按钮 -->
-									<template v-if="activeMenu != '2'">
-										<el-button icon="ChatRound" circle title="回复" @click="handleReply(false)" />
-										<el-button icon="Share" circle title="回复全部" @click="handleReply(true)" />
-									</template>
-									<!-- 转发按钮始终显示 -->
-									<el-button icon="Right" circle title="转发" @click="handleForward" />
+								<el-button @click="backToList" icon="Back" style="margin-right: 12px;">返回</el-button>
+								<el-button-group v-if="activeMenu != '3'">
+									<el-button @click="handleReply(false)">回复</el-button>
+									<el-button @click="handleReply(true)">回复全部</el-button>
+									<el-button @click="handleForward">转发</el-button>
 									<el-popover ref="tagPopover" v-model:visible="tagPopoverVisible" placement="bottom"
 										:width="300" trigger="click" popper-class="tag-popover">
 										<template #reference>
-											<el-button icon="CollectionTag" circle
-												:class="{ 'has-tags': currentEmail.tags?.length }" title="标签" />
+											<el-button :class="{ 'has-tags': currentEmail.tags?.length }">标签</el-button>
 										</template>
 										<!-- 标签选择面板 -->
 										<div class="tag-panel">
@@ -365,8 +337,9 @@
 											</div>
 										</div>
 									</el-popover>
-									<el-button v-if="activeMenu !== '4'" icon="Delete" circle title="删除"
-										@click="handleMoveEmail('4')" />
+									<el-button @click="markAsUnread(currentEmail.id)">标记为未读</el-button>
+									<el-button @click="openReminderDialog(currentEmail)">提醒</el-button>
+									<el-button v-if="activeMenu !== '4'" @click="handleMoveEmail('4')">删除</el-button>
 								</el-button-group>
 							</div>
 						</div>
@@ -2949,6 +2922,26 @@ const MoveEmail = async (emailType) => {
 
 // 修复移动邮件后的处理
 const handleMoveEmail = async (command) => {
+	// 移动到垃圾箱前二次确认
+	if (String(command) === '4') {
+		try {
+			await ElMessageBox.confirm(
+				'确定要将当前邮件移动到垃圾箱吗？',
+				'确认删除',
+				{
+					confirmButtonText: '确定',
+					cancelButtonText: '取消',
+					type: 'warning'
+				}
+			)
+		} catch (error) {
+			if (error !== 'cancel') {
+				console.error('删除确认失败:', error)
+			}
+			return
+		}
+	}
+
 	try {
 		await MoveEmail(command)
 		showEmailDetail.value = false
@@ -5868,7 +5861,7 @@ watch(emailFolders, () => {
 
 .detail-header {
 	display: flex;
-	justify-content: space-between;
+	justify-content: flex-start;
 	align-items: center;
 	padding: 16px;
 	border-bottom: 1px solid #eee;
