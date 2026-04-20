@@ -94,37 +94,37 @@
 				@row-dblclick="CunstomeinfotableDatahandleRowDblClick" style="width: 100%; table-layout: fixed;" stripe
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '22px' }" :cell-style="{ padding: '1px 0' }">
-				<el-table-column prop="customerNo" label="客户编号" width="90">
+				<el-table-column prop="customerNo" label="客户编号" width="120" sortable>
 					<template #default="scope">
 						<span>{{ scope.row.customerNo }}</span>
 						<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
 							size="small">草稿</el-tag>
 					</template>
 				</el-table-column>
-				<el-table-column prop="customerStatus" label="客户状态" width="90" />
-				<el-table-column prop="customerLevel" label="客户等级" width="90" />
-				<el-table-column prop="customerAbbreviation" label="客户简称" width="150" />
-				<el-table-column prop="tradingCountry" label="贸易国别" width="90" />
-				<el-table-column prop="lastContactTime" label="最近联系时间" width="140">
+				<el-table-column prop="customerStatus" label="客户状态" width="120" sortable />
+				<el-table-column prop="customerLevel" label="客户等级" width="120" sortable />
+				<el-table-column prop="customerAbbreviation" label="客户简称" width="150" sortable />
+				<el-table-column prop="tradingCountry" label="贸易国别" width="120" sortable />
+				<el-table-column prop="lastContactTime" label="最近联系时间" width="140" sortable>
 					<template #default="scope">
 						{{ formatDate(scope.row.lastContactTime) }}
 					</template>
 				</el-table-column>
-				<el-table-column prop="nextFollowUpTime" label="下次跟进时间" width="140">
+				<el-table-column prop="nextFollowUpTime" label="下次跟进时间" width="140" sortable>
 					<template #default="scope">
 						<span :style="{ color: getFollowUpTimeColor(scope.row.nextFollowUpTime) }">
 							{{ formatDate(scope.row.nextFollowUpTime) }}
 						</span>
 					</template>
 				</el-table-column>
-				<el-table-column prop="create_time" label="建档时间" width="110">
+				<el-table-column prop="create_time" label="建档时间" width="120" sortable>
 					<template #default="scope">
 						{{ formatDate(scope.row.create_time) }}
 					</template>
 				</el-table-column>
-				<el-table-column prop="salesPerson" label="所属销售员" width="130" />
-				<el-table-column prop="lastbindSalePerson" label="原跟进人" width="130" />
-				<el-table-column prop="create_by" label="创建人" width="130" />
+				<el-table-column prop="salesPerson" label="所属销售员" width="130" sortable />
+				<el-table-column prop="lastbindSalePerson" label="原跟进人" width="130" v-if="false" />
+				<el-table-column prop="create_by" label="创建人" width="130" v-if="false" />
 				<el-table-column fixed="right" prop="operate" label="操作" width="280">
 					<template v-slot:default="scope">
 						<el-button link type="primary" size="small"
