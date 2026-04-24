@@ -3,18 +3,7 @@
   <div class="login-wrap">
     <div class="login">
       <h3 class="title">{{ defaultSettings.title }}</h3>
-
-      <LangSelect title="多语言设置" class="langSet" />
-
-      <div style="padding: 0 25px 5px 25px">
-        <el-tabs v-model="loginType" @tab-click="handleLoginType">
-          <el-tab-pane :label="$t('login.loginway1')" :name="1"></el-tab-pane>
-          <el-tab-pane :label="$t('login.loginway2')" :name="2" v-if="defaultSettings.showPhoneLogin"></el-tab-pane>
-          <el-tab-pane :label="$t('login.loginway3')" :name="3" v-if="defaultSettings.showQrLogin"></el-tab-pane>
-        </el-tabs>
-      </div>
-
-      <el-form ref="loginRef" :model="loginForm" :rules="loginRules" class="login-form" v-if="loginType == 1">
+      <el-form ref="loginRef" :model="loginForm" :rules="loginRules" class="login-form">
         <el-form-item prop="username">
           <el-input v-model="loginForm.username" type="text" auto-complete="off" :placeholder="$t('login.account')">
             <template #prefix>
@@ -53,17 +42,14 @@
           </el-button>
         </el-form-item>
 
-        <div style="display: flex; justify-content: space-between; align-items: center">
+        <div class="login-options">
           <el-checkbox v-model="loginForm.rememberMe">{{ $t('login.rememberMe') }}</el-checkbox>
           <span style="font-size: 12px">
-            <router-link class="link-type" :to="'/register'">{{ $t('login.register') }}</router-link>
+            <!-- <router-link class="link-type" :to="'/register'">{{ $t('login.register') }}</router-link> -->
             <span @click="handleForgetPwd()" class="forget-pwd">{{ $t('login.forgotPwd') }}</span>
           </span>
         </div>
       </el-form>
-
-      <qrLogin ref="qrLoginRef" v-if="loginType == 3"></qrLogin>
-      <phoneLogin v-if="loginType == 2"></phoneLogin>
       <oauthLogin v-if="defaultSettings.showOtherLogin"></oauthLogin>
     </div>
 
@@ -79,11 +65,8 @@ import Cookies from 'js-cookie'
 import { encrypt, decrypt } from '@/utils/jsencrypt'
 import defaultSettings from '@/settings'
 import starBackground from '@/views/components/starBackground.vue'
-import LangSelect from '@/components/LangSelect/index.vue'
 import useUserStore from '@/store/modules/user'
 import oauthLogin from './components/Login/oauthLogin.vue'
-import phoneLogin from './components/Login/phoneLogin.vue'
-import qrLogin from './components/Login/qrLogin.vue'
 
 var visitorId = ''
 const fpPromise = import('https://openfpcdn.io/fingerprintjs/v3').then((FingerprintJS) => FingerprintJS.load())
@@ -105,12 +88,6 @@ const loginRules = {
   password: [{ required: true, trigger: 'blur', message: '请输入您的密码' }],
   code: [{ required: true, trigger: 'change', message: '请输入验证码' }]
 }
-const loginType = computed({
-  get: () => userStore.loginType,
-  set: (val) => {
-    userStore.loginType = val
-  }
-})
 const codeUrl = ref('')
 const loading = ref(false)
 // 验证码开关
@@ -198,43 +175,30 @@ function handleForgetPwd() {
   proxy.$modal.msg('请联系管理员')
 }
 
-function handleLoginType(t) {
-  // const val = t.paneName
-
-  if (userStore.loginType == 3) {
-    nextTick(() => {
-      proxy.$refs.qrLoginRef.clearQr()
-    })
-  }
-}
-watch(
-  () => userStore.loginType,
-  (val) => {
-    if (val == 3) {
-      handleShowQrLogin()
-    }
-  },
-  {
-    immediate: true
-  }
-)
-function handleShowQrLogin() {
-  nextTick(() => {
-    proxy.$refs.qrLoginRef.generateCode()
-  })
-}
+// 仅保留账号密码登录模式
+userStore.loginType = 1
 getCode()
 getCookie()
 </script>
 
 <style lang="scss" scoped>
 @use '@/assets/styles/login.scss';
+.login-form {
+  height: auto;
+  padding-bottom: 5px;
+}
 .forget-pwd {
   color: #ccc;
   margin-left: 10px;
   cursor: pointer;
   border-left: 1px solid;
   padding-left: 10px;
+}
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
 }
 .qrCode {
   width: 160px;

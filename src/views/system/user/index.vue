@@ -421,7 +421,7 @@ watch(deptName, (val) => {
 /** 查询部门下拉树结构 */
 function getTreeselect() {
   treeselect().then((response) => {
-    deptOptions.value = [{ id: 0, label: '未知部门', children: [] }, ...response.data]
+    deptOptions.value = [{ id: 0, label: '系统管理', children: [] }, ...response.data]
   })
 }
 /** 查询用户列表 */
