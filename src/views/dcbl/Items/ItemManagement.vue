@@ -2,7 +2,7 @@
   <div class="app-container item-management">
     <el-form ref="queryRef" :model="queryParams" :inline="true" class="search-form">
       <el-form-item label="名称" prop="name">
-        <el-input v-model="queryParams.name" placeholder="请输入物料/产品名称" clearable class="query-control" @keyup.enter="handleQuery" />
+        <el-input v-model="queryParams.name" placeholder="请输入配件/产品名称" clearable class="query-control" @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="类型" prop="type">
         <el-select v-model="queryParams.type" placeholder="请选择类型" clearable class="query-control" @change="handleQuery">
@@ -74,7 +74,7 @@
     <el-dialog :title="dialogTitle" v-model="open" width="760px" append-to-body @close="cancel">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入物料/产品名称" maxlength="50" show-word-limit />
+          <el-input v-model="form.name" placeholder="请输入配件/产品名称" maxlength="50" show-word-limit />
         </el-form-item>
         <el-form-item label="类型" prop="type">
           <el-select v-model="form.type" placeholder="请选择类型" clearable class="form-select" @change="handleFormTypeChange">
@@ -391,14 +391,14 @@ function handlePagination({ page, limit }) {
 
 function handleAdd() {
   isEdit.value = false
-  dialogTitle.value = '新增物料/产品'
+  dialogTitle.value = '新增配件/产品'
   resetForm()
   open.value = true
 }
 
 function handleEdit(row) {
   isEdit.value = true
-  dialogTitle.value = '编辑物料/产品'
+  dialogTitle.value = '编辑配件/产品'
   Object.assign(form, { ...row, components: [] })
   formRef.value?.clearValidate()
   open.value = true
@@ -461,7 +461,7 @@ function validateComponents() {
 
     const key = String(item.componentId)
     if (usedComponentIds.has(key)) {
-      proxy.$modal.msgError('同一个成品下不能重复选择相同配件')
+      proxy.$modal.msgError('同一个产品下不能重复选择相同配件')
       return false
     }
     usedComponentIds.add(key)
