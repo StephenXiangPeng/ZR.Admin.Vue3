@@ -2,7 +2,7 @@
   <div class="app-container inventory-management">
     <el-form ref="queryRef" :model="queryParams" :inline="true" class="search-form">
       <el-form-item label="名称" prop="name">
-        <el-input v-model="queryParams.name" placeholder="请输入物料/产品名称" clearable class="query-control" @keyup.enter="handleQuery" />
+        <el-input v-model="queryParams.name" placeholder="请输入配件/产品名称" clearable class="query-control" @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="类型" prop="type">
         <el-select v-model="queryParams.type" placeholder="请选择类型" clearable class="query-control" @change="handleQuery">

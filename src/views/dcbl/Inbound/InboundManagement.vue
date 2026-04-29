@@ -1,8 +1,8 @@
 <template>
   <div class="app-container inbound-management">
     <el-form ref="queryRef" :model="queryParams" :inline="true" class="search-form">
-      <el-form-item label="物料/产品" prop="itemId">
-        <el-select v-model="queryParams.itemId" placeholder="请选择物料/产品" clearable filterable class="query-control" @change="handleQuery">
+      <el-form-item label="配件/产品" prop="itemId">
+        <el-select v-model="queryParams.itemId" placeholder="请选择配件/产品" clearable filterable class="query-control" @change="handleQuery">
           <el-option v-for="item in itemOptions" :key="item.value" :label="formatItemOptionLabel(item)" :value="item.value" />
         </el-select>
       </el-form-item>
@@ -55,8 +55,8 @@
 
     <el-dialog :title="dialogTitle" v-model="open" width="560px" append-to-body @close="cancel">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="物料/产品" prop="itemId">
-          <el-select v-model="form.itemId" placeholder="请选择物料/产品" filterable class="form-select">
+        <el-form-item label="配件/产品" prop="itemId">
+          <el-select v-model="form.itemId" placeholder="请选择配件/产品" filterable class="form-select">
             <el-option v-for="item in itemOptions" :key="item.value" :label="formatItemOptionLabel(item)" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -150,7 +150,7 @@ const detailRecord = reactive({
 const inboundList = ref([])
 
 const rules = {
-  itemId: [{ required: true, message: '请选择物料/产品', trigger: 'change' }],
+  itemId: [{ required: true, message: '请选择配件/产品', trigger: 'change' }],
   quantity: [
     { required: true, message: '数量不能为空', trigger: 'blur' },
     { validator: validatePositiveQuantity, trigger: 'change' }

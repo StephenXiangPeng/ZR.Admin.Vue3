@@ -190,7 +190,7 @@ const detailRecord = reactive({
 })
 
 const rules = {
-  itemId: [{ required: true, message: '请选择物料/产品', trigger: 'change' }],
+  itemId: [{ required: true, message: '请选择配件/产品', trigger: 'change' }],
   adjustmentType: [{ required: true, message: '请选择调整类型', trigger: 'change' }],
   quantity: [
     { required: true, message: '调整数量不能为空', trigger: 'blur' },

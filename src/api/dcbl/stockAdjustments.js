@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-// 获取物料/产品下拉框数据
+// 获取配件/产品下拉框数据
 export function listAdjustmentItemOptions() {
   return request({
     url: '/StockAdjustments/GetItemOptions/GetItemOptions',

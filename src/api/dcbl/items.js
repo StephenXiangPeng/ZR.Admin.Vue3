@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-// 获取物料/产品列表
+// 获取配件/产品列表
 export function listItems(query) {
   return request({
     url: '/Items/GetItemsList/GetList',
@@ -9,7 +9,7 @@ export function listItems(query) {
   })
 }
 
-// 添加物料/产品
+// 添加配件/产品
 export function addItem(data) {
   return request({
     url: '/Items/AddItem/Add',
@@ -18,7 +18,7 @@ export function addItem(data) {
   })
 }
 
-// 编辑物料/产品
+// 编辑配件/产品
 export function editItem(data) {
   return request({
     url: '/Items/EditItems/Edit',
@@ -27,7 +27,7 @@ export function editItem(data) {
   })
 }
 
-// 删除物料/产品
+// 删除配件/产品
 export function deleteItems(ids) {
   return request({
     url: '/Items/DeleteItems/Delete',
