@@ -246,7 +246,7 @@ function formatAdjustmentType(value) {
 }
 
 function formatItemOptionLabel(item) {
-  return item.label || `${item.name} / ${formatTypeLabel(item.type)} / ${formatUnitLabel(item.unit)} / 当前库存 ${item.stockQuantity}`
+  return `${item.name} / ${formatTypeLabel(item.type)} / ${formatUnitLabel(item.unit)} / 当前库存 ${item.stockQuantity}`
 }
 
 function getCurrentTime() {
@@ -300,7 +300,6 @@ function normalizeItemOption(item) {
 
   return {
     value,
-    label: item.label ?? item.Label ?? '',
     name,
     type,
     unit,

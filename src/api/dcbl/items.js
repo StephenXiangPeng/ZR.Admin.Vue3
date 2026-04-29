@@ -35,3 +35,20 @@ export function deleteItems(ids) {
     data: ids
   })
 }
+
+// 获取所有配件下拉
+export function listComponentOptions() {
+  return request({
+    url: '/Items/GetComponentOptions/GetComponentOptions',
+    method: 'get'
+  })
+}
+
+// 获取某个成品的配件组成
+export function listProductComponents(productId) {
+  return request({
+    url: '/Items/GetProductComponents/GetProductComponents',
+    method: 'get',
+    params: { productId }
+  })
+}
