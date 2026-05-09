@@ -1,11 +1,13 @@
 <template>
   <el-config-provider :locale="locale" :size="size">
     <router-view />
+    <AiChatFloat />
   </el-config-provider>
 </template>
 <script setup>
 import useUserStore from './store/modules/user'
 import useAppStore from './store/modules/app'
+import AiChatFloat from '@/components/AiChatFloat.vue'
 import { ElConfigProvider, ElMessage } from 'element-plus'
 import zh from 'element-plus/dist/locale/zh-cn.mjs' // 中文语言
 import en from 'element-plus/dist/locale/en.mjs' // 英文语言
