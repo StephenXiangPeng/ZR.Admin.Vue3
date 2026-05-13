@@ -240,7 +240,9 @@
 							</el-col>
 							<el-col :span="6">
 								<el-form-item label="汇率" prop="exchangerate" data-field="exchangerate">
-									<el-input v-model="quotationDialogform.exchangerate" style="width: 300px;" disabled
+									<el-input v-model="quotationDialogform.exchangerate" style="width: 300px;"
+										data-calculation-field="exchangerate"
+										:class="getCalculationInputClass(null, 'exchangerate')" disabled
 										@change="calculateTotal" size="default" clearable />
 								</el-form-item>
 							</el-col>
@@ -394,7 +396,8 @@
 						:disabled="isDisabled" size="default">导入产品</el-button>
 					<el-button class="mt-4" type="primary" @click="onAddquotationProductItem"
 						style="margin-bottom: 10px;" :disabled="isDisabled" size="default">添加新产品</el-button>
-					<el-table :data="productData" style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
+					<el-table ref="productTableRef" :data="productData"
+						style="width: 100%;margin-bottom: 15px; table-layout: fixed;"
 						max-height="550"
 						:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 						:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
@@ -452,14 +455,20 @@
 							</template>
 						</el-table-column>
 						<el-table-column prop="ProfitMargin" label="利润率%" width="100">
-							<template #default="{ row }">
-								<el-input @blur="formatNumber(row, 'ProfitMargin')" v-model="row.ProfitMargin"
+							<template #default="scope">
+								<el-input @blur="formatNumber(scope.row, 'ProfitMargin')"
+									v-model="scope.row.ProfitMargin"
+									:data-calculation-row-index="scope.$index" data-calculation-field="ProfitMargin"
+									:class="getCalculationInputClass(scope.row, 'ProfitMargin')"
 									@change="calculateTotal" :disabled="isDisabled" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="quotationnum" label="报价数量" width="110">
-							<template #default="{ row }">
-								<el-input @blur="formatNumber(row, 'quotationnum')" v-model="row.quotationnum"
+							<template #default="scope">
+								<el-input @blur="formatNumber(scope.row, 'quotationnum')"
+									v-model="scope.row.quotationnum"
+									:data-calculation-row-index="scope.$index" data-calculation-field="quotationnum"
+									:class="getCalculationInputClass(scope.row, 'quotationnum')"
 									@change="calculateTotal" :disabled="isDisabled" />
 							</template>
 						</el-table-column>
@@ -492,9 +501,12 @@
 							</template>
 						</el-table-column>
 						<el-table-column prop="purchaseunitprice" label="采购单价" width="110">
-							<template #default="{ row }">
-								<el-input @blur="formatNumber2(row, 'purchaseunitprice')"
-									v-model="row.purchaseunitprice" @change="calculateTotal" :disabled="isDisabled" />
+							<template #default="scope">
+								<el-input @blur="formatNumber2(scope.row, 'purchaseunitprice')"
+									v-model="scope.row.purchaseunitprice"
+									:data-calculation-row-index="scope.$index" data-calculation-field="purchaseunitprice"
+									:class="getCalculationInputClass(scope.row, 'purchaseunitprice')"
+									@change="calculateTotal" :disabled="isDisabled" />
 							</template>
 						</el-table-column>
 						<el-table-column prop="inlandfreightprice" label="内陆运费(m³)" width="130">
@@ -569,8 +581,11 @@
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxloading" label="外箱装量" width="100">
-							<template #default="{ row }">
-								<el-input @blur="formatNumber(row, 'outerboxloading')" v-model="row.outerboxloading"
+							<template #default="scope">
+								<el-input @blur="formatNumber(scope.row, 'outerboxloading')"
+									v-model="scope.row.outerboxloading"
+									:data-calculation-row-index="scope.$index" data-calculation-field="outerboxloading"
+									:class="getCalculationInputClass(scope.row, 'outerboxloading')"
 									@change="calculateTotal" :disabled="isDisabled" />
 							</template>
 						</el-table-column>
@@ -974,6 +989,15 @@
 	box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2) !important;
 }
 
+:deep(.calculation-error-input .el-input__wrapper) {
+	box-shadow: 0 0 0 1px var(--el-color-danger) inset !important;
+	background-color: rgba(245, 108, 108, 0.08);
+}
+
+:deep(.calculation-error-input .el-input__inner) {
+	color: var(--el-color-danger);
+}
+
 @keyframes highlight {
 	0% {
 		background-color: rgba(245, 108, 108, 0.1);
@@ -1333,6 +1357,112 @@ const quotationDialogform = reactive<quotationDialogform>({
 	isLatestVersion: true
 })
 
+const calculationSubmitAttempted = ref(false);
+
+const isEmptyCalculationValue = (value) => value === null || value === undefined || value === '';
+
+const isInvalidPositiveCalculationNumber = (value) => {
+	if (isEmptyCalculationValue(value)) return true;
+	const numericValue = Number(value);
+	return isNaN(numericValue) || numericValue <= 0;
+}
+
+const hasCalculationInputError = (row, field) => {
+	if (isDisabled.value && field !== 'exchangerate') return false;
+
+	if (field === 'exchangerate') {
+		return productData.value.length > 0 && isInvalidPositiveCalculationNumber(quotationDialogform.exchangerate);
+	}
+
+	if (!row) return false;
+
+	if (field === 'purchaseunitprice') {
+		return isInvalidPositiveCalculationNumber(row.purchaseunitprice);
+	}
+
+	if (field === 'outerboxloading') {
+		return isInvalidPositiveCalculationNumber(row.outerboxloading);
+	}
+
+	if (field === 'ProfitMargin') {
+		if (isEmptyCalculationValue(row.ProfitMargin)) return true;
+		const profitMargin = Number(row.ProfitMargin);
+		return isNaN(profitMargin) || profitMargin < 0 || profitMargin >= 100;
+	}
+
+	if (field === 'quotationnum') {
+		return calculationSubmitAttempted.value && isInvalidPositiveCalculationNumber(row.quotationnum);
+	}
+
+	return false;
+}
+
+const hasExportUnitPriceCalculationError = (row) => {
+	return hasCalculationInputError(row, 'purchaseunitprice') ||
+		hasCalculationInputError(row, 'outerboxloading') ||
+		hasCalculationInputError(row, 'ProfitMargin') ||
+		hasCalculationInputError(row, 'exchangerate');
+}
+
+const getCalculationInputClass = (row, field) => {
+	return {
+		'calculation-error-input': hasCalculationInputError(row, field)
+	};
+}
+
+const calculationFieldLabelMap = {
+	exchangerate: '汇率',
+	purchaseunitprice: '采购单价',
+	outerboxloading: '外箱装量',
+	ProfitMargin: '利润率%',
+	quotationnum: '报价数量'
+};
+
+const getProductCalculationErrorFields = (row) => {
+	const fields = ['purchaseunitprice', 'outerboxloading', 'ProfitMargin', 'quotationnum'];
+
+	if (hasCalculationInputError(row, 'exchangerate')) {
+		fields.unshift('exchangerate');
+	}
+
+	return fields.filter(field => hasCalculationInputError(row, field));
+}
+
+const focusCalculationInput = (rowIndex, field) => {
+	if (!productInfoCollapseActive.value.includes('productInfo')) {
+		productInfoCollapseActive.value.push('productInfo');
+	}
+
+	nextTick(() => {
+		const selector = field === 'exchangerate'
+			? '[data-calculation-field="exchangerate"]'
+			: `[data-calculation-row-index="${rowIndex}"][data-calculation-field="${field}"]`;
+		const target = document.querySelector(selector) as HTMLElement | null;
+		target?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+		const input = target?.querySelector('input') as HTMLInputElement | null;
+		input?.focus();
+	});
+}
+
+const validateProductCalculationBeforeSubmit = () => {
+	calculationSubmitAttempted.value = true;
+	calculateTotal();
+
+	const invalidRowIndex = productData.value.findIndex(item => getProductCalculationErrorFields(item).length > 0);
+	if (invalidRowIndex === -1) return true;
+
+	const invalidRow = productData.value[invalidRowIndex];
+	const errorFields = getProductCalculationErrorFields(invalidRow);
+	const firstField = errorFields[0];
+	const productName = invalidRow.cproductname || invalidRow.productNum || `第${invalidRowIndex + 1}行`;
+	const fieldText = errorFields.map(field => calculationFieldLabelMap[field]).join('、');
+
+	focusCalculationInput(invalidRowIndex, firstField);
+	ElMessage.error(`产品明细第${invalidRowIndex + 1}行【${productName}】未完成计算，请输入或修正：${fieldText}`);
+
+	return false;
+}
+
 const quotationDialogformRules = reactive<FormRules<quotationDialogform>>({
 	inquirydate: [{ required: true, message: '请选择询价日期', trigger: ['blur', 'change'] }],
 	realquotationdate: [{ required: true, message: '请选择实际报价日期', trigger: ['blur', 'change'] }],
@@ -1358,6 +1488,7 @@ const OpenQuotationDialog = async () => {
 	GetNextQuotationNo();
 	const currentDate = new Date();
 	const formattedDate = currentDate.toISOString().split('T')[0];
+	calculationSubmitAttempted.value = false;
 	isSaveBtnShow.value = true;
 	showEditBtn.value = false;
 	showEditSaveBtn.value = false;
@@ -1519,6 +1650,7 @@ const productDatatwo = ref([])
 const myTable = ref(null)
 //报价产品表格
 const productData = ref([])
+const productTableRef = ref(null)
 //分页组件
 const SearchProducttotalItems = ref(0);
 const SearchProductCurrentPage = ref(1);
@@ -1996,19 +2128,13 @@ const calculateTotal = () => {
 				Number(quotationDialogform.shippingrate));
 		console.log('成本价：' + costPrice.toFixed(3));
 		// 数据验证
-		if (!item.purchaseunitprice || !item.outerboxloading || !quotationDialogform.exchangerate) {
+		if (hasExportUnitPriceCalculationError(item)) {
+			if (Number(item.ProfitMargin) >= 100) {
+				ElMessage.warning('利润率不能大于100%');
+			}
 			return;
 		}
-		if (item.outerboxloading <= 0) {
-			return;
-		}
-		if (item.ProfitMargin < 0) {
-			return;
-		} else if (item.ProfitMargin >= 100) {
-			ElMessage.warning('利润率不能大于100%');
-			item.ProfitMargin = 99.9;
-			return;
-		}
+
 		let exportPrice;
 		const profitRateDecimal = item.ProfitMargin / 100;
 		if (profitRateDecimal < 1) {
@@ -2129,23 +2255,13 @@ const AddQuotation = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
 	await formEl.validate(async (valid, fields) => {
 		if (valid) {
-			// 过滤掉没有填写报价数量和利润率的产品
-			const validProducts = productData.value.filter(item =>
-				item.quotationnum && item.quotationnum > 0 &&
-				item.ProfitMargin !== undefined && item.ProfitMargin !== null && item.ProfitMargin >= 0
-			);
-
-			// 如果有被过滤掉的产品，更新产品列表
-			if (validProducts.length !== productData.value.length) {
-				const removedCount = productData.value.length - validProducts.length;
-				productData.value = validProducts;
-				calculateTotal(); // 重新计算总值
-				ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
-			}
-
 			// 检查产品列表是否为空
 			if (productData.value.length === 0) {
 				ElMessage.error('请至少添加一个产品信息才能提交报价单');
+				return;
+			}
+
+			if (!validateProductCalculationBeforeSubmit()) {
 				return;
 			}
 
@@ -2577,6 +2693,7 @@ const ChcekDetails = async (row) => {
 	// } else {
 	// 	isReviewBtnShow.value = false;
 	// }
+	calculationSubmitAttempted.value = false;
 	isDisabled.value = true;
 	isViewDetails.value = true; // 查看详情时设置为true
 	if (row.isDraft == 0) {
@@ -2738,23 +2855,13 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 	if (!formEl) return
 	await formEl.validate(async (valid, fields) => {
 		if (valid) {
-			// 过滤掉没有填写报价数量和利润率的产品
-			const validProducts = productData.value.filter(item =>
-				item.quotationnum && item.quotationnum > 0 &&
-				item.ProfitMargin !== undefined && item.ProfitMargin !== null && item.ProfitMargin >= 0
-			);
-
-			// 如果有被过滤掉的产品，更新产品列表
-			if (validProducts.length !== productData.value.length) {
-				const removedCount = productData.value.length - validProducts.length;
-				productData.value = validProducts;
-				calculateTotal(); // 重新计算总值
-				ElMessage.warning(`已自动删除 ${removedCount} 个未填写报价数量或利润率的产品行`);
-			}
-
 			// 检查产品列表是否为空
 			if (productData.value.length === 0) {
 				ElMessage.error('请至少添加一个产品信息才能提交报价单');
+				return;
+			}
+
+			if (!validateProductCalculationBeforeSubmit()) {
 				return;
 			}
 
@@ -2937,6 +3044,7 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 const quotationDialogHandClose = () => {
 	// 清空表单验证提示
 	quotationDialogformRef.value?.clearValidate();
+	calculationSubmitAttempted.value = false;
 	quotationDialog.value = false;
 	productData.value = [];
 	QuotationRemarksTextarea.value = '';
