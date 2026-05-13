@@ -28,7 +28,7 @@
       </div>
     </transition>
 
-    <button class="ai-chat__float-button" type="button" @click="visible = !visible">
+    <button class="ai-chat__float-button" type="button" @click="showAiPendingMessage">
       <span>AI</span>
     </button>
   </div>
@@ -37,7 +37,7 @@
 <script setup>
 import { nextTick, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { chatWithAi } from '@/api/ai'
+// import { chatWithAi } from '@/api/ai'
 
 const visible = ref(false)
 const loading = ref(false)
@@ -47,13 +47,17 @@ const messages = ref([
   {
     id: Date.now(),
     role: 'assistant',
-    content: '您好，我是 AI 助手，可以帮您解答进出口办公系统相关问题。'
+    content: 'AI 助手待接入，敬请期待。'
   }
 ])
 
-function getAnswerContent(response) {
-  return response?.message?.content || response?.data?.message?.content || response?.content || response?.answer || 'AI 暂未返回内容。'
+function showAiPendingMessage() {
+  ElMessage.info('AI 功能即将接入')
 }
+
+// function getAnswerContent(response) {
+//   return response?.message?.content || response?.data?.message?.content || response?.content || response?.answer || 'AI 暂未返回内容。'
+// }
 
 async function scrollToBottom() {
   await nextTick()
@@ -68,6 +72,10 @@ async function sendMessage() {
     return
   }
 
+  ElMessage.info('AI 功能即将接入')
+  return
+
+  // 原 AI 接口调用逻辑暂时保留，后续接入时恢复。
   messages.value.push({
     id: Date.now(),
     role: 'user',
@@ -78,12 +86,12 @@ async function sendMessage() {
   await scrollToBottom()
 
   try {
-    const response = await chatWithAi(content)
-    messages.value.push({
-      id: Date.now() + 1,
-      role: 'assistant',
-      content: getAnswerContent(response)
-    })
+    // const response = await chatWithAi(content)
+    // messages.value.push({
+    //   id: Date.now() + 1,
+    //   role: 'assistant',
+    //   content: getAnswerContent(response)
+    // })
   } catch (error) {
     ElMessage.error('AI 对话请求失败，请稍后重试')
   } finally {
