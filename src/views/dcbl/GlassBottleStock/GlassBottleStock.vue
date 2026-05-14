@@ -188,7 +188,9 @@
           <template #default="{ row }">{{ formatNum(row.afterStock) }}</template>
         </el-table-column>
         <el-table-column label="操作时间" prop="opTime" width="170" align="center" />
-        <el-table-column label="操作人" prop="operator" width="120" align="center" :show-overflow-tooltip="true" />
+        <el-table-column label="操作人" prop="operator" width="120" align="center" :show-overflow-tooltip="true">
+          <template #default="{ row }">{{ formatLogOperator(row) }}</template>
+        </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="160" :show-overflow-tooltip="true">
           <template #default="{ row }">{{ row.remark || '-' }}</template>
         </el-table-column>
@@ -238,6 +240,7 @@ const archiveEdit = ref(false)
 const archiveTitle = computed(() => (archiveEdit.value ? '编辑瓶身' : '新增瓶身'))
 const archiveFormRef = ref()
 const unitOptions = ref([])
+const userOptions = ref([])
 const archiveForm = reactive({
   id: undefined,
   code: '',
@@ -325,10 +328,15 @@ function formatNum(v) {
 }
 
 function loadDicts() {
-  return proxy.getDicts(['dc_material_unit']).then((response) => {
+  return proxy.getDicts(['dc_material_unit', 'sql_all_user']).then((response) => {
     const source = response?.data?.data || response?.data?.result || response?.data || []
     const dicts = Array.isArray(source) ? source : []
     unitOptions.value = getDictList(dicts, 'dc_material_unit')
+    userOptions.value = getDictList(dicts, 'sql_all_user').map((item) => ({
+      userId: item.dictValue,
+      userName: item.dictLabel,
+      nickName: item.dictLabel
+    }))
   })
 }
 
@@ -342,6 +350,19 @@ function formatDictLabel(optionsRef, value) {
   const options = Array.isArray(optionsRef?.value) ? optionsRef.value : Array.isArray(optionsRef) ? optionsRef : []
   const matched = options.find((item) => String(item.dictValue) === String(value))
   return matched?.dictLabel || value || '-'
+}
+
+/** 库存流水操作人：按 sql_all_user 字典（dictValue=用户标识）解析展示 */
+function formatLogOperator(row) {
+  const rawOperator = row?.operator
+  const rawOperatorId = row?.operatorId
+  const matched = userOptions.value.find(
+    (item) =>
+      String(item.userId) === String(rawOperatorId) ||
+      String(item.userId) === String(rawOperator) ||
+      String(item.userName) === String(rawOperator)
+  )
+  return matched?.nickName || matched?.userName || rawOperator || '-'
 }
 
 function getPageData(response) {
@@ -385,6 +406,14 @@ function normalizeStockLog(item) {
     afterStock: formatNum(item.afterStock ?? item.AfterStock),
     opTime: formatDateTime(item.opTime ?? item.OpTime),
     operator: item.operatorName ?? item.OperatorName ?? item.operator ?? item.Operator ?? '',
+    operatorId:
+      item.operatorId ??
+      item.OperatorId ??
+      item.createBy ??
+      item.CreateBy ??
+      item.userId ??
+      item.UserId ??
+      '',
     remark: item.remark ?? item.Remark ?? ''
   }
 }
