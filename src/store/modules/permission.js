@@ -109,12 +109,25 @@ function filterChildren(childrenMap, lastRouter = false) {
 
 export const loadView = (view) => {
   let res
+
+  console.log('当前菜单组件路径:', view)
+
   for (const path in modules) {
     const dir = path.split('views/')[1].split('.vue')[0]
+
+    if (dir.includes('SpareParts') || dir.includes('GlassBottle')) {
+      console.log('可匹配页面:', dir)
+    }
+
     if (dir === view) {
       res = () => modules[path]()
     }
   }
+
+  if (!res) {
+    console.error('没有匹配到页面组件:', view)
+  }
+
   return res
 }
 
