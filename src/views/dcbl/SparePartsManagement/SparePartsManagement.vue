@@ -1,6 +1,6 @@
 <template>
   <div class="app-container spare-parts-management">
-    <el-form ref="queryRef" :model="queryParams" class="search-form" @submit.prevent>
+    <el-form ref="queryRef" :model="queryParams" :inline="true" class="search-form" @submit.prevent>
       <el-form-item label="零配件名称" prop="name" class="query-form-item">
         <el-input
           v-model="queryParams.name"
@@ -10,7 +10,21 @@
           @input="handleInputQuery"
           @clear="handleQuery"
           @keyup.enter="handleQuery"
-		  size="default" />
+          size="default" />
+      </el-form-item>
+      <el-form-item label="所属分类" prop="categoryId" class="query-form-item">
+        <el-tree-select
+          v-model="queryParams.categoryId"
+          :data="categoryTreeOptions"
+          :props="categoryTreeProps"
+          value-key="id"
+          placeholder="全部分类"
+          clearable
+          filterable
+          check-strictly
+          class="query-control"
+          @change="handleQuery" 
+          size="default"/>
       </el-form-item>
     </el-form>
 
@@ -22,7 +36,12 @@
 
     <el-table v-loading="loading" :data="sparePartList" border stripe class="parts-table" :height="tableHeight">
       <el-table-column type="index" label="序号" width="70" align="center" :index="getTableIndex" v-if="false"/>
-      <el-table-column label="名称" prop="name" min-width="180" :show-overflow-tooltip="true" />
+      <el-table-column label="名称" prop="name" min-width="160" :show-overflow-tooltip="true" />
+      <el-table-column label="所属分类" prop="categoryId" min-width="140" :show-overflow-tooltip="true">
+        <template #default="{ row }">
+          {{ getCategoryLabel(row.categoryId) }}
+        </template>
+      </el-table-column>
       <el-table-column label="类型" prop="type" width="110" align="center" v-if="false">
         <template #default="{ row }">
           <el-tag :type="getTypeTagType(row.type)" effect="light">{{ formatTypeLabel(row.type) }}</el-tag>
@@ -70,7 +89,22 @@
     <el-dialog :title="dialogTitle" v-model="open" width="680px" append-to-body @close="cancel">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px" @submit.prevent>
         <el-form-item label="名称" prop="name">
-          <el-input v-model="form.name" maxlength="50"  show-word-limit placeholder="请输入零配件名称" />
+          <el-input v-model="form.name" maxlength="50" show-word-limit placeholder="请输入零配件名称" />
+        </el-form-item>
+        <el-form-item label="所属分类" prop="categoryId">
+          <div class="category-field-row">
+            <el-tree-select
+              v-model="form.categoryId"
+              :data="categoryTreeOptions"
+              :props="categoryTreeProps"
+              value-key="id"
+              placeholder="请选择所属分类"
+              clearable
+              filterable
+              check-strictly
+              class="form-control category-select" />
+            <el-button type="primary" link @click="openCategoryManage">维护分类</el-button>
+          </div>
         </el-form-item>
         <el-form-item label="单位" prop="unit">
           <el-select v-model="form.unit" placeholder="请选择单位" clearable class="form-control">
@@ -141,11 +175,100 @@
         <el-button type="primary" @click="recordOpen = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="categoryManageOpen" title="分类维护" width="720px" append-to-body @open="loadCategoryManageTree">
+      <el-row :gutter="10" class="mb8">
+        <el-col :span="1.5">
+          <el-button type="primary" plain icon="Plus" size="default" @click="handleCategoryAdd()">新增一级分类</el-button>
+        </el-col>
+        <el-col :span="1.5">
+          <el-button type="info" plain icon="Sort" size="default" @click="toggleCategoryExpandAll">展开/折叠</el-button>
+        </el-col>
+      </el-row>
+      <el-table
+        v-if="categoryTableRefresh"
+        v-loading="categoryLoading"
+        :data="categoryManageTree"
+        row-key="id"
+        border
+        :default-expand-all="categoryExpandAll"
+        :tree-props="{ children: 'children' }"
+        max-height="420">
+        <el-table-column prop="categoryName" label="分类名称" min-width="200" :show-overflow-tooltip="true" />
+        <el-table-column prop="sort" label="排序" width="80" align="center" />
+        <el-table-column prop="status" label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'info'" effect="light">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="220" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button text size="small" class="op-btn" @click="handleCategoryAdd(row)">添加子级</el-button>
+            <el-button text size="small" class="op-btn" @click="handleCategoryEdit(row)">编辑</el-button>
+            <el-button text size="small" class="op-btn is-danger" @click="handleCategoryDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button type="primary" @click="categoryManageOpen = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="categoryFormOpen"
+      :title="categoryFormTitle"
+      width="520px"
+      append-to-body
+      @close="resetCategoryForm">
+      <el-form ref="categoryFormRef" :model="categoryForm" :rules="categoryRules" label-width="90px" @submit.prevent>
+        <el-form-item v-if="categoryForm.id" label="上级分类" prop="parentId">
+          <el-tree-select
+            v-model="categoryForm.parentId"
+            :data="categoryParentTreeOptions"
+            :props="categoryTreeProps"
+            value-key="id"
+            placeholder="不选则为一级分类"
+            clearable
+            filterable
+            check-strictly
+            class="form-control" />
+        </el-form-item>
+        <el-form-item v-else label="上级分类">
+          <span class="readonly-text">{{ categoryParentLabel }}</span>
+        </el-form-item>
+        <el-form-item label="分类名称" prop="categoryName">
+          <el-input v-model="categoryForm.categoryName" maxlength="50" show-word-limit placeholder="请输入分类名称" />
+        </el-form-item>
+        <el-form-item label="排序" prop="sort">
+          <el-input-number v-model="categoryForm.sort" :min="0" :precision="0" controls-position="right" class="form-control" />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="categoryForm.status">
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">停用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="categoryForm.remark" type="textarea" maxlength="200" show-word-limit :rows="2" placeholder="选填" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button text @click="categoryFormOpen = false">取消</el-button>
+        <el-button type="primary" @click="submitCategoryForm">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup name="SparePartsManagement">
-import { computed, getCurrentInstance, reactive, ref } from 'vue'
+import { computed, getCurrentInstance, nextTick, reactive, ref } from 'vue'
+import {
+  SPARE_PART_CATEGORY_TYPE,
+  addCategory,
+  deleteCategory,
+  editCategory,
+  listCategory
+} from '@/api/dcbl/category'
 import { addInboundRecord, listInboundRecords } from '@/api/dcbl/inboundRecords'
 import { addItem, deleteItems, editItem, listItems } from '@/api/dcbl/items'
 
@@ -154,7 +277,10 @@ const { proxy } = getCurrentInstance()
 const queryRef = ref()
 const formRef = ref()
 const stockInFormRef = ref()
+const categoryFormRef = ref()
 const queryDebounceTimer = ref()
+
+const categoryTreeProps = { value: 'id', label: 'categoryName', children: 'children' }
 
 const loading = ref(false)
 const stockInLoading = ref(false)
@@ -168,20 +294,41 @@ const recordOpen = ref(false)
 const recordLoading = ref(false)
 const recordTotal = ref(0)
 
+const categoryManageOpen = ref(false)
+const categoryFormOpen = ref(false)
+const categoryLoading = ref(false)
+const categoryExpandAll = ref(true)
+const categoryTableRefresh = ref(true)
+const categoryFormTitle = ref('')
+const categoryIsEdit = ref(false)
+const categoryParentLabel = ref('一级分类（无上级）')
+
 const tableHeight = computed(() => 'calc(100vh - 290px)')
 
 const queryParams = reactive({
   pageNum: 1,
   pageSize: 30,
   name: '',
-  type: ''
+  type: '',
+  categoryId: undefined
 })
 
 const form = reactive({
   id: undefined,
   name: '',
+  categoryId: undefined,
   unit: '',
   specification: '',
+  remark: ''
+})
+
+const categoryForm = reactive({
+  id: undefined,
+  categoryName: '',
+  parentId: 0,
+  categoryType: SPARE_PART_CATEGORY_TYPE,
+  sort: 0,
+  status: 1,
   remark: ''
 })
 
@@ -201,6 +348,10 @@ const componentTypeValue = ref('')
 const sparePartList = ref([])
 const recordList = ref([])
 const userOptions = ref([])
+const categoryTreeOptions = ref([])
+const categoryManageTree = ref([])
+const categoryParentTreeOptions = ref([])
+const categoryLabelMap = ref({})
 const currentPart = reactive({
   id: undefined,
   name: '',
@@ -218,6 +369,10 @@ const rules = {
 
 const stockInRules = {
   quantity: [{ required: true, message: '请输入入库数量', trigger: 'change' }]
+}
+
+const categoryRules = {
+  categoryName: [{ required: true, message: '分类名称不能为空', trigger: 'blur' }]
 }
 
 function loadDicts() {
@@ -314,15 +469,182 @@ function getListData(response) {
 }
 
 function normalizeItem(item) {
+  const categoryId = item.categoryId ?? item.CategoryId
   return {
     id: item.id ?? item.Id,
     name: item.name ?? item.Name ?? '',
     type: item.type ?? item.Type ?? '',
+    categoryId: categoryId === 0 || categoryId === '0' ? undefined : categoryId,
     unit: item.unit ?? item.Unit ?? '',
     stockQuantity: item.stockQuantity ?? item.StockQuantity ?? 0,
     specification: item.specification ?? item.Specification ?? item.spec ?? item.Spec ?? '',
     remark: item.remark ?? item.Remark ?? ''
   }
+}
+
+function normalizeCategory(item) {
+  const parentId = item.parentId ?? item.ParentId ?? 0
+  return {
+    id: item.id ?? item.Id ?? item.value,
+    categoryName: item.categoryName ?? item.CategoryName ?? item.label ?? '',
+    parentId: parentId === null || parentId === undefined ? 0 : parentId,
+    categoryType: item.categoryType ?? item.CategoryType ?? SPARE_PART_CATEGORY_TYPE,
+    sort: item.sort ?? item.Sort ?? 0,
+    status: item.status ?? item.Status ?? 1,
+    remark: item.remark ?? item.Remark ?? ''
+  }
+}
+
+function buildCategoryMaps(list) {
+  const map = {}
+  list.forEach((item) => {
+    map[item.id] = item.categoryName
+  })
+  categoryLabelMap.value = map
+}
+
+function buildCategoryTree(list) {
+  const normalized = list.map(normalizeCategory)
+  buildCategoryMaps(normalized)
+  const tree = proxy.handleTree(normalized, 'id', 'parentId')
+  categoryTreeOptions.value = tree
+  return tree
+}
+
+function getCategoryLabel(categoryId) {
+  if (!categoryId) return '-'
+  return categoryLabelMap.value[categoryId] || '-'
+}
+
+function collectCategoryDescendantIds(categoryId) {
+  const ids = new Set()
+  const collectFromTree = (nodes, parentMatched) => {
+    nodes.forEach((node) => {
+      const matched = parentMatched || String(node.id) === String(categoryId)
+      if (matched) ids.add(String(node.id))
+      if (node.children?.length) collectFromTree(node.children, matched)
+    })
+  }
+  collectFromTree(categoryTreeOptions.value, false)
+  return ids
+}
+
+function loadCategoryTree() {
+  return listCategory({
+    pageNum: 1,
+    pageSize: 9999,
+    categoryType: SPARE_PART_CATEGORY_TYPE
+  }).then((response) => {
+    const pageData = getPageData(response)
+    return buildCategoryTree(pageData.list)
+  })
+}
+
+function loadCategoryManageTree() {
+  categoryLoading.value = true
+  return loadCategoryTree()
+    .then((tree) => {
+      categoryManageTree.value = tree
+    })
+    .finally(() => {
+      categoryLoading.value = false
+    })
+}
+
+function filterCategoryTreeForParent(tree, excludeId) {
+  if (!excludeId) return tree
+  const clone = JSON.parse(JSON.stringify(tree))
+  const prune = (nodes) =>
+    nodes.filter((node) => {
+      if (node.id === excludeId) return false
+      if (node.children?.length) {
+        node.children = prune(node.children)
+      }
+      return true
+    })
+  return prune(clone)
+}
+
+function openCategoryManage() {
+  categoryManageOpen.value = true
+}
+
+function toggleCategoryExpandAll() {
+  categoryTableRefresh.value = false
+  categoryExpandAll.value = !categoryExpandAll.value
+  nextTick(() => {
+    categoryTableRefresh.value = true
+  })
+}
+
+function resetCategoryForm() {
+  Object.assign(categoryForm, {
+    id: undefined,
+    categoryName: '',
+    parentId: 0,
+    categoryType: SPARE_PART_CATEGORY_TYPE,
+    sort: 0,
+    status: 1,
+    remark: ''
+  })
+  categoryParentLabel.value = '一级分类（无上级）'
+  categoryFormRef.value?.clearValidate()
+}
+
+function handleCategoryAdd(parentRow) {
+  categoryIsEdit.value = false
+  categoryFormTitle.value = parentRow ? '新增子级分类' : '新增一级分类'
+  resetCategoryForm()
+  if (parentRow) {
+    categoryForm.parentId = parentRow.id
+    categoryParentLabel.value = parentRow.categoryName
+  }
+  categoryFormOpen.value = true
+}
+
+function handleCategoryEdit(row) {
+  categoryIsEdit.value = true
+  categoryFormTitle.value = '编辑分类'
+  Object.assign(categoryForm, normalizeCategory(row))
+  categoryParentTreeOptions.value = filterCategoryTreeForParent(categoryTreeOptions.value, row.id)
+  categoryFormOpen.value = true
+}
+
+function handleCategoryDelete(row) {
+  proxy.$modal
+    .confirm(`是否确认删除分类"${row.categoryName}"？`)
+    .then(() => deleteCategory([row.id]))
+    .then(() => {
+      proxy.$modal.msgSuccess('删除成功')
+      loadCategoryManageTree()
+    })
+    .catch(() => {})
+}
+
+function getCategorySubmitData() {
+  const parentId = Number(categoryForm.parentId) || 0
+  return {
+    id: categoryForm.id,
+    categoryName: categoryForm.categoryName.trim(),
+    parentId,
+    categoryType: SPARE_PART_CATEGORY_TYPE,
+    sort: Number(categoryForm.sort) || 0,
+    status: categoryForm.status,
+    remark: categoryForm.remark?.trim() || ''
+  }
+}
+
+function submitCategoryForm() {
+  categoryFormRef.value?.validate((valid) => {
+    if (!valid) return
+    const payload = getCategorySubmitData()
+    const submitApi = categoryIsEdit.value ? editCategory : addCategory
+    submitApi(payload).then(() => {
+      proxy.$modal.msgSuccess(categoryIsEdit.value ? '修改成功' : '新增成功')
+      categoryFormOpen.value = false
+      loadCategoryManageTree()
+    })
+  })
 }
 
 function normalizeInboundRecord(item) {
@@ -370,9 +692,14 @@ function getList() {
   })
     .then((response) => {
       const pageData = getPageData(response)
-      const normalizedList = pageData.list.map(normalizeItem)
-      sparePartList.value = normalizedList.filter((item) => isComponentType(item.type))
-      total.value = queryParams.type ? pageData.total : sparePartList.value.length
+      let normalizedList = pageData.list.map(normalizeItem)
+      normalizedList = normalizedList.filter((item) => isComponentType(item.type))
+      if (queryParams.categoryId) {
+        const matchIds = collectCategoryDescendantIds(queryParams.categoryId)
+        normalizedList = normalizedList.filter((item) => matchIds.has(String(item.categoryId)))
+      }
+      sparePartList.value = normalizedList
+      total.value = queryParams.categoryId ? sparePartList.value.length : queryParams.type ? pageData.total : sparePartList.value.length
     })
     .finally(() => {
       loading.value = false
@@ -443,6 +770,7 @@ function resetForm() {
   Object.assign(form, {
     id: undefined,
     name: '',
+    categoryId: undefined,
     unit: '',
     specification: '',
     remark: ''
@@ -475,6 +803,7 @@ function getSubmitData() {
     id: form.id,
     name: form.name.trim(),
     type: componentTypeValue.value,
+    categoryId: form.categoryId || 0,
     unit: form.unit,
     spec: form.specification.trim(),
     remark: form.remark.trim()
@@ -572,10 +901,12 @@ function handleViewInboundRecords(row) {
   recordOpen.value = true
 }
 
-loadDicts().then(() => {
-  resetForm()
-  getList()
-})
+loadDicts()
+  .then(() => loadCategoryTree())
+  .then(() => {
+    resetForm()
+    getList()
+  })
 </script>
 
 <style scoped>
@@ -585,16 +916,27 @@ loadDicts().then(() => {
 
 .search-form {
   padding-bottom: 4px;
-  width: 100%;
 }
 
 .query-form-item {
-  width: 100%;
-  margin-right: 0;
+  margin-right: 16px;
+  margin-bottom: 0;
 }
 
 .query-control {
+  width: 220px;
+}
+
+.category-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
+}
+
+.category-select {
+  flex: 1;
+  min-width: 0;
 }
 
 .parts-table,

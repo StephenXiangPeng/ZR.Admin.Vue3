@@ -1,6 +1,6 @@
 <template>
   <div class="app-container product-management">
-    <el-form ref="queryRef" :model="queryParams" class="search-form" @submit.prevent>
+    <el-form ref="queryRef" :model="queryParams" :inline="true" class="search-form" @submit.prevent>
       <el-form-item label="产品名称" prop="name" class="query-form-item">
         <el-input
           v-model="queryParams.name"
@@ -61,7 +61,7 @@
       v-model:limit="queryParams.pageSize"
       @pagination="handlePagination" />
 
-    <el-dialog :title="dialogTitle" v-model="open" width="760px" append-to-body class="product-edit-dialog" @close="cancel">
+    <el-dialog :title="dialogTitle" v-model="open" width="900px" append-to-body class="product-edit-dialog" @close="cancel">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px" @submit.prevent>
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" maxlength="50" show-word-limit placeholder="请输入产品名称" />
@@ -80,11 +80,26 @@
         <el-form-item label="配件组成" class="component-form-item">
           <div class="component-section">
             <el-table :data="form.components" border class="component-edit-table" empty-text="暂无配件组成">
-              <el-table-column label="配件" min-width="220">
+              <el-table-column label="分类" width="180">
+                <template #default="{ row }">
+                  <el-tree-select
+                    v-model="row.filterCategoryId"
+                    :data="categoryTreeOptions"
+                    :props="categoryTreeProps"
+                    value-key="id"
+                    placeholder="全部分类"
+                    clearable
+                    filterable
+                    check-strictly
+                    class="form-control"
+                    @change="handleComponentCategoryChange(row)" />
+                </template>
+              </el-table-column>
+              <el-table-column label="配件" min-width="200">
                 <template #default="{ row }">
                   <el-select v-model="row.componentId" placeholder="请选择配件" filterable clearable class="form-control">
                     <el-option
-                      v-for="item in componentOptions"
+                      v-for="item in getFilteredComponentOptions(row)"
                       :key="item.value"
                       :label="formatComponentOptionLabel(item)"
                       :value="item.value"
@@ -217,8 +232,11 @@
 
 <script setup name="ProductManagement">
 import { computed, getCurrentInstance, reactive, ref } from 'vue'
-import { addItem, deleteItems, editItem, listComponentOptions, listItems, listProductComponents } from '@/api/dcbl/items'
+import { SPARE_PART_CATEGORY_TYPE, listCategory } from '@/api/dcbl/category'
+import { addItem, deleteItems, editItem, listItems, listProductComponents } from '@/api/dcbl/items'
 import { addOutboundRecord, listOutboundRecords } from '@/api/dcbl/outboundRecords'
+
+const categoryTreeProps = { value: 'id', label: 'categoryName', children: 'children' }
 
 const { proxy } = getCurrentInstance()
 
@@ -282,8 +300,10 @@ const typeOptions = ref([])
 const unitOptions = ref([])
 const usageTypeOptions = ref([])
 const productTypeValue = ref('')
+const componentTypeValue = ref('')
 const productList = ref([])
 const componentOptions = ref([])
+const categoryTreeOptions = ref([])
 const productComponentList = ref([])
 const outboundRecordList = ref([])
 const stockOutFormRef = ref()
@@ -300,13 +320,58 @@ function loadDicts() {
     unitOptions.value = getDictList(dicts, 'dc_material_unit')
     usageTypeOptions.value = getDictList(dicts, 'dc_usagetype')
     productTypeValue.value = resolveProductTypeValue()
+    componentTypeValue.value = resolveComponentTypeValue()
     queryParams.type = productTypeValue.value
   })
 }
 
+function resolveComponentTypeValue() {
+  const preferred = typeOptions.value.find((item) => isComponentType(item.dictValue))
+  return preferred?.dictValue ?? '1'
+}
+
+function loadCategoryTree() {
+  return listCategory({
+    pageNum: 1,
+    pageSize: 9999,
+    categoryType: SPARE_PART_CATEGORY_TYPE
+  }).then((response) => {
+    const pageData = getPageData(response)
+    const normalized = pageData.list.map(normalizeCategory)
+    categoryTreeOptions.value = proxy.handleTree(normalized, 'id', 'parentId')
+  })
+}
+
+function normalizeCategory(item) {
+  const parentId = item.parentId ?? item.ParentId ?? 0
+  return {
+    id: item.id ?? item.Id ?? item.value,
+    categoryName: item.categoryName ?? item.CategoryName ?? item.label ?? '',
+    parentId: parentId === null || parentId === undefined ? 0 : parentId
+  }
+}
+
+function collectCategoryDescendantIds(categoryId) {
+  const ids = new Set()
+  const collectFromTree = (nodes, parentMatched) => {
+    nodes.forEach((node) => {
+      const matched = parentMatched || String(node.id) === String(categoryId)
+      if (matched) ids.add(String(node.id))
+      if (node.children?.length) collectFromTree(node.children, matched)
+    })
+  }
+  collectFromTree(categoryTreeOptions.value, false)
+  return ids
+}
+
 function loadComponentOptions() {
-  listComponentOptions().then((response) => {
-    componentOptions.value = getListData(response)
+  return listItems({
+    pageNum: 1,
+    pageSize: 9999,
+    type: componentTypeValue.value
+  }).then((response) => {
+    const pageData = getPageData(response)
+    componentOptions.value = pageData.list
       .map(normalizeComponentOption)
       .filter((item) => !item.type || isComponentType(item.type))
   })
@@ -413,14 +478,34 @@ function normalizeComponents(list) {
 }
 
 function normalizeComponentOption(item) {
+  const categoryId = item.categoryId ?? item.CategoryId
   return {
     value: item.value ?? item.id ?? item.Id ?? item.componentId ?? item.ComponentId,
     label: item.label ?? item.name ?? item.Name ?? item.componentName ?? item.ComponentName ?? '',
     name: item.name ?? item.Name ?? item.label ?? item.componentName ?? item.ComponentName ?? '',
     type: item.type ?? item.Type ?? '',
+    categoryId: categoryId === 0 || categoryId === '0' ? undefined : categoryId,
     unit: item.unit ?? item.Unit ?? '',
     spec: item.spec ?? item.Spec ?? item.specification ?? item.Specification ?? ''
   }
+}
+
+function getFilteredComponentOptions(row) {
+  if (!row.filterCategoryId) return componentOptions.value
+  const matchIds = collectCategoryDescendantIds(row.filterCategoryId)
+  return componentOptions.value.filter((item) => item.categoryId && matchIds.has(String(item.categoryId)))
+}
+
+function handleComponentCategoryChange(row) {
+  if (!row.componentId) return
+  const stillValid = getFilteredComponentOptions(row).some((item) => String(item.value) === String(row.componentId))
+  if (!stillValid) row.componentId = undefined
+}
+
+function resolveComponentFilterCategoryId(componentId) {
+  if (!componentId) return undefined
+  const matched = componentOptions.value.find((item) => String(item.value) === String(componentId))
+  return matched?.categoryId
 }
 
 function normalizeOutboundRecord(item) {
@@ -515,6 +600,7 @@ function handleEdit(row) {
   open.value = true
   loadProductComponents(row.id, (components) => {
     form.components = components.map((item) => ({
+      filterCategoryId: resolveComponentFilterCategoryId(item.componentId),
       componentId: item.componentId,
       quantity: item.quantity
     }))
@@ -528,6 +614,7 @@ function cancel() {
 
 function addComponentRow() {
   form.components.push({
+    filterCategoryId: undefined,
     componentId: undefined,
     quantity: 1
   })
@@ -713,11 +800,12 @@ function loadProductComponents(productId, callback) {
     })
 }
 
-loadDicts().then(() => {
-  resetForm()
-  loadComponentOptions()
-  getList()
-})
+loadDicts()
+  .then(() => Promise.all([loadCategoryTree(), loadComponentOptions()]))
+  .then(() => {
+    resetForm()
+    getList()
+  })
 </script>
 
 <style scoped>
@@ -727,16 +815,15 @@ loadDicts().then(() => {
 
 .search-form {
   padding-bottom: 4px;
-  width: 100%;
 }
 
 .query-form-item {
-  width: 100%;
-  margin-right: 0;
+  margin-right: 16px;
+  margin-bottom: 0;
 }
 
 .query-control {
-  width: 100%;
+  width: 220px;
 }
 
 .product-table,
