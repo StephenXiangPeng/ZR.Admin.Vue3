@@ -516,19 +516,6 @@ function getCategoryLabel(categoryId) {
   return categoryLabelMap.value[categoryId] || '-'
 }
 
-function collectCategoryDescendantIds(categoryId) {
-  const ids = new Set()
-  const collectFromTree = (nodes, parentMatched) => {
-    nodes.forEach((node) => {
-      const matched = parentMatched || String(node.id) === String(categoryId)
-      if (matched) ids.add(String(node.id))
-      if (node.children?.length) collectFromTree(node.children, matched)
-    })
-  }
-  collectFromTree(categoryTreeOptions.value, false)
-  return ids
-}
-
 function loadCategoryTree() {
   return listCategory({
     pageNum: 1,
@@ -684,22 +671,22 @@ function getCurrentTime() {
 
 function getList() {
   loading.value = true
-  listItems({
+  const params = {
     pageNum: queryParams.pageNum,
     pageSize: queryParams.pageSize,
     name: queryParams.name.trim(),
     type: queryParams.type
-  })
+  }
+  if (queryParams.categoryId) {
+    params.CategoryId = Number(queryParams.categoryId) || queryParams.categoryId
+  }
+  listItems(params)
     .then((response) => {
       const pageData = getPageData(response)
       let normalizedList = pageData.list.map(normalizeItem)
       normalizedList = normalizedList.filter((item) => isComponentType(item.type))
-      if (queryParams.categoryId) {
-        const matchIds = collectCategoryDescendantIds(queryParams.categoryId)
-        normalizedList = normalizedList.filter((item) => matchIds.has(String(item.categoryId)))
-      }
       sparePartList.value = normalizedList
-      total.value = queryParams.categoryId ? sparePartList.value.length : queryParams.type ? pageData.total : sparePartList.value.length
+      total.value = pageData.total
     })
     .finally(() => {
       loading.value = false
