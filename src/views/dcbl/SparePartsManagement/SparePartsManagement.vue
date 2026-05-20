@@ -675,7 +675,7 @@ function getList() {
     pageNum: queryParams.pageNum,
     pageSize: queryParams.pageSize,
     name: queryParams.name.trim(),
-    type: queryParams.type
+    type: queryParams.type || componentTypeValue.value
   }
   if (queryParams.categoryId) {
     params.CategoryId = Number(queryParams.categoryId) || queryParams.categoryId
@@ -683,9 +683,7 @@ function getList() {
   listItems(params)
     .then((response) => {
       const pageData = getPageData(response)
-      let normalizedList = pageData.list.map(normalizeItem)
-      normalizedList = normalizedList.filter((item) => isComponentType(item.type))
-      sparePartList.value = normalizedList
+      sparePartList.value = pageData.list.map(normalizeItem)
       total.value = pageData.total
     })
     .finally(() => {
