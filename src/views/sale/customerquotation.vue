@@ -3041,10 +3041,17 @@ const EditSaveQuotation = async (formEl: FormInstance | undefined) => {
 		}
 	});
 }
+const isCreatingRevision = ref(false);
+
 const quotationDialogHandClose = () => {
 	// 清空表单验证提示
 	quotationDialogformRef.value?.clearValidate();
 	calculationSubmitAttempted.value = false;
+	// 创建次报价时关闭弹窗需保留上次填写的表单与产品数据
+	if (isCreatingRevision.value) {
+		quotationDialog.value = false;
+		return;
+	}
 	quotationDialog.value = false;
 	productData.value = [];
 	QuotationRemarksTextarea.value = '';
@@ -3168,25 +3175,35 @@ const CreateRevision = () => {
 		cancelButtonText: '取消',
 		type: 'info'
 	}).then(() => {
-		// 获取修订版报价单号
+		const currentVersion = quotationDialogform.version || 1;
+		const baseQuotationNum = quotationDialogform.baseQuotationNum || quotationDialogform.quotationnum;
+
 		request({
 			url: 'Quotation/GetRevisionQuotationNum/GetRevisionQuotationNum',
 			method: 'GET',
 			params: {
-				baseQuotationNum: quotationDialogform.baseQuotationNum || quotationDialogform.quotationnum
+				baseQuotationNum
 			}
 		}).then(response => {
 			if (response.code == 200) {
-				// 关闭当前窗口
+				isCreatingRevision.value = true;
 				quotationDialog.value = false;
-				// 存储当前报价单的关键信息
-				const currentVersion = quotationDialogform.version || 1;
-				const baseQuotationNum = quotationDialogform.baseQuotationNum || quotationDialogform.quotationnum;
-				const originalId = EditQuotationId.value;
 
-				// 设置新报价单信息
 				setTimeout(() => {
-					// 打开新的报价单窗体
+					isCreatingRevision.value = false;
+
+					quotationDialogform.id = null;
+					EditQuotationId.value = 0;
+					quotationDialogform.quotationnum = response.data.quotationNum;
+					quotationDialogform.baseQuotationNum = baseQuotationNum;
+					quotationDialogform.version = currentVersion + 1;
+					quotationDialogform.isLatestVersion = true;
+
+					// 清除产品明细行 ID，避免与上一版报价单关联
+					productData.value.forEach(item => {
+						delete item.id;
+					});
+
 					quotationDialog.value = true;
 					isSaveBtnShow.value = true;
 					showEditBtn.value = false;
@@ -3195,81 +3212,11 @@ const CreateRevision = () => {
 					showSaveDraftBtn.value = true;
 					showCreateRevisionBtn.value = false;
 					isViewDetails.value = false;
-
-					// 填充原报价单数据，但使用新的报价单号
-					quotationDialogform.quotationnum = response.data.quotationNum;
-					// 设置版本信息
-					quotationDialogform.baseQuotationNum = baseQuotationNum;
-					quotationDialogform.version = currentVersion + 1;
-					quotationDialogform.isLatestVersion = true;
-
-					// 重新获取产品数据，因为它们不是直接从quotationDialogform中来的
-					request({
-						url: 'Quotation/GetQuotationDetailsListByQuotationID/GetQuotationDetailsList',
-						method: 'GET',
-						params: {
-							ID: originalId
-						}
-					}).then(resp => {
-						if (resp.data.length > 0) {
-							productData.value = [];
-							resp.data.forEach(element => {
-								productData.value.push({
-									productId: element.productId,
-									productNum: element.productNum,
-									customerNum: element.customerNum,
-									cproductname: element.cProductName,
-									cspecification: element.cSpecification,
-									quotationnum: element.quotationNum,
-									exportunitprice: element.exportUnitPrice,
-									exporttotalprice: element.exportTotalPrice,
-									unitofmeasurement: state.optionss["hr_calculate_unit"].filter(hr_calculate_unit => hr_calculate_unit.dictValue == element.unitOfMeasurement).map(item => item.dictValue).values().next().value,
-									purchasecurrency: state.optionss["hr_export_currency"].filter(hr_export_currency => hr_export_currency.dictValue == element.purchaseCurrency).map(item => item.dictValue).values().next().value,
-									purchaseunitprice: element.purchaseUnitPrice,
-									onepacking: element.onePacking,
-									isInvoicingc: state.optionss['hr_yes_no'].filter(hr_yes_no => hr_yes_no.dictValue == element.invoice).map(item => item.dictValue).values().next().value,
-									packaging: element.packaging,
-									specialrequirements: element.specialRequirements,
-									rebaterate: element.rebateRate,
-									outerboxloading: element.outerBoxLoading,
-									outerboxunit: element.outerBoxUnit,
-									outerboxlength: element.outerBoxLength.toFixed(1),
-									outerboxwidth: element.outerBoxWidth.toFixed(1),
-									outerboxheight: element.outerBoxHeight.toFixed(1),
-									outerboxnetweight: element.outerBoxNetWeight.toFixed(1),
-									outerboxgrossweight: element.outerBoxGrossWeight.toFixed(1),
-									NumberOfBoxes: element.numberOfBoxes.toFixed(1),
-									OtherFees: element.otherFees,
-									additionalpackagingcosts: element.additionalPackagingCosts,
-									innerBoxLoading: element.innerBoxLoading,
-									singleProductGrossProfit: element.singleProductGrossProfit,
-									singleProductGrossProfitTotal: element.singleProductGrossProfitTotal,
-									grossProfitRate: element.grossProfitRate,
-									totalNetWeight: element.totalNetWeight.toFixed(1),
-									totalGrossWeight: element.totalGrossWeight.toFixed(1),
-									totalVolume: element.totalVolume,
-									SinglesalesrevenueA: element.singlesalesrevenue,
-									Singleproductvolume: element.singleproductvolume,
-									Oceanfreightforasingleproduct: element.oceanfreightforasingleproduct,
-									Portchargesforindividualproducts: element.portchargesforindividualproducts,
-									Inlandfreightforasingleproduct: element.inlandfreightforasingleproduct,
-									outerboxvolume: element.outerBoxVolume,
-									inlandfreightprice: element.inlandfreightprice,
-									IsNewProduct: element.IsNewProduct,
-									ProfitMargin: element.importProfitMargin !== undefined && element.importProfitMargin !== null ? element.importProfitMargin : element.profitMargin, // 优先使用 ImportProfitMargin
-									productPhotoPath: element.productPhotoPath || '', // 新增产品图片字段
-									isImported: element.IsNewProduct === 0
-								});
-							});
-							calculateTotal(); // 重新计算总值
-						}
-					}).catch(error => {
-						console.error('获取产品数据失败:', error);
-						ElMessage.error('获取产品数据失败');
-					});
+					calculationSubmitAttempted.value = false;
+					calculateTotal();
 
 					ElMessage({
-						message: `已创建${getVersionText(currentVersion + 1)}窗体，请修改后保存`,
+						message: `已创建${getVersionText(currentVersion + 1)}窗体，已导入上次报价数据，请修改后保存`,
 						type: 'success'
 					});
 				}, 300);

@@ -37,8 +37,8 @@
 			</div>
 
 			<!-- 表格区域 -->
-			<el-table class="customer-info-table" :data="InquityTableData" style="width: 100%; table-layout: fixed;" stripe
-				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+			<el-table class="customer-info-table" :data="InquityTableData" style="width: 100%; table-layout: fixed;"
+				stripe :header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="inquiry_number" label="询价单号" :width="120">
 					<template #default="scope">
@@ -71,9 +71,9 @@
 				</el-table-column>
 			</el-table>
 			<el-pagination @current-change="SearchInquiryhandlePageChange" @size-change="SearchInquiryhandleSizeChange"
-				:current-page="SearchInquirycurrentPage" :page-size="SearchInquirypageSize" :total="SearchInquirytotalItems"
-				:page-sizes="[10, 20, 30, 50]" background layout="total, sizes, prev, pager, next, jumper"
-				style="margin-top: 10px; text-align: right;" />
+				:current-page="SearchInquirycurrentPage" :page-size="SearchInquirypageSize"
+				:total="SearchInquirytotalItems" :page-sizes="[10, 20, 30, 50]" background
+				layout="total, sizes, prev, pager, next, jumper" style="margin-top: 10px; text-align: right;" />
 		</div>
 		<el-dialog :modal="false" :modal-penetrable="true" v-model="CreateInquiryDialog" title="创建询价单"
 			:close-on-click-modal=false style="width: 75%;" @close="CloseInquiryDialog">
@@ -322,19 +322,22 @@
 					<el-table-column prop="outerboxdata" label="外箱数据(CM)" width="120" align="center">
 						<el-table-column prop="outerboxlength" label="长" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-if="!isEditable" v-model="row.outerboxlength" />
+								<el-input v-if="!isEditable" v-model="row.outerboxlength"
+									@input="updateOuterBoxVolume(row)" />
 								<span v-else>{{ row.outerboxlength }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxwidth" label="宽" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-if="!isEditable" v-model="row.outerboxwidth" />
+								<el-input v-if="!isEditable" v-model="row.outerboxwidth"
+									@input="updateOuterBoxVolume(row)" />
 								<span v-else>{{ row.outerboxwidth }}</span>
 							</template>
 						</el-table-column>
 						<el-table-column prop="outerboxheight" label="高" width="120" align="center">
 							<template #default="{ row }">
-								<el-input v-if="!isEditable" v-model="row.outerboxheight" />
+								<el-input v-if="!isEditable" v-model="row.outerboxheight"
+									@input="updateOuterBoxVolume(row)" />
 								<span v-else>{{ row.outerboxheight }}</span>
 							</template>
 						</el-table-column>
@@ -463,9 +466,9 @@
 				<el-table-column prop="unitOfMeasurement" label="计量单位" width="120" />
 			</el-table>
 			<el-pagination @current-change="SearchProducthandlePageChange" @size-change="SearchProducthandleSizeChange"
-				:current-page="SearchProductCurrentPage" :page-size="SearchProductpageSize" :total="SearchProducttotalItems"
-				:page-sizes="[10, 20, 30, 50]" background layout="total, sizes, prev, pager, next, jumper"
-				style="margin-top: 10px; text-align: right;" />
+				:current-page="SearchProductCurrentPage" :page-size="SearchProductpageSize"
+				:total="SearchProducttotalItems" :page-sizes="[10, 20, 30, 50]" background
+				layout="total, sizes, prev, pager, next, jumper" style="margin-top: 10px; text-align: right;" />
 			<template #footer>
 				<span class="dialog-footer">
 					<el-button type="danger" @click="SearchProcutDialog = false">
@@ -564,7 +567,7 @@ const handleRowDblClick = (row) => {
 		ElMessage.error("产品【" + row.chineseProductName + "】已存在报价单的产品列表中，请重新选择");
 		return;
 	} else {
-		inquryProductTableData.value.push({
+		const newItem = {
 			productId: row.id,
 			date: dayjs().format('YYYY-MM-DD'),
 			productimage: row.productPhotoPath || '', // 如果有图片则导入，否则为空
@@ -595,7 +598,9 @@ const handleRowDblClick = (row) => {
 			outerboxvolume: row.outerBoxVolume ?? 0,
 			outerboxgrossweight: row.outerBoxGrossWeight ?? 0,
 			status: 0
-		});
+		};
+		updateOuterBoxVolume(newItem);
+		inquryProductTableData.value.push(newItem);
 		SearchProcutDialog.value = false;
 	}
 };
@@ -652,10 +657,21 @@ const GetNextInquiryNumber = () => {
 
 //询价产品列表
 const inquryProductTableData = ref([]);
+const updateOuterBoxVolume = (row) => {
+	const length = Number(row.outerboxlength) || 0;
+	const width = Number(row.outerboxwidth) || 0;
+	const height = Number(row.outerboxheight) || 0;
+	const volume = length > 0 && width > 0 && height > 0
+		? Number(((length * width * height) / 1000000).toFixed(6))
+		: 0;
+	if (row.outerboxvolume !== volume) {
+		row.outerboxvolume = volume;
+	}
+}
 const now = new Date()
 const onAddInquiryProductItem = () => {
 	now.setDate(now.getDate())
-	inquryProductTableData.value.push({
+	const newItem = {
 		date: dayjs(now).format('YYYY-MM-DD'),
 		productimage: '',
 		productsupplementarydocuments: '',
@@ -685,7 +701,9 @@ const onAddInquiryProductItem = () => {
 		outerboxvolume: 0,
 		outerboxgrossweight: 0,
 		status: 0
-	})
+	};
+	updateOuterBoxVolume(newItem);
+	inquryProductTableData.value.push(newItem)
 }
 const selectedImages = ref([]); // 存储用户选择的图片文件
 const previewImage = ref(''); // 存储要预览的图片
@@ -1164,6 +1182,7 @@ const ChcekDetails = (row) => {
 					outerboxgrossweight: item.outerBoxGrossWeight,
 					status: item.status
 				}));
+				inquryProductTableData.value.forEach(updateOuterBoxVolume);
 			} else {
 				inquryProductTableData.value = [];
 				originalProductData.value = [];
@@ -1632,6 +1651,7 @@ const loadProductList = async (inquiryId) => {
 					outerboxgrossweight: item.outerBoxGrossWeight,
 					status: item.status
 				}));
+				inquryProductTableData.value.forEach(updateOuterBoxVolume);
 			} else {
 				inquryProductTableData.value = [];
 			}

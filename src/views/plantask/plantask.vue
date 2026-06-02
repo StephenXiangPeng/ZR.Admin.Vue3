@@ -241,7 +241,8 @@
 								<el-form-item :label="'关联客户'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.customer'">
 									<el-select v-model="item.customer" filterable placeholder="选择关联客户"
-										style="width: 300px" clearable multiple size="default">
+										style="width: 300px" clearable multiple size="default"
+										:disabled="!(item.customerOptions && item.customerOptions.length)">
 										<el-option v-for="dict in item.customerOptions || []" :key="dict.dictValue"
 											:label="dict.dictLabel" :value="dict.dictValue">
 										</el-option>
@@ -251,7 +252,8 @@
 							<el-col :span="6">
 								<el-form-item :label="'时间节点'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.deadline'">
-									<el-date-picker v-model="item.deadline" type="datetime" placeholder="选择时间节点"
+									<el-date-picker v-model="item.deadline" type="date" placeholder="选择时间节点"
+										format="YYYY-MM-DD" value-format="YYYY-MM-DD"
 										style="width: 300px" size="default" @change="(value) => {
 											if (!value) return;
 											if (!PlanTaskForm.starttime || !PlanTaskForm.endtime) {
@@ -390,7 +392,7 @@
 							</el-table-column>
 							<el-table-column prop="timePoint" label="计划完成时间节点" min-width="150">
 								<template #default="{ row }">
-									{{ formatDateTime(row.timePoint) }}
+									{{ formatDate(row.timePoint) }}
 								</template>
 							</el-table-column>
 							<el-table-column prop="realTimePoint" label="实际完成时间" min-width="150">

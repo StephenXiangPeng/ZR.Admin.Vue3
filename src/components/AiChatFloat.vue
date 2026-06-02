@@ -1,5 +1,5 @@
 <template>
-  <div class="ai-chat">
+  <div ref="chatRootRef" class="ai-chat" :class="{ 'is-dragging': isDragging }" :style="containerStyle">
     <transition name="ai-chat-panel">
       <div v-show="visible" class="ai-chat__panel">
         <div class="ai-chat__header">
@@ -28,21 +28,37 @@
       </div>
     </transition>
 
-    <button class="ai-chat__float-button" type="button" @click="showAiPendingMessage">
+    <button class="ai-chat__float-button" type="button" @mousedown.prevent="onFloatMouseDown">
       <span>AI</span>
     </button>
   </div>
 </template>
 
 <script setup>
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 // import { chatWithAi } from '@/api/ai'
+
+const POSITION_STORAGE_KEY = 'huirong-ai-chat-float-position'
+const FLOAT_BUTTON_SIZE = 56
+const FLOAT_MARGIN = 8
+const DRAG_THRESHOLD = 4
 
 const visible = ref(false)
 const loading = ref(false)
 const question = ref('')
 const messageListRef = ref(null)
+const chatRootRef = ref(null)
+const isDragging = ref(false)
+const floatPos = ref(null)
+const dragState = {
+  startX: 0,
+  startY: 0,
+  originX: 0,
+  originY: 0,
+  moved: false
+}
+
 const messages = ref([
   {
     id: Date.now(),
@@ -51,13 +67,110 @@ const messages = ref([
   }
 ])
 
+const containerStyle = computed(() => {
+  if (!floatPos.value) {
+    return {}
+  }
+  return {
+    left: `${floatPos.value.x}px`,
+    top: `${floatPos.value.y}px`,
+    right: 'auto',
+    bottom: 'auto'
+  }
+})
+
+function clampPosition(x, y) {
+  const maxX = Math.max(FLOAT_MARGIN, window.innerWidth - FLOAT_BUTTON_SIZE - FLOAT_MARGIN)
+  const maxY = Math.max(FLOAT_MARGIN, window.innerHeight - FLOAT_BUTTON_SIZE - FLOAT_MARGIN)
+  return {
+    x: Math.min(Math.max(FLOAT_MARGIN, x), maxX),
+    y: Math.min(Math.max(FLOAT_MARGIN, y), maxY)
+  }
+}
+
+function loadSavedPosition() {
+  try {
+    const raw = localStorage.getItem(POSITION_STORAGE_KEY)
+    if (!raw) {
+      return
+    }
+    const parsed = JSON.parse(raw)
+    if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') {
+      floatPos.value = clampPosition(parsed.x, parsed.y)
+    }
+  } catch (error) {
+    console.warn('读取 AI 悬浮位置失败:', error)
+  }
+}
+
+function savePosition() {
+  if (!floatPos.value) {
+    return
+  }
+  localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(floatPos.value))
+}
+
+function ensurePixelPosition() {
+  if (floatPos.value || !chatRootRef.value) {
+    return
+  }
+  const rect = chatRootRef.value.getBoundingClientRect()
+  floatPos.value = clampPosition(rect.left, rect.top)
+}
+
+function onFloatMouseMove(event) {
+  if (!isDragging.value) {
+    return
+  }
+  const dx = event.clientX - dragState.startX
+  const dy = event.clientY - dragState.startY
+  if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+    dragState.moved = true
+  }
+  floatPos.value = clampPosition(dragState.originX + dx, dragState.originY + dy)
+}
+
+function stopDragging() {
+  if (!isDragging.value) {
+    return
+  }
+  isDragging.value = false
+  document.removeEventListener('mousemove', onFloatMouseMove)
+  document.removeEventListener('mouseup', stopDragging)
+  if (floatPos.value) {
+    savePosition()
+  }
+  if (!dragState.moved) {
+    showAiPendingMessage()
+  }
+}
+
+function onFloatMouseDown(event) {
+  if (event.button !== 0) {
+    return
+  }
+  ensurePixelPosition()
+  isDragging.value = true
+  dragState.moved = false
+  dragState.startX = event.clientX
+  dragState.startY = event.clientY
+  dragState.originX = floatPos.value.x
+  dragState.originY = floatPos.value.y
+  document.addEventListener('mousemove', onFloatMouseMove)
+  document.addEventListener('mouseup', stopDragging)
+}
+
+function handleWindowResize() {
+  if (!floatPos.value) {
+    return
+  }
+  floatPos.value = clampPosition(floatPos.value.x, floatPos.value.y)
+  savePosition()
+}
+
 function showAiPendingMessage() {
   ElMessage.info('AI 功能即将接入')
 }
-
-// function getAnswerContent(response) {
-//   return response?.message?.content || response?.data?.message?.content || response?.content || response?.answer || 'AI 暂未返回内容。'
-// }
 
 async function scrollToBottom() {
   await nextTick()
@@ -75,7 +188,6 @@ async function sendMessage() {
   ElMessage.info('AI 功能即将接入')
   return
 
-  // 原 AI 接口调用逻辑暂时保留，后续接入时恢复。
   messages.value.push({
     id: Date.now(),
     role: 'user',
@@ -87,11 +199,6 @@ async function sendMessage() {
 
   try {
     // const response = await chatWithAi(content)
-    // messages.value.push({
-    //   id: Date.now() + 1,
-    //   role: 'assistant',
-    //   content: getAnswerContent(response)
-    // })
   } catch (error) {
     ElMessage.error('AI 对话请求失败，请稍后重试')
   } finally {
@@ -99,6 +206,17 @@ async function sendMessage() {
     await scrollToBottom()
   }
 }
+
+onMounted(() => {
+  loadSavedPosition()
+  window.addEventListener('resize', handleWindowResize)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('mousemove', onFloatMouseMove)
+  document.removeEventListener('mouseup', stopDragging)
+  window.removeEventListener('resize', handleWindowResize)
+})
 </script>
 
 <style scoped lang="scss">
@@ -109,6 +227,10 @@ async function sendMessage() {
   z-index: 3000;
 }
 
+.ai-chat.is-dragging {
+  user-select: none;
+}
+
 .ai-chat__float-button {
   width: 56px;
   height: 56px;
@@ -117,9 +239,14 @@ async function sendMessage() {
   color: #fff;
   font-size: 18px;
   font-weight: 700;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
   box-shadow: 0 10px 24px rgba(64, 158, 255, 0.36);
   background: linear-gradient(135deg, #409eff, #7c4dff);
+}
+
+.ai-chat.is-dragging .ai-chat__float-button {
+  cursor: grabbing;
 }
 
 .ai-chat__panel {

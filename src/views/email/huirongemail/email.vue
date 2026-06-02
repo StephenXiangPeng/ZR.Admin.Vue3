@@ -1,8 +1,9 @@
 <template>
-	<div>
+	<div class="email-page">
 		<el-container class="layout-container-demo" style="height: 100%">
 			<el-aside width="300px">
-				<el-scrollbar height="calc(100vh - 60px)">
+				<el-scrollbar
+					height="calc(100vh - var(--base-header-height, 50px) - var(--base-tags-height, 34px) - var(--base-footer-height, 30px))">
 					<el-menu :default-active="activeMenu">
 						<!-- 修改写邮件图标为 Edit -->
 						<el-menu-item @click="handleWriteEmail">
@@ -77,9 +78,9 @@
 								</el-icon>
 							</el-button>
 						</div>
-						<el-tree :data="emailFolders" :props="defaultProps" @node-click="handleNodeClick"
-							:default-expanded-keys="['1']" node-key="id" :expand-on-click-node="false"
-							class="email-folder-tree">
+						<el-tree ref="folderTreeRef" :data="emailFolders" :props="defaultProps"
+							@node-click="handleNodeClick" :default-expanded-keys="['1']" node-key="id" highlight-current
+							:expand-on-click-node="false" class="email-folder-tree">
 							<template #default="{ node, data }">
 								<div class="custom-tree-node">
 									<el-icon>
@@ -126,9 +127,16 @@
 				<el-header class="email-list-header" style="text-align: left; font-size: 12px;">
 					<div class="email-header-primary">
 						<div class="search-container" style="width: 70%;">
-							<el-input v-model="input1" style="width: 100%" size="large" placeholder="搜索邮件"
-								@input="handleLocalSearch" clearable @clear="clearLocalSearch">
+							<el-input v-model="input1" style="width: 100%" size="large"
+								placeholder="搜索发件人、收件人、主题、正文，多个关键词用空格或逗号分隔" clearable @input="onQuickSearchInput"
+								@keyup.enter="onQuickSearchEnter" @clear="clearQuickSearch">
 								<template #suffix>
+									<el-tooltip content="支持搜索发件人、收件人、主题、正文；多个关键词可用空格、逗号分隔；按 Enter 立即搜索"
+										placement="bottom">
+										<el-icon class="cursor-pointer" style="margin-right: 4px;">
+											<InfoFilled />
+										</el-icon>
+									</el-tooltip>
 									<el-tooltip content="高级搜索" placement="bottom">
 										<el-icon class="cursor-pointer" @click="showAdvancedSearch = true">
 											<Operation />
@@ -177,20 +185,36 @@
 						</el-dropdown>
 					</div>
 				</el-header>
-				<el-main>
+				<el-main class="email-main">
 					<!-- 邮件列表视图 -->
-					<div v-show="!showEmailDetail">
+					<div v-show="!showEmailDetail" class="email-list-view">
 						<!-- 修改表格容器样式 -->
-						<div style="width: 100%; ">
-							<!-- 添加搜索状态提示到这里 -->
-							<div v-if="isSearchMode" class="search-status">
-								<el-alert title="当前显示搜索结果" type="info" :closable="false" style="margin-bottom: 10px;">
-									<template #default>
-										<el-button link type="primary" @click="resetSearchForm">
-											清除搜索
-										</el-button>
-									</template>
-								</el-alert>
+						<div class="email-list-inner">
+							<div v-if="isSearchMode" class="search-status-bar">
+								<div class="search-status-left">
+									<div class="search-status-icon-wrap">
+										<el-icon>
+											<Search />
+										</el-icon>
+									</div>
+									<div class="search-status-body">
+										<div class="search-status-header">
+											<span class="search-status-type">{{ searchStatusMeta.typeLabel }}</span>
+											<span class="search-status-count">共找到 {{ totalItems }} 封邮件</span>
+										</div>
+										<div v-if="searchStatusMeta.tags.length" class="search-status-tags">
+											<span v-for="item in searchStatusMeta.tags" :key="item.label"
+												class="search-status-tag">
+												<span class="search-status-tag-label">{{ item.label }}</span>
+												<span class="search-status-tag-value" :title="item.value">{{ item.value
+												}}</span>
+											</span>
+										</div>
+									</div>
+								</div>
+								<el-button class="search-status-clear" type="primary" link @click="resetSearchForm">
+									清除搜索
+								</el-button>
 							</div>
 
 							<!-- 批量操作按钮区域 -->
@@ -210,11 +234,19 @@
 											</el-icon>
 											归档
 										</el-button>
-										<!-- 新增：移动至按钮 -->
+										<!-- 新增：手动归档按钮 -->
 										<el-button type="warning" @click="showBatchMoveDialog"
 											:loading="isBatchProcessing">
 											<el-icon>
 												<Folder />
+											</el-icon>
+											手动归档
+										</el-button>
+										<!-- 新增：移动至按钮（系统文件夹） -->
+										<el-button type="success" @click="showBatchMoveToSystemDialog"
+											:loading="isBatchProcessing">
+											<el-icon>
+												<Rank />
 											</el-icon>
 											移动至
 										</el-button>
@@ -232,61 +264,79 @@
 								</div>
 							</div>
 
-							<el-table ref="emailTable" :data="EmailTableData" @selection-change="handleSelectionChange"
-								@row-click="handleRowClick" :row-class-name="tableRowClassName" style="width: 100%;">
-								<!-- 选择列 -->
-								<el-table-column type="selection" fixed min-width="50" align="center" />
-								<!-- 邮件ID列 -->
-								<el-table-column prop="id" label="邮件编号" min-width="200" v-if="false"
-									show-overflow-tooltip />
-								<!-- EmailID列 -->
-								<el-table-column prop="EmailID" label="EmailID" min-width="200" v-if="false"
-									show-overflow-tooltip />
-								<!-- 邮件内容列 -->
-								<el-table-column prop="emailContent" label="邮件内容" min-width="200" v-if="false"
-									show-overflow-tooltip />
-								<!--发件人列 -->
-								<el-table-column prop="name" label="发件人" min-width="200" show-overflow-tooltip />
-								<el-table-column prop="FromEmailAddress" label="发件人Email" min-width="200"
-									show-overflow-tooltip v-if="false" />
-								<!--收件人列 -->
-								<el-table-column prop="toEmail" label="收件人" min-width="200" show-overflow-tooltip
-									v-if="false" />
-								<!-- 主题列 -->
-								<el-table-column prop="subject" min-width="400" label="主题" show-overflow-tooltip>
-									<template #default="{ row }">
-										<div style="display: flex; align-items: center;">
-											<span>{{ row.subject }}</span>
-											<el-icon v-if="row.hasAttachments"
-												style="margin-left: 8px; color: #909399;">
-												<Paperclip />
-											</el-icon>
-										</div>
-									</template>
-								</el-table-column>
-								<!-- 日期列 -->
-								<el-table-column prop="date" label="日期" min-width="150" show-overflow-tooltip />
+							<div class="email-table-wrap" ref="tableWrapRef">
+								<el-table ref="emailTable" :data="EmailTableData" :key="emailTableSortKey"
+									:default-sort="isListDateSortable ? { prop: 'date', order: 'descending' } : undefined"
+									@selection-change="handleSelectionChange" @row-click="handleRowClick"
+									@sort-change="handleEmailListSortChange"
+									:row-class-name="tableRowClassName" :height="tableHeight" style="width: 100%;">
+									<!-- 选择列 -->
+									<el-table-column type="selection" fixed min-width="50" align="center" />
+									<!-- 邮件ID列 -->
+									<el-table-column prop="id" label="邮件编号" min-width="200" v-if="false"
+										show-overflow-tooltip />
+									<!-- EmailID列 -->
+									<el-table-column prop="EmailID" label="EmailID" min-width="200" v-if="false"
+										show-overflow-tooltip />
+									<!-- 邮件内容列 -->
+									<el-table-column prop="emailContent" label="邮件内容" min-width="200" v-if="false"
+										show-overflow-tooltip />
+									<!--发件人列 -->
+									<el-table-column prop="name" label="发件人" min-width="200" show-overflow-tooltip />
+									<el-table-column prop="FromEmailAddress" label="发件人Email" min-width="200"
+										show-overflow-tooltip v-if="false" />
+									<!--收件人列 -->
+									<el-table-column prop="toEmail" label="收件人" min-width="200" show-overflow-tooltip
+										v-if="false" />
+									<!-- 主题列 -->
+									<el-table-column prop="subject" min-width="400" label="主题" show-overflow-tooltip>
+										<template #default="{ row }">
+											<div style="display: flex; align-items: center;">
+												<span>{{ row.subject }}</span>
+												<el-icon v-if="row.hasAttachments"
+													style="margin-left: 8px; color: #909399;">
+													<Paperclip />
+												</el-icon>
+											</div>
+										</template>
+									</el-table-column>
+									<!-- 日期列（系统分类 / 邮件分类：服务端排序） -->
+									<el-table-column prop="date" label="日期" min-width="150" show-overflow-tooltip
+										:sortable="isListDateSortable ? 'custom' : false" />
 
-								<!-- 标签列 -->
-								<el-table-column prop="emailTags" label="标签ID" min-width="150" v-if="false"
-									show-overflow-tooltip />
-								<el-table-column prop="emailTagsShow" label="标签" min-width="150" show-overflow-tooltip>
-									<template #default="{ row }">
-										<div class="email-tags-container">
-											<el-tag v-for="tagId in getRowTags(row.emailTags)" :key="tagId" size="small"
-												:type="getTagType(getTagName(tagId))" class="mx-1">
-												{{ getTagName(tagId) }}
-											</el-tag>
-										</div>
-									</template>
-								</el-table-column>
-							</el-table>
+									<!-- 标签列 -->
+									<el-table-column prop="emailTags" label="标签ID" min-width="150" v-if="false"
+										show-overflow-tooltip />
+									<el-table-column prop="emailTagsShow" label="标签" min-width="150">
+										<template #default="{ row }">
+											<div class="email-tags-container">
+												<!-- 单个标签：直接显示 -->
+												<el-tag v-if="getRowTags(row.emailTags).length === 1"
+													size="small" disable-transitions
+													:type="getTagType(getTagName(getRowTags(row.emailTags)[0]))">
+													{{ getTagName(getRowTags(row.emailTags)[0]) }}
+												</el-tag>
+												<!-- 多个标签：折叠为「多标签…」，悬停 tip 展示全部标签 -->
+												<el-tooltip v-else-if="getRowTags(row.emailTags).length > 1"
+													effect="dark" placement="top"
+													:content="getRowTagNames(row.emailTags)">
+													<el-tag size="small" type="warning" class="tags-more"
+														disable-transitions>多标签…</el-tag>
+												</el-tooltip>
+											</div>
+										</template>
+									</el-table-column>
+								</el-table>
+							</div>
 							<!-- 添加分页组件 -->
-							<div class="pagination-container">
+							<div class="pagination-container" ref="paginationRef">
 								<el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
 									:page-sizes="[20, 30, 50]" :total="totalItems" @size-change="handleSizeChange"
 									@current-change="handleCurrentChange"
-									layout="total, sizes, prev, pager, next, jumper" />
+									layout="total, slot, sizes, prev, pager, next, jumper"
+									class="email-list-pagination">
+									<span class="pagination-current-count">,当前页 {{ EmailTableData.length }} 条</span>
+								</el-pagination>
 							</div>
 						</div>
 					</div>
@@ -352,7 +402,8 @@
 								<!-- 标签区域 -->
 								<div class="email-tags" v-if="EmailTagcheckboxGroup.length">
 									<el-tag v-for="tagId in EmailTagcheckboxGroup" :key="tagId" size="small"
-										effect="plain" class="custom-tag" :type="getTagType(getTagName(tagId))">
+										effect="plain" class="custom-tag" disable-transitions
+										:type="getTagType(getTagName(tagId))">
 										{{ getTagName(tagId) }}
 									</el-tag>
 								</div>
@@ -806,22 +857,79 @@
 				</span>
 			</template>
 		</el-dialog>
-		<!-- 批量移动至文件夹对话框 -->
-		<el-dialog v-model="showBatchMoveToFolderDialog" title="移动邮件至文件夹" width="50%" :close-on-click-modal="false">
+		<!-- 批量手动归档对话框（仅分类文件夹） -->
+		<el-dialog v-model="showBatchMoveToFolderDialog" title="手动归档" width="50%" :close-on-click-modal="false">
 			<div class="move-to-folder-dialog">
 				<div class="selected-emails-info">
 					<el-alert title="提示" type="info" :closable="false" style="margin-bottom: 20px;">
 						<template #default>
-							将移动 <strong>{{ selectedRows.length }}</strong> 封邮件到选定的文件夹
+							将归档 <strong>{{ selectedRows.length }}</strong> 封邮件到选定的文件夹
 						</template>
 					</el-alert>
 				</div>
-				<el-form label-width="100px">
-					<el-form-item label="目标文件夹">
-						<el-tree :data="flattenedFolderOptions" :props="folderTreeProps"
-							@node-click="handleFolderSelect" node-key="value" highlight-current
-							:default-expanded-keys="['1']"
-							style="max-height: 300px; overflow-y: auto; border: 1px solid #dcdfe6; border-radius: 4px; padding: 10px;">
+
+				<div class="folder-section-wrapper">
+					<div class="folder-section">
+						<div class="folder-section-title">
+							<el-icon>
+								<CollectionTag />
+							</el-icon>
+							<span>分类文件夹</span>
+						</div>
+						<el-tree ref="hierarchyTreeRef" :data="hierarchyFolderTree" :props="folderTreeProps"
+							@node-click="handleFolderSelect" node-key="value" highlight-current default-expand-all
+							class="folder-tree-block">
+							<template #default="{ node, data }">
+								<div class="folder-tree-node">
+									<el-icon>
+										<Folder />
+									</el-icon>
+									<span style="margin-left: 8px;">{{ node.label }}</span>
+								</div>
+							</template>
+						</el-tree>
+					</div>
+				</div>
+
+				<el-form label-width="100px" style="margin-top: 16px;">
+					<el-form-item label="选中文件夹">
+						<el-input v-model="selectedFolderName" readonly placeholder="请选择目标文件夹" />
+					</el-form-item>
+				</el-form>
+			</div>
+			<template #footer>
+				<div class="dialog-footer">
+					<el-button @click="showBatchMoveToFolderDialog = false">取消</el-button>
+					<el-button type="primary" @click="handleBatchMoveToFolder" :loading="isBatchMovingToFolder"
+						:disabled="!selectedFolderData">
+						归档
+					</el-button>
+				</div>
+			</template>
+		</el-dialog>
+
+		<!-- 批量移动至对话框（仅系统文件夹） -->
+		<el-dialog v-model="showMoveToSystemDialog" title="移动至" width="50%" :close-on-click-modal="false">
+			<div class="move-to-folder-dialog">
+				<div class="selected-emails-info">
+					<el-alert title="提示" type="info" :closable="false" style="margin-bottom: 20px;">
+						<template #default>
+							将移动 <strong>{{ selectedRows.length }}</strong> 封邮件到选定的系统文件夹
+						</template>
+					</el-alert>
+				</div>
+
+				<div class="folder-section-wrapper">
+					<div class="folder-section">
+						<div class="folder-section-title">
+							<el-icon>
+								<Folder />
+							</el-icon>
+							<span>系统文件夹</span>
+						</div>
+						<el-tree ref="systemTreeRef" :data="systemFolderTree" :props="folderTreeProps"
+							@node-click="handleFolderSelect" node-key="value" highlight-current default-expand-all
+							class="folder-tree-block">
 							<template #default="{ node, data }">
 								<div class="folder-tree-node">
 									<el-icon>
@@ -834,8 +942,10 @@
 								</div>
 							</template>
 						</el-tree>
-					</el-form-item>
+					</div>
+				</div>
 
+				<el-form label-width="100px" style="margin-top: 16px;">
 					<el-form-item label="选中文件夹">
 						<el-input v-model="selectedFolderName" readonly placeholder="请选择目标文件夹" />
 					</el-form-item>
@@ -843,10 +953,70 @@
 			</div>
 			<template #footer>
 				<div class="dialog-footer">
-					<el-button @click="showBatchMoveToFolderDialog = false">取消</el-button>
-					<el-button type="primary" @click="handleBatchMoveToFolder" :loading="isBatchMovingToFolder"
+					<el-button @click="showMoveToSystemDialog = false">取消</el-button>
+					<el-button type="primary" @click="handleBatchMoveToSystem" :loading="isBatchMovingToFolder"
 						:disabled="!selectedFolderData">
-						移动邮件
+						移动
+					</el-button>
+				</div>
+			</template>
+		</el-dialog>
+
+		<!-- 自动归档结果对话框 -->
+		<el-dialog v-model="showArchiveResultDialog" title="归档结果" width="50%" :close-on-click-modal="false">
+			<div class="archive-result-dialog">
+				<!-- 汇总信息 -->
+				<div class="archive-result-summary">
+					<div class="archive-result-stat archive-result-stat--success">
+						<div class="archive-result-stat-num">{{ archiveResultData.successCount }}</div>
+						<div class="archive-result-stat-label">已自动归档（封）</div>
+					</div>
+					<div class="archive-result-stat archive-result-stat--remain">
+						<div class="archive-result-stat-num">{{ archiveResultData.skippedCount }}</div>
+						<div class="archive-result-stat-label">剩余未归档（封）</div>
+					</div>
+				</div>
+
+				<!-- 归档目录明细 -->
+				<div class="archive-result-block-title">归档目录明细</div>
+				<el-table :data="archiveResultData.directories" size="small" border max-height="280"
+					empty-text="没有归档到任何目录">
+					<el-table-column type="index" label="#" width="55" align="center" />
+					<el-table-column label="归档目录" min-width="220">
+						<template #default="{ row }">
+							<div class="archive-result-dir">
+								<el-icon>
+									<Folder />
+								</el-icon>
+								<span style="margin-left: 6px;">{{ row.path }}</span>
+								<el-tag v-if="dirTypeLabel(row.type)" size="small" type="info"
+									style="margin-left: 8px;">
+									{{ dirTypeLabel(row.type) }}
+								</el-tag>
+							</div>
+						</template>
+					</el-table-column>
+					<el-table-column label="归档数量（封）" width="140" align="center">
+						<template #default="{ row }">
+							<el-tag type="success" effect="plain">{{ row.count }}</el-tag>
+						</template>
+					</el-table-column>
+				</el-table>
+
+				<!-- 剩余未归档提示 -->
+				<el-alert v-if="archiveResultData.skippedCount > 0" type="warning" :closable="false" show-icon
+					style="margin-top: 16px;">
+					<template #title>
+						还有 <strong>{{ archiveResultData.skippedCount }}</strong> 封邮件未匹配到联系人，未自动归档，是否需要手动归档？
+					</template>
+				</el-alert>
+			</div>
+			<template #footer>
+				<div class="dialog-footer">
+					<el-button @click="showArchiveResultDialog = false">关闭</el-button>
+					<el-button v-if="archiveResultData.skippedCount > 0" type="warning"
+						@click="handleManualArchiveRemaining">
+						手动归档剩余邮件
 					</el-button>
 				</div>
 			</template>
@@ -855,7 +1025,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, watch, reactive, computed, onMounted, onUnmounted, onActivated, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import { useRoute } from 'vue-router'
 import {
@@ -1130,6 +1300,8 @@ const handleInquiryOpportunityConfirm = async () => {
 const EmailTableData = ref([])
 const originalEmailData = ref([])
 const activeMenu = ref('1')
+// 左侧“邮件分类”树的引用，用于在切换系统菜单/标签时清除其选中高亮
+const folderTreeRef = ref(null)
 const showEmailDetail = ref(false)
 const currentEmail = ref({
 	id: '',
@@ -1145,16 +1317,45 @@ const currentEmail = ref({
 
 // 邮件列表相关
 const currentPage = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(50)
 const totalItems = ref(0)
+/** 列表日期排序（服务端），对应 GetArchive / GetInbox 的 orderby / sortType */
+const DEFAULT_EMAIL_LIST_SORT = { orderby: 'emaildate', sortType: 'desc' }
+const archiveListSort = ref({ ...DEFAULT_EMAIL_LIST_SORT })
+const inboxListSort = ref({ ...DEFAULT_EMAIL_LIST_SORT })
+const SYSTEM_EMAIL_TYPES = ['1', '2', '3', '4', '6']
+const isArchiveFolderView = computed(() => activeMenu.value.startsWith('folder-'))
+const isSystemFolderView = computed(() => SYSTEM_EMAIL_TYPES.includes(String(activeMenu.value)))
+const isListDateSortable = computed(() => isArchiveFolderView.value || isSystemFolderView.value)
+const emailTableSortKey = computed(() => {
+	if (isArchiveFolderView.value) return `archive-${activeMenu.value}`
+	if (isSystemFolderView.value) return `system-${activeMenu.value}`
+	return `list-${activeMenu.value}`
+})
 const selectedRows = ref([])
 const isBatchProcessing = ref(false)
+// 自动归档结果对话框
+const showArchiveResultDialog = ref(false)
+const archiveResultData = ref({ message: '', successCount: 0, skippedCount: 0, directories: [] })
+// 归档时选中邮件的 id 快照：归档成功的会从列表移除，剩余的用于手动归档时重新选中
+const archivedSelectionSnapshot = ref([])
+
+// 归档目录类型转中文
+const dirTypeLabel = (type) => {
+	const map = {
+		1: '大洲', 2: '国家', 3: '客户', 4: '联系人', 5: '自定义文件夹',
+		continent: '大洲', country: '国家', customer: '客户', contact: '联系人', custom: '自定义文件夹'
+	}
+	return map[type] || ''
+}
 const isEmptyingTrash = ref(false)
 
 // 搜索相关
 const input1 = ref('')
 const isSearchMode = ref(false)
 const lastSearchParams = ref(null)
+/** 进入搜索前保存的文件夹/标签/系统目录状态，退出搜索时恢复（避免 dataId 重复导致 type 解析错误） */
+const folderStateBeforeSearch = ref(null)
 const showAdvancedSearch = ref(false)
 const searchForm = reactive({
 	sender: '',
@@ -1474,16 +1675,22 @@ const refreshCurrentView = async () => {
 
 		// 搜索模式下只刷新搜索结果，勿清空 lastSearchParams / 勿用 activeMenu 覆盖 currentFolderState（否则 type 会被改写成 system 等）
 		if (isSearchMode.value && lastSearchParams.value) {
-			await handleAdvancedSearchRequest()
+			await executeSearchRequest()
 			return
 		}
 
 		isSearchMode.value = false
 		lastSearchParams.value = null
 
-		// 仅当初始未同步过时根据侧边栏补齐，避免每次刷新都 setCurrentFolderState 导致 type 与当前视图不一致
-		if (!currentFolderState.value.type) {
-			restoreStateFromActiveMenu()
+		// 退出搜索后恢复文件夹/标签/系统目录状态（type 仍为 search 时也要恢复）
+		if (!currentFolderState.value.type || currentFolderState.value.type === 'search') {
+			if (folderStateBeforeSearch.value) {
+				const saved = folderStateBeforeSearch.value
+				folderStateBeforeSearch.value = null
+				setCurrentFolderState(saved.type, saved.id, saved.name, saved.folderData, saved.params)
+			} else {
+				restoreStateFromActiveMenu()
+			}
 		}
 
 		if (activeMenu.value.startsWith('tag-')) {
@@ -1494,9 +1701,9 @@ const refreshCurrentView = async () => {
 		} else if (activeMenu.value.startsWith('folder-')) {
 			// 文件夹模式
 			const folderId = activeMenu.value.replace('folder-', '')
-			const folderData = findFolderDataById(emailFolders.value, folderId)
-			if (folderData && folderData.type) {
-				await getEmailArchiveList(currentPage.value, pageSize.value, folderData.type, folderId)
+			const folderType = resolveFolderType(folderId)
+			if (folderType) {
+				await getEmailArchiveList(currentPage.value, pageSize.value, folderType, folderId)
 			}
 		} else {
 			// 普通菜单模式
@@ -1512,18 +1719,27 @@ const refreshCurrentView = async () => {
 function getInboxEmail(start, end, emailType) {
 	console.log('getInboxEmail 调用 - start:', start, 'end:', end, 'emailType:', emailType)
 
-	EmailTableData.value = []
+	const applyInboxSort = SYSTEM_EMAIL_TYPES.includes(String(emailType))
+		&& !activeMenu.value.startsWith('tag-')
+		&& !isSearchMode.value
+	const params = {
+		PageNum: start,
+		PageSize: end,
+		EmailType: emailType,
+		EmailTagIndex: EmailTagIndex.value,
+		floderName: folderName.value
+	}
+	if (applyInboxSort) {
+		params.orderby = inboxListSort.value.orderby
+		params.sortType = inboxListSort.value.sortType
+	}
+
+	// 不在请求前清空数据：避免列表先塌缩为空再填充导致的闪烁/抖动，数据在响应返回后再整体替换
 	return new Promise((resolve, reject) => {
 		request({
 			url: 'Email/GetEmailInboxList/GetInbox',
 			method: 'GET',
-			params: {
-				PageNum: start,
-				PageSize: end,
-				EmailType: emailType,
-				EmailTagIndex: EmailTagIndex.value,
-				floderName: folderName.value
-			}
+			params
 		}).then(response => {
 			if (response.data.result.length > 0) {
 				const processedEmails = response.data.result.map(item => ({
@@ -1563,6 +1779,64 @@ function getInboxEmail(start, end, emailType) {
 }
 
 // 增强的获取归档邮件列表方法 - 添加参数验证
+const normalizeEmailListSortOrder = (order) => {
+	if (order === 'ascending') return 'asc'
+	if (order === 'descending') return 'desc'
+	if (order === 'asc' || order === 'desc') return order
+	return 'desc'
+}
+
+const resetArchiveListSort = () => {
+	archiveListSort.value = { ...DEFAULT_EMAIL_LIST_SORT }
+}
+
+const resetInboxListSort = () => {
+	inboxListSort.value = { ...DEFAULT_EMAIL_LIST_SORT }
+}
+
+const reloadCurrentArchiveList = async (pageNum = currentPage.value) => {
+	if (!activeMenu.value.startsWith('folder-')) {
+		return
+	}
+	const folderId = activeMenu.value.replace('folder-', '')
+	const folderType = resolveFolderType(folderId)
+	if (folderType) {
+		await getEmailArchiveList(pageNum, pageSize.value, folderType, folderId)
+	}
+}
+
+const reloadCurrentInboxList = async (pageNum = currentPage.value) => {
+	if (!isSystemFolderView.value) {
+		return
+	}
+	await getInboxEmail(pageNum, pageSize.value, activeMenu.value)
+}
+
+const handleEmailListSortChange = ({ prop, order }) => {
+	if (prop !== 'date') {
+		return
+	}
+
+	const sortValue = {
+		orderby: 'emaildate',
+		sortType: order ? normalizeEmailListSortOrder(order) : DEFAULT_EMAIL_LIST_SORT.sortType
+	}
+
+	if (isArchiveFolderView.value) {
+		archiveListSort.value = sortValue
+		currentPage.value = 1
+		reloadCurrentArchiveList(1)
+	} else if (isSystemFolderView.value) {
+		inboxListSort.value = sortValue
+		currentPage.value = 1
+		reloadCurrentInboxList(1)
+	} else {
+		return
+	}
+
+	scrollListToTop()
+}
+
 const getEmailArchiveList = async (pageNum, pageSize, type, dataId) => {
 	try {
 		console.log('获取归档邮件列表 - 参数:', { pageNum, pageSize, type, dataId })
@@ -1588,7 +1862,9 @@ const getEmailArchiveList = async (pageNum, pageSize, type, dataId) => {
 				PageNum: pageNum,
 				PageSize: pageSize,
 				type: type,
-				dataId: dataId
+				dataId: dataId,
+				orderby: archiveListSort.value.orderby,
+				sortType: archiveListSort.value.sortType
 			}
 		})
 
@@ -1721,7 +1997,10 @@ const MenuClick = async (menuIndex) => {
 	showEmailDetail.value = false
 	isSearchMode.value = false
 	lastSearchParams.value = null
+	folderStateBeforeSearch.value = null
+	input1.value = ''
 	currentPage.value = 1
+	resetInboxListSort()
 
 	// 设置系统文件夹状态
 	const systemFolderNames = {
@@ -1734,11 +2013,15 @@ const MenuClick = async (menuIndex) => {
 
 	setCurrentFolderState('system', menuIndex, systemFolderNames[menuIndex.toString()])
 
+	// 选中系统菜单时，清除“邮件分类”树的选中高亮，保证只有一个被选中
+	folderTreeRef.value?.setCurrentKey(null)
+
 	// 清除选择
 	clearSelection()
 
 	// 获取邮件列表
 	await getInboxEmail(currentPage.value, pageSize.value, menuIndex)
+	scrollListToTop()
 }
 
 // 4. 优化的 filterByTag 方法
@@ -1751,6 +2034,8 @@ const filterByTag = async (tagId) => {
 		showEmailDetail.value = false
 		isSearchMode.value = false
 		lastSearchParams.value = null
+		folderStateBeforeSearch.value = null
+		input1.value = ''
 		currentPage.value = 1
 
 		// 查找标签名称
@@ -1760,6 +2045,9 @@ const filterByTag = async (tagId) => {
 		// 设置统一的标签状态
 		setCurrentFolderState('tag', tagId, tagName, tagData)
 
+		// 选中标签时，清除“邮件分类”树的选中高亮，保证只有一个被选中
+		folderTreeRef.value?.setCurrentKey(null)
+
 		console.log('🏷️ 标签状态设置完成:', currentFolderState.value)
 
 		// 清除选择
@@ -1767,6 +2055,7 @@ const filterByTag = async (tagId) => {
 
 		// 获取带有该标签的邮件列表
 		await getInboxEmail(currentPage.value, pageSize.value, 1)
+		scrollListToTop()
 	} catch (error) {
 		console.error('❌ 按标签过滤邮件失败:', error)
 		ElMessage.error('获取标签邮件失败')
@@ -1785,7 +2074,10 @@ const filterByFolder = async (folderId, type) => {
 		showEmailDetail.value = false
 		isSearchMode.value = false
 		lastSearchParams.value = null
+		folderStateBeforeSearch.value = null
+		input1.value = ''
 		currentPage.value = 1
+		resetArchiveListSort()
 
 		// 查找文件夹数据
 		const folderData = findFolderDataById(emailFolders.value, folderId)
@@ -1801,6 +2093,7 @@ const filterByFolder = async (folderId, type) => {
 
 		// 获取归档邮件列表
 		await getEmailArchiveList(currentPage.value, pageSize.value, type, folderId)
+		scrollListToTop()
 	} catch (error) {
 		console.error('❌ 过滤分类邮件失败:', error)
 		ElMessage.error('获取分类邮件失败')
@@ -2080,6 +2373,11 @@ const getTagName = (tagId) => {
 	const tag = EmailTagcheckboxoptions.value.find(t => t.value === tagId)
 	return tag ? tag.label : ''
 }
+
+// 获取某行全部标签名称（用于「多标签…」悬停 tip 展示所有标签）
+const getRowTagNames = (tagsString) => {
+	return getRowTags(tagsString).map(id => getTagName(id)).filter(Boolean).join('、')
+}
 // #endregion
 
 // #region 邮件文件夹管理
@@ -2311,30 +2609,265 @@ const findFolderDataById = (folders, id) => {
 
 	return result
 }
+
+// 解析当前文件夹的真实 type：
+// findFolderDataById 仅按 id/dataId 匹配，不同层级（大洲/国家/客户/联系人）的 dataId 可能重复，
+// 会返回错误层级导致 type 不一致（如分页时 type 从 3 变成 1），进而引发分页越界、重复请求。
+// 这里优先使用选中文件夹时记录的 type（currentFolderState.params.type）。
+const resolveFolderType = (folderId) => {
+	const state = currentFolderState.value
+	if (state?.type === 'folder' && String(state.id) === String(folderId) && state.params?.type) {
+		return state.params.type
+	}
+	return findFolderDataById(emailFolders.value, folderId)?.type
+}
 // #endregion
 
 // #region 搜索功能
-// 本地搜索处理
-const handleLocalSearch = () => {
-	if (!input1.value) {
-		EmailTableData.value = [...originalEmailData.value]
+const SEARCH_SCOPE_LABELS = {
+	0: '所有邮件',
+	1: '收件箱',
+	2: '已发送',
+	3: '草稿箱',
+	4: '垃圾箱',
+	6: '已归档'
+}
+
+const getSearchScopeLabel = (scope) => SEARCH_SCOPE_LABELS[Number(scope)] ?? '所有邮件'
+
+const formatSearchDateValue = (date) => {
+	if (!date) return ''
+	const d = date instanceof Date ? date : new Date(date)
+	if (Number.isNaN(d.getTime())) return String(date)
+	const y = d.getFullYear()
+	const m = String(d.getMonth() + 1).padStart(2, '0')
+	const day = String(d.getDate()).padStart(2, '0')
+	return `${y}-${m}-${day}`
+}
+
+const searchStatusMeta = computed(() => {
+	const params = lastSearchParams.value
+	if (!params) {
+		return { typeLabel: '搜索结果', tags: [] }
+	}
+
+	const tags = []
+	const typeLabel = params.mode === 'keyword' ? '关键词搜索' : '高级搜索'
+
+	tags.push({ label: '范围', value: getSearchScopeLabel(params.searchScope) })
+
+	if (params.mode === 'keyword') {
+		if (params.keyword) {
+			tags.push({ label: '关键词', value: params.keyword })
+		}
+	} else {
+		if (params.sender) tags.push({ label: '发件人', value: params.sender })
+		if (params.receiver) tags.push({ label: '收件人', value: params.receiver })
+		if (params.subject) tags.push({ label: '主题', value: params.subject })
+		if (params.includeWords) tags.push({ label: '包含', value: params.includeWords })
+		if (params.excludeWords) tags.push({ label: '不包含', value: params.excludeWords })
+		if (params.hasAttachment === 1) tags.push({ label: '附件', value: '带有附件' })
+		if (params.startDate && params.endDate) {
+			tags.push({
+				label: '日期',
+				value: `${formatSearchDateValue(params.startDate)} 至 ${formatSearchDateValue(params.endDate)}`
+			})
+		}
+	}
+
+	return { typeLabel, tags }
+})
+
+const QUICK_SEARCH_DEBOUNCE_MS = 400
+let quickSearchTimer = null
+
+const getSearchScopeFromActiveMenu = () => {
+	const menu = activeMenu.value
+	if (['1', '2', '3', '4', '6'].includes(menu)) {
+		return Number(menu)
+	}
+	return 0
+}
+
+const buildQuickSearchParams = (keyword) => ({
+	mode: 'keyword',
+	keyword,
+	searchScope: getSearchScopeFromActiveMenu()
+})
+
+const mapSearchEmailListResult = (data) => {
+	if (!data?.result) {
+		EmailTableData.value = []
+		originalEmailData.value = []
+		totalItems.value = 0
+		return
+	}
+	const processedEmails = data.result.map(item => ({
+		id: item.id,
+		subject: item.emailsubject,
+		date: item.emaildate,
+		name: GetFromEmailName(item.fromEmail),
+		tags: item.emailtags,
+		content: item.emailContent,
+		emailTags: item.emailTags,
+		toEmail: item.toEmail,
+		fromEmailAddress: item.fromEmailAddress,
+		EmailID: item.emailID,
+		hasAttachments: item.isAttachments === 1,
+		isRead: item.isRead
+	}))
+	EmailTableData.value = processedEmails
+	originalEmailData.value = [...processedEmails]
+	totalItems.value = data.totalNum || 0
+}
+
+// 顶部搜索框：通用关键词搜索
+const executeKeywordSearchRequest = async () => {
+	try {
+		const { keyword, searchScope } = lastSearchParams.value || {}
+		const response = await request({
+			url: 'Email/SearchEmailByKeyword/SearchEmailByKeyword',
+			method: 'GET',
+			params: {
+				PageNum: currentPage.value,
+				PageSize: pageSize.value,
+				searchScope: searchScope ?? 0,
+				keyword: keyword ?? ''
+			}
+		})
+		mapSearchEmailListResult(response.data)
+	} catch (error) {
+		console.error('关键词搜索失败:', error)
+		ElMessage.error('搜索失败，请重试')
+	}
+}
+
+// 高级搜索
+const executeAdvancedSearchRequest = async () => {
+	try {
+		const searchParams = {
+			...lastSearchParams.value,
+			PageNum: currentPage.value,
+			PageSize: pageSize.value
+		}
+		delete searchParams.mode
+
+		const response = await request({
+			url: 'Email/SearchEmailInboxList/SearchEmailList',
+			method: 'GET',
+			params: searchParams
+		})
+		mapSearchEmailListResult(response.data)
+	} catch (error) {
+		console.error('高级搜索失败:', error)
+		ElMessage.error('搜索失败，请重试')
+	}
+}
+
+const executeSearchRequest = async () => {
+	if (!lastSearchParams.value) {
+		return
+	}
+	if (lastSearchParams.value.mode === 'keyword') {
+		await executeKeywordSearchRequest()
+	} else {
+		await executeAdvancedSearchRequest()
+	}
+}
+
+// 搜索时退出详情页，确保列表与搜索结果可见
+const exitEmailDetailView = () => {
+	if (showEmailDetail.value) {
+		showEmailDetail.value = false
+	}
+}
+
+const clearQuickSearchTimer = () => {
+	if (quickSearchTimer) {
+		clearTimeout(quickSearchTimer)
+		quickSearchTimer = null
+	}
+}
+
+const saveFolderStateBeforeSearch = () => {
+	const state = currentFolderState.value
+	if (state?.type && state.type !== 'search') {
+		folderStateBeforeSearch.value = {
+			type: state.type,
+			id: state.id,
+			name: state.name,
+			folderData: state.folderData,
+			params: state.params ? { ...state.params } : null
+		}
+	}
+}
+
+const shouldExitSearchMode = () => {
+	return isSearchMode.value || lastSearchParams.value || currentFolderState.value.type === 'search'
+}
+
+const exitSearchModeAndRestoreList = async ({ clearInput = false } = {}) => {
+	if (!shouldExitSearchMode()) {
 		return
 	}
 
-	const searchTerm = input1.value.toLowerCase()
-	EmailTableData.value = originalEmailData.value.filter(email => {
-		return (
-			email.subject?.toLowerCase().includes(searchTerm) ||
-			email.name?.toLowerCase().includes(searchTerm) ||
-			email.fromEmailAddress?.toLowerCase().includes(searchTerm) ||
-			email.toEmail?.toLowerCase().includes(searchTerm)
-		)
-	})
+	exitEmailDetailView()
+	clearQuickSearchTimer()
+
+	isSearchMode.value = false
+	lastSearchParams.value = null
+	currentPage.value = 1
+
+	if (clearInput) {
+		input1.value = ''
+	}
+
+	if (folderStateBeforeSearch.value) {
+		const saved = folderStateBeforeSearch.value
+		folderStateBeforeSearch.value = null
+		setCurrentFolderState(saved.type, saved.id, saved.name, saved.folderData, saved.params)
+	} else {
+		restoreStateFromActiveMenu()
+	}
+
+	await refreshCurrentView()
 }
 
-// 清除本地搜索
-const clearLocalSearch = () => {
-	EmailTableData.value = [...originalEmailData.value]
+// 顶部搜索框：服务端搜索
+const handleQuickSearch = async () => {
+	const keyword = input1.value?.trim() || ''
+	if (!keyword) {
+		await exitSearchModeAndRestoreList()
+		return
+	}
+
+	exitEmailDetailView()
+
+	saveFolderStateBeforeSearch()
+	const searchParams = buildQuickSearchParams(keyword)
+	lastSearchParams.value = searchParams
+	setCurrentFolderState('search', 'quick', '搜索结果', null, searchParams)
+	isSearchMode.value = true
+	currentPage.value = 1
+	await executeSearchRequest()
+}
+
+const onQuickSearchInput = () => {
+	if (quickSearchTimer) {
+		clearTimeout(quickSearchTimer)
+	}
+	quickSearchTimer = setTimeout(() => {
+		handleQuickSearch()
+	}, QUICK_SEARCH_DEBOUNCE_MS)
+}
+
+const onQuickSearchEnter = () => {
+	clearQuickSearchTimer()
+	handleQuickSearch()
+}
+
+const clearQuickSearch = async () => {
+	await exitSearchModeAndRestoreList({ clearInput: true })
 }
 
 // 重置搜索表单
@@ -2351,58 +2884,15 @@ const resetSearchForm = () => {
 		hasAttachment: false
 	})
 
-	isSearchMode.value = false
-	lastSearchParams.value = null
-	currentPage.value = 1
-	pageSize.value = 20
-
-	// 退出搜索后必须与侧边栏对齐，否则 currentFolderState.type 仍为 search 会干扰后续刷新/分页
-	restoreStateFromActiveMenu()
-	refreshCurrentView()
-}
-
-// 高级搜索请求
-const handleAdvancedSearchRequest = async () => {
-	try {
-		const searchParams = {
-			...lastSearchParams.value,
-			PageNum: currentPage.value,
-			PageSize: pageSize.value
-		}
-
-		const response = await request({
-			url: 'Email/SearchEmailInboxList/SearchEmailList',
-			method: 'GET',
-			params: searchParams
-		})
-
-		if (response.data) {
-			EmailTableData.value = response.data.result.map(item => ({
-				id: item.id,
-				subject: item.emailsubject,
-				date: item.emaildate,
-				name: GetFromEmailName(item.fromEmail),
-				tags: item.emailtags,
-				content: item.emailContent,
-				emailTags: item.emailTags,
-				toEmail: item.toEmail,
-				fromEmailAddress: item.fromEmailAddress,
-				EmailID: item.emailID,
-				hasAttachments: item.isAttachments === 1,
-				isRead: item.isRead
-			}))
-			originalEmailData.value = [...EmailTableData.value]
-			totalItems.value = response.data.totalNum
-		}
-	} catch (error) {
-		console.error('搜索失败:', error)
-		ElMessage.error('搜索失败，请重试')
-	}
+	pageSize.value = 50
+	exitSearchModeAndRestoreList({ clearInput: true })
 }
 
 // 处理高级搜索
 const handleAdvancedSearch = async () => {
 	try {
+		exitEmailDetailView()
+
 		const searchParams = {
 			sender: searchForm.sender,
 			receiver: searchForm.receiver,
@@ -2425,12 +2915,14 @@ const handleAdvancedSearch = async () => {
 		}
 
 		// 设置搜索状态（先写入参数再 setState，避免 params 仍为上一次/空）
-		lastSearchParams.value = searchParams
-		setCurrentFolderState('search', 'advanced', '高级搜索结果', null, searchParams)
+		saveFolderStateBeforeSearch()
+		lastSearchParams.value = { mode: 'advanced', ...searchParams }
+		setCurrentFolderState('search', 'advanced', '高级搜索结果', null, lastSearchParams.value)
 		isSearchMode.value = true
 		currentPage.value = 1
 
-		await handleAdvancedSearchRequest()
+		input1.value = searchForm.includeWords?.trim() || ''
+		await executeSearchRequest()
 
 		showAdvancedSearch.value = false
 		ElMessage.success('搜索完成')
@@ -2455,12 +2947,12 @@ const handleCurrentChange = async (newPage) => {
 
 		if (state.type === 'search') {
 			// 搜索模式分页
-			await handleAdvancedSearchRequest()
+			await executeSearchRequest()
 		} else if (state.type === 'folder') {
-			// 文件夹模式分页
-			const folderData = state.folderData || findFolderDataById(emailFolders.value, state.id)
-			if (folderData && folderData.type) {
-				await getEmailArchiveList(newPage, pageSize.value, folderData.type, state.id)
+			// 文件夹模式分页：使用选中时记录的 type，避免 dataId 重复导致 type 串层
+			const folderType = resolveFolderType(state.id)
+			if (folderType) {
+				await getEmailArchiveList(newPage, pageSize.value, folderType, state.id)
 			} else {
 				throw new Error('文件夹数据丢失')
 			}
@@ -2472,12 +2964,12 @@ const handleCurrentChange = async (newPage) => {
 			// 系统文件夹分页
 			await getInboxEmail(newPage, pageSize.value, state.id)
 		} else if (isSearchMode.value && lastSearchParams.value) {
-			await handleAdvancedSearchRequest()
+			await executeSearchRequest()
 		} else if (activeMenu.value.startsWith('folder-')) {
 			const folderId = activeMenu.value.replace('folder-', '')
-			const folderData = findFolderDataById(emailFolders.value, folderId)
-			if (folderData?.type) {
-				await getEmailArchiveList(newPage, pageSize.value, folderData.type, folderId)
+			const folderType = resolveFolderType(folderId)
+			if (folderType) {
+				await getEmailArchiveList(newPage, pageSize.value, folderType, folderId)
 			} else {
 				throw new Error('文件夹数据丢失')
 			}
@@ -2489,6 +2981,9 @@ const handleCurrentChange = async (newPage) => {
 			}
 			await getInboxEmail(newPage, pageSize.value, emailType)
 		}
+
+		// 翻页后列表回到顶部
+		scrollListToTop()
 	} catch (error) {
 		console.error('❌ 分页处理失败:', error)
 		ElMessage.error('分页操作失败，请重试')
@@ -2514,27 +3009,27 @@ const handleSizeChange = async (newSize) => {
 		if (isSearchMode.value && lastSearchParams.value) {
 			// 搜索模式
 			console.log('执行搜索模式每页数量变更')
-			await handleAdvancedSearchRequest()
+			await executeSearchRequest()
 		} else if (activeMenu.value.startsWith('folder-')) {
 			// 文件夹模式 - 重点修复区域
 			const folderId = activeMenu.value.replace('folder-', '')
 			console.log('文件夹模式每页数量变更 - 文件夹ID:', folderId)
 
-			// 验证文件夹数据
-			const folderData = findFolderDataById(emailFolders.value, folderId)
-			console.log('查找到的文件夹数据:', folderData)
+			// 优先使用选中时记录的 type，避免 dataId 重复导致 type 串层
+			let folderType = resolveFolderType(folderId)
+			console.log('解析到的文件夹 type:', folderType)
 
-			if (!folderData) {
+			if (!folderType) {
 				console.error('每页数量变更时找不到文件夹数据:', folderId)
 				ElMessage.warning('文件夹数据丢失，正在重新加载...')
 
 				// 尝试重新获取文件夹数据
 				await fetchCustomFolders()
-				const refreshedFolderData = findFolderDataById(emailFolders.value, folderId)
+				folderType = resolveFolderType(folderId)
 
-				if (refreshedFolderData && refreshedFolderData.type) {
-					console.log('重新获取文件夹数据成功:', refreshedFolderData)
-					await getEmailArchiveList(1, newSize, refreshedFolderData.type, folderId)
+				if (folderType) {
+					console.log('重新获取文件夹数据成功, type:', folderType)
+					await getEmailArchiveList(1, newSize, folderType, folderId)
 				} else {
 					console.error('重新获取文件夹数据仍然失败，切换到收件箱')
 					ElMessage.error('文件夹数据异常，已切换到收件箱')
@@ -2544,14 +3039,8 @@ const handleSizeChange = async (newSize) => {
 				return
 			}
 
-			if (!folderData.type) {
-				console.error('文件夹缺少type属性:', folderData)
-				ElMessage.error('文件夹配置异常，请联系管理员')
-				return
-			}
-
-			console.log('执行文件夹邮件获取（每页数量变更） - type:', folderData.type, 'dataId:', folderId)
-			await getEmailArchiveList(1, newSize, folderData.type, folderId)
+			console.log('执行文件夹邮件获取（每页数量变更） - type:', folderType, 'dataId:', folderId)
+			await getEmailArchiveList(1, newSize, folderType, folderId)
 
 		} else {
 			// 普通模式
@@ -2562,6 +3051,9 @@ const handleSizeChange = async (newSize) => {
 			console.log('执行普通模式每页数量变更 - emailType:', emailType)
 			await getInboxEmail(1, newSize, emailType)
 		}
+
+		// 每页数量变更后列表回到顶部
+		scrollListToTop()
 	} catch (error) {
 		console.error('每页数量变更处理失败:', error)
 		ElMessage.error('操作失败，请重试')
@@ -2712,22 +3204,18 @@ const backToList = async () => {
 			// 文件夹模式
 			console.log('📁 文件夹模式返回，刷新归档邮件列表')
 
-			let folderData = state.folderData
+			// 优先使用选中时记录的 type，避免 dataId 重复导致 type 串层
+			let folderType = resolveFolderType(state.id)
 
-			// 如果没有缓存的文件夹数据，重新查找
-			if (!folderData || !folderData.type) {
+			// 如果拿不到 type，重新拉取文件夹数据再解析一次
+			if (!folderType) {
 				console.log('📁 重新查找文件夹数据')
 				await fetchCustomFolders()
-				folderData = findFolderDataById(emailFolders.value, state.id)
-
-				// 更新缓存的文件夹数据
-				if (folderData) {
-					currentFolderState.value.folderData = folderData
-				}
+				folderType = resolveFolderType(state.id)
 			}
 
-			if (folderData && folderData.type) {
-				await getEmailArchiveList(currentPage.value, pageSize.value, folderData.type, state.id)
+			if (folderType) {
+				await getEmailArchiveList(currentPage.value, pageSize.value, folderType, state.id)
 			} else {
 				console.error('❌ 无法找到文件夹数据，执行降级处理')
 				ElMessage.warning('文件夹数据丢失，切换到收件箱')
@@ -2743,7 +3231,7 @@ const backToList = async () => {
 		} else if (state.type === 'search') {
 			// 搜索模式
 			console.log('🔍 搜索模式返回，刷新搜索结果')
-			await handleAdvancedSearchRequest()
+			await executeSearchRequest()
 
 		} else if (state.type === 'system') {
 			// 系统文件夹模式
@@ -2950,10 +3438,10 @@ const handleMoveEmail = async (command) => {
 		if (activeMenu.value.startsWith('folder-')) {
 			// 文件夹模式特殊处理
 			const folderId = activeMenu.value.replace('folder-', '')
-			const folderData = findFolderDataById(emailFolders.value, folderId)
+			const folderType = resolveFolderType(folderId)
 
-			if (folderData && folderData.type) {
-				await getEmailArchiveList(currentPage.value, pageSize.value, folderData.type, folderId)
+			if (folderType) {
+				await getEmailArchiveList(currentPage.value, pageSize.value, folderType, folderId)
 			} else {
 				await refreshCurrentView()
 			}
@@ -3098,6 +3586,9 @@ onMounted(() => {
 	nextTick(() => {
 		console.log('🚀 组件挂载完成，初始化表格状态')
 
+		// 初始化列表表格高度（首屏即测量，避免等待接口导致表格高度为 0）
+		setupTableHeightObserver()
+
 		if (emailTable.value) {
 			console.log('✅ 邮件表格引用已准备就绪')
 
@@ -3119,6 +3610,97 @@ onMounted(() => {
 })
 
 const emailTable = ref(null)
+
+// 方案 A（最终版）：
+//   1) .email-page 用 position:absolute; inset:0 钉死在父级 el-main(app-main) 内，
+//      高度由布局确定，不依赖百分比解析链，也不受路由 fade-transform 的 transform 影响；
+//   2) el-table 不用百分比高度（Element Plus 对 height:"100%" 处理不稳，常常不出内部滚动条、
+//      直接被父容器 overflow:hidden 裁掉末尾行），改为按表格容器的 clientHeight 设像素高。
+//      关键：clientHeight 是布局尺寸，不受入场动画 transform 干扰；这正是旧逻辑用
+//      getBoundingClientRect().top 反推会在首屏算错、必须 resize 才修正的根因。
+const tableWrapRef = ref(null)
+const paginationRef = ref(null)
+const tableHeight = ref(0)
+let tableResizeObserver = null
+
+// el-table 重排（高度变化或行高变化后让其重算表体/固定列/滚动高度）
+const relayoutTable = () => {
+	nextTick(() => {
+		try {
+			emailTable.value?.doLayout?.()
+		} catch (e) {
+			// 忽略布局重算异常
+		}
+	})
+}
+
+// 按表格容器的真实可用高度（clientHeight）设置 el-table 像素高度。
+// 容器是 flex:1 + overflow:hidden，其 clientHeight 即为表头与分页之间的可用高度。
+const updateTableHeight = () => {
+	// 双 rAF：等 flex 布局 / display 恢复 / 入场动画稳定后再量，避免量到 0 或中间值。
+	requestAnimationFrame(() => {
+		requestAnimationFrame(() => {
+			const wrap = tableWrapRef.value
+			if (!wrap) return
+			const h = Math.floor(wrap.clientHeight)
+			if (h > 0 && Math.abs(h - tableHeight.value) > 1) {
+				tableHeight.value = h
+				relayoutTable()
+			}
+		})
+	})
+}
+
+const setupTableHeightObserver = () => {
+	updateTableHeight()
+	if (typeof ResizeObserver !== 'undefined' && tableWrapRef.value) {
+		tableResizeObserver = new ResizeObserver(() => updateTableHeight())
+		tableResizeObserver.observe(tableWrapRef.value)
+		// 同时观察列表容器，确保搜索条/批量操作条出现或消失时重新计算高度
+		const inner = tableWrapRef.value.parentElement
+		if (inner) {
+			tableResizeObserver.observe(inner)
+		}
+	}
+	window.addEventListener('resize', updateTableHeight)
+}
+
+const teardownTableHeightObserver = () => {
+	if (tableResizeObserver) {
+		tableResizeObserver.disconnect()
+		tableResizeObserver = null
+	}
+	window.removeEventListener('resize', updateTableHeight)
+}
+
+// 健壮性①：从详情返回列表时容器由 display:none 恢复显示，重测高度并重排
+watch(showEmailDetail, (val) => {
+	if (!val) {
+		updateTableHeight()
+	}
+})
+
+// 健壮性②：标签列表异步返回后，标签列内容可能变化，重排一次避免滚动高度算不准。
+// 注意：不在 EmailTableData（翻页/搜索）变化时再调 doLayout——
+// el-table 自身已处理数据变化，额外的 doLayout 会与其叠加成二次布局，翻页时造成抖动。
+watch(UserEmailTagList, () => {
+	relayoutTable()
+})
+
+// 切换页数后将列表滚动回顶部
+const scrollListToTop = () => {
+	nextTick(() => {
+		try {
+			emailTable.value?.setScrollTop?.(0)
+		} catch (e) {
+			// 忽略
+		}
+		const wrap = tableWrapRef.value?.querySelector('.el-scrollbar__wrap, .el-table__body-wrapper')
+		if (wrap) {
+			wrap.scrollTop = 0
+		}
+	})
+}
 
 const clearSelection = () => {
 	console.log('🔄 开始清除选择状态')
@@ -3212,20 +3794,87 @@ const handleBatchArchive = async () => {
 		})
 
 		if (response.code == 200) {
-			ElMessage.success(response.data || '批量归档成功')
+			const raw = response.data
+			const data = (raw && typeof raw === 'object') ? raw : {}
+
+			// 兼容后端 PascalCase / camelCase 字段
+			const successCount = data.successCount ?? data.SuccessCount ?? 0
+			const skippedCount = data.skippedCount ?? data.SkippedCount ?? 0
+			const message = data.message || data.Message || (typeof raw === 'string' ? raw : '批量归档完成')
+			const rawDirs = data.directories || data.Directories || []
+			const directories = (Array.isArray(rawDirs) ? rawDirs : []).map(d => ({
+				path: d.directoryPath || d.DirectoryPath || d.directoryName || d.DirectoryName || '未知目录',
+				type: d.directoryType ?? d.DirectoryType ?? '',
+				count: d.count ?? d.Count ?? 0
+			}))
+
+			archiveResultData.value = { message, successCount, skippedCount, directories }
+
+			// 记录本次选中的邮件 id（归档成功的会从列表移除，剩余的即未归档邮件）
+			archivedSelectionSnapshot.value = selectedRows.value.map(r => r.id)
+
+			ElMessage.success(message)
 			clearSelection()
 			await refreshCurrentView()
+
+			// 展示归档结果明细
+			showArchiveResultDialog.value = true
 		} else {
-			ElMessage.error('批量归档失败')
+			isBatchProcessing.value = false
+			await promptManualArchive(response.msg || '批量归档失败')
 		}
 	} catch (error) {
 		if (error !== 'cancel') {
 			console.error('批量归档失败:', error)
-			ElMessage.error('批量归档失败，请重试')
+			isBatchProcessing.value = false
+			await promptManualArchive('批量归档失败，请重试')
 		}
 	} finally {
 		isBatchProcessing.value = false
 	}
+}
+
+// 归档失败时，提示用户进行手动归档
+const promptManualArchive = async (failMessage) => {
+	try {
+		await ElMessageBox.confirm(
+			`${failMessage}，是否进行手动归档？`,
+			'归档失败',
+			{
+				confirmButtonText: '手动归档',
+				cancelButtonText: '取消',
+				type: 'warning'
+			}
+		)
+		// 用户确认后打开手动归档（移动至文件夹）对话框
+		await showBatchMoveDialog()
+	} catch (error) {
+		// 用户取消，无需处理
+	}
+}
+
+// 归档结果对话框：手动归档剩余未自动归档的邮件
+const handleManualArchiveRemaining = async () => {
+	showArchiveResultDialog.value = false
+	await nextTick()
+
+	// 归档成功的邮件已从当前列表移除，按快照重新选中仍在列表中的（即未自动归档的）邮件
+	const ids = archivedSelectionSnapshot.value.map(id => String(id))
+	const rowsToSelect = EmailTableData.value.filter(row => ids.includes(String(row.id)))
+
+	if (emailTable.value) {
+		emailTable.value.clearSelection()
+		rowsToSelect.forEach(row => emailTable.value.toggleRowSelection(row, true))
+	}
+	selectedRows.value = rowsToSelect
+
+	if (rowsToSelect.length === 0) {
+		ElMessage.warning('未找到需要手动归档的邮件，请手动勾选后再操作')
+		return
+	}
+
+	// 打开手动归档（分类文件夹）对话框
+	await showBatchMoveDialog()
 }
 
 // 批量删除
@@ -4261,6 +4910,10 @@ onMounted(async () => {
 		} else {
 			console.log('未检测到路由参数或参数为空')
 		}
+
+		// 数据加载后再次校正表格高度
+		await nextTick()
+		updateTableHeight()
 	} catch (error) {
 		console.error('初始化失败:', error)
 	}
@@ -4441,6 +5094,14 @@ const autoOpenEmailDetail = async (emailId) => {
 
 onUnmounted(() => {
 	stopAutoSave()
+	clearQuickSearchTimer()
+	teardownTableHeightObserver()
+})
+
+// 健壮性④：被 keep-alive 缓存的页面重新激活时，隐藏期间 el-table 高度可能已塌为 0，
+// 这里重算页高并重排表格，避免回到列表时表体空白 / 不滚动。
+onActivated(() => {
+	nextTick(updateTableHeight)
 })
 
 // 监听路由变化，处理URL参数
@@ -4472,6 +5133,7 @@ watch(() => route.path, (newPath) => {
 // #region 批量移动至文件夹功能
 // 新增状态变量
 const showBatchMoveToFolderDialog = ref(false)
+const showMoveToSystemDialog = ref(false)
 const isBatchMovingToFolder = ref(false)
 const selectedFolderData = ref(null)
 const selectedFolderName = ref('')
@@ -4483,6 +5145,23 @@ const folderTreeProps = {
 	label: 'label',
 	value: 'value'
 }
+
+// 手动归档对话框两棵树的引用（用于跨树清除高亮）
+const systemTreeRef = ref(null)
+const hierarchyTreeRef = ref(null)
+
+// 系统文件夹（手动归档对话框用，取消“归档邮件”目录显示）
+const systemFolderTree = computed(() => {
+	const group = flattenedFolderOptions.value.find(g => g.value === 'system-folders')
+	if (!group || !group.children) return []
+	return group.children.filter(item => item.type !== 6)
+})
+
+// 分类文件夹（手动归档对话框用）
+const hierarchyFolderTree = computed(() => {
+	const group = flattenedFolderOptions.value.find(g => g.value === 'hierarchy-folders')
+	return group && group.children ? group.children : []
+})
 
 // 显示移动对话框时构建文件夹树
 const showBatchMoveDialog = async () => {
@@ -4504,6 +5183,42 @@ const showBatchMoveDialog = async () => {
 
 		// 显示对话框
 		showBatchMoveToFolderDialog.value = true
+
+		// 清除上次打开时残留的选中高亮
+		await nextTick()
+		systemTreeRef.value?.setCurrentKey(null)
+		hierarchyTreeRef.value?.setCurrentKey(null)
+
+	} catch (error) {
+		console.error('加载文件夹数据失败:', error)
+		ElMessage.error('加载文件夹数据失败，请重试')
+	}
+}
+
+// 显示“移动至”对话框（仅系统文件夹）
+const showBatchMoveToSystemDialog = async () => {
+	if (selectedRows.value.length === 0) {
+		ElMessage.warning('请先选择要移动的邮件')
+		return
+	}
+
+	try {
+		// 确保有最新的文件夹数据
+		await fetchCustomFolders()
+
+		// 构建完整的文件夹选择树
+		buildCompletefolderTreeOptions()
+
+		// 重置选择状态
+		selectedFolderData.value = null
+		selectedFolderName.value = ''
+
+		// 显示对话框
+		showMoveToSystemDialog.value = true
+
+		// 清除上次打开时残留的选中高亮
+		await nextTick()
+		systemTreeRef.value?.setCurrentKey(null)
 
 	} catch (error) {
 		console.error('加载文件夹数据失败:', error)
@@ -4658,14 +5373,16 @@ const handleFolderSelect = (data, node) => {
 		return
 	}
 
-	// 显示详细的选择信息
-	const folderType = getFolderTypeName(data)
-	const message = `已选择${folderType}: ${data.label} (ID: ${data.dataId}, 计算类型: ${determineFolderLevelType(data)})`
-	console.log(message)
-	ElMessage.info(message)
-
 	selectedFolderData.value = data
 	selectedFolderName.value = node.label
+
+	// 只保持当前选中的节点高亮：清除另一棵树的高亮
+	const isSystemNode = data.isSystem || data.folderCategory === 'system'
+	if (isSystemNode) {
+		hierarchyTreeRef.value?.setCurrentKey(null)
+	} else {
+		systemTreeRef.value?.setCurrentKey(null)
+	}
 
 	// 生成测试请求来验证参数
 	const testRequest = buildBatchMoveRequest(data, ['test-email-id'])
@@ -4674,20 +5391,24 @@ const handleFolderSelect = (data, node) => {
 }
 
 // 确保文件夹数据结构包含足够的信息
-const convertEmailFoldersToHierarchy = (folders) => {
+const convertEmailFoldersToHierarchy = (folders, parentKey = '') => {
 	if (!folders || !Array.isArray(folders)) {
 		return []
 	}
 
-	return folders.map(folder => {
+	return folders.map((folder, index) => {
+		const dataId = folder.dataId || folder.id
+		// 不同层级（大洲/国家/客户等）的 dataId 可能重复，
+		// 这里用 类型+ID+父级路径+索引 生成唯一 node-key，避免树高亮串节点
+		const uniqueKey = `${parentKey}/folder-${folder.type}-${dataId}-${index}`
 		const converted = {
-			value: `folder-${folder.dataId || folder.id}`,
+			value: uniqueKey,
 			label: folder.label || folder.name,
 			type: folder.type,                    // 原始层级类型（1=大洲,2=国家等）
-			dataId: folder.dataId || folder.id,   // 具体的ID（可能与系统文件夹ID重复）
+			dataId: dataId,                       // 具体的ID（可能与系统文件夹ID重复）
 			isSystem: false,                      // 明确标记为非系统文件夹
 			folderCategory: 'hierarchy',          // 新增：文件夹类别
-			children: folder.children ? convertEmailFoldersToHierarchy(folder.children) : []
+			children: folder.children ? convertEmailFoldersToHierarchy(folder.children, uniqueKey) : []
 		}
 
 		console.log('转换文件夹数据:', {
@@ -4771,10 +5492,10 @@ const handleBatchMoveToFolder = async () => {
 
 	try {
 		await ElMessageBox.confirm(
-			`确定要将选中的 ${selectedRows.value.length} 封邮件移动到 "${selectedFolderName.value}" 吗？`,
-			'确认移动',
+			`确定要将选中的 ${selectedRows.value.length} 封邮件归档到 "${selectedFolderName.value}" 吗？`,
+			'确认归档',
 			{
-				confirmButtonText: '确定移动',
+				confirmButtonText: '确定归档',
 				cancelButtonText: '取消',
 				type: 'warning'
 			}
@@ -4795,8 +5516,64 @@ const handleBatchMoveToFolder = async () => {
 		})
 
 		if (response.code === 200) {
-			ElMessage.success(response.msg || `成功移动 ${selectedRows.value.length} 封邮件`)
+			ElMessage.success(response.msg || `成功归档 ${selectedRows.value.length} 封邮件`)
 			showBatchMoveToFolderDialog.value = false
+			clearSelection()
+			await refreshCurrentView()
+		} else {
+			ElMessage.error(response.msg || '归档失败')
+		}
+
+	} catch (error) {
+		if (error !== 'cancel') {
+			console.error('批量移动邮件失败:', error)
+			ElMessage.error('移动邮件失败，请重试')
+		}
+	} finally {
+		isBatchMovingToFolder.value = false
+	}
+}
+
+// 执行批量移动至系统文件夹
+const handleBatchMoveToSystem = async () => {
+	if (!selectedFolderData.value) {
+		ElMessage.warning('请选择目标位置')
+		return
+	}
+
+	if (selectedRows.value.length === 0) {
+		ElMessage.warning('没有选中的邮件')
+		return
+	}
+
+	try {
+		await ElMessageBox.confirm(
+			`确定要将选中的 ${selectedRows.value.length} 封邮件移动到 "${selectedFolderName.value}" 吗？`,
+			'确认移动',
+			{
+				confirmButtonText: '确定移动',
+				cancelButtonText: '取消',
+				type: 'warning'
+			}
+		)
+
+		isBatchMovingToFolder.value = true
+		const emailIds = selectedRows.value.map(row => row.id.toString())
+
+		// 构建移动请求参数
+		const moveRequest = buildBatchMoveRequest(selectedFolderData.value, emailIds)
+
+		console.log('批量移动至系统文件夹请求参数:', moveRequest)
+
+		const response = await request({
+			url: 'Email/BatchMoveEmailToFolder/BatchMoveToFolder',
+			method: 'POST',
+			data: moveRequest
+		})
+
+		if (response.code === 200) {
+			ElMessage.success(response.msg || `成功移动 ${selectedRows.value.length} 封邮件`)
+			showMoveToSystemDialog.value = false
 			clearSelection()
 			await refreshCurrentView()
 		} else {
@@ -5172,6 +5949,11 @@ watch(emailFolders, () => {
 	flex-wrap: wrap;
 	gap: 8px;
 
+	:deep(.el-tag) {
+		transition: none !important;
+		animation: none !important;
+	}
+
 	.custom-tag {
 		padding: 4px 12px;
 		border-radius: 4px;
@@ -5373,17 +6155,25 @@ watch(emailFolders, () => {
 
 // 签名设置止
 
+/* 标签单元格固定为「单行」定高：无论有无标签、单标签还是多标签（折叠为“多标签…”），
+   单元格高度恒定，保证所有行行高一致，彻底消除翻页时与固定列(选择/序号)行高同步导致的抖动。 */
 .email-tags-container {
 	display: flex;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
+	align-items: center;
 	gap: 4px;
+	height: 26px;
+	overflow: hidden;
 
 	:deep(.el-tag) {
-		margin: 2px;
+		flex-shrink: 0;
 		max-width: 120px;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		/* 取消 el-tag 默认缩放/淡入等入场过渡，避免翻页、切换有/无标签行时抖动 */
+		transition: none !important;
+		animation: none !important;
 	}
 }
 
@@ -5402,6 +6192,11 @@ watch(emailFolders, () => {
 		flex-wrap: wrap;
 		gap: 5px;
 		margin-top: 8px;
+
+		:deep(.el-tag) {
+			transition: none !important;
+			animation: none !important;
+		}
 
 		.custom-tag {
 			font-size: 14px;
@@ -5465,7 +6260,10 @@ watch(emailFolders, () => {
 	overflow: hidden;
 }
 
-:deep(.el-scrollbar) {
+/* 注意：以下两条只能作用于左侧文件夹栏的 el-scrollbar，必须用 .el-aside 限定作用域。
+   否则会命中 el-table 内部的 .el-scrollbar（EP 2.x 表体也是 el-scrollbar），
+   把表体滚动容器强行撑成 calc(100vh-60px)，导致末尾几行被裁、无法滚动。 */
+.el-aside :deep(.el-scrollbar) {
 	height: calc(100vh - 60px);
 }
 
@@ -5473,7 +6271,7 @@ watch(emailFolders, () => {
 	border-right: none;
 }
 
-:deep(.el-scrollbar__wrap) {
+.el-aside :deep(.el-scrollbar__wrap) {
 	overflow-x: hidden;
 }
 
@@ -5689,28 +6487,228 @@ watch(emailFolders, () => {
 	height: 100%;
 }
 
+.search-status-bar {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 12px;
+	padding: 12px 16px;
+	background: linear-gradient(90deg, var(--el-color-primary-light-9) 0%, #fff 100%);
+	border: 1px solid var(--el-color-primary-light-7);
+	border-radius: 8px;
+}
+
+.search-status-left {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	min-width: 0;
+	flex: 1;
+}
+
+.search-status-icon-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	flex-shrink: 0;
+	border-radius: 8px;
+	background: var(--el-color-primary-light-8);
+	color: var(--el-color-primary);
+	font-size: 18px;
+}
+
+.search-status-body {
+	min-width: 0;
+	flex: 1;
+}
+
+.search-status-header {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	margin-bottom: 8px;
+}
+
+.search-status-type {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--el-text-color-primary);
+}
+
+.search-status-count {
+	font-size: 13px;
+	color: var(--el-text-color-secondary);
+}
+
+.search-status-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.search-status-tag {
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	padding: 4px 10px;
+	border-radius: 4px;
+	background: #fff;
+	border: 1px solid var(--el-border-color-lighter);
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.search-status-tag-label {
+	flex-shrink: 0;
+	margin-right: 4px;
+	color: var(--el-text-color-secondary);
+}
+
+.search-status-tag-value {
+	color: var(--el-text-color-primary);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 360px;
+}
+
+.search-status-clear {
+	flex-shrink: 0;
+	padding-top: 4px;
+}
+
 .pagination-container {
 	padding: 15px;
 	display: flex;
 	justify-content: flex-end;
 	background-color: white;
 	border-top: 1px solid var(--el-border-color-lighter);
+	overflow: visible;
+	min-width: 0;
+	flex-shrink: 0;
 }
 
-/* 确保表格占据剩余空间 */
-.el-table {
+/* 整页用绝对定位钉死在父级 el-main(app-main) 内（app-main 为 position:relative）：
+   高度由布局确定、为定值，不依赖百分比解析链，也不受路由入场动画 transform 影响，
+   从根本上避免“整页偏高、底部行被挤进 app-main 滚动溢出区”的问题。 */
+.email-page {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+}
+
+/* 邮件列表视图：纵向 flex，表格区域占据剩余空间并内部滚动 */
+.email-list-view {
 	flex: 1;
-	overflow: auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.email-list-inner {
+	flex: 1;
+	min-height: 0;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+/* 表格容器占据列表中部的剩余空间，表格在其内部滚动 */
+.email-table-wrap {
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+}
+
+/* 详情视图占满 el-main 高度，由其内部 .detail-content 滚动（具体样式见 .email-detail 主定义） */
+.email-detail {
+	flex: 1;
 }
 
 /* 分页组件样式 */
-:deep(.el-pagination) {
+:deep(.email-list-pagination.el-pagination) {
 	justify-content: flex-end;
 	padding: 0;
+	flex-wrap: nowrap;
+	white-space: nowrap;
 }
 
-:deep(.el-pagination .el-select .el-input) {
-	width: 100px;
+:deep(.email-list-pagination .el-pagination__sizes .el-select) {
+	width: 128px;
+}
+
+:deep(.email-list-pagination .el-pagination__sizes .el-select .el-input) {
+	width: 128px;
+}
+
+:deep(.email-list-pagination .el-pagination__sizes .el-select .el-input__inner) {
+	text-align: center;
+}
+
+:deep(.email-list-pagination .el-pager li) {
+	min-width: 32px;
+}
+
+.pagination-current-count {
+	margin-right: 12px;
+	color: var(--el-text-color-regular);
+	font-weight: 400;
+}
+
+/* 归档结果对话框 */
+.archive-result-summary {
+	display: flex;
+	gap: 16px;
+	margin-bottom: 20px;
+}
+
+.archive-result-stat {
+	flex: 1;
+	text-align: center;
+	padding: 14px 0;
+	border-radius: 8px;
+	background-color: #f5f7fa;
+}
+
+.archive-result-stat-num {
+	font-size: 28px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.archive-result-stat-label {
+	margin-top: 4px;
+	font-size: 13px;
+	color: #909399;
+}
+
+.archive-result-stat--success .archive-result-stat-num {
+	color: #67c23a;
+}
+
+.archive-result-stat--remain .archive-result-stat-num {
+	color: #e6a23c;
+}
+
+.archive-result-block-title {
+	font-weight: 600;
+	color: #303133;
+	margin-bottom: 10px;
+}
+
+.archive-result-dir {
+	display: flex;
+	align-items: center;
+}
+
+.archive-result-dir .el-icon {
+	color: #909399;
 }
 
 .tag-item {
@@ -5857,6 +6855,10 @@ watch(emailFolders, () => {
 .email-detail {
 	height: 100%;
 	background: #fff;
+	/* 固定高度布局：详情头固定，正文区域内部滚动 */
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
 }
 
 .detail-header {
@@ -5865,11 +6867,14 @@ watch(emailFolders, () => {
 	align-items: center;
 	padding: 16px;
 	border-bottom: 1px solid #eee;
+	flex-shrink: 0;
 }
 
 .detail-content {
 	padding: 20px;
-	height: calc(100% - 64px);
+	/* 占据详情区剩余空间并内部滚动，自动适配详情头高度 */
+	flex: 1;
+	min-height: 0;
 	overflow: auto;
 }
 
@@ -6055,7 +7060,7 @@ watch(emailFolders, () => {
 
 /* 自定义表格行高 */
 :deep(.el-table__row) {
-	height: 48px;
+	height: 24px;
 }
 
 .layout-container-demo .el-header {
@@ -6086,6 +7091,11 @@ watch(emailFolders, () => {
 
 .layout-container-demo .el-main {
 	padding: 0;
+	/* 固定高度布局：el-main 不再整体滚动，由内部表格/详情自行滚动 */
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	min-height: 0;
 }
 
 .layout-container-demo .toolbar {
@@ -6216,6 +7226,41 @@ watch(emailFolders, () => {
 
 .selected-emails-info {
 	margin-bottom: 20px;
+}
+
+/* 系统文件夹与分类文件夹分块区域 */
+.folder-section-wrapper {
+	display: flex;
+	gap: 16px;
+}
+
+.folder-section {
+	flex: 1;
+	min-width: 0;
+	border: 1px solid #dcdfe6;
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+.folder-section-title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 12px;
+	font-weight: 600;
+	color: #303133;
+	background-color: #f5f7fa;
+	border-bottom: 1px solid #dcdfe6;
+}
+
+.folder-section-title .el-icon {
+	color: #409eff;
+}
+
+.folder-tree-block {
+	max-height: 300px;
+	overflow-y: auto;
+	padding: 10px;
 }
 
 .folder-tree-node {

@@ -296,6 +296,9 @@ export function getWeek(num = 0) {
 
 // 移除空字符串，null, undefined
 export const delEmptyQueryNodes = (obj = {}) => {
+  if (obj === null || obj === undefined || typeof obj !== 'object') {
+    return obj
+  }
   if (Array.isArray(obj)) {
     return obj
   }

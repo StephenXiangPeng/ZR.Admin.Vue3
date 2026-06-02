@@ -123,7 +123,7 @@
 				<el-table-column fixed="right" label="操作" width="280px">
 					<template #default="scope">
 						<el-button type="text" size="small" @click="CheckShipingDelivery(scope.row)">查看/编辑</el-button>
-						<el-button type="primary" link size="small" @click="handleTestExcel">测试excel</el-button>
+						<el-button type="primary" link size="small" @click="handleDownloadInvoicePdf(scope.row)">下载发票PDF</el-button>
 						<el-button type="warning" size="small" icon="Back" link
 							v-if="scope.row.reviewStatusStr === '审核中' && (scope.row.createBy != null && scope.row.createBy.toString() === useUserStore().userId.toString())"
 							@click="withdrawalApproval(scope.row)">撤回审批</el-button>
@@ -653,9 +653,11 @@
 </template>
 <script setup lang="ts">
 import { createApp, getCurrentInstance, reactive, toRefs, ref, nextTick } from 'vue'
-import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, UploadUserFile, UploadFile } from 'element-plus'
+import { ElButton, ElDivider, ElDialog, ElForm, ElTable, ElTableColumn, ElTreeV2, ElIcon, ElContainer, ElMessageBox, ElMessage, ElLoading, UploadUserFile, UploadFile } from 'element-plus'
 import type { Action } from 'element-plus'
-import request, { downFile } from '@/utils/request';
+import request from '@/utils/request';
+import { blobValidate } from '@/utils/ruoyi';
+import { saveAs } from 'file-saver';
 import { get } from 'sortablejs';
 import Supperinfomation from '../purchase/supperinfomation.vue';
 import dayjs from 'dayjs';
@@ -2117,8 +2119,46 @@ var CreateByUser;
 //出运发货单选中数据ID
 var ShippingDeliveriesID = ref(0);
 
-const handleTestExcel = () => {
-	downFile('ShippingDeliveries/TestExcel/test-excel', {}, undefined);
+const handleDownloadInvoicePdf = async (row) => {
+	if (!row?.id) {
+		ElMessage.error('出运发货单 ID 无效');
+		return;
+	}
+	const loading = ElLoading.service({ text: '正在下载发票，请稍候', background: 'rgba(0, 0, 0, 0.7)' });
+	try {
+		const resp = await request({
+			url: 'CommercialInvoice/DownloadPdf/pdf',
+			method: 'post',
+			data: row.id,
+			responseType: 'blob'
+		});
+		const isBlob = await blobValidate(resp.data);
+		if (isBlob) {
+			const contentDisposition = decodeURI(resp.headers['content-disposition'] || '');
+			const match = /filename=([^;]+\.[^.;]+);*/.exec(contentDisposition);
+			const fileName = match ? match[1].replace(/"/g, '') : `invoice-${row.invoiceNumber || row.id}.pdf`;
+			saveAs(new Blob([resp.data], { type: 'application/pdf' }), fileName);
+		} else {
+			const resText = await resp.data.text();
+			const rspObj = JSON.parse(resText);
+			ElMessage.error(rspObj.msg || rspObj.title || '下载发票失败');
+		}
+	} catch (err) {
+		const errData = err?.response?.data;
+		if (errData instanceof Blob) {
+			const resText = await errData.text();
+			try {
+				const rspObj = JSON.parse(resText);
+				ElMessage.error(rspObj.msg || rspObj.title || '下载发票失败');
+			} catch {
+				ElMessage.error(resText || '下载发票失败');
+			}
+		} else {
+			ElMessage.error(err?.message || '下载发票失败，请联系管理员');
+		}
+	} finally {
+		loading.close();
+	}
 };
 
 //检查出运发货单
