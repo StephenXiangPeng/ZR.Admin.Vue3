@@ -2835,13 +2835,20 @@ const loadCustomerContractPerson = (customerId) => {
 				} else {
 					item.sexText = state.optionss['sys_user_sex'].find(option => item.sex && option.dictValue.toString() === item.sex.toString()).dictLabel;
 				}
-				//加载联系日志
-				var contactEmailStr = ContactPersonData.value.map(item => item.email).join(',');
-				if (contactEmailStr != null && contactEmailStr != '') {
-					//getContactLogList(contactEmailStr);
-					loadCustomerContactLogs(selectCustomerID.value, contactEmailStr);
-				}
 			});
+			const contactEmailStr = ContactPersonData.value
+				.map(item => item.email)
+				.filter(email => email && email.trim() !== '')
+				.join(',');
+			if (contactEmailStr) {
+				ContactLogTablecurrentPage.value = 1;
+				loadCustomerContactLogs(
+					selectCustomerID.value,
+					contactEmailStr,
+					1,
+					ContactLogTablepageSize.value
+				);
+			}
 		} else {
 			ContactPersonData.value = [];
 		}
@@ -3612,7 +3619,7 @@ const ContactLogTablehandleSizeChange = async (size: number) => {
 }
 
 // 加载客户联系日志
-const loadCustomerContactLogs = async (customerId: number, emailaddress: string = '', pageNum: number = 1, pageSize: number = 2) => {
+const loadCustomerContactLogs = async (customerId: number, emailaddress: string = '', pageNum: number = 1, pageSize: number = 30) => {
 	try {
 		const response = await request({
 			url: 'CustomerInfoMation/GetContactLogsByCustomerID/GetContactLogs',
