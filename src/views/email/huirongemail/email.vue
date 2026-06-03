@@ -389,6 +389,8 @@
 									</el-popover>
 									<el-button @click="markAsUnread(currentEmail.id)">标记为未读</el-button>
 									<el-button @click="openReminderDialog(currentEmail)">提醒</el-button>
+									<el-button @click="handleDetailArchive" :loading="isBatchProcessing">归档</el-button>
+									<el-button @click="handleDetailMoveToSystem" :loading="isBatchProcessing">移动至</el-button>
 									<el-button v-if="activeMenu !== '4'" @click="handleMoveEmail('4')">删除</el-button>
 								</el-button-group>
 							</div>
@@ -3763,16 +3765,61 @@ const tableRowClassName = ({ row }) => {
 	return classes.join(' ')
 }
 
-// 批量归档
-const handleBatchArchive = async () => {
+// 详情页：将当前邮件作为批量操作目标
+const resolveDetailEmailRows = () => {
+	const id = currentEmail.value?.id ?? EmailModel.id
+	if (!id) return []
+	const row = EmailTableData.value.find(r => String(r.id) === String(id))
+	if (row) return [row]
+	return [{ id, subject: currentEmail.value?.subject ?? '' }]
+}
+
+const applyDetailEmailSelection = () => {
+	const rows = resolveDetailEmailRows()
+	if (!rows.length) {
+		ElMessage.warning('当前邮件信息无效')
+		return false
+	}
+	selectedRows.value = rows
+	return true
+}
+
+const handleDetailArchive = async () => {
+	if (!applyDetailEmailSelection()) return
+	await handleBatchArchive(true)
+}
+
+/** 详情页归档失败时去掉「批量」等列表场景文案 */
+const normalizeArchiveFailMessage = (message: string, fromDetail: boolean) => {
+	if (!fromDetail) return message || '批量归档失败'
+	const text = message || '归档失败'
+	return text.replace(/批量归档/g, '归档')
+}
+
+const handleDetailMoveToSystem = async () => {
+	if (!applyDetailEmailSelection()) return
+	await showBatchMoveToSystemDialog()
+}
+
+const closeEmailDetailIfOpen = () => {
+	if (showEmailDetail.value) {
+		showEmailDetail.value = false
+	}
+}
+
+// 批量归档（fromDetail：邮件详情内单封归档）
+const handleBatchArchive = async (fromDetail = false) => {
 	if (selectedRows.value.length === 0) {
-		ElMessage.warning('请先选择要归档的邮件')
+		ElMessage.warning(fromDetail ? '当前邮件无效' : '请先选择要归档的邮件')
 		return
 	}
 
 	try {
+		const confirmMessage = fromDetail
+			? '确定要将当前邮件归档吗？'
+			: `确定要将选中的 ${selectedRows.value.length} 封邮件归档吗？`
 		await ElMessageBox.confirm(
-			`确定要将选中的 ${selectedRows.value.length} 封邮件归档吗？`,
+			confirmMessage,
 			'确认归档',
 			{
 				confirmButtonText: '确定',
@@ -3815,19 +3862,25 @@ const handleBatchArchive = async () => {
 
 			ElMessage.success(message)
 			clearSelection()
+			closeEmailDetailIfOpen()
 			await refreshCurrentView()
 
 			// 展示归档结果明细
 			showArchiveResultDialog.value = true
 		} else {
 			isBatchProcessing.value = false
-			await promptManualArchive(response.msg || '批量归档失败')
+			const failMsg = normalizeArchiveFailMessage(response.msg || '批量归档失败', fromDetail)
+			await promptManualArchive(failMsg)
 		}
 	} catch (error) {
 		if (error !== 'cancel') {
-			console.error('批量归档失败:', error)
+			console.error(fromDetail ? '归档失败:' : '批量归档失败:', error)
 			isBatchProcessing.value = false
-			await promptManualArchive('批量归档失败，请重试')
+			const failMsg = normalizeArchiveFailMessage(
+				fromDetail ? '归档失败，请重试' : '批量归档失败，请重试',
+				fromDetail
+			)
+			await promptManualArchive(failMsg)
 		}
 	} finally {
 		isBatchProcessing.value = false
@@ -3835,7 +3888,7 @@ const handleBatchArchive = async () => {
 }
 
 // 归档失败时，提示用户进行手动归档
-const promptManualArchive = async (failMessage) => {
+const promptManualArchive = async (failMessage: string) => {
 	try {
 		await ElMessageBox.confirm(
 			`${failMessage}，是否进行手动归档？`,
@@ -5519,6 +5572,7 @@ const handleBatchMoveToFolder = async () => {
 			ElMessage.success(response.msg || `成功归档 ${selectedRows.value.length} 封邮件`)
 			showBatchMoveToFolderDialog.value = false
 			clearSelection()
+			closeEmailDetailIfOpen()
 			await refreshCurrentView()
 		} else {
 			ElMessage.error(response.msg || '归档失败')
@@ -5575,6 +5629,7 @@ const handleBatchMoveToSystem = async () => {
 			ElMessage.success(response.msg || `成功移动 ${selectedRows.value.length} 封邮件`)
 			showMoveToSystemDialog.value = false
 			clearSelection()
+			closeEmailDetailIfOpen()
 			await refreshCurrentView()
 		} else {
 			ElMessage.error(response.msg || '移动邮件失败')
