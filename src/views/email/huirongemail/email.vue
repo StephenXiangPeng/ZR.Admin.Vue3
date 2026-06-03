@@ -526,10 +526,12 @@
 			</template>
 			<div class="email-form">
 				<!-- 收件人 -->
-				<div class="form-item">
-					<div class="form-label">收件人：</div>
-					<el-select v-model="emailForm.ToEmail" multiple filterable allow-create default-first-option
-						placeholder="请输入邮箱地址" class="full-width">
+				<div ref="toEmailFormItemRef" class="form-item"
+					:class="{ 'is-field-error': emailFormFieldErrors.toEmail }">
+					<div class="form-label" :class="{ 'is-field-error-label': emailFormFieldErrors.toEmail }">收件人：</div>
+					<el-select ref="toEmailSelectRef" v-model="emailForm.ToEmail" multiple filterable allow-create
+						default-first-option placeholder="请输入邮箱地址" class="full-width"
+						@change="clearEmailFormFieldError('toEmail')">
 						<el-option v-for="item in recipientTreeData" :key="item.value" :label="item.label"
 							:value="item.value">
 						</el-option>
@@ -552,10 +554,12 @@
 					<el-input v-model="emailForm.subject" placeholder="邮件主题" class="form-input" />
 				</div>
 				<!-- 选择标签 -->
-				<div class="form-item">
-					<div class="form-label">标签：</div>
-					<el-select v-model="emailForm.emailTags" clearable filterable allow-create default-first-option
-						placeholder="请选择标签" class="full-width">
+				<div ref="emailTagsFormItemRef" class="form-item"
+					:class="{ 'is-field-error': emailFormFieldErrors.emailTags }">
+					<div class="form-label" :class="{ 'is-field-error-label': emailFormFieldErrors.emailTags }">标签：</div>
+					<el-select ref="emailTagsSelectRef" v-model="emailForm.emailTags" clearable filterable allow-create
+						default-first-option placeholder="请选择标签" class="full-width"
+						@change="clearEmailFormFieldError('emailTags')">
 						<el-option v-for="tag in EmailTagcheckboxoptions" :key="tag.value" :label="tag.label"
 							:value="tag.value">
 						</el-option>
@@ -4035,6 +4039,14 @@ const showCc = ref(false)
 const fileList = ref([])
 const fileInput = ref(null)
 const quillEditor = ref(null)
+const toEmailFormItemRef = ref(null)
+const emailTagsFormItemRef = ref(null)
+const toEmailSelectRef = ref(null)
+const emailTagsSelectRef = ref(null)
+const emailFormFieldErrors = reactive({
+	toEmail: false,
+	emailTags: false
+})
 const recipientTreeData = ref([])
 const isSavingDraft = ref(false)
 
@@ -4046,7 +4058,7 @@ const emailForm = reactive({
 	bcc: [],
 	subject: '',
 	content: '',
-	emailTags: [],
+	emailTags: null,
 	originalMessageId: null,
 	delta: new Delta()
 })
@@ -4426,6 +4438,8 @@ function resetEmailForm() {
 	emailForm.subject = ''
 	emailForm.content = ''           // 如果还在用
 	emailForm.delta = new Delta()    // 你当前用的 delta
+	emailForm.emailTags = null
+	clearEmailFormFieldErrors()
 
 	fileList.value = []
 
@@ -4556,9 +4570,57 @@ const saveDraft = async () => {
 	}
 }
 
+// 发送/转发前校验是否已选标签
+const isEmailTagSelected = () => {
+	const tag = emailForm.emailTags
+	if (tag === null || tag === undefined || tag === '') return false
+	if (Array.isArray(tag)) return tag.some(t => t !== null && t !== undefined && t !== '')
+	return true
+}
+
+const isToEmailFilled = () => Array.isArray(emailForm.ToEmail) && emailForm.ToEmail.length > 0
+
+const clearEmailFormFieldErrors = () => {
+	emailFormFieldErrors.toEmail = false
+	emailFormFieldErrors.emailTags = false
+}
+
+const clearEmailFormFieldError = (field: 'toEmail' | 'emailTags') => {
+	emailFormFieldErrors[field] = false
+}
+
+const focusComposeField = async (field: 'toEmail' | 'emailTags') => {
+	await nextTick()
+	const formItemEl = field === 'toEmail' ? toEmailFormItemRef.value : emailTagsFormItemRef.value
+	const selectRef = field === 'toEmail' ? toEmailSelectRef.value : emailTagsSelectRef.value
+	formItemEl?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+	selectRef?.focus?.()
+}
+
+/** 发送前校验收件人、标签；失败时标红并定位到首个未填项 */
+const validateEmailComposeBeforeSend = async () => {
+	clearEmailFormFieldErrors()
+	const missingTo = !isToEmailFilled()
+	const missingTag = !isEmailTagSelected()
+	if (!missingTo && !missingTag) return true
+
+	if (missingTo) emailFormFieldErrors.toEmail = true
+	if (missingTag) emailFormFieldErrors.emailTags = true
+
+	const messages: string[] = []
+	if (missingTo) messages.push('请填写收件人')
+	if (missingTag) messages.push('必须选择标签')
+	ElMessage.warning(messages.join('；'))
+
+	await focusComposeField(missingTo ? 'toEmail' : 'emailTags')
+	return false
+}
+
 // 发送邮件
 const sendEmail = async () => {
 	try {
+		if (!(await validateEmailComposeBeforeSend())) return
+
 		const quill = quillEditor.value?.getQuill?.() || quillEditor.value?.quill
 		const replyHtml = quill ? quill.root.innerHTML : ''
 		// 组合：你的回复 + 两个空行 + 原文只读块
@@ -4577,16 +4639,8 @@ const sendEmail = async () => {
 // 发送新邮件
 const sendNewEmail = async () => {
 	try {
-		if (!emailForm.ToEmail.length) {
-			ElMessage.warning('请填写收件人')
-			return
-		}
 		if (!emailForm.subject) {
 			ElMessage.warning('请填写主题')
-			return
-		}
-		if (!emailForm.emailTags) {
-			ElMessage.warning('请选择标签')
 			return
 		}
 
@@ -4669,10 +4723,6 @@ const sendNewEmail = async () => {
 // 发送草稿邮件
 const sendFromDraft = async () => {
 	try {
-		if (!emailForm.ToEmail.length) {
-			ElMessage.warning('请填写收件人')
-			return
-		}
 		if (!emailForm.subject) {
 			ElMessage.warning('请填写主题')
 			return
@@ -5960,6 +6010,19 @@ watch(emailFolders, () => {
 	line-height: 32px;
 	flex-shrink: 0;
 	color: #606266;
+}
+
+.email-form .form-item.is-field-error .form-label.is-field-error-label {
+	color: var(--el-color-danger);
+}
+
+.email-form .form-item.is-field-error :deep(.el-select__wrapper) {
+	box-shadow: 0 0 0 1px var(--el-color-danger) inset;
+}
+
+.email-form .form-item.is-field-error :deep(.el-select__wrapper:hover),
+.email-form .form-item.is-field-error :deep(.el-select__wrapper.is-focus) {
+	box-shadow: 0 0 0 1px var(--el-color-danger) inset;
 }
 
 .full-width {
