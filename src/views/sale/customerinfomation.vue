@@ -117,9 +117,9 @@
 						</span>
 					</template>
 				</el-table-column>
-				<el-table-column prop="create_time" label="建档时间" width="120" sortable>
+				<el-table-column prop="createTime" label="建档时间" width="120" sortable>
 					<template #default="scope">
-						{{ formatDate(scope.row.create_time) }}
+						{{ formatDate(scope.row.createTime) }}
 					</template>
 				</el-table-column>
 				<el-table-column prop="salesPerson" label="所属销售员" width="130" sortable />
@@ -480,9 +480,9 @@
 						<el-table-column prop="customerAbbreviation" label="客户简称" width="150" />
 						<el-table-column prop="tradingCountry" label="贸易国别" width="120" />
 						<el-table-column prop="Lastcontactdate" label="最近联系时间" width="140" />
-						<el-table-column prop="create_time" label="建档时间" width="140">
+						<el-table-column prop="createTime" label="建档时间" width="140">
 							<template #default="scope">
-								{{ formatDate(scope.row.create_time) }}
+								{{ formatDate(scope.row.createTime) }}
 							</template>
 						</el-table-column>
 						<el-table-column prop="salesName" label="所属销售员" width="120" />
@@ -503,9 +503,9 @@
 				<el-table-column prop="tradingCountry" label="贸易国别" width="120" />
 				<el-table-column prop="businessScope" label="市场" width="120" />
 				<el-table-column prop="Lastcontactdate" label="最近联系时间" width="140" />
-				<el-table-column prop="create_time" label="建档时间" width="140">
+				<el-table-column prop="createTime" label="建档时间" width="140">
 					<template #default="scope">
-						{{ formatDate(scope.row.create_time) }}
+						{{ formatDate(scope.row.createTime) }}
 					</template>
 				</el-table-column>
 				<el-table-column prop="lastbindSalePerson" label="原属业务员" width="120" />
