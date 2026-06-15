@@ -1748,21 +1748,7 @@ function getInboxEmail(start, end, emailType) {
 			params
 		}).then(response => {
 			if (response.data.result.length > 0) {
-				const processedEmails = response.data.result.map(item => ({
-					id: item.id,
-					subject: item.emailsubject,
-					date: item.emaildate,
-					name: GetFromEmailName(item.fromEmail),
-					tags: item.emailtags,
-					content: item.emailContent,
-					emailTags: item.emailTags,
-					toEmail: item.toEmail,
-					ccEmail: item.ccEmail,
-					fromEmailAddress: item.fromEmailAddress,
-					EmailID: item.emailID,
-					hasAttachments: item.isAttachments === 1,
-					isRead: item.isRead
-				}))
+				const processedEmails = response.data.result.map(mapEmailListItem)
 
 				EmailTableData.value = processedEmails
 				originalEmailData.value = [...processedEmails]
@@ -1877,21 +1863,7 @@ const getEmailArchiveList = async (pageNum, pageSize, type, dataId) => {
 		console.log('归档邮件API响应:', response)
 
 		if (response.data && response.data.result) {
-			const processedEmails = response.data.result.map(item => ({
-				id: item.id,
-				subject: item.emailsubject,
-				date: item.emaildate,
-				name: GetFromEmailName(item.fromEmail),
-				tags: item.emailtags,
-				content: item.emailContent,
-				emailTags: item.emailTags,
-				toEmail: item.toEmail,
-				ccEmail: item.ccEmail,
-				fromEmailAddress: item.fromEmailAddress,
-				EmailID: item.emailID,
-				hasAttachments: item.isAttachments === 1,
-				isRead: item.isRead
-			}))
+			const processedEmails = response.data.result.map(mapEmailListItem)
 
 			console.log('处理后的邮件数据数量:', processedEmails.length)
 			EmailTableData.value = processedEmails
@@ -1932,6 +1904,22 @@ const GetFromEmailName = (fromEmail) => {
 
 	return fromEmail
 }
+
+/** 列表项映射（不含正文，正文通过 GetEmailById 按需加载） */
+const mapEmailListItem = (item) => ({
+	id: item.id,
+	subject: item.emailsubject,
+	date: item.emaildate,
+	name: GetFromEmailName(item.fromEmail),
+	tags: item.emailtags,
+	emailTags: item.emailTags,
+	toEmail: item.toEmail,
+	ccEmail: item.ccEmail,
+	fromEmailAddress: item.fromEmailAddress,
+	EmailID: item.emailID,
+	hasAttachments: item.isAttachments === 1,
+	isRead: item.isRead
+})
 
 // 标记邮件为已读
 const markAsRead = async (row) => {
@@ -2708,20 +2696,7 @@ const mapSearchEmailListResult = (data) => {
 		totalItems.value = 0
 		return
 	}
-	const processedEmails = data.result.map(item => ({
-		id: item.id,
-		subject: item.emailsubject,
-		date: item.emaildate,
-		name: GetFromEmailName(item.fromEmail),
-		tags: item.emailtags,
-		content: item.emailContent,
-		emailTags: item.emailTags,
-		toEmail: item.toEmail,
-		fromEmailAddress: item.fromEmailAddress,
-		EmailID: item.emailID,
-		hasAttachments: item.isAttachments === 1,
-		isRead: item.isRead
-	}))
+	const processedEmails = data.result.map(mapEmailListItem)
 	EmailTableData.value = processedEmails
 	originalEmailData.value = [...processedEmails]
 	totalItems.value = data.totalNum || 0
@@ -3123,15 +3098,41 @@ const GetEmailAttachment = async (emailId) => {
 	}
 }
 
-// 优化后的处理行点击方法 - 确保标签数据同步
-const handleRowClick = async (row, column, event) => {
-	if (column.type === 'selection') {
-		return
+/** 按邮件 ID 获取正文（列表接口不再返回 emailContent） */
+const fetchEmailContentById = async (emailId: number | string) => {
+	const response = await request({
+		url: 'Email/GetEmailById/GetEmailById',
+		method: 'GET',
+		params: { id: emailId }
+	})
+
+	if (response.code === 404 || (response.code === 200 && !response.data)) {
+		throw new Error('该邮件不存在或已被删除')
+	}
+	if (response.code !== 200) {
+		throw new Error(response.msg || '获取邮件正文失败')
 	}
 
+	return response.data.emailContent || ''
+}
+
+/** 打开邮件详情：元数据来自列表行，正文按需拉取 */
+const openEmailDetail = async (row, preloadedContent?: string) => {
 	SelectEmailID.value = row.id
 
+	let loading: ReturnType<typeof ElLoading.service> | null = null
 	try {
+		isLoadingTags.value = true
+		loading = ElLoading.service({
+			lock: true,
+			text: '正在加载邮件正文...',
+			background: 'rgba(0, 0, 0, 0.7)'
+		})
+
+		const content = preloadedContent !== undefined
+			? preloadedContent
+			: await fetchEmailContentById(row.id)
+
 		const attachmentsList = await GetEmailAttachment(row.EmailID)
 		currentEmail.value = {
 			id: row.id,
@@ -3140,7 +3141,7 @@ const handleRowClick = async (row, column, event) => {
 			to: row.toEmail,
 			cc: row.ccEmail || null,
 			date: row.date,
-			content: row.content,
+			content,
 			attachments: attachmentsList.map(attachment => ({
 				id: attachment.id,
 				name: attachment.attachmentsName,
@@ -3152,13 +3153,11 @@ const handleRowClick = async (row, column, event) => {
 		EmailModel.id = row.id
 		EmailModel.emailsubject = row.subject
 		EmailModel.fromEmail = row.fromEmailAddress
+		EmailModel.emailContent = content
 
-		isLoadingTags.value = true
 		markAsRead(row)
-
 		emailDetailSavedTagIds.value = null
 
-		// 清空并重新获取标签
 		EmailTagcheckboxGroup.value = []
 		EmailTagcheckboxoptions.value = []
 
@@ -3173,7 +3172,6 @@ const handleRowClick = async (row, column, event) => {
 				value: item.id
 			}))
 
-			// 使用最新的标签数据（优先使用当前行数据）
 			if (row.emailTags) {
 				const tagArray = row.emailTags.split(',')
 				tagArray.forEach(tagId => {
@@ -3187,11 +3185,21 @@ const handleRowClick = async (row, column, event) => {
 		emailDetailSavedTagIds.value = normalizeTagIdList(EmailTagcheckboxGroup.value)
 		showEmailDetail.value = true
 	} catch (error) {
-		console.error('获取标签列表失败:', error)
-		ElMessage.error('获取标签列表失败')
+		console.error('打开邮件详情失败:', error)
+		ElMessage.error(error?.message || '加载邮件详情失败')
 	} finally {
+		loading?.close()
 		isLoadingTags.value = false
 	}
+}
+
+// 优化后的处理行点击方法 - 确保标签数据同步
+const handleRowClick = async (row, column, event) => {
+	if (column.type === 'selection') {
+		return
+	}
+
+	await openEmailDetail(row)
 }
 
 // 6. 大幅优化的 backToList 方法
@@ -5073,32 +5081,7 @@ const autoOpenEmailDetail = async (emailId) => {
 				// 关闭加载提示
 				loading.close()
 
-				// 构造邮件对象
-				const targetEmail = {
-					id: emailData.id,
-					subject: emailData.emailsubject,
-					from: emailData.fromEmail, // 发件人完整信息（包含姓名）
-					to: emailData.toEmail, // 收件人完整信息（包含姓名）
-					cc: emailData.ccEmail || null,
-					date: emailData.emaildate,
-					content: emailData.emailContent,
-					emailTags: emailData.emailTags,
-					EmailID: emailData.emailID,
-					hasAttachments: emailData.isAttachments === 1,
-					isRead: emailData.isRead,
-					fromEmailAddress: emailData.fromEmailAddress, // 发件人邮箱地址
-					toEmailAddress: emailData.toEmailAddress, // 收件人邮箱地址
-					// 添加其他可能需要的字段
-					fromEmail: emailData.fromEmail,
-					toEmail: emailData.toEmail,
-					ccEmail: emailData.ccEmail
-				}
-
-				console.log('构造的邮件对象:', targetEmail)
-				console.log('邮件对象中的发件人:', targetEmail.from)
-				console.log('邮件对象中的收件人:', targetEmail.to)
-
-				// 根据邮件类型设置正确的文件夹状态
+				const targetEmail = mapEmailListItem(emailData)
 				const emailType = emailData.emailType || '1'
 				const menuNames = {
 					'1': '收件箱',
@@ -5110,8 +5093,7 @@ const autoOpenEmailDetail = async (emailId) => {
 
 				setCurrentFolderState('system', emailType, menuNames[emailType])
 
-				// 模拟点击行来打开邮件详情
-				await handleRowClick(targetEmail, {}, {})
+				await openEmailDetail(targetEmail, emailData.emailContent || '')
 				ElMessage.success('邮件详情已打开')
 				return
 			} else {
@@ -5175,8 +5157,8 @@ const autoOpenEmailDetail = async (emailId) => {
 				setCurrentFolderState('system', foundInType || '1', menuNames[foundInType || '1'])
 			}
 
-			// 模拟点击行来打开邮件详情
-			await handleRowClick(targetEmail, {}, {})
+			// 打开邮件详情（正文按需拉取）
+			await openEmailDetail(targetEmail)
 			ElMessage.success(`邮件详情已打开 (ID: ${emailId})`)
 		} else {
 			// API 未返回数据且当前列表也没有：邮件不存在或不在当前视图
