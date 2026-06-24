@@ -42,7 +42,13 @@
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column label="ID" align="center" prop="id" v-if="false" />
-				<el-table-column label="公司简称" align="center" prop="simpleCompanyName" />
+				<el-table-column label="公司简称" align="center" prop="simpleCompanyName">
+					<template #default="scope">
+						<span>{{ scope.row.simpleCompanyName }}</span>
+						<el-tag v-if="Number(scope.row.isDraft ?? scope.row.IsDraft) === 1" type="warning" style="margin-left: 5px;"
+							size="small">草稿</el-tag>
+					</template>
+				</el-table-column>
 				<el-table-column label="公司全称" align="center" prop="companyName" />
 				<el-table-column label="公司类型" align="center" prop="companyType">
 					<template #default="scope">
@@ -135,22 +141,32 @@
 							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 							<el-table-column label="联系人姓名" prop="name">
 								<template #default="scope">
-									<el-input v-model="scope.row.name" placeholder="请输入联系人姓名" size="default" />
+									<el-input v-model="scope.row.name" placeholder="请输入联系人姓名" maxlength="50"
+										size="default" />
 								</template>
 							</el-table-column>
 							<el-table-column label="电话号码" prop="phone">
 								<template #default="scope">
-									<el-input v-model="scope.row.phone" placeholder="请输入电话号码" size="default" />
+									<el-input v-model="scope.row.phone" placeholder="请输入电话号码" maxlength="20"
+										size="default" />
+								</template>
+							</el-table-column>
+							<el-table-column label="手机号码" prop="mobileNumber">
+								<template #default="scope">
+									<el-input v-model="scope.row.mobileNumber" placeholder="请输入手机号码" maxlength="11"
+										size="default" />
 								</template>
 							</el-table-column>
 							<el-table-column label="电子邮件" prop="email">
 								<template #default="scope">
-									<el-input v-model="scope.row.email" placeholder="请输入电子邮件" size="default" />
+									<el-input v-model="scope.row.email" placeholder="请输入电子邮件" maxlength="100"
+										size="default" />
 								</template>
 							</el-table-column>
 							<el-table-column label="备注" prop="remark">
 								<template #default="scope">
-									<el-input v-model="scope.row.remark" placeholder="请输入备注" size="default" />
+									<el-input v-model="scope.row.remark" placeholder="请输入备注" maxlength="500"
+										size="default" />
 								</template>
 							</el-table-column>
 							<el-table-column label="操作" width="100">
@@ -215,7 +231,9 @@
 			</el-form>
 			<template #footer>
 				<div class="dialog-footer">
-					<el-button type="primary" @click="submitForm">确 定</el-button>
+					<el-button v-if="showSaveDraftBtn" type="warning" @click="saveDraftForm"
+						:loading="draftSaving">保存草稿</el-button>
+					<el-button type="primary" @click="submitForm" :loading="submitSaving">提交</el-button>
 					<el-button @click="cancel">取 消</el-button>
 				</div>
 			</template>
@@ -240,7 +258,16 @@
 					:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 					:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 					<el-table-column label="联系人姓名" prop="name" />
-					<el-table-column label="电话号码" prop="phoneNumber" />
+					<el-table-column label="电话号码" prop="phoneNumber">
+						<template #default="scope">
+							{{ scope.row.phoneNumber || scope.row.phone || '-' }}
+						</template>
+					</el-table-column>
+					<el-table-column label="手机号码" prop="mobileNumber">
+						<template #default="scope">
+							{{ scope.row.mobileNumber || '-' }}
+						</template>
+					</el-table-column>
 					<el-table-column label="电子邮件" prop="email" />
 					<el-table-column label="备注" prop="remark" />
 				</el-table>
@@ -422,8 +449,11 @@ const form = ref({
 	bankAccount: '', // 后端接口需要，但不在界面显示
 	companyTaxNumber: undefined,
 	remark: undefined,
+	isDraft: 0,
 	contacts: []
 })
+
+const showSaveDraftBtn = computed(() => !form.value.id || Number(form.value.isDraft) === 1)
 
 // 表单校验
 const rules = ref({
@@ -435,6 +465,8 @@ const rules = ref({
 
 // 加载状态
 const loading = ref(false)
+const submitSaving = ref(false)
+const draftSaving = ref(false)
 
 // 联系人表格数据
 const contactsTableData = ref([]);
@@ -513,7 +545,13 @@ const financeLedgerPaginatedData = computed(() => {
 /** 查询物流公司列表 */
 function getList() {
 	loading.value = true
-	listLogisticsCompany(queryParams.value).then(response => {
+	const params = {
+		pageNum: queryParams.value.pageNum,
+		pageSize: queryParams.value.pageSize,
+		shortName: queryParams.value.simpleCompanyName,
+		companyType: queryParams.value.companyType
+	}
+	listLogisticsCompany(params).then(response => {
 		// 适配后端返回的数据结构
 		logisticsCompanyList.value = response.data.result || []
 		total.value = response.data.totalNum || 0
@@ -539,6 +577,7 @@ function reset() {
 		bankAccount: '', // 后端接口需要，但不在界面显示
 		companyTaxNumber: undefined,
 		remark: undefined,
+		isDraft: 0,
 		contacts: []
 	}
 	// 清空联系人表格
@@ -604,6 +643,7 @@ function handleUpdate(row) {
 				response.data.companyType = response.data.companyType.toString();
 			}
 			Object.assign(form.value, response.data)
+			form.value.isDraft = Number(response.data.isDraft ?? response.data.IsDraft ?? 0)
 			// 清空联系人表格
 			contactsTableData.value = []
 			// 清空银行账号表格
@@ -614,8 +654,9 @@ function handleUpdate(row) {
 					// 将联系人数据添加到表格
 					contactsTableData.value = contactResponse.data.map(contact => ({
 						id: contact.id,
-						name: contact.name,
-						phone: contact.phoneNumber, // 注意字段名可能不同
+						name: contact.name || '',
+						phone: contact.phoneNumber || contact.phone || '',
+						mobileNumber: contact.mobileNumber || '',
 						email: contact.email || '',
 						remark: contact.remark || ''
 					})) || []
@@ -653,77 +694,141 @@ function handleUpdate(row) {
 	})
 }
 
+/** 组装联系人提交数据 */
+function mapContactsForSubmit() {
+	return contactsTableData.value.map(contact => ({
+		Id: contact.id,
+		LogisticsCompanyId: form.value.id,
+		Name: (contact.name || '').trim(),
+		Phone: (contact.phone || '').trim(),
+		MobileNumber: (contact.mobileNumber || '').trim(),
+		Email: (contact.email || '').trim() || null,
+		Remark: (contact.remark || '').trim() || null
+	}))
+}
+
+/** 组装银行账号提交数据 */
+function mapBankAccountsForSubmit() {
+	return bankAccountTableData.value.map(bank => ({
+		Id: bank.id,
+		LogisticsCompanyID: form.value.id,
+		Bank_account_name: bank.bankAccountName,
+		Bank: bank.bank,
+		Bank_account_number: bank.bankAccountNumber,
+		Bank_address: bank.bankAddress || '',
+		Remark: bank.remark
+	}))
+}
+
+/** 提交前校验联系人 */
+function validateContactsForSubmit() {
+	if (contactsTableData.value.length === 0) {
+		ElMessage.warning('请至少添加一个联系人')
+		return false
+	}
+
+	for (let i = 0; i < contactsTableData.value.length; i++) {
+		const contact = contactsTableData.value[i]
+		const rowNum = i + 1
+		const name = (contact.name || '').trim()
+		const phone = (contact.phone || '').trim()
+		const mobileNumber = (contact.mobileNumber || '').trim()
+		const email = (contact.email || '').trim()
+		const remark = (contact.remark || '').trim()
+
+		if (!name) {
+			ElMessage.warning(`第${rowNum}个联系人的姓名不能为空`)
+			return false
+		}
+		if (name.length > 50) {
+			ElMessage.warning(`第${rowNum}个联系人的姓名长度不能超过50个字符`)
+			return false
+		}
+		if (!phone) {
+			ElMessage.warning(`第${rowNum}个联系人的电话号码不能为空`)
+			return false
+		}
+		if (phone.length > 20) {
+			ElMessage.warning(`第${rowNum}个联系人的电话号码长度不能超过20个字符`)
+			return false
+		}
+		if (!mobileNumber) {
+			ElMessage.warning(`第${rowNum}个联系人的手机号码不能为空`)
+			return false
+		}
+		if (mobileNumber.length > 11) {
+			ElMessage.warning(`第${rowNum}个联系人的手机号码长度不能超过11个字符`)
+			return false
+		}
+		if (email.length > 100) {
+			ElMessage.warning(`第${rowNum}个联系人的电子邮件长度不能超过100个字符`)
+			return false
+		}
+		if (remark.length > 500) {
+			ElMessage.warning(`第${rowNum}个联系人的备注长度不能超过500个字符`)
+			return false
+		}
+	}
+	return true
+}
+
+/** 组装提交数据（对齐 LogisticsCompanyRequest） */
+function buildSubmitData(isDraft) {
+	return {
+		Id: form.value.id,
+		simpleCompanyName: form.value.simpleCompanyName,
+		companyName: form.value.companyName,
+		companyType: form.value.companyType ? Number(form.value.companyType) : 0,
+		address: form.value.address,
+		openAccountBank: form.value.openAccountBank || '',
+		bankAccount: form.value.bankAccount || '',
+		companyTaxNumber: form.value.companyTaxNumber,
+		Remark: form.value.remark,
+		isDraft: isDraft ? 1 : 0,
+		Contacts: mapContactsForSubmit(),
+		BankAccounts: mapBankAccountsForSubmit()
+	}
+}
+
+/** 保存/提交物流公司 */
+function persistLogisticsCompany(isDraft) {
+	const submitData = buildSubmitData(isDraft)
+	const savingRef = isDraft ? draftSaving : submitSaving
+	const requestApi = form.value.id ? updateLogisticsCompany : addLogisticsCompany
+	const successMessage = isDraft ? '保存草稿成功' : (form.value.id ? '修改成功' : '新增成功')
+	const failMessage = isDraft ? '保存草稿失败' : (form.value.id ? '修改失败' : '新增失败')
+
+	savingRef.value = true
+	requestApi(submitData).then(response => {
+		if (response && response.code === 200) {
+			ElMessage.success(response.msg || successMessage)
+			open.value = false
+			getList()
+		} else {
+			ElMessage.error(response?.msg || failMessage)
+		}
+	}).catch(() => {
+		ElMessage.error(`${failMessage}，请稍后重试`)
+	}).finally(() => {
+		savingRef.value = false
+	})
+}
+
+/** 保存草稿 */
+function saveDraftForm() {
+	persistLogisticsCompany(true)
+}
+
 /** 提交按钮 */
 function submitForm() {
 	logisticsCompanyRef.value.validate(valid => {
-		if (valid) {
-			// 检查联系人是否为空
-			if (contactsTableData.value.length === 0) {
-				ElMessage.warning('请至少添加一个联系人');
-				return;
-			}
-
-			// 检查联系人必填字段
-			for (let i = 0; i < contactsTableData.value.length; i++) {
-				const contact = contactsTableData.value[i];
-				if (!contact.name || !contact.phone) {
-					ElMessage.warning(`第${i + 1}个联系人的姓名和电话不能为空`);
-					return;
-				}
-			}
-
-			// 准备提交的数据
-			const submitData = {
-				...form.value,
-				// 联系人数据字段名与后端匹配
-				Contacts: contactsTableData.value.map(contact => ({
-					Id: contact.id,
-					LogisticsCompanyId: form.value.id, // 如果是修改，需要保留关联ID
-					Name: contact.name,
-					Phone: contact.phone,
-					Email: contact.email,
-					Remark: contact.remark
-				})),
-				// 银行账号数据字段名与后端匹配
-				BankAccounts: bankAccountTableData.value.map(bank => ({
-					Id: bank.id,
-					LogisticsCompanyID: form.value.id, // 如果是修改，需要保留关联ID
-					Bank_account_name: bank.bankAccountName,
-					Bank: bank.bank,
-					Bank_account_number: bank.bankAccountNumber,
-					Bank_address: bank.bankAddress || '', // 添加银行地址字段
-					Remark: bank.remark
-				}))
-			};
-
-			if (form.value.id) {
-				// 修改操作
-				updateLogisticsCompany(submitData).then(response => {
-					if (response && response.data) {
-						ElMessage.success('修改成功')
-						open.value = false
-						getList()
-					} else {
-						ElMessage.error('修改失败')
-					}
-				}).catch(() => {
-					ElMessage.error('修改失败，请稍后重试')
-				})
-			} else {
-				// 新增操作
-				addLogisticsCompany(submitData).then(response => {
-					if (response && response.data) {
-						ElMessage.success('新增成功')
-						open.value = false
-						getList()
-					} else {
-						ElMessage.error('新增失败')
-					}
-				}).catch(() => {
-					ElMessage.error('新增失败，请稍后重试')
-				})
-			}
+		if (!valid) {
+			return
 		}
+		if (!validateContactsForSubmit()) {
+			return
+		}
+		persistLogisticsCompany(false)
 	})
 }
 
@@ -759,6 +864,7 @@ function addContact() {
 		id: undefined,
 		name: '',
 		phone: '',
+		mobileNumber: '',
 		email: '',
 		remark: ''
 	});

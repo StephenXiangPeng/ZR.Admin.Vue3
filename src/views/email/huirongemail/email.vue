@@ -414,7 +414,20 @@
 								<div class="meta-info">
 									<div class="meta-item">
 										<span class="label">发件人：</span>
-										<span class="value">{{ currentEmail.from }}</span>
+										<el-dropdown v-if="senderActionMenuAvailable" trigger="hover"
+											placement="bottom-start" @command="handleSenderActionCommand">
+											<span class="value sender-action-trigger">{{ currentEmail.from }}</span>
+											<template #dropdown>
+												<el-dropdown-menu>
+													<el-dropdown-item command="addContact">添加到客户联系人</el-dropdown-item>
+													<el-dropdown-item command="createCustomer">新建客户</el-dropdown-item>
+												</el-dropdown-menu>
+											</template>
+										</el-dropdown>
+										<span v-else class="value sender-action-trigger sender-action-trigger--plain"
+											@click="handleSenderRegistryClick">
+											{{ currentEmail.from }}
+										</span>
 									</div>
 									<div class="meta-item">
 										<span class="label">收件人：</span>
@@ -883,7 +896,7 @@
 							<span>分类文件夹</span>
 						</div>
 						<el-tree ref="hierarchyTreeRef" :data="hierarchyFolderTree" :props="folderTreeProps"
-							@node-click="handleFolderSelect" node-key="value" highlight-current default-expand-all
+							@node-click="handleFolderSelect" node-key="value" highlight-current
 							class="folder-tree-block">
 							<template #default="{ node, data }">
 								<div class="folder-tree-node">
@@ -1027,6 +1040,57 @@
 				</div>
 			</template>
 		</el-dialog>
+
+		<!-- 发件人：添加到客户联系人 -->
+		<el-dialog v-model="addSenderContactDialogVisible" title="添加到客户联系人" width="520px"
+			:close-on-click-modal="false">
+			<el-form label-width="100px">
+				<el-form-item label="客户">
+					<el-select v-model="addSenderContactForm.customerId" filterable placeholder="请选择客户"
+						style="width: 100%;">
+						<el-option v-for="item in senderCustomerOptions" :key="item.value" :label="item.label"
+							:value="item.value" />
+					</el-select>
+				</el-form-item>
+				<el-form-item label="联系人">
+					<el-input v-model="addSenderContactForm.contactName" placeholder="请输入联系人姓名" />
+				</el-form-item>
+				<el-form-item label="邮箱">
+					<el-input v-model="addSenderContactForm.contactEmail" disabled />
+				</el-form-item>
+			</el-form>
+			<template #footer>
+				<el-button @click="addSenderContactDialogVisible = false">取消</el-button>
+				<el-button type="primary" :loading="senderActionSubmitting" @click="submitAddSenderToContact">
+					确定
+				</el-button>
+			</template>
+		</el-dialog>
+
+		<!-- 发件人：新建客户 -->
+		<el-dialog v-model="createCustomerFromSenderDialogVisible" title="新建客户" width="520px"
+			:close-on-click-modal="false">
+			<el-form label-width="100px">
+				<el-form-item label="客户简称" required>
+					<el-input v-model="createCustomerFromSenderForm.customerAbbreviation" placeholder="请输入客户简称" />
+				</el-form-item>
+				<el-form-item label="客户名称">
+					<el-input v-model="createCustomerFromSenderForm.customerName" placeholder="请输入客户名称" />
+				</el-form-item>
+				<el-form-item label="联系人">
+					<el-input v-model="createCustomerFromSenderForm.contactName" placeholder="请输入联系人姓名" />
+				</el-form-item>
+				<el-form-item label="邮箱">
+					<el-input v-model="createCustomerFromSenderForm.contactEmail" disabled />
+				</el-form-item>
+			</el-form>
+			<template #footer>
+				<el-button @click="createCustomerFromSenderDialogVisible = false">取消</el-button>
+				<el-button type="primary" :loading="senderActionSubmitting" @click="submitCreateCustomerFromSender">
+					确定
+				</el-button>
+			</template>
+		</el-dialog>
 	</div>
 </template>
 
@@ -1045,6 +1109,7 @@ import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import request from '@/utils/request'
 import DOMPurify from 'dompurify'
 import { useRouter } from 'vue-router'
+import useUserStore from '@/store/modules/user'
 import Delta from 'quill-delta'                // ✅ v2 用这个类
 
 
@@ -1108,6 +1173,7 @@ function buildQuotedBlock(mail: {
 }
 // 路由实例
 const router = useRouter()
+const userStore = useUserStore()
 const route = useRoute()
 
 // 防止重复执行自动打开邮件的标志
@@ -3184,6 +3250,7 @@ const openEmailDetail = async (row, preloadedContent?: string) => {
 
 		emailDetailSavedTagIds.value = normalizeTagIdList(EmailTagcheckboxGroup.value)
 		showEmailDetail.value = true
+		await refreshSenderRegistryStatus()
 	} catch (error) {
 		console.error('打开邮件详情失败:', error)
 		ElMessage.error(error?.message || '加载邮件详情失败')
@@ -4123,6 +4190,411 @@ const GetEmailContract = async () => {
 const validateEmail = (email: string) => {
 	const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 	return emailRegex.test(email)
+}
+
+const contactPersonEmailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
+const normalizeContactEmail = (email: string) => (email || '').trim().toLowerCase()
+
+/** 从详情发件人字段解析姓名与邮箱 */
+const parseSenderFromCurrentEmail = () => {
+	const raw = (currentEmail.value?.from || EmailModel.fromEmail || '').trim()
+	if (!raw) return { name: '', email: '' }
+
+	const angleMatch = raw.match(/^"?([^"<]*)"?\s*<([^>]+)>$/)
+	if (angleMatch) {
+		const email = angleMatch[2].trim()
+		const name = (angleMatch[1] || '').trim() || GetFromEmailName(raw) || email
+		return { name, email }
+	}
+
+	const emailMatch = raw.match(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/)
+	if (emailMatch) {
+		return {
+			name: GetFromEmailName(raw) || emailMatch[1],
+			email: emailMatch[1]
+		}
+	}
+
+	return { name: raw, email: '' }
+}
+
+const addSenderContactDialogVisible = ref(false)
+const createCustomerFromSenderDialogVisible = ref(false)
+const senderActionSubmitting = ref(false)
+const senderCustomerOptions = ref<{ value: number | string; label: string }[]>([])
+const addSenderContactForm = reactive({
+	customerId: null as number | string | null,
+	contactName: '',
+	contactEmail: ''
+})
+const createCustomerFromSenderForm = reactive({
+	customerAbbreviation: '',
+	customerName: '',
+	contactName: '',
+	contactEmail: ''
+})
+
+const senderRegistryStatus = reactive({
+	email: '',
+	checked: false,
+	checking: false,
+	contactExists: false,
+	customerExists: false
+})
+
+const senderActionMenuAvailable = computed(() => {
+	if (!senderRegistryStatus.checked || senderRegistryStatus.checking) {
+		return false
+	}
+	return !senderRegistryStatus.contactExists && !senderRegistryStatus.customerExists
+})
+
+const resetSenderRegistryStatus = () => {
+	senderRegistryStatus.email = ''
+	senderRegistryStatus.checked = false
+	senderRegistryStatus.checking = false
+	senderRegistryStatus.contactExists = false
+	senderRegistryStatus.customerExists = false
+}
+
+const queryCustomersByEmail = async (emailAddress: string) => {
+	const response = await request({
+		url: '/CustomerInfoMation/GetCustomerQueryIsDuplicated/GetCustomerQueryIsDuplicatedList',
+		method: 'GET',
+		params: {
+			customerCemail: emailAddress
+		}
+	})
+	if (Array.isArray(response?.data)) {
+		return response.data
+	}
+	return []
+}
+
+const refreshSenderRegistryStatus = async () => {
+	const sender = parseSenderFromCurrentEmail()
+	if (!sender.email || !validateEmail(sender.email)) {
+		resetSenderRegistryStatus()
+		return
+	}
+
+	const normalizedEmail = normalizeContactEmail(sender.email)
+	if (senderRegistryStatus.checking && senderRegistryStatus.email === normalizedEmail) {
+		return
+	}
+
+	senderRegistryStatus.email = normalizedEmail
+	senderRegistryStatus.checking = true
+	senderRegistryStatus.checked = false
+
+	try {
+		const [contactCount, duplicateCustomers] = await Promise.all([
+			getContactPersonCountByEmail(normalizedEmail),
+			queryCustomersByEmail(sender.email)
+		])
+		senderRegistryStatus.contactExists = Number(contactCount) > 0
+		senderRegistryStatus.customerExists = duplicateCustomers.length > 0
+		senderRegistryStatus.checked = true
+	} catch (error) {
+		console.error('检查发件人客户/联系人状态失败:', error)
+		resetSenderRegistryStatus()
+	} finally {
+		senderRegistryStatus.checking = false
+	}
+}
+
+const handleSenderRegistryClick = () => {
+	const sender = parseSenderFromCurrentEmail()
+	if (!sender.email || !validateEmail(sender.email)) {
+		ElMessage.warning('无法识别发件人邮箱')
+		return
+	}
+
+	if (senderRegistryStatus.checking || !senderRegistryStatus.checked) {
+		ElMessage.info('正在检查发件人信息，请稍后再试')
+		return
+	}
+
+	if (senderRegistryStatus.contactExists && senderRegistryStatus.customerExists) {
+		ElMessage.info('该发件人邮箱已存在客户联系人及客户档案')
+		return
+	}
+	if (senderRegistryStatus.contactExists) {
+		ElMessage.info('该发件人邮箱已存在于客户联系人中')
+		return
+	}
+	if (senderRegistryStatus.customerExists) {
+		ElMessage.info('该发件人邮箱已存在客户档案')
+	}
+}
+
+const loadSenderCustomerOptions = async () => {
+	const response = await request({
+		url: 'CustomerInfoMation/GetCustomerDataByUserID/GetSelectCustomerDataByUserID',
+		method: 'GET'
+	})
+	if (response?.code === 200 && Array.isArray(response.data)) {
+		senderCustomerOptions.value = response.data.map(item => ({
+			value: item.dictValue,
+			label: item.dictLabel
+		}))
+		return
+	}
+	throw new Error(response?.msg || '获取客户列表失败')
+}
+
+const getContactPersonCountByEmail = async (emailAddress: string) => {
+	const response = await request({
+		url: 'CustomerInfoMation/GetContactPersonCountByEmailAddress/GetContactPersonCount',
+		method: 'GET',
+		params: { EmailAddress: emailAddress }
+	})
+	if (response?.code === 200) {
+		return response.data
+	}
+	throw new Error(response?.msg || '验证联系人邮箱失败')
+}
+
+const fetchCustomerInfoById = async (customerId: number | string) => {
+	const response = await request({
+		url: 'CustomerInfoMation/getCustomerInfoByID/GetCustomerInfo',
+		method: 'GET',
+		params: { ID: customerId }
+	})
+	const customerData = response?.data ?? response
+	if (!customerData?.id && customerData?.id !== 0) {
+		throw new Error(response?.msg || '获取客户信息失败')
+	}
+	return customerData
+}
+
+const mapContactPersonForSave = (person: any) => ({
+	id: person.id,
+	name: person.name || '',
+	sex: person.sex ?? '2',
+	position: person.position || '',
+	telePhone: person.telePhone || person.telephone || '',
+	cellPhone: person.cellPhone || person.cellphone || '',
+	fax: person.fax || '',
+	email: person.email || ''
+})
+
+const buildCustomerInfoForSave = (customerData: any) => ({
+	id: customerData.id,
+	customerNo: customerData.customerNo || '',
+	customerStatus: customerData.customerStatus ?? 0,
+	customerLevel: customerData.customerLevel ?? 0,
+	customerAbbreviation: customerData.customerAbbreviation || '',
+	customerName: customerData.customerName || '',
+	tradingCountry: customerData.tradingCountry ?? 0,
+	compantWebsite: customerData.compantWebsite || '',
+	customerSource: customerData.customerSource ?? 0,
+	businessScope: customerData.businessScope ?? 0,
+	pricingTerm: customerData.pricingTerm ?? 0,
+	settlementWay: customerData.settlementWay ?? 0,
+	collectionPeriod: customerData.collectionPeriod ?? 0,
+	customerTaxNumber: customerData.customerTaxNumber || '',
+	salesPerson: customerData.salesPerson ?? userStore.userId ?? 0,
+	address1: customerData.address1 || '',
+	customerPhoto: customerData.customerPhoto || '',
+	remark: customerData.remark || '',
+	IsDraft: 0,
+	isDelete: customerData.isDelete ?? 0
+})
+
+const assertPotentialCanAddCustomer = async () => {
+	const response = await request({
+		url: 'CustomerInfoMation/GetCustomerLimitStatus/GetCustomerLimitStatus',
+		method: 'GET'
+	})
+	if (response?.code !== 200) {
+		throw new Error(response?.msg || '获取客户数量上限失败')
+	}
+	const lim = response.data
+	const potential = lim?.Potential ?? lim?.potential
+	const canAdd = potential?.CanAdd ?? potential?.canAdd
+	if (!canAdd) {
+		const c = potential?.Count ?? potential?.count
+		const l = potential?.Limit ?? potential?.limit
+		throw new Error(`潜在客户数量已达上限（${c}/${l}），无法新增客户档案`)
+	}
+}
+
+const fetchNextCustomerNo = async () => {
+	const response = await request({
+		url: 'CustomerInfoMation/GetNextCustomerNo/GetNextCustomerNo',
+		method: 'GET'
+	})
+	if (String(response?.code) === '200' || response?.code === 200) {
+		return response.data
+	}
+	throw new Error(response?.msg || '获取客户编号失败')
+}
+
+const handleSenderActionCommand = async (command: string) => {
+	const sender = parseSenderFromCurrentEmail()
+	if (!sender.email || !validateEmail(sender.email)) {
+		ElMessage.warning('无法识别发件人邮箱')
+		return
+	}
+
+	await refreshSenderRegistryStatus()
+	if (senderRegistryStatus.contactExists || senderRegistryStatus.customerExists) {
+		handleSenderRegistryClick()
+		return
+	}
+
+	if (command === 'addContact') {
+		try {
+			addSenderContactForm.customerId = null
+			addSenderContactForm.contactName = sender.name
+			addSenderContactForm.contactEmail = sender.email
+			await loadSenderCustomerOptions()
+			addSenderContactDialogVisible.value = true
+		} catch (error: any) {
+			ElMessage.error(error?.message || '加载客户列表失败')
+		}
+		return
+	}
+
+	if (command === 'createCustomer') {
+		createCustomerFromSenderForm.customerAbbreviation = sender.name || sender.email.split('@')[0]
+		createCustomerFromSenderForm.customerName = sender.name || ''
+		createCustomerFromSenderForm.contactName = sender.name
+		createCustomerFromSenderForm.contactEmail = sender.email
+		createCustomerFromSenderDialogVisible.value = true
+	}
+}
+
+const submitAddSenderToContact = async () => {
+	if (!addSenderContactForm.customerId) {
+		ElMessage.warning('请选择客户')
+		return
+	}
+	if (!addSenderContactForm.contactName?.trim()) {
+		ElMessage.warning('请输入联系人姓名')
+		return
+	}
+	const email = normalizeContactEmail(addSenderContactForm.contactEmail)
+	if (!contactPersonEmailRegex.test(email)) {
+		ElMessage.warning('联系人邮箱格式不正确')
+		return
+	}
+
+	senderActionSubmitting.value = true
+	try {
+		const count = await getContactPersonCountByEmail(email)
+		if (Number(count) > 0) {
+			ElMessage.warning('该邮箱已存在于客户联系人中')
+			return
+		}
+
+		const customerData = await fetchCustomerInfoById(addSenderContactForm.customerId)
+		const existingContacts = Array.isArray(customerData.contactPerson)
+			? customerData.contactPerson.map(mapContactPersonForSave)
+			: []
+
+		const response = await request.post('CustomerInfoMation/EditCustomerInfo/Edit', {
+			customerInfo: buildCustomerInfoForSave(customerData),
+			contactPeople: [
+				...existingContacts,
+				{
+					name: addSenderContactForm.contactName.trim(),
+					sex: '2',
+					position: '',
+					telePhone: '',
+					cellPhone: '',
+					fax: '',
+					email
+				}
+			]
+		})
+
+		if (response?.code === 200 || response != null) {
+			ElMessage.success(response?.msg || '已添加到客户联系人')
+			addSenderContactDialogVisible.value = false
+		} else {
+			ElMessage.error(response?.msg || '添加失败')
+		}
+	} catch (error: any) {
+		console.error('添加到客户联系人失败:', error)
+		ElMessage.error(error?.message || '添加到客户联系人失败')
+	} finally {
+		senderActionSubmitting.value = false
+	}
+}
+
+const submitCreateCustomerFromSender = async () => {
+	if (!createCustomerFromSenderForm.customerAbbreviation?.trim()) {
+		ElMessage.warning('请输入客户简称')
+		return
+	}
+	if (!createCustomerFromSenderForm.contactName?.trim()) {
+		ElMessage.warning('请输入联系人姓名')
+		return
+	}
+	const email = normalizeContactEmail(createCustomerFromSenderForm.contactEmail)
+	if (!contactPersonEmailRegex.test(email)) {
+		ElMessage.warning('联系人邮箱格式不正确')
+		return
+	}
+
+	senderActionSubmitting.value = true
+	try {
+		await assertPotentialCanAddCustomer()
+		const count = await getContactPersonCountByEmail(email)
+		if (Number(count) > 0) {
+			ElMessage.warning('该邮箱已存在于客户联系人中')
+			return
+		}
+
+		const customerNo = await fetchNextCustomerNo()
+		const response = await request.post('CustomerInfoMation/AddCustomerInfo/Add', {
+			customerInfo: {
+				id: 0,
+				customerNo,
+				customerStatus: 0,
+				customerLevel: 0,
+				customerAbbreviation: createCustomerFromSenderForm.customerAbbreviation.trim(),
+				customerName: createCustomerFromSenderForm.customerName?.trim() || createCustomerFromSenderForm.customerAbbreviation.trim(),
+				tradingCountry: 0,
+				compantWebsite: '',
+				customerSource: 0,
+				businessScope: 0,
+				pricingTerm: 0,
+				settlementWay: 0,
+				collectionPeriod: 0,
+				customerTaxNumber: '',
+				salesPerson: userStore.userId,
+				address1: '',
+				customerPhoto: '',
+				remark: '',
+				IsDraft: 0,
+				isDelete: 0
+			},
+			contactPeople: [{
+				name: createCustomerFromSenderForm.contactName.trim(),
+				sex: '2',
+				position: '',
+				telePhone: '',
+				cellPhone: '',
+				fax: '',
+				email
+			}]
+		})
+
+		if (response?.code === 200 || response != null) {
+			ElMessage.success(response?.msg || '新建客户成功')
+			createCustomerFromSenderDialogVisible.value = false
+		} else {
+			ElMessage.error(response?.msg || '新建客户失败')
+		}
+	} catch (error: any) {
+		console.error('新建客户失败:', error)
+		ElMessage.error(error?.message || '新建客户失败')
+	} finally {
+		senderActionSubmitting.value = false
+	}
 }
 
 // 辅助函数：将邮箱字符串转换为数组
@@ -6101,6 +6573,25 @@ watch(emailFolders, () => {
 
 	.value {
 		color: #666;
+	}
+
+	.sender-action-trigger {
+		cursor: pointer;
+		color: var(--el-color-primary);
+		transition: opacity 0.2s ease;
+
+		&:hover {
+			text-decoration: underline;
+			opacity: 0.85;
+		}
+	}
+
+	.sender-action-trigger--plain {
+		color: #666;
+
+		&:hover {
+			color: var(--el-color-primary);
+		}
 	}
 }
 

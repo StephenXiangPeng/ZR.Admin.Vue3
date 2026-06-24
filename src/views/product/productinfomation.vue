@@ -35,26 +35,29 @@
 			</div>
 
 			<!-- 产品分类侧边栏 -->
-			<div style="display: flex;">
-				<div
-					style="width: 400px; border-right: 1px solid #e5e7eb; background: #fafafa; padding: 15px; position: relative; height: 600px; overflow: hidden;">
-					<span style="font-size: 16px; font-weight: bold; color: #333;">产品分类</span>
-					<el-divider style="margin: 10px 0;"></el-divider>
-					<el-tree ref="treeRef" :props="{ label: 'label', children: 'children' }" node-key="id"
-						:default-expanded-keys="[0]" :expand-on-click-node="false" :data="ProductCategoriesTreeData"
-						style="font-size: 14px;" :height="500" @node-click="handleNodeClick"
-						@node-collapse="handleCollapse" @node-contextmenu="handleRightClick" draggable
-						:allow-drop="allowDrop" @node-drag-start="handleDragStart" @node-drag-enter="handleDragEnter"
-						@node-drag-leave="handleDragLeave" @node-drag-end="handleDragEnd" @node-drop="handleDrop">
-						<template #default="{ node }">
-							<span class="prefix" :class="{ 'is-leaf': node.isLeaf }">
-								<el-icon>
-									<Folder />
-								</el-icon>
-							</span>
-							<span>{{ node.label }}</span>
-						</template>
-					</el-tree>
+			<div class="product-main-layout">
+				<div class="product-category-panel">
+					<div class="product-category-panel__header">
+						<span class="product-category-panel__title">产品分类</span>
+						<el-divider style="margin: 10px 0;"></el-divider>
+					</div>
+					<div class="product-category-panel__body">
+						<el-tree ref="treeRef" :props="{ label: 'label', children: 'children' }" node-key="id"
+							:default-expanded-keys="[0]" :expand-on-click-node="false" :data="ProductCategoriesTreeData"
+							class="product-category-tree" @node-click="handleNodeClick"
+							@node-collapse="handleCollapse" @node-contextmenu="handleRightClick" draggable
+							:allow-drop="allowDrop" @node-drag-start="handleDragStart" @node-drag-enter="handleDragEnter"
+							@node-drag-leave="handleDragLeave" @node-drag-end="handleDragEnd" @node-drop="handleDrop">
+							<template #default="{ node }">
+								<span class="prefix" :class="{ 'is-leaf': node.isLeaf }">
+									<el-icon>
+										<Folder />
+									</el-icon>
+								</span>
+								<span>{{ node.label }}</span>
+							</template>
+						</el-tree>
+					</div>
 
 					<!-- 右键菜单 -->
 					<ul v-show="contextMenuVisible"
@@ -85,9 +88,8 @@
 						</li>
 					</ul>
 
-					<!-- 分类管理按钮区域 - 固定在底部 -->
-					<div
-						style="position: absolute; bottom: 15px; left: 15px; right: 15px; background: #fafafa; padding: 10px; border-top: 1px solid #e5e7eb; border-radius: 4px;">
+					<!-- 分类管理按钮 -->
+					<div class="product-category-panel__footer">
 						<div class="category-buttons-container">
 							<el-button type="success" size="small" @click="openAddproductCategoriesMessageBox()"
 								v-if="userId.toString() === '1'" class="category-btn">
@@ -118,13 +120,24 @@
 				</div>
 
 				<!-- 表格区域 -->
-				<div style="flex: 1; padding: 15px;">
+				<div class="product-table-panel">
 					<div class="table-wrapper">
 						<el-table :data="ProductInfoTableData" row-key="id"
+							:max-height="productTableMaxHeight"
 							:tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
 							@sort-change="handleSortChange" style="width: 100%; table-layout: fixed;" stripe
 							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
+							<el-table-column label="产品图片" width="90">
+								<template #default="scope">
+									<el-image v-if="scope.row.productPhotoPath"
+										:src="getFirstImageUrl(scope.row.productPhotoPath)"
+										style="width: 50px; height: 50px; object-fit: cover;"
+										:preview-src-list="getImageUrlList(scope.row.productPhotoPath)"
+										:initial-index="0" fit="cover" :preview-teleported="true">
+									</el-image>
+								</template>
+							</el-table-column>
 							<el-table-column prop="productCode" label="产品编号" width="200" sortable="custom">
 								<template #default="scope">
 									<span>{{ scope.row.productCode }}</span>
@@ -136,16 +149,7 @@
 							<el-table-column prop="englishProductName" label="英文品名" width="200"></el-table-column>
 							<el-table-column prop="chineseSpecification" label="中文规格" width="200"></el-table-column>
 							<el-table-column prop="unitOfMeasurement" label="计量单位" width="90"></el-table-column>
-							<el-table-column label="产品图片" width="90">
-								<template #default="scope">
-									<el-image v-if="scope.row.productPhotoPath"
-										:src="getFirstImageUrl(scope.row.productPhotoPath)"
-										style="width: 50px; height: 50px; object-fit: cover;"
-										:preview-src-list="getImageUrlList(scope.row.productPhotoPath)"
-										:initial-index="0" fit="cover" :preview-teleported="true">
-									</el-image>
-								</template>
-							</el-table-column>
+							
 							<el-table-column label="最近成交" width="110">
 								<template #default="scope">
 									{{ formatDate(scope.row.recentTransactionDate) }}
@@ -162,10 +166,11 @@
 							</el-table-column>
 						</el-table>
 					</div>
-					<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
-						:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
-						background layout="total, sizes, prev, pager, next, jumper"
-						style="margin-top: 10px; text-align: right;" />
+					<div class="product-table-panel__pagination">
+						<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
+							:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
+							background layout="total, sizes, prev, pager, next, jumper" />
+					</div>
 				</div>
 			</div>
 		</div>
@@ -2151,6 +2156,8 @@ const handleSortChange = (column) => {
 
 //产品信息表格
 const ProductInfoTableData = ref([])
+// 主列表高度：视口减去顶栏/搜索/分页等占用，表格 body 内部滚动
+const productTableMaxHeight = 'calc(100vh - 306px)'
 const handlePageChange = async (newPage) => {
 	currentPage.value = newPage;
 	await GetProductInfoList(newPage, pageSize.value);
@@ -3589,6 +3596,80 @@ const EditSaveDraft = async () => {
 	border: 1px solid #ca1818;
 }
 
+/* 产品分类侧边栏 + 列表布局 */
+.product-main-layout {
+	display: flex;
+	height: calc(100vh - 220px);
+	min-height: 480px;
+	overflow: hidden;
+}
+
+.product-category-panel {
+	position: relative;
+	box-sizing: border-box;
+	width: 250px;
+	min-width: 200px;
+	flex-shrink: 0;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	border-right: 1px solid #e5e7eb;
+	background: #fafafa;
+	padding: 15px;
+	overflow: hidden;
+}
+
+.product-category-panel__header {
+	flex-shrink: 0;
+}
+
+.product-category-panel__title {
+	font-size: 16px;
+	font-weight: bold;
+	color: #333;
+}
+
+.product-category-panel__body {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+}
+
+.product-category-tree {
+	font-size: 14px;
+	min-width: 0;
+}
+
+.product-category-panel__footer {
+	flex-shrink: 0;
+	margin-top: 12px;
+	padding-top: 10px;
+	border-top: 1px solid #e5e7eb;
+	background: #fafafa;
+}
+
+.product-table-panel {
+	flex: 1;
+	min-width: 0;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	padding: 15px;
+}
+
+.table-wrapper {
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.product-table-panel__pagination {
+	flex-shrink: 0;
+	margin-top: 10px;
+	text-align: right;
+}
+
 .tree-container {
 	width: 25%;
 }
@@ -3746,6 +3827,19 @@ const EditSaveDraft = async () => {
 .button-text-short {
 	display: none;
 	margin-left: 4px;
+}
+
+/* 分类栏固定 250px，底部按钮始终显示简写 */
+.product-category-panel .button-text {
+	display: none;
+}
+
+.product-category-panel .button-text-short {
+	display: inline;
+}
+
+.product-category-panel .category-buttons-container {
+	gap: 4px;
 }
 
 /* 当分类区域宽度小于350px时，显示简化文字 */
