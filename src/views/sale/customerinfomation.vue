@@ -494,6 +494,7 @@
 		</el-dialog>
 		<el-dialog v-model="CustomerPublicSeaDialog" title="客户公海" :close-on-click-modal="false" style="width: 75%;">
 			<el-table :data="CustomerPublicSeaTableData" style="width: 100%; table-layout: fixed;" stripe
+				@row-dblclick="OpenCustomerProfileDetailDialog"
 				:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 				:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 				<el-table-column prop="customerNo" label="客户编号" width="120" />
@@ -509,9 +510,11 @@
 					</template>
 				</el-table-column>
 				<el-table-column prop="lastbindSalePerson" label="原属业务员" width="120" />
-				<el-table-column fixed="right" label="操作" width="120">
+				<el-table-column fixed="right" label="操作" width="180">
 					<template #default="scope">
-						<el-button link type="primary" size="small" @click="claimPublicSeaCustomer(scope.row)">
+						<el-button link type="primary" size="small"
+							@click.stop="OpenCustomerProfileDetailDialog(scope.row)">查看详情</el-button>
+						<el-button link type="success" size="small" @click.stop="claimPublicSeaCustomer(scope.row)">
 							领取
 						</el-button>
 					</template>
@@ -768,8 +771,8 @@
 								@row-dblclick="handleContactLogRowDblClick"
 								:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 								:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
-								<el-table-column prop="conactTag" label="日志标签" width="130" />
 								<el-table-column prop="emailDate" label="联系日期" width="130" />
+								<el-table-column prop="conactTag" label="日志标签" width="130" />
 								<el-table-column prop="logSouce" label="来源" width="150" />
 								<el-table-column prop="contact" label="联系人" width="180" />
 								<el-table-column prop="ourPersonnel" label="我方人员" width="180" />
@@ -783,10 +786,11 @@
 								<el-table-column prop="contactDetails" label="联系内容" show-overflow-tooltip
 									min-width="120">
 									<template #default="{ row }">
-										<span :class="{ 'contact-content-link': row.logSouce === '邮件记录' }"
-											@dblclick.stop="handleContactContentDblClick(row)">
-											{{ row.contactDetails }}
-										</span>
+										<el-link v-if="row.logSouce === '邮件记录'" type="primary"
+											:underline="false" @click.stop="handleContactContentClick(row)">
+											查看邮件
+										</el-link>
+										<span v-else>{{ row.contactDetails }}</span>
 									</template>
 								</el-table-column>
 								<el-table-column label="图片" width="100">
@@ -1139,7 +1143,9 @@
 					}}
 				</el-descriptions-item>
 				<el-descriptions-item label="联系内容">
-					<div style="white-space: pre-wrap;">{{ selectedContactLog.contactDetails }}</div>
+					<el-link v-if="selectedContactLog.logSouce === '邮件记录'" type="primary"
+						:underline="false" @click="handleContactContentClick(selectedContactLog)">查看邮件</el-link>
+					<div v-else style="white-space: pre-wrap;">{{ selectedContactLog.contactDetails }}</div>
 				</el-descriptions-item>
 				<el-descriptions-item label="图片" v-if="selectedContactLog.images">
 					<el-image style="width: 100px; height: 100px; margin-right: 10px;"
@@ -3654,7 +3660,7 @@ const loadCustomerContactLogs = async (customerId: number, emailaddress: string 
 					// 查找我方人员名称 - 将ID转换为名称
 					let ourStaffName = item.ourPersonnel;
 					if (!isNaN(Number(item.ourPersonnel))) {
-						const staff = state.optionss.sql_hr_sale.find(staff => staff.dictValue === item.ourPersonnel);
+						const staff = state.optionss.sql_hr_sale.find(staff => String(staff.dictValue) === String(item.ourPersonnel));
 						if (staff) {
 							ourStaffName = staff.dictLabel;
 						}
@@ -4086,8 +4092,8 @@ const handleContactLogRowDblClick = (row) => {
 	contactLogDetailDialogVisible.value = true
 }
 
-// 联系内容列双击：来源为邮件记录时跳转邮件页面并打开该邮件
-const handleContactContentDblClick = (row: ContactLog) => {
+// 联系内容中的邮件链接：跳转邮件页面并打开该邮件
+const handleContactContentClick = (row: ContactLog) => {
 	if (row.logSouce === '邮件记录') {
 		const emailID = row.emailID ?? row.relatedDocumentID
 		if (emailID) {
@@ -4262,11 +4268,6 @@ const CustomerSendSampleHandleSizeChange = async (size) => {
 	line-height: 1.25;
 	padding-top: 1px !important;
 	padding-bottom: 1px !important;
-}
-
-/* 联系日志中邮件记录的联系内容可双击跳转，显示手型 */
-.contact-content-link {
-	cursor: pointer;
 }
 
 /* 客户信息页面dialog中的表单组件间距减少一半，与销售合同页面保持一致 */

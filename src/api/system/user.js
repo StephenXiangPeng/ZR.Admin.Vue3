@@ -129,3 +129,30 @@ export function importTemplate() {
     responseType: 'blob' //1.首先设置responseType对象格式为 blob:
   })
 }
+
+// 初始化二次验证绑定
+export function initTwoFactorBind() {
+  return request({
+    url: '/api/auth/2fa/bind/init',
+    method: 'post'
+  })
+}
+
+// 确认二次验证绑定
+export function confirmTwoFactorBind(data) {
+  return request({
+    url: '/api/auth/2fa/bind/confirm',
+    method: 'post',
+    data,
+    skipErrorMessage: true
+  })
+}
+
+// 管理员重置用户二次验证
+export function resetUserTwoFactor(userId) {
+  return request({
+    url: '/system/user/reset2fa',
+    method: 'put',
+    data: { userId }
+  })
+}

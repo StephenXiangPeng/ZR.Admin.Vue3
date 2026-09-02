@@ -1,13 +1,13 @@
 import request from '@/utils/request'
 
 // 登录方法
-export function login(username, password, code, uuid, clientId) {
+export function login(username, password, code, uuid, deviceId) {
   const data = {
     username,
     password,
     code,
     uuid,
-    clientId
+    deviceId
   }
   return request({
     url: '/login',
@@ -16,6 +16,16 @@ export function login(username, password, code, uuid, clientId) {
     headers: {
       userName: username
     }
+  })
+}
+
+// 登录二次验证
+export function verifyTwoFactor(data) {
+  return request({
+    url: '/api/auth/2fa/verify',
+    method: 'post',
+    data,
+    skipErrorMessage: true
   })
 }
 

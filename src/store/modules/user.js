@@ -1,5 +1,6 @@
-import { login, logout, getInfo, oauthCallback } from '@/api/system/login'
+import { login, logout, getInfo, oauthCallback, verifyTwoFactor } from '@/api/system/login'
 import { getToken, setToken, removeToken } from '@/utils/auth'
+import { getOrCreateDeviceId } from '@/utils/device'
 import defAva from '@/assets/images/profile.jpg'
 import cache from '@/plugins/cache'
 import md5 from 'crypto-js/md5'
@@ -21,29 +22,56 @@ const useUserStore = defineStore('user', {
     setAuthSource(source) {
       this.authSource = source
     },
+    saveToken(token) {
+      setToken(token)
+      this.token = token
+    },
     // 登录
     login(userInfo) {
       const username = encodeURIComponent(userInfo.username.trim())
       const password = md5(userInfo.password).toString()
       const code = userInfo.code
       const uuid = userInfo.uuid
-      const clientId = this.clientId
+      const deviceId = getOrCreateDeviceId()
 
       return new Promise((resolve, reject) => {
-        login(username, password, code, uuid, clientId)
+        login(username, password, code, uuid, deviceId)
           .then((res) => {
             if (res.code == 200) {
-              setToken(res.data)
-              this.token = res.data
-              resolve() //then处理
+              if (res.data && res.data.needTwoFactor === true) {
+                resolve(res.data)
+              } else if (typeof res.data === 'string' && res.data) {
+                this.saveToken(res.data)
+                resolve(res.data)
+              } else {
+                reject({ msg: '登录响应数据无效' })
+              }
             } else {
-              console.log('login error ', res)
               reject(res) //catch处理
             }
           })
           .catch((error) => {
             reject(error)
           })
+      })
+    },
+    // 登录二次验证
+    verifyTwoFactorLogin(twoFactorToken, code) {
+      return new Promise((resolve, reject) => {
+        verifyTwoFactor({
+          twoFactorToken,
+          code,
+          deviceId: getOrCreateDeviceId()
+        })
+          .then((res) => {
+            if (res.code == 200 && typeof res.data === 'string' && res.data) {
+              this.saveToken(res.data)
+              resolve(res.data)
+            } else {
+              reject(res)
+            }
+          })
+          .catch(reject)
       })
     },
     /**

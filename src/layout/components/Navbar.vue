@@ -28,9 +28,9 @@
         </span>
         <template #dropdown>
           <el-dropdown-menu>
-            <!-- <router-link to="/user/profile">
+            <router-link to="/user/profile">
               <el-dropdown-item>{{ $t('layout.personalCenter') }}</el-dropdown-item>
-            </router-link> -->
+            </router-link>
             <el-dropdown-item command="setLayout">
               <span>{{ $t('layout.layoutSetting') }}</span>
             </el-dropdown-item>

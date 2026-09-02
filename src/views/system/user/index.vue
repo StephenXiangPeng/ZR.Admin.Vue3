@@ -111,7 +111,7 @@
           </el-table-column>
           <el-table-column prop="email" label="用户邮箱" align="center" v-if="columns.showColumn('email')" />
           <el-table-column prop="loginDate" label="最后登录时间" align="center" v-if="columns.showColumn('loginDate')" />
-          <el-table-column label="操作" align="center" width="110" class-name="small-padding fixed-width">
+          <el-table-column label="操作" align="center" width="150" class-name="small-padding fixed-width">
             <template #default="scope">
               <el-button v-if="scope.row.userId !== 1" text icon="Edit" @click="handleUpdate(scope.row)"
                 v-hasPermi="['system:user:edit']">
@@ -121,6 +121,8 @@
               </el-button>
               <el-button v-if="scope.row.userId !== 1" text icon="Key" title="重置密码" @click="handleResetPwd(scope.row)"
                 v-hasPermi="['system:user:resetPwd']"></el-button>
+              <el-button v-if="scope.row.userId !== 1" text icon="RefreshLeft" title="重置二次验证"
+                @click="handleResetTwoFactor(scope.row)" v-hasPermi="['system:user:reset2fa']"></el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -306,7 +308,17 @@
 <script setup name="user">
 import { getToken } from '@/utils/auth'
 import { treeselect } from '@/api/system/dept'
-import { changeUserStatus, listUser, resetUserPwd, delUser, getUser, updateUser, addUser, exportUser } from '@/api/system/user'
+import {
+  changeUserStatus,
+  listUser,
+  resetUserPwd,
+  resetUserTwoFactor,
+  delUser,
+  getUser,
+  updateUser,
+  addUser,
+  exportUser
+} from '@/api/system/user'
 import request from '@/utils/request'
 
 const { proxy } = getCurrentInstance()
@@ -531,6 +543,17 @@ function handleResetPwd(row) {
       resetUserPwd(row.userId, value).then((response) => {
         proxy.$modal.msgSuccess('修改成功，新密码是：' + value)
       })
+    })
+    .catch(() => { })
+}
+/** 重置二次验证按钮操作 */
+function handleResetTwoFactor(row) {
+  proxy.$modal
+    .confirm('确定要重置该用户的二次验证吗？重置后，该用户需要重新绑定验证器。')
+    .then(() => resetUserTwoFactor(row.userId))
+    .then(() => {
+      proxy.$modal.msgSuccess('二次验证已重置')
+      getList()
     })
     .catch(() => { })
 }

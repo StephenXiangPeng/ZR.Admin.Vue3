@@ -44,9 +44,9 @@
 					<div class="product-category-panel__body">
 						<el-tree ref="treeRef" :props="{ label: 'label', children: 'children' }" node-key="id"
 							:default-expanded-keys="[0]" :expand-on-click-node="false" :data="ProductCategoriesTreeData"
-							class="product-category-tree" @node-click="handleNodeClick"
-							@node-collapse="handleCollapse" @node-contextmenu="handleRightClick" draggable
-							:allow-drop="allowDrop" @node-drag-start="handleDragStart" @node-drag-enter="handleDragEnter"
+							class="product-category-tree" @node-click="handleNodeClick" @node-collapse="handleCollapse"
+							@node-contextmenu="handleRightClick" draggable :allow-drop="allowDrop"
+							@node-drag-start="handleDragStart" @node-drag-enter="handleDragEnter"
 							@node-drag-leave="handleDragLeave" @node-drag-end="handleDragEnd" @node-drop="handleDrop">
 							<template #default="{ node }">
 								<span class="prefix" :class="{ 'is-leaf': node.isLeaf }">
@@ -122,7 +122,7 @@
 				<!-- 表格区域 -->
 				<div class="product-table-panel">
 					<div class="table-wrapper">
-						<el-table :data="ProductInfoTableData" row-key="id"
+						<el-table class="customer-info-table" :data="ProductInfoTableData" row-key="id"
 							:max-height="productTableMaxHeight"
 							:tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
 							@sort-change="handleSortChange" style="width: 100%; table-layout: fixed;" stripe
@@ -138,7 +138,7 @@
 									</el-image>
 								</template>
 							</el-table-column>
-							<el-table-column prop="productCode" label="产品编号" width="200" sortable="custom">
+							<el-table-column prop="productCode" label="产品编号" width="110" sortable="custom">
 								<template #default="scope">
 									<span>{{ scope.row.productCode }}</span>
 									<el-tag v-if="scope.row.isDraft" type="warning" style="margin-left: 5px;"
@@ -149,13 +149,13 @@
 							<el-table-column prop="englishProductName" label="英文品名" width="200"></el-table-column>
 							<el-table-column prop="chineseSpecification" label="中文规格" width="200"></el-table-column>
 							<el-table-column prop="unitOfMeasurement" label="计量单位" width="90"></el-table-column>
-							
+
 							<el-table-column label="最近成交" width="110">
 								<template #default="scope">
 									{{ formatDate(scope.row.recentTransactionDate) }}
 								</template>
 							</el-table-column>
-							<el-table-column fixed="right" label="操作" width="200">
+							<el-table-column fixed="right" label="操作" width="180">
 								<template #default="scope">
 									<el-button link type="primary" size="small" v-if="!scope.row.isSubProduct"
 										@click="OpenProductInfoDetailDialog(scope.row)">查看详情</el-button>
@@ -168,165 +168,59 @@
 					</div>
 					<div class="product-table-panel__pagination">
 						<el-pagination @current-change="handlePageChange" @size-change="handleSizeChange"
-							:current-page="currentPage" :page-size="pageSize" :total="totalItems" :page-sizes="[10, 20, 30, 50]"
-							background layout="total, sizes, prev, pager, next, jumper" />
+							:current-page="currentPage" :page-size="pageSize" :total="totalItems"
+							:page-sizes="[10, 20, 30, 50]" background
+							layout="total, sizes, prev, pager, next, jumper" />
 					</div>
 				</div>
 			</div>
 		</div>
-		<el-dialog :modal="false" :modal-penetrable="true" v-model="AddProductDialog" title="添加产品"
-			:close-on-click-modal=false style="width: 70%;" @close="closeAddProductDialog()">
-			<span style="font-size: 20px; font-weight: bold;">基本信息</span>
-			<el-divider></el-divider>
+		<el-dialog class="product-info-dialog" :modal="false" :modal-penetrable="true" v-model="AddProductDialog"
+			title="添加产品" :close-on-click-modal=false width="92%" @close="closeAddProductDialog()">
 			<el-form ref="ProductformRef" :rules="ProductformRules" :model="Productform" label-width="120px"
-				:show-message="false">
-				<el-row>
-					<el-col :span="6">
-						<el-form-item label="产品编号" prop="productCode" data-field="productCode">
-							<el-input v-model="Productform.productCode" :disabled="isDisabled" placeholder="请输入产品编号"
-								style="width: 300px;" ref="productCodeInput" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="客户货号" prop="customerGoodsNumber" data-field="customerGoodsNumber">
-							<el-input v-model="Productform.customerGoodsNumber" :disabled="isDisabled"
-								placeholder="请输入客户货号" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="产品条码" data-field="productBarcode">
-							<el-input v-model="Productform.productBarcode" :disabled="isDisabled" placeholder="请输入产品条码"
-								style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="计量单位" prop="unit" data-field="unit">
-							<el-select v-model="Productform.unit" :disabled="isDisabled" placeholder="请选择计量单位"
-								style="width: 300px;" size="default" clearable>
-								<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue" />
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="6">
-						<el-form-item label="中文品名" prop="chineseProductName" data-field="chineseProductName">
-							<el-input v-model="Productform.chineseProductName" :disabled="isDisabled"
-								placeholder="请输入中文品名" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="英文品名" prop="englishProductName" data-field="englishProductName">
-							<el-input v-model="Productform.englishProductName" :disabled="isDisabled"
-								placeholder="请输入英文品名" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="中文规格" prop="chineseSpecification" data-field="chineseSpecification">
-							<el-input v-model="Productform.chineseSpecification" :disabled="isDisabled"
-								placeholder="请输入中文规格" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="英文规格" data-field="englishSpecification">
-							<el-input v-model="Productform.englishSpecification" :disabled="isDisabled"
-								placeholder="请输入英文规格" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="6">
-						<el-form-item label="海关编码" prop="customsCode" data-field="customsCode">
-							<el-input v-model="Productform.customsCode" :disabled="isDisabled" placeholder="请输入海关编码"
-								style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="报关中文品名" prop="chineseDeclarationProductName"
-							data-field="chineseDeclarationProductName">
-							<el-input v-model="Productform.chineseDeclarationProductName" :disabled="isDisabled"
-								placeholder="请输入报关中文品名" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="报关英文品名" prop="englishDeclarationProductName"
-							data-field="englishDeclarationProductName">
-							<el-input v-model="Productform.englishDeclarationProductName" :disabled="isDisabled"
-								placeholder="请输入报关英文品名" style="width: 300px;" size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="商检标志" prop="inspectionMark" data-field="inspectionMark">
-							<el-select v-model="Productform.inspectionMark" :disabled="isDisabled" placeholder="选择商检标志"
-								style="width: 300px;" size="default" clearable>
-								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="6">
-						<el-form-item label="包装方式" prop="PackingMethod">
-							<el-select v-model="Productform.PackingMethod" :disabled="isDisabled" placeholder="选择包装方式"
-								style="width: 300px;" size="default" clearable>
-								<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="所属供应商" prop="Supplier">
-							<el-select v-model="Productform.Supplier" multiple clearable filterable
-								:disabled="isDisabled" placeholder="选择供应商" style="width: 300px;" size="default">
-								<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="库存数量">
-							<el-input v-model="Productform.stockQuantity" disabled placeholder="" style="width: 300px;"
-								size="default" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="6">
-						<el-form-item label="开发人员">
-							<el-select v-model="Productform.developmentPersonnel" placeholder="" :disabled="isDisabled"
-								style="width: 300px;" size="default" clearable>
-								<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
-									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-							</el-select>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="6">
-						<el-form-item label="所属分类" prop="ProductCategories">
-							<el-cascader v-model="Productform.ProductCategories" :disabled="isDisabled"
-								:options="Productoptions" :props="props1" clearable style="width: 300px;" size="default"
-								@change="handleCategoryChange" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="16">
-						<el-form-item label="产品照片">
-							<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="fileList"
-								:limit="3" :disabled="fileList.length >= 3" @change="handleChange" :action="UploadUrl"
-								:data="formData">
+				:show-message="false" @submit.prevent>
+				<div class="basic-info-section">
+					<div class="basic-info-header">基本信息</div>
+					<div class="basic-info-body">
+						<div class="basic-info-photo"
+							:class="{ 'is-empty': !previewProductImageUrl, 'is-readonly': isDisabled }">
+							<div class="basic-info-photo__box">
+								<button v-if="fileList.length > 1" type="button" class="basic-info-photo__nav is-prev"
+									@click.stop="prevProductImage">
+									<el-icon>
+										<ArrowLeft />
+									</el-icon>
+								</button>
+								<el-image v-if="previewProductImageUrl" class="basic-info-photo__image"
+									:src="previewProductImageUrl" fit="contain"
+									:preview-src-list="productImagePreviewList" :initial-index="currentPreviewIndex"
+									preview-teleported />
+								<div v-else class="basic-info-photo__placeholder">暂无图片</div>
+								<button v-if="fileList.length > 1" type="button" class="basic-info-photo__nav is-next"
+									@click.stop="nextProductImage">
+									<el-icon>
+										<ArrowRight />
+									</el-icon>
+								</button>
+							</div>
+							<el-upload class="basic-info-photo__upload" list-type="picture-card" :auto-upload="false"
+								v-model:file-list="fileList" :limit="3" :disabled="isDisabled || fileList.length >= 3"
+								@change="handleChange" :action="UploadUrl" :data="formData">
 								<el-icon>
 									<Plus />
 								</el-icon>
 								<template #file="{ file }">
-									<div>
+									<div class="basic-info-photo__thumb"
+										:class="{ 'is-active': isCurrentPreview(file) }"
+										@click="setPreviewByFile(file)">
 										<img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
 										<span class="el-upload-list__item-actions">
 											<span class="el-upload-list__item-preview"
-												@click="handlePictureCardPreview(file)">
+												@click.stop="handlePictureCardPreview(file)">
 												<el-icon><zoom-in /></el-icon>
 											</span>
-											<span v-if="!disabled" class="el-upload-list__item-delete"
-												@click="handleRemove(file)">
+											<span v-if="!disabled && !isDisabled" class="el-upload-list__item-delete"
+												@click.stop="handleRemove(file)">
 												<el-icon>
 													<Delete />
 												</el-icon>
@@ -339,40 +233,130 @@
 								<img style="max-width: 100%; max-height: 100%; width: auto; height: auto;" w-full
 									:src="dialogImageUrl" alt="Preview Image" />
 							</el-dialog>
-						</el-form-item>
-					</el-col>
-				</el-row>
-				<el-row>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="开发时间日期">
-							<el-date-picker v-model="Productform.developmentEventDate" type="date" disabled
-								style=" width: 300px;" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="最近报价">
-							<el-select v-model="Productform.recentQuotation" placeholder="" disabled
-								style="width: 300px;" clearable>
-							</el-select>
-						</el-form-item>
-					</el-col>
-					<el-col :span="8" v-if="false">
-						<el-form-item label="最近成交日期">
-							<el-date-picker v-model="Productform.recentTransactionDate" type="date" disabled
-								placeholder="" style="width: 300px;" />
-						</el-form-item>
-					</el-col>
-					<el-col :span="8">
-						<!-- <el-form-item label="所属分类" prop="ProductCategories">
-							<el-cascader v-model="Productform.ProductCategories" :disabled="isDisabled"
-								:options="Productoptions" :props="props1" clearable style="width: 300px;"
-								@change="handleCategoryChange" />
-						</el-form-item> -->
-					</el-col>
-				</el-row>
-				<span style="font-size: 20px; font-weight: bold;">产品规格</span>
-				<el-divider></el-divider>
-				<el-row>
+						</div>
+
+						<div class="basic-info-form-area">
+							<div class="basic-info-col">
+								<el-form-item label="产品编号" prop="productCode" data-field="productCode">
+									<el-input v-model="Productform.productCode" :disabled="isDisabled"
+										placeholder="请输入产品编号" ref="productCodeInput" size="small" />
+								</el-form-item>
+								<el-form-item label="中文品名" prop="chineseProductName" data-field="chineseProductName">
+									<el-input v-model="Productform.chineseProductName" :disabled="isDisabled"
+										placeholder="请输入中文品名" size="small" />
+								</el-form-item>
+								<el-form-item class="is-multiline" label="中文规格" prop="chineseSpecification"
+									data-field="chineseSpecification">
+									<el-input v-model="Productform.chineseSpecification" type="textarea" :rows="2"
+										:disabled="isDisabled" placeholder="请输入中文规格" size="small" />
+								</el-form-item>
+								<el-form-item label="客户货号" prop="customerGoodsNumber" data-field="customerGoodsNumber">
+									<el-input v-model="Productform.customerGoodsNumber" :disabled="isDisabled"
+										placeholder="请输入客户货号" size="small" />
+								</el-form-item>
+								<el-form-item label="开发人员">
+									<el-select v-model="Productform.developmentPersonnel" placeholder="请选择开发人员"
+										:disabled="isDisabled" clearable size="small">
+										<el-option v-for="dict in optionss.sql_all_user" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+								<el-form-item label="产品条码" data-field="productBarcode">
+									<el-input v-model="Productform.productBarcode" :disabled="isDisabled"
+										placeholder="请输入产品条码" size="small" />
+								</el-form-item>
+							</div>
+
+							<div class="basic-info-col">
+								<el-form-item label="所属分类" prop="ProductCategories">
+									<el-cascader v-model="Productform.ProductCategories" :disabled="isDisabled"
+										:options="Productoptions" :props="props1" clearable size="small"
+										@change="handleCategoryChange" />
+								</el-form-item>
+								<el-form-item label="英文品名" prop="englishProductName" data-field="englishProductName">
+									<el-input v-model="Productform.englishProductName" :disabled="isDisabled"
+										placeholder="请输入英文品名" size="small" />
+								</el-form-item>
+								<el-form-item class="is-multiline" label="英文规格" data-field="englishSpecification">
+									<el-input v-model="Productform.englishSpecification" type="textarea" :rows="2"
+										:disabled="isDisabled" placeholder="请输入英文规格" size="small" />
+								</el-form-item>
+								<el-form-item label="产品克重">
+									<el-input v-model="Productform.productweight" :disabled="isDisabled"
+										placeholder="请输入产品克重" size="small" />
+								</el-form-item>
+								<el-form-item label="开发时间">
+									<el-date-picker v-model="Productform.developmentEventDate" type="date"
+										format="YYYY / MM / DD" :disabled="isDisabled" placeholder="请选择开发时间"
+										size="small" style="width: 100%;" />
+								</el-form-item>
+								<el-form-item label="最近成交">
+									<el-date-picker v-model="Productform.recentTransactionDate" type="date"
+										format="YYYY / MM / DD" :disabled="isDisabled" placeholder="请选择最近成交"
+										size="small" style="width: 100%;" />
+								</el-form-item>
+							</div>
+
+							<div class="basic-info-col basic-info-col--wide-label">
+								<el-form-item label="报关中文品名" prop="chineseDeclarationProductName"
+									data-field="chineseDeclarationProductName">
+									<el-input v-model="Productform.chineseDeclarationProductName" :disabled="isDisabled"
+										placeholder="请输入报关中文品名" size="small" />
+								</el-form-item>
+								<el-form-item label="报关英文品名" prop="englishDeclarationProductName"
+									data-field="englishDeclarationProductName">
+									<el-input v-model="Productform.englishDeclarationProductName" :disabled="isDisabled"
+										placeholder="请输入报关英文品名" size="small" />
+								</el-form-item>
+								<el-form-item label="商检标志" prop="inspectionMark" data-field="inspectionMark">
+									<el-select v-model="Productform.inspectionMark" :disabled="isDisabled"
+										placeholder="选择商检标志" clearable size="small">
+										<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+								<el-form-item label="海关编码" prop="customsCode" data-field="customsCode">
+									<el-input v-model="Productform.customsCode" :disabled="isDisabled"
+										placeholder="请输入海关编码" size="small" />
+								</el-form-item>
+								<el-form-item label="计量单位" prop="unit" data-field="unit">
+									<el-select v-model="Productform.unit" :disabled="isDisabled" placeholder="请选择计量单位"
+										clearable size="small">
+										<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue" />
+									</el-select>
+								</el-form-item>
+								<el-form-item label="所属供应商" prop="Supplier">
+									<el-select v-model="Productform.Supplier" multiple clearable filterable
+										:disabled="isDisabled" placeholder="选择供应商" size="small">
+										<el-option v-for="dict in optionss.sql_supplier_info" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+								<el-form-item label="库存数量" v-if="false">
+									<el-input v-model="Productform.stockQuantity" disabled placeholder="请输入库存数量"
+										size="small" />
+								</el-form-item>
+								<el-form-item label="包装方式" prop="PackingMethod">
+									<el-select v-model="Productform.PackingMethod" :disabled="isDisabled"
+										placeholder="选择包装方式" clearable size="small">
+										<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
+											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
+									</el-select>
+								</el-form-item>
+							</div>
+						</div>
+					</div>
+
+					<div class="basic-info-pack-table">
+						<PackageSpecList ref="packageSpecListRef" :product-id="EditProductID" :disabled="isDisabled"
+							:dicts="optionss" />
+					</div>
+				</div>
+
+				<span style="font-size: 20px; font-weight: bold;" v-if="false">产品规格</span>
+				<el-divider v-if="false"></el-divider>
+				<el-row v-if="false">
 					<el-col :span="24">
 						<el-form-item label="产品描述">
 							<el-input v-model="Productform.productDescription" :disabled="isDisabled"
@@ -380,13 +364,7 @@
 						</el-form-item>
 					</el-col>
 				</el-row>
-				<el-row>
-					<el-col :span="6">
-						<el-form-item label="产品克重">
-							<el-input v-model="Productform.productweight" :disabled="isDisabled" style="width: 300px;"
-								size="default" />
-						</el-form-item>
-					</el-col>
+				<el-row v-if="false">
 					<el-col :span="6">
 						<el-form-item label="中包装量">
 							<el-input v-model="Productform.mediumpackagingvolume" :disabled="isDisabled"
@@ -406,7 +384,7 @@
 						</el-form-item>
 					</el-col>
 				</el-row>
-				<el-row>
+				<el-row v-if="false">
 					<el-col :span="6">
 						<el-form-item label="外箱长度(CM)">
 							<el-input v-model="Productform.outerboxlength" :disabled="isDisabled" style="width: 300px;"
@@ -432,7 +410,7 @@
 						</el-form-item>
 					</el-col>
 				</el-row>
-				<el-row>
+				<el-row v-if="false">
 					<el-col :span="6">
 						<el-form-item label="外箱毛重(KG)">
 							<el-input v-model="Productform.outerboxgrossweight" :disabled="isDisabled"
@@ -444,8 +422,9 @@
 				<el-divider></el-divider>
 				<el-button type="primary" @click="AddSubProduct()"
 					v-if="showAddSubProductButton && (userId.toString() === '1' || userDepartment === 210)"
-					:disabled="isDisabled" size="default">添加子产品</el-button>
-				<el-table :data="SubProductTableData" :max-height="550" style="width: 100%; table-layout: fixed;" stripe
+					:disabled="isDisabled" size="small">添加子产品</el-button>
+				<el-table class="customer-info-table product-dialog-edit-table" :data="SubProductTableData" border
+					:max-height="550" style="width: 100%; table-layout: fixed;" stripe
 					:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 					:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
 					<el-table-column prop="mainProductCode" label="主产品编号" width="150" align="center" v-if="false">
@@ -453,22 +432,22 @@
 							<span>{{ scope.row.mainProductCode }}</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subProductCode" label="产品编号" width="300" align="center">
+					<el-table-column prop="subProductCode" label="产品编号" width="200" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subProductCode" style="max-width:250px" placeholder="请输入产品编号"
-								:disabled="isDisabled">
+							<el-input v-model="scope.row.subProductCode" style="max-width:250px" placeholder="输入产品编号"
+								:disabled="isDisabled" size="small">
 								<template #prepend>{{ Productform.productCode + "-" }}</template>
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subcustomerGoodsNumber" label="客户货号" width="300" align="center">
+					<el-table-column prop="subcustomerGoodsNumber" label="客户货号" width="90" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subcustomerGoodsNumber" style="max-width:200px"
-								:disabled="isDisabled" placeholder="客户货号">
+							<el-input v-model="scope.row.subcustomerGoodsNumber" style="max-width:90px"
+								:disabled="isDisabled" placeholder="客户货号" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subProductFiles" label="子产品附件" width="200" align="center">
+					<el-table-column prop="subProductFiles" label="子产品附件" width="130" align="center">
 						<template #default="scope">
 							<el-upload ref="uploadProductFileRef" class="upload-demo" :auto-upload="false" :limit="3"
 								:show-file-list="true" :file-list="scope.row.productFiles || []"
@@ -476,7 +455,7 @@
 								:on-remove="(file) => handleSubProductFileRemove(file, fileList, scope.$index)"
 								:on-preview="handleFileDownload" :disabled="isDisabled">
 								<template #trigger>
-									<el-button type="primary" icon="Plus" size="default"
+									<el-button type="primary" icon="Plus" size="small"
 										:disabled="isDisabled || (scope.row.productFiles && scope.row.productFiles.length >= 3)"
 										v-if="SelectFileView && (userId.toString() === '1' || userDepartment === 210)">
 										选择附件
@@ -491,7 +470,7 @@
 							</el-upload>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subproductImage" label="产品图片" width="200" align="center">
+					<el-table-column prop="subproductImage" label="产品图片" width="150" align="center">
 						<template #default="scope">
 							<el-upload :id="`upload-${scope.$index}`" ref="uploadRefs" :auto-upload="false"
 								:show-file-list="true" :on-change="(file) => handleImageSelect(file, scope.$index)"
@@ -499,7 +478,7 @@
 								multiple list-type="text" :file-list="scope.row.subproductImages || []">
 								<el-button
 									v-if="!isViewMode && (!scope.row.subproductImages || scope.row.subproductImages.length < 3) && (userId.toString() === '1' || userDepartment === 210)"
-									type="primary" icon="Plus" size="default">
+									type="primary" icon="Plus" size="small">
 									选择图片
 								</el-button>
 								<template #tip>
@@ -511,18 +490,18 @@
 							</el-upload>
 						</template>
 					</el-table-column>
-					<el-table-column prop="previewImages" label="图片预览" width="300" align="center">
+					<el-table-column prop="previewImages" label="图片预览" width="200" align="center">
 						<template #default="scope">
 							<div class="image-preview-container"
 								v-if="scope.row.subproductImages && scope.row.subproductImages.length">
-								<el-button type="text" :icon="ArrowLeft" @click="prevImage(scope.$index)"
+								<el-button type="text" :icon="ArrowLeft" size="small" @click="prevImage(scope.$index)"
 									:disabled="scope.row.currentImageIndex === 0" />
-								<el-image style="width: 150px; height: 150px;"
+								<el-image style="width: 40px; height: 40px;"
 									:src="scope.row.subproductImages[scope.row.currentImageIndex || 0].url"
 									:preview-src-list="scope.row.subproductImages.map(img => img.url)"
 									:initial-index="scope.row.currentImageIndex || 0" fit="cover" preview-teleported
 									@click="openPreview(scope.$index)" />
-								<el-button type="text" :icon="ArrowRight" @click="nextImage(scope.$index)"
+								<el-button type="text" :icon="ArrowRight" size="small" @click="nextImage(scope.$index)"
 									:disabled="scope.row.currentImageIndex === scope.row.subproductImages.length - 1" />
 								<el-button v-if="!isViewMode" type="danger" icon="Delete"
 									@click="deleteCurrentImage(scope.$index)" size="small">删除</el-button>
@@ -530,45 +509,45 @@
 							<span v-else>暂无图片</span>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subproductBarcode" label="产品条码" width="200" align="center">
+					<el-table-column prop="subproductBarcode" label="产品条码" width="100" align="center">
 						<template #default="scope">
 							<el-input v-model="scope.row.subproductBarcode" style="max-width:250px"
-								:disabled="isDisabled" placeholder="请输入子产品条码">
+								:disabled="isDisabled" placeholder="产品条码" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subchineseProductName" label="中文品名" width="200" align="center">
+					<el-table-column prop="subchineseProductName" label="中文品名" width="100" align="center">
 						<template #default="scope">
 							<el-input v-model="scope.row.subchineseProductName" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品中文品名">
+								:disabled="isDisabled" placeholder="中文品名" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subenglishProductName" label="英文品名" width="200" align="center">
+					<el-table-column prop="subenglishProductName" label="英文品名" width="100" align="center">
 						<template #default="scope">
 							<el-input v-model="scope.row.subenglishProductName" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品英文品名">
+								:disabled="isDisabled" placeholder="英文品名" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subchineseSpecification" label="中文规格" width="200" align="center">
+					<el-table-column prop="subchineseSpecification" label="中文规格" width="100" align="center">
 						<template #default="scope">
 							<el-input v-model="scope.row.subchineseSpecification" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品中文规格">
+								:disabled="isDisabled" placeholder="中文规格" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subenglishSpecification" label="英文规格" width="200" align="center">
+					<el-table-column prop="subenglishSpecification" label="英文规格" width="100" align="center">
 						<template #default="scope">
 							<el-input v-model="scope.row.subenglishSpecification" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品英文规格">
+								:disabled="isDisabled" placeholder="英文规格" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subunit" label="计量单位" width="150" align="center">
+					<el-table-column prop="subunit" label="计量单位" width="85" align="center">
 						<template #default="scope">
 							<el-select v-model="scope.row.subunit" :disabled="isDisabled" placeholder="请选择"
-								style="width: 90px;" clearable>
+								style="width: 50px;" clearable size="small">
 								<el-option v-for="dict in optionss.hr_calculate_unit" :key="dict.dictCode"
 									:disabled="isDisabled" :label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -577,7 +556,7 @@
 					<el-table-column prop="subcustomsCode" label="海关编码" width="200" align="center" v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subcustomsCode" style="max-width:200px" :disabled="isDisabled"
-								placeholder="请输入子产品海关编码">
+								placeholder="请输入子产品海关编码" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
@@ -585,7 +564,7 @@
 						v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subchineseDeclarationProductName" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品报关中文品名">
+								:disabled="isDisabled" placeholder="请输入子产品报关中文品名" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
@@ -593,46 +572,46 @@
 						v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subenglishDeclarationProductName" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品报关英文品名">
+								:disabled="isDisabled" placeholder="请输入子产品报关英文品名" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
 					<el-table-column prop="subinspectionMark" label="商检标志" width="120" align="center" v-if="false">
 						<template #default="scope">
 							<el-select v-model="scope.row.subinspectionMark" :disabled="isDisabled" placeholder="请选择"
-								style="width: 90px;" clearable>
+								style="width: 90px;" clearable size="small">
 								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subPackingMethod" label="包装方式" width="130" align="center">
+					<el-table-column prop="subPackingMethod" label="包装方式" width="115" align="center">
 						<template #default="scope">
 							<el-select v-model="scope.row.subPackingMethod" :disabled="isDisabled" placeholder="请选择"
-								style="width: 100px;" clearable>
+								style="width: 80px;" clearable size="small">
 								<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
 						</template>
 					</el-table-column>
-					<el-table-column prop="substockQuantity" label="库存数量" width="200" align="center">
+					<el-table-column prop="substockQuantity" label="库存数量" width="90" align="center">
 						<template #default="scope">
 							<el-input v-model="scope.row.substockQuantity" style="max-width:200px" disabled
-								placeholder="请输入子产品库存数量">
+								placeholder="请输入子产品库存数量" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subdevelopmentEventDate" label="开发时间日期" width="200" align="center">
+					<el-table-column prop="subdevelopmentEventDate" label="开发时间日期" width="135" align="center">
 						<template #default="scope">
 							<el-date-picker v-model="scope.row.subdevelopmentEventDate" type="date" disabled
-								placeholder="请选择" style="width: 140px;" />
+								placeholder="请选择" style="width: 100px;" size="small" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="subrecentRecommendation" label="最近推荐" width="200" align="center"
 						v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subrecentRecommendation" style="max-width:200px" disabled
-								placeholder="请输入子产品最近推荐">
+								placeholder="请输入子产品最近推荐" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
@@ -640,7 +619,7 @@
 						v-if="false">
 						<template #default="scope">
 							<el-select v-model="scope.row.subrecentSampleShipment" disabled placeholder="请选择"
-								style="width: 90px;" clearable>
+								style="width: 90px;" clearable size="small">
 								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -649,7 +628,7 @@
 					<el-table-column prop="subrecentQuotation" label="最近报价" width="150" align="center" v-if="false">
 						<template #default="scope">
 							<el-select v-model="scope.row.subrecentQuotation" placeholder="请选择" style="width: 90px;"
-								clearable>
+								clearable size="small">
 								<el-option v-for="dict in optionss.hr_inspectionmark" :key="dict.dictCode"
 									:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 							</el-select>
@@ -659,106 +638,106 @@
 						v-if="false">
 						<template #default="scope">
 							<el-date-picker v-model="scope.row.subrecentTransactionDate" type="date" placeholder="请选择"
-								style="width: 140px;" />
+								style="width: 140px;" size="small" />
 						</template>
 					</el-table-column>
 					<el-table-column prop="subproductLength" label="产品长度" width="200" align="center" v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subproductLength" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品长度">
+								:disabled="isDisabled" placeholder="请输入子产品长度" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
 					<el-table-column prop="subproductWidth" label="产品宽度" width="200" align="center" v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subproductWidth" style="max-width:200px" :disabled="isDisabled"
-								placeholder="请输入子产品宽度">
+								placeholder="请输入子产品宽度" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
 					<el-table-column prop="subproductHeight" label="产品高度" width="200" align="center" v-if="false">
 						<template #default="scope">
 							<el-input v-model="scope.row.subproductHeight" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品高度">
+								:disabled="isDisabled" placeholder="请输入子产品高度" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subproductWeight" label="产品克重" width="200" align="center">
+					<el-table-column prop="subproductWeight" label="产品克重" width="90" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subproductWeight" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品克重">
+							<el-input v-model="scope.row.subproductWeight" style="max-width:100px"
+								:disabled="isDisabled" placeholder="请输入子产品克重" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="submediumPackagingVolume" label="中包装量" width="200" align="center">
+					<el-table-column prop="submediumPackagingVolume" label="中包装量" width="90" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.submediumPackagingVolume" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品中包装量">
+							<el-input v-model="scope.row.submediumPackagingVolume" style="max-width:100px"
+								:disabled="isDisabled" placeholder="请输入子产品中包装量" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subouterBoxPackingQuantity" label="外箱装量" width="200" align="center">
+					<el-table-column prop="subouterBoxPackingQuantity" label="外箱装量" width="90" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subouterBoxPackingQuantity" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品外箱装量">
+							<el-input v-model="scope.row.subouterBoxPackingQuantity" style="max-width:100px"
+								:disabled="isDisabled" placeholder="请输入子产品外箱装量" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subouterBoxLength" label="外箱长度(CM)" width="200" align="center">
+					<el-table-column prop="subouterBoxLength" label="外箱长度(CM)" width="120" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subouterBoxLength" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品外箱长度"
+							<el-input v-model="scope.row.subouterBoxLength" style="max-width:120px"
+								:disabled="isDisabled" placeholder="请输入子产品外箱长度" size="small"
 								@change="subProductCalculatingOutBoxVolume(scope.$index)">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subouterBoxWidth" label="外箱宽度(CM)" width="200" align="center">
+					<el-table-column prop="subouterBoxWidth" label="外箱宽度(CM)" width="120" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subouterBoxWidth" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品外箱宽度"
+							<el-input v-model="scope.row.subouterBoxWidth" style="max-width:120px"
+								:disabled="isDisabled" placeholder="请输入子产品外箱宽度" size="small"
 								@change="subProductCalculatingOutBoxVolume(scope.$index)">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subouterBoxHeight" label="外箱高度(CM)" width="200" align="center">
+					<el-table-column prop="subouterBoxHeight" label="外箱高度(CM)" width="120" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subouterBoxHeight" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品外箱高度"
+							<el-input v-model="scope.row.subouterBoxHeight" style="max-width:120px"
+								:disabled="isDisabled" placeholder="请输入子产品外箱高度" size="small"
 								@change="subProductCalculatingOutBoxVolume(scope.$index)">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subouterBoxVolume" label="外箱体积(m³)" width="200" align="center">
+					<el-table-column prop="subouterBoxVolume" label="外箱体积(m³)" width="120" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subouterBoxVolume" style="max-width:200px" disabled
-								placeholder="请输入子产品外箱体积">
+							<el-input v-model="scope.row.subouterBoxVolume" style="max-width:120px" disabled
+								placeholder="请输入子产品外箱体积" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subouterBoxNetWeight" label="外箱净重(KG)" width="200" align="center">
+					<el-table-column prop="subouterBoxNetWeight" label="外箱净重(KG)" width="120" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subouterBoxNetWeight" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品外箱净重">
+							<el-input v-model="scope.row.subouterBoxNetWeight" style="max-width:120px"
+								:disabled="isDisabled" placeholder="请输入子产品外箱净重" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column prop="subouterBoxGrossWeight" label="外箱毛重(KG)" width="200" align="center">
+					<el-table-column prop="subouterBoxGrossWeight" label="外箱毛重(KG)" width="120" align="center">
 						<template #default="scope">
-							<el-input v-model="scope.row.subouterBoxGrossWeight" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品外箱毛重">
+							<el-input v-model="scope.row.subouterBoxGrossWeight" style="max-width:120px"
+								:disabled="isDisabled" placeholder="请输入子产品外箱毛重" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
 					<el-table-column prop="subProductRemark" label="备注" width="200" align="center">
 						<template #default="scope">
 							<el-input v-model="scope.row.subProductRemark" style="max-width:200px"
-								:disabled="isDisabled" placeholder="请输入子产品备注">
+								:disabled="isDisabled" placeholder="请输入子产品备注" size="small">
 							</el-input>
 						</template>
 					</el-table-column>
-					<el-table-column label="操作" width="150" align="center" fixed="right">
+					<el-table-column label="操作" width="80" align="center" fixed="right">
 						<template #default="scope">
-							<el-button :disabled="isDisabled" link type="danger"
+							<el-button :disabled="isDisabled" link type="danger" size="small"
 								@click="removeSubProduct(scope.$index)">删除</el-button>
 						</template>
 					</el-table-column>
@@ -768,15 +747,17 @@
 				<el-divider></el-divider>
 				<el-tabs v-model="activeTab" class="demo-tabs">
 					<el-tab-pane label="工厂报价" name="FactoryQuotationTab">
-						<el-table :data="FactoryQuotationTableData" style="width: 100%; table-layout: fixed;" stripe
+						<el-table class="customer-info-table product-dialog-edit-table" border
+							:data="FactoryQuotationTableData" style="width: 100%; table-layout: fixed;" stripe
 							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
 							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
-							<el-table-column prop="update_time" label="报价日期" width="150">
+							<el-table-column prop="productCode" label="产品编号" width="90"></el-table-column>
+							<el-table-column prop="date" label="报价日期" width="105">
 								<template #default="scope">
-									{{ formatDate(scope.row.update_time) }}
+									{{ formatDate(scope.row.date || scope.row.update_time) }}
 								</template>
 							</el-table-column>
-							<el-table-column prop="productImage" label="产品图片" width="150">
+							<el-table-column prop="productImage" label="产品图片" width="85">
 								<template #default="scope">
 									<div v-if="scope.row.productImage">
 										<el-image style="width: 37.8px; height: 37.8px" :src="scope.row.productImage"
@@ -798,73 +779,123 @@
 									</div>
 								</template>
 							</el-table-column>
-							<el-table-column prop="supplierID" label="规格" width="150" v-if="false"></el-table-column>
-							<el-table-column prop="mainMaterials" label="主要材料" width="150"></el-table-column>
-							<el-table-column prop="smallPackagingMethod" label="小包装方式" width="150"></el-table-column>
-							<el-table-column prop="supplierID" label="供应商" width="150">
+							<el-table-column prop="supplierID" label="规格" width="140" v-if="false"></el-table-column>
+							<el-table-column prop="mainMaterials" label="主要材料" width="100"></el-table-column>
+							<el-table-column prop="smallPackagingMethod" label="小包装方式" width="100"></el-table-column>
+							<el-table-column prop="supplierID" label="供应商" width="130">
 								<template #default="scope">
 									{{ getSupplierLabel(scope.row.supplierID) }}
 								</template>
 							</el-table-column>
-							<el-table-column prop="quoteNotes" label="备注" width="150"></el-table-column>
-							<el-table-column prop="moq" label="MOQ" width="150"></el-table-column>
-							<el-table-column prop="negotiateprice" label="议价" width="150"></el-table-column>
-							<el-table-column prop="customMade" label="定制" width="150"></el-table-column>
-							<el-table-column prop="priceTerms" label="价格条款" width="150">
+							<el-table-column prop="quoteNotes" label="备注" width="70"></el-table-column>
+							<el-table-column prop="moq" label="MOQ" width="70"></el-table-column>
+							<el-table-column prop="negotiateprice" label="议价" width="70"></el-table-column>
+							<el-table-column prop="customMade" label="定制" width="70"></el-table-column>
+							<el-table-column prop="priceTerms" label="价格条款" width="100">
 								<template #default="scope">
 									{{ getPriceTermsLabel(scope.row.priceTerms) }}
 								</template>
 							</el-table-column>
-							<el-table-column prop="taxIncluded" label="含税+/-" width="150"></el-table-column>
-							<el-table-column prop="quoteQuantity" label="报价数量" width="150"></el-table-column>
-							<el-table-column prop="price" label="价格" width="150"></el-table-column>
-							<el-table-column prop="productWeight" label="克重" width="150"></el-table-column>
-							<el-table-column prop="outerBoxLength" label="长" width="150"></el-table-column>
-							<el-table-column prop="outerBoxWidth" label="宽" width="150"></el-table-column>
-							<el-table-column prop="outerBoxHeight" label="高" width="150"></el-table-column>
-							<el-table-column prop="outerBoxVolume" label="体积" width="150"></el-table-column>
-							<el-table-column prop="outerBoxGrossWeight" label="毛重" width="150"></el-table-column>
+							<el-table-column prop="taxIncluded" label="含税+/-" width="80"></el-table-column>
+							<el-table-column prop="quoteQuantity" label="报价数量" width="85"></el-table-column>
+							<el-table-column prop="price" label="价格" width="60"></el-table-column>
+							<el-table-column prop="productWeight" label="克重" width="60"></el-table-column>
+							<el-table-column prop="outerBoxLength" label="长" width="50"></el-table-column>
+							<el-table-column prop="outerBoxWidth" label="宽" width="50"></el-table-column>
+							<el-table-column prop="outerBoxHeight" label="高" width="50"></el-table-column>
+							<el-table-column prop="outerBoxVolume" label="体积" width="70"></el-table-column>
+							<el-table-column prop="outerBoxGrossWeight" label="毛重" width="60"></el-table-column>
 						</el-table>
 					</el-tab-pane>
 					<el-tab-pane label="销售历史" name="SaleHistoryTab">
-						<el-table :data="SaleHistoryTableData" style="width: 100%; table-layout: fixed;" stripe
-							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						<el-table class="customer-info-table product-dialog-edit-table" border
+							:data="SaleHistoryTableData" style="width: 100%; table-layout: fixed;" stripe
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold', textAlign: 'center' }"
 							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
-							<el-table-column prop="" label="交货日期" width="150"></el-table-column>
-							<el-table-column prop="" label="客户简称" width="150"></el-table-column>
-							<el-table-column prop="" label="客户货号" width="150"></el-table-column>
-							<el-table-column prop="" label="中文品名" width="150"></el-table-column>
-							<el-table-column prop="" label="合同数量" width="150"></el-table-column>
-							<el-table-column prop="" label="包装方式" width="150"></el-table-column>
-							<el-table-column prop="" label="价格条款" width="150"></el-table-column>
-							<el-table-column prop="" label="销售单价" width="150"></el-table-column>
-							<el-table-column prop="" label="计量单位" width="150"></el-table-column>
-							<el-table-column prop="" label="总金额" width="150"></el-table-column>
-							<el-table-column prop="" label="含税+/-" width="150"></el-table-column>
+							<el-table-column prop="productCode" label="产品编号" width="100"></el-table-column>
+							<el-table-column prop="deliveryDate" label="交货日期" width="105">
+								<template #default="scope">
+									{{ formatDate(scope.row.deliveryDate) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="customerAbbreviation" label="客户简称" min-width="100"
+								show-overflow-tooltip></el-table-column>
+							<el-table-column prop="customerCode" label="客户货号" width="110"
+								show-overflow-tooltip></el-table-column>
+							<el-table-column prop="chineseProductName" label="中文品名" min-width="110"
+								show-overflow-tooltip></el-table-column>
+							<el-table-column prop="englishProductName" label="英文品名" min-width="110"
+								show-overflow-tooltip></el-table-column>
+							<el-table-column prop="chineseSpecification" label="中文规格" min-width="110"
+								show-overflow-tooltip></el-table-column>
+							<el-table-column prop="unitOfMeasurement" label="计量单位" width="90">
+								<template #default="scope">
+									{{ getHistoryDictLabel('hr_calculate_unit', scope.row.unitOfMeasurement) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="packagingMethod" label="包装方式" width="100">
+								<template #default="scope">
+									{{ getHistoryDictLabel('hr_packing', scope.row.packagingMethod) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="salesUnitPrice" label="销售单价" width="90"></el-table-column>
+							<el-table-column prop="priceTerms" label="价格条款" width="100">
+								<template #default="scope">
+									{{ getHistoryDictLabel('hr_pricing_term', scope.row.priceTerms) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="contractQuantity" label="合同数量" width="90"></el-table-column>
+							<el-table-column prop="totalAmount" label="总金额" width="80"></el-table-column>
 						</el-table>
 					</el-tab-pane>
 					<el-tab-pane label="采购历史" name="PurchaseHistoryTab">
-						<el-table :data="PurchaseHistoryTableData" style="width: 100%; table-layout: fixed;" stripe
-							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold' }"
+						<el-table class="customer-info-table product-dialog-edit-table" border
+							:data="PurchaseHistoryTableData" style="width: 100%; table-layout: fixed;" stripe
+							:header-cell-style="{ background: '#d1d5db', color: '#333', fontWeight: 'bold', textAlign: 'center' }"
 							:row-style="{ height: '20px' }" :cell-style="{ padding: '2px 0' }">
-							<el-table-column prop="" label="采购时间" width="150"></el-table-column>
-							<el-table-column prop="" label="采购合同" width="150"></el-table-column>
-							<el-table-column prop="" label="供应商编号" width="150"></el-table-column>
-							<el-table-column prop="" label="供应商简称" width="150"></el-table-column>
-							<el-table-column prop="" label="中文品名" width="150"></el-table-column>
-							<el-table-column prop="" label="合同数量" width="150"></el-table-column>
-							<el-table-column prop="" label="包装方式" width="150"></el-table-column>
-							<el-table-column prop="" label="价格条款" width="150"></el-table-column>
-							<el-table-column prop="" label="采购单价" width="150"></el-table-column>
-							<el-table-column prop="" label="计量单位" width="150"></el-table-column>
-							<el-table-column prop="" label="总金额" width="150"></el-table-column>
-							<el-table-column prop="" label="含税+/-" width="150"></el-table-column>
+							<el-table-column prop="productCode" label="产品编号" width="100"></el-table-column>
+							<el-table-column prop="purchaseDate" label="采购时间" width="105">
+								<template #default="scope">
+									{{ formatDate(scope.row.purchaseDate) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="contractNumber" label="合同编号" width="130"
+								show-overflow-tooltip></el-table-column>
+							<el-table-column prop="supplierAbbreviation" label="供应商简称" min-width="110"
+								show-overflow-tooltip></el-table-column>
+							<el-table-column prop="chineseProductName" label="中文品名" min-width="110"
+								show-overflow-tooltip></el-table-column>
+							<el-table-column prop="chineseSpecification" label="中文规格" min-width="110"
+								show-overflow-tooltip></el-table-column>
+							<el-table-column prop="unitOfMeasurement" label="计量单位" width="90">
+								<template #default="scope">
+									{{ getHistoryDictLabel('hr_calculate_unit', scope.row.unitOfMeasurement) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="packagingMethod" label="包装方式" width="90">
+								<template #default="scope">
+									{{ getHistoryDictLabel('hr_packing', scope.row.packagingMethod) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="purchaseUnitPrice" label="采购单价" width="90"></el-table-column>
+							<el-table-column prop="priceTerms" label="价格条款" width="100">
+								<template #default="scope">
+									{{ getPriceTermsLabel(scope.row.priceTerms) }}
+								</template>
+							</el-table-column>
+							<el-table-column prop="contractQuantity" label="合同数量" width="90"></el-table-column>
+							<el-table-column prop="totalAmount" label="总金额" width="100"></el-table-column>
 						</el-table>
 					</el-tab-pane>
 				</el-tabs>
 			</el-form>
 			<template #footer>
 				<span class="dialog-footer">
+					<span v-if="showSaveBtn && autoSaveStatus" class="auto-save-status">
+						<span class="auto-save-status__dot"></span>
+						<span>{{ autoSaveStatus }}</span>
+						<span class="auto-save-status__countdown">{{ autoSaveCountdown }} 秒后自动保存</span>
+					</span>
 					<el-button type="warning"
 						v-if="showSaveBtn && (userId.toString() === '1' || userDepartment === 210)"
 						@click="SaveProductinfomation(ProductformRef, true)">
@@ -909,17 +940,49 @@ import { Plus, Delete, Edit, Folder, ArrowLeft, ArrowRight, TopRight, Picture } 
 import useUserStore from '@/store/modules/user'
 import { useDict } from '@/utils/dict'
 import request from '@/utils/request'
-import { getInquiryProductHistoryList } from '@/api/product/inquiry'
+import { getFactoryQuotationHistory, getPurchaseHistory, getSalesHistory } from '@/api/product/inquiry'
+import PackageSpecList from './packageSpecList.vue'
+import { addProductPackageSpec, buildProductPackageSpecSavePayload } from '@/api/product/packageSpec'
 import { FormInstance, FormRules, UploadProps, UploadUserFile, UploadRawFile, UploadFile, UploadFiles } from 'element-plus'
 import { ElNotification } from 'element-plus'
 import { use } from 'echarts'
 import { useRouter } from 'vue-router'
 //初始运行钩子
 const router = useRouter()
+const PRODUCT_ADD_DRAFT_KEY = `product-add-auto-draft:${useUserStore().userId}`
+const AUTO_SAVE_INTERVAL = 30 * 1000
+const autoSaveStatus = ref('')
+const autoSaveCountdown = ref(AUTO_SAVE_INTERVAL / 1000)
+let autoSaveTimer: ReturnType<typeof setInterval> | null = null
+let lastAutoSaveSnapshot = ''
+const releaseProductLockOnPageHide = () => {
+	if (EditProductID.value > 0 && activeProductLockToken.value) {
+		void removeProductEditLock(EditProductID.value)
+	}
+}
+
 onMounted(async () => {
 	console.log('产品信息页面挂载，检查路由参数')
 	await dictsLoaded;
 	autoAddProduct()
+	autoSaveTimer = setInterval(() => {
+		if (!AddProductDialog.value || !showSaveBtn.value) {
+			autoSaveCountdown.value = AUTO_SAVE_INTERVAL / 1000
+			return
+		}
+		autoSaveCountdown.value -= 1
+		if (autoSaveCountdown.value <= 0) {
+			saveAddProductDraftLocally()
+			autoSaveCountdown.value = AUTO_SAVE_INTERVAL / 1000
+		}
+	}, 1000)
+	window.addEventListener('pagehide', releaseProductLockOnPageHide)
+})
+
+onBeforeUnmount(() => {
+	if (autoSaveTimer) clearInterval(autoSaveTimer)
+	window.removeEventListener('pagehide', releaseProductLockOnPageHide)
+	releaseProductLockOnPageHide()
 })
 const CProductsId = ref(0);
 const autoAddProduct = async () => {
@@ -1287,6 +1350,66 @@ const runOnPageLoad = () => {
 	//#endregion
 };
 
+const packageSpecListRef = ref()
+
+const pickProductId = (value: any): string | number | null => {
+	if (value === null || value === undefined || value === '') return null
+	if (typeof value === 'number' || typeof value === 'string') {
+		return String(value) === '0' ? null : value
+	}
+	if (typeof value !== 'object') return null
+	const id = value.id ?? value.Id ?? value.ID ?? value.productID ?? value.ProductID ?? value.productId
+	if (id !== null && id !== undefined && id !== '' && String(id) !== '0') return id
+	if (value.data !== undefined) return pickProductId(value.data)
+	if (value.result !== undefined) return pickProductId(value.result)
+	return null
+}
+
+const extractAddedProductId = (response: any) => pickProductId(response)
+
+const lookupProductIdByCode = async (productCode: string) => {
+	if (!productCode) return null
+	try {
+		const response: any = await request({
+			url: 'ProductInformation/GetProductList/GetList',
+			method: 'GET',
+			params: {
+				PageNum: 1,
+				PageSize: 20,
+				ProductCode: productCode
+			}
+		})
+		const list = response?.data?.data || response?.data || []
+		const rows = Array.isArray(list) ? list : []
+		const match = rows.find((item: any) => String(item.productCode || item.ProductCode) === String(productCode))
+		return pickProductId(match)
+	} catch (error) {
+		return null
+	}
+}
+
+const persistPendingPackageSpecs = async (productId: string | number | null, pendingRows: any[] = []) => {
+	const rows = pendingRows.length ? pendingRows : (packageSpecListRef.value?.getPendingRows?.() || [])
+	if (!rows.length) return true
+	if (!productId || String(productId) === '0') {
+		ElMessage.warning('产品已保存，但未能获取产品ID，包装计价规格未保存')
+		return false
+	}
+	try {
+		for (const row of rows) {
+			const response: any = await addProductPackageSpec(buildProductPackageSpecSavePayload(row, productId, false))
+			if (response?.code != 200) {
+				ElMessage.warning('产品已保存，但包装计价规格保存失败，请编辑产品后重试')
+				return false
+			}
+		}
+		return true
+	} catch (error) {
+		ElMessage.warning('产品已保存，但包装计价规格保存失败，请编辑产品后重试')
+		return false
+	}
+}
+
 const openAddProductDialog = () => {
 	clearProductform();
 	Productform.ProductCategories = SelectNodeId.value;
@@ -1294,6 +1417,9 @@ const openAddProductDialog = () => {
 	showSaveBtn.value = true;
 	AddProductDialog.value = true;
 	showAddSubProductButton.value = true;
+	packageSpecListRef.value?.reset();
+	autoSaveCountdown.value = AUTO_SAVE_INTERVAL / 1000
+	restoreAddProductDraft()
 	// Clear form validation
 	if (ProductformRef.value) {
 		ProductformRef.value.clearValidate();
@@ -1301,17 +1427,20 @@ const openAddProductDialog = () => {
 }
 
 const closeAddProductDialog = async () => {
-	if (userId.toString() === '1' && EditProductID.value > 0) {
+	if (EditProductID.value > 0 && (activeProductLockToken.value || sessionStorage.getItem(`product-edit-lock-token:${EditProductID.value}`))) {
 		await removeProductEditLock(EditProductID.value);
 	}
 	clearProductform();
 	SelectNodeId.value = 0;
 	// 重置编辑ID
 	EditProductID.value = 0;
-	// 清空工厂报价表格数据
+	// 清空关联数据表格
 	FactoryQuotationTableData.value = [];
+	SaleHistoryTableData.value = [];
+	PurchaseHistoryTableData.value = [];
 	// 清空产品ID数组
 	productIdsArray.value = [];
+	packageSpecListRef.value?.reset();
 }
 
 const clearProductform = () => {
@@ -1350,6 +1479,8 @@ const clearProductform = () => {
 	uploadedFiles.value = []
 	SubProductTableData.value = []
 	FactoryQuotationTableData.value = []
+	SaleHistoryTableData.value = []
+	PurchaseHistoryTableData.value = []
 	isDisabled.value = false;
 	showEditSaveBtn.value = false;
 	showEditBtn.value = false;
@@ -1359,6 +1490,67 @@ const clearProductform = () => {
 	Productform.Supplier = null;
 	Productform.developmentPersonnel = null;
 	Productform.isDraft = 0; // 默认不是草稿
+}
+
+// 新增产品时每 30 秒保存到本机，避免重复调用新增接口产生多条草稿。
+const buildAddProductDraft = () => ({
+	productForm: { ...Productform },
+	subProductItems: SubProductTableData.value,
+	categoryId: SelectNodeId.value,
+	savedAt: Date.now()
+})
+
+const serializeAddProductDraft = () => JSON.stringify(buildAddProductDraft(), (key, value) => {
+	// File/Blob 无法在 localStorage 中还原，仅保留表单和已有文件的可序列化信息。
+	if (key === 'raw' || value instanceof File || value instanceof Blob) return undefined
+	return value
+})
+
+const hasAddProductContent = () => Boolean(
+	Productform.productCode || Productform.chineseProductName || Productform.englishProductName ||
+	Productform.chineseSpecification || Productform.productDescription || SubProductTableData.value.length
+)
+
+const saveAddProductDraftLocally = () => {
+	if (!AddProductDialog.value || !showSaveBtn.value || !hasAddProductContent()) return
+	try {
+		const snapshot = serializeAddProductDraft()
+		if (snapshot === lastAutoSaveSnapshot) return
+		localStorage.setItem(PRODUCT_ADD_DRAFT_KEY, snapshot)
+		lastAutoSaveSnapshot = snapshot
+		autoSaveStatus.value = `已自动保存 ${new Date().toLocaleTimeString('zh-CN', { hour12: false })}`
+	} catch (error) {
+		console.error('自动保存产品草稿失败:', error)
+		autoSaveStatus.value = '自动保存失败'
+	}
+}
+
+const restoreAddProductDraft = () => {
+	try {
+		const snapshot = localStorage.getItem(PRODUCT_ADD_DRAFT_KEY)
+		if (!snapshot) {
+			autoSaveStatus.value = '将每 30 秒自动保存'
+			lastAutoSaveSnapshot = ''
+			return
+		}
+		const draft = JSON.parse(snapshot)
+		if (draft.productForm) Object.assign(Productform, draft.productForm)
+		if (Array.isArray(draft.subProductItems)) SubProductTableData.value = draft.subProductItems
+		if (draft.categoryId !== undefined && draft.categoryId !== null) SelectNodeId.value = draft.categoryId
+		lastAutoSaveSnapshot = serializeAddProductDraft()
+		autoSaveStatus.value = `已恢复 ${new Date(draft.savedAt).toLocaleString('zh-CN')} 的草稿`
+	} catch (error) {
+		console.error('恢复产品草稿失败:', error)
+		localStorage.removeItem(PRODUCT_ADD_DRAFT_KEY)
+		autoSaveStatus.value = '将每 30 秒自动保存'
+	}
+}
+
+const clearAddProductDraft = () => {
+	localStorage.removeItem(PRODUCT_ADD_DRAFT_KEY)
+	lastAutoSaveSnapshot = ''
+	autoSaveStatus.value = ''
+	autoSaveCountdown.value = AUTO_SAVE_INTERVAL / 1000
 }
 
 //  上传主产品图片
@@ -1456,12 +1648,14 @@ const state = reactive({
 		hr_inspectionmark: [],
 		sql_supplier_info: [],
 		sql_all_user: [],
-		hr_purchase_pricing_term: []
+		hr_purchase_pricing_term: [],
+		hr_pricing_term: []
 	}
 })
 const { optionss } = toRefs(state)
 var dictParams = [{ dictType: 'hr_packing' }, { dictType: 'hr_calculate_unit' },
-{ dictType: 'hr_inspectionmark' }, { dictType: 'sql_supplier_info' }, { dictType: 'sql_all_user' }, { dictType: 'hr_purchase_pricing_term' }]
+{ dictType: 'hr_inspectionmark' }, { dictType: 'sql_supplier_info' }, { dictType: 'sql_all_user' },
+{ dictType: 'hr_purchase_pricing_term' }, { dictType: 'hr_pricing_term' }]
 
 // 封装Promise，等字典加载完再resolve
 const dictsLoaded = new Promise((resolve) => {
@@ -1475,14 +1669,10 @@ const dictsLoaded = new Promise((resolve) => {
 });
 
 const handleCategoryChange = (value) => {
-	// 如果是数组，取最后一个值（通常是叶子节点）
-	if (Array.isArray(value)) {
-		Productform.ProductCategories = value[value.length - 1];
-		SelectNodeId.value = value[value.length - 1];
-	} else {
-		Productform.ProductCategories = value;
-		SelectNodeId.value = value;
+	if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) {
+		return
 	}
+	SelectNodeId.value = Array.isArray(value) ? value[value.length - 1] : value
 }
 
 // 定义级联选择器的数据和配置
@@ -1491,8 +1681,8 @@ const props1 = {
 	value: 'value',
 	label: 'label',
 	children: 'children',
-	checkStrictly: true,  // 可选，是否严格的遵守父子节点不互相关联
-	emitPath: true       // 可选，是否返回选中节点的完整路径
+	checkStrictly: true,
+	emitPath: false
 }
 
 // 获取产品分类树
@@ -1835,6 +2025,41 @@ const filelistUrlStr = ref('');	// 产品图片
 const AddProductDialog = ref(false)	// 添加产品对话框
 const UploadUrl = 'Common/UploadFile'	// 上传图片地址
 const fileList = ref<UploadUserFile[]>([]);
+const currentPreviewIndex = ref(0)
+const previewProductImageUrl = computed(() => fileList.value[currentPreviewIndex.value]?.url || fileList.value[0]?.url || '')
+const productImagePreviewList = computed(() => fileList.value.map(item => item.url).filter(Boolean))
+
+const isCurrentPreview = (file) => {
+	const current = fileList.value[currentPreviewIndex.value]
+	return !!current && (current.uid === file.uid || current.url === file.url)
+}
+
+const setPreviewByFile = (file) => {
+	const index = fileList.value.findIndex(item => item.uid === file.uid || item.url === file.url)
+	if (index >= 0) {
+		currentPreviewIndex.value = index
+	}
+}
+
+const prevProductImage = () => {
+	if (fileList.value.length <= 1) return
+	currentPreviewIndex.value = (currentPreviewIndex.value - 1 + fileList.value.length) % fileList.value.length
+}
+
+const nextProductImage = () => {
+	if (fileList.value.length <= 1) return
+	currentPreviewIndex.value = (currentPreviewIndex.value + 1) % fileList.value.length
+}
+
+watch(() => fileList.value.length, (len) => {
+	if (len === 0) {
+		currentPreviewIndex.value = 0
+		return
+	}
+	if (currentPreviewIndex.value >= len) {
+		currentPreviewIndex.value = len - 1
+	}
+})
 const uploadedFiles = ref([]);  // 用于存储已上传的文件
 const formData = { filePath: 'product' }; // 上传文件的附加数据
 const TableData = ref([])	// 产品列表
@@ -1915,6 +2140,10 @@ const SaveProductinfomation = async (formEl: FormInstance | undefined, isDraftMo
 // 提取公共的保存产品信息逻辑
 const saveProductInfo = async (isDraftMode: boolean) => {
 	try {
+		if (packageSpecListRef.value && !packageSpecListRef.value.validatePending()) {
+			return;
+		}
+		const pendingSpecs = packageSpecListRef.value?.getPendingRows?.() || []
 		if (CProductsId.value == null || CProductsId.value == undefined || isNaN(CProductsId.value)) {
 			CProductsId.value = 0;
 		}
@@ -2088,6 +2317,12 @@ const saveProductInfo = async (isDraftMode: boolean) => {
 		console.log(productInfoRequest);
 		const response = await request.post('ProductInformation/AddProductInformation/Add', productInfoRequest);
 		if (response != null) {
+			let newProductId = extractAddedProductId(response)
+			if (!newProductId && pendingSpecs.length) {
+				newProductId = await lookupProductIdByCode(Productform.productCode)
+			}
+			await persistPendingPackageSpecs(newProductId, pendingSpecs)
+			clearAddProductDraft()
 			ElMessage({
 				message: isDraftMode ? '草稿保存成功' : '产品提交成功',
 				type: 'success'
@@ -2308,10 +2543,11 @@ const DeleteProduct = (row) => {
 // 获取产品编辑锁状态
 const getProductEditLock = async (productId) => {
 	try {
+		const lockToken = sessionStorage.getItem(`product-edit-lock-token:${productId}`) || ''
 		const res = await request({
 			url: 'ProductInformation/GetProductInfoEditLock/GetProductInfoEditLock',
 			method: 'get',
-			params: { ProductID: productId }
+			params: { ProductID: productId, LockToken: lockToken }
 		});
 		return res; // 返回锁定用户名，如果未锁定则为null
 	} catch (error) {
@@ -2321,28 +2557,91 @@ const getProductEditLock = async (productId) => {
 };
 
 // 设置产品编辑锁
+const activeProductLockToken = ref('')
+let productEditLockHeartbeat: ReturnType<typeof setInterval> | null = null
+
+const getOrCreateProductLockToken = (productId) => {
+	const storageKey = `product-edit-lock-token:${productId}`
+	let token = sessionStorage.getItem(storageKey)
+	if (!token) {
+		token = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+		sessionStorage.setItem(storageKey, token)
+	}
+	return token
+}
+
+const stopProductEditLockHeartbeat = () => {
+	if (productEditLockHeartbeat) clearInterval(productEditLockHeartbeat)
+	productEditLockHeartbeat = null
+}
+
+const handleProductEditLockLost = () => {
+	stopProductEditLockHeartbeat()
+	if (EditProductID.value > 0) sessionStorage.removeItem(`product-edit-lock-token:${EditProductID.value}`)
+	activeProductLockToken.value = ''
+	isViewMode.value = true
+	isDisabled.value = true
+	showEditSaveBtn.value = false
+	showEditBtn.value = true
+	showAddSubProductButton.value = false
+	ElMessageBox.alert('产品编辑锁已失效，当前页面已切换为只读状态。您已填写的内容仍保留在页面中。', '编辑锁已失效', {
+		confirmButtonText: '确定'
+	})
+}
+
+const renewProductEditLock = async (productId, lockToken) => {
+	try {
+		const res = await request({
+			url: 'ProductInformation/RenewProductInfoEditLock/RenewProductInfoEditLock',
+			method: 'get',
+			params: { ProductID: productId, LockToken: lockToken }
+		})
+		if (res?.code != 200) handleProductEditLockLost()
+	} catch (error) {
+		console.error('续期产品编辑锁失败:', error)
+		handleProductEditLockLost()
+	}
+}
+
+const startProductEditLockHeartbeat = (productId, lockToken) => {
+	stopProductEditLockHeartbeat()
+	productEditLockHeartbeat = setInterval(() => renewProductEditLock(productId, lockToken), 30 * 1000)
+}
+
 const setProductEditLock = async (productId) => {
+	const lockToken = getOrCreateProductLockToken(productId)
 	try {
 		const res = await request({
 			url: 'ProductInformation/SettingsProductInfoEditLock/SettingsProductInfoEditLock',
 			method: 'get',
-			params: { ProductID: productId }
+			params: { ProductID: productId, LockToken: lockToken }
 		});
-		return res.code === 200;
+		if (res.code === 200) {
+			activeProductLockToken.value = lockToken
+			startProductEditLockHeartbeat(productId, lockToken)
+			return true
+		}
+		return false
 	} catch (error) {
 		console.error('设置产品编辑锁失败:', error);
+		sessionStorage.removeItem(`product-edit-lock-token:${productId}`)
 		return false;
 	}
 };
 
 // 移除产品编辑锁
 const removeProductEditLock = async (productId) => {
+	const lockToken = activeProductLockToken.value || sessionStorage.getItem(`product-edit-lock-token:${productId}`)
+	if (!lockToken) return
+	stopProductEditLockHeartbeat()
 	try {
 		await request({
 			url: 'ProductInformation/RemoveProductInfoEditLock/RemoveProductInfoEditLock',
 			method: 'get',
-			params: { ProductID: productId }
+			params: { ProductID: productId, LockToken: lockToken }
 		});
+		sessionStorage.removeItem(`product-edit-lock-token:${productId}`)
+		activeProductLockToken.value = ''
 	} catch (error) {
 		console.error('移除产品编辑锁失败:', error);
 	}
@@ -2363,7 +2662,7 @@ const OpenProductInfoDetailDialog = async (row) => {
 
 	// 先检查编辑锁
 	const lockStatus = await getProductEditLock(productId);
-	if (lockStatus.data.isEditLock == true) {
+	if (lockStatus?.data?.isEditLock == true && !lockStatus?.data?.ownedByMe) {
 		ElMessageBox.alert(`当前产品正在被${lockStatus.data.editUser}编辑中，请稍后再试！`, '提示', {
 			confirmButtonText: '确定',
 			showClose: false
@@ -2426,8 +2725,11 @@ const OpenProductInfoDetailDialog = async (row) => {
 	AddProductDialog.value = true;
 	runOnPageLoad();
 
-	// 获取询价记录并绑定到工厂报价表格
-	await loadInquiryProductHistory();
+	await Promise.all([
+		loadInquiryProductHistory(),
+		loadSalesHistory(),
+		loadPurchaseHistory()
+	]);
 }
 
 // 获取供应商标签
@@ -2442,6 +2744,12 @@ const getPriceTermsLabel = (priceTerms) => {
 	if (!priceTerms) return '';
 	const priceTerm = state.optionss.hr_purchase_pricing_term?.find(item => Number(item.dictValue) === Number(priceTerms));
 	return priceTerm ? priceTerm.dictLabel : priceTerms;
+};
+
+const getHistoryDictLabel = (dictType, value) => {
+	if (value === null || value === undefined || value === '') return '';
+	const item = state.optionss[dictType]?.find(dict => String(dict.dictValue) === String(value));
+	return item ? item.dictLabel : value;
 };
 
 // 悬停图片相关
@@ -2473,11 +2781,15 @@ const loadInquiryProductHistory = async () => {
 			return;
 		}
 
-		const response = await getInquiryProductHistoryList(productIdsArray.value);
+		const response = await getFactoryQuotationHistory(productIdsArray.value);
 
 		if (response.code === 200) {
-			// 将询价记录数据绑定到工厂报价表格
-			FactoryQuotationTableData.value = response.data || [];
+			FactoryQuotationTableData.value = (response.data || []).map((item) => ({
+				...item,
+				mainMaterials: item.mainMaterials ?? item.mainmaterials ?? '',
+				smallPackagingMethod: item.smallPackagingMethod ?? item.smallpackagingmethod ?? '',
+				date: item.date ?? item.update_time ?? null
+			}))
 		} else {
 			ElMessage.error(response.msg || '获取询价记录失败');
 			FactoryQuotationTableData.value = [];
@@ -2488,6 +2800,30 @@ const loadInquiryProductHistory = async () => {
 		FactoryQuotationTableData.value = [];
 	}
 }
+
+const loadHistoryList = async (requestFn, tableRef, errorText) => {
+	if (!productIdsArray.value || productIdsArray.value.length === 0) {
+		tableRef.value = [];
+		return;
+	}
+	try {
+		const response = await requestFn(productIdsArray.value);
+		if (response.code === 200) {
+			tableRef.value = response.data || [];
+		} else {
+			ElMessage.error(response.msg || errorText);
+			tableRef.value = [];
+		}
+	} catch (error) {
+		console.error(errorText, error);
+		ElMessage.error(errorText);
+		tableRef.value = [];
+	}
+}
+
+const loadSalesHistory = () => loadHistoryList(getSalesHistory, SaleHistoryTableData, '获取销售历史失败')
+
+const loadPurchaseHistory = () => loadHistoryList(getPurchaseHistory, PurchaseHistoryTableData, '获取采购历史失败')
 
 // 辅助函数：填充产品表单
 const fillProductForm = (product) => {
@@ -2645,8 +2981,9 @@ const processSubProducts = (product) => {
 }
 
 const EditProductID = ref(0);
-const EditProductinfomation = () => {
-	setProductEditLock(EditProductID.value);
+const EditProductinfomation = async () => {
+	const acquired = await setProductEditLock(EditProductID.value)
+	if (!acquired) return
 	isViewMode.value = false;
 	showEditSaveBtn.value = true;
 	showEditBtn.value = false;
@@ -2670,6 +3007,11 @@ const EditSaveProductinfomation = async () => {
 				throw new Error('请完善表单信息');
 			}
 		});
+
+		if (packageSpecListRef.value && !packageSpecListRef.value.validatePending()) {
+			return;
+		}
+		const pendingSpecs = packageSpecListRef.value?.getPendingRows?.() || []
 
 		// 调试信息：检查UnitOfMeasurement字段
 		console.log('Productform.unit value:', Productform.unit);
@@ -2859,6 +3201,7 @@ const EditSaveProductinfomation = async () => {
 
 		const response = await request.post('ProductInformation/UpdateProductInfo/Edit', editProductInfoRequest);
 		if (response != null) {
+			await persistPendingPackageSpecs(EditProductID.value, pendingSpecs)
 			ElMessage({
 				message: response.msg,
 				type: 'success'
@@ -3227,6 +3570,10 @@ const hasSubProducts = computed(() => {
 // 编辑保存草稿功能
 const EditSaveDraft = async () => {
 	try {
+		if (packageSpecListRef.value && !packageSpecListRef.value.validatePending()) {
+			return;
+		}
+		const pendingSpecs = packageSpecListRef.value?.getPendingRows?.() || []
 		const editProductInfoRequest = {
 			id: EditProductID.value,
 			ProductCategoriesID: Productform.ProductCategories,
@@ -3364,6 +3711,7 @@ const EditSaveDraft = async () => {
 
 		const response = await request.post('ProductInformation/UpdateProductInfo/Edit', editProductInfoRequest);
 		if (response != null) {
+			await persistPendingPackageSpecs(EditProductID.value, pendingSpecs)
 			ElMessage({
 				message: '草稿保存成功',
 				type: 'success'
@@ -3387,6 +3735,392 @@ const EditSaveDraft = async () => {
 
 </script>
 <style scoped>
+.product-info-dialog {
+	max-width: 1840px;
+}
+
+.product-info-dialog :deep(.el-dialog__body) {
+	padding: 12px 20px 20px;
+}
+
+.basic-info-section {
+	container-type: inline-size;
+	margin-bottom: 8px;
+	--basic-info-control-height: 24px;
+	--basic-info-item-gap: 6px;
+}
+
+.basic-info-header {
+	font-size: 14px;
+	font-weight: 700;
+	color: #303133;
+	line-height: 1.4;
+	padding-bottom: 6px;
+	margin-bottom: 12px;
+	border-bottom: 1px solid #e5e7eb;
+}
+
+.basic-info-body {
+	display: flex;
+	align-items: flex-start;
+	gap: 16px;
+}
+
+.basic-info-photo {
+	flex: 0 0 220px;
+	width: 220px;
+}
+
+.basic-info-photo__box {
+	position: relative;
+	box-sizing: border-box;
+	width: 220px;
+	height: 200px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #fff;
+	border: 1px solid #dcdfe6;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.basic-info-photo__nav {
+	position: absolute;
+	top: 50%;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.45);
+	color: #fff;
+	cursor: pointer;
+	transform: translateY(-50%);
+}
+
+.basic-info-photo__nav:hover {
+	background: rgba(0, 0, 0, 0.65);
+}
+
+.basic-info-photo__nav.is-prev {
+	left: 6px;
+}
+
+.basic-info-photo__nav.is-next {
+	right: 6px;
+}
+
+.basic-info-photo__nav .el-icon {
+	font-size: 14px;
+}
+
+.basic-info-photo__image {
+	width: 100%;
+	height: 100%;
+}
+
+.basic-info-photo__image :deep(.el-image__inner) {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.basic-info-photo__placeholder {
+	color: #c0c4cc;
+	font-size: 12px;
+}
+
+.basic-info-photo__upload {
+	margin-top: 6px;
+}
+
+.basic-info-photo__upload :deep(.el-upload-list--picture-card) {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.basic-info-photo__upload :deep(.el-upload--picture-card),
+.basic-info-photo__upload :deep(.el-upload-list__item) {
+	width: 50px;
+	height: 50px;
+	margin: 0;
+	overflow: hidden;
+}
+
+.basic-info-photo__thumb {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	cursor: pointer;
+}
+
+.basic-info-photo__thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.basic-info-photo__upload :deep(.el-upload-list__item.is-success .el-upload-list__item-status-label) {
+	display: none;
+}
+
+.basic-info-photo__upload :deep(.el-upload-list__item-actions) {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+}
+
+.basic-info-photo__upload :deep(.el-upload-list__item-preview),
+.basic-info-photo__upload :deep(.el-upload-list__item-delete) {
+	margin: 0 !important;
+	font-size: 14px;
+	line-height: 1;
+}
+
+.basic-info-photo__upload :deep(.el-upload-list--picture-card .el-upload-list__item-actions span + span) {
+	margin-left: 4px !important;
+}
+
+.basic-info-photo__upload :deep(.el-upload-list__item-actions .el-icon) {
+	font-size: 14px;
+}
+
+.basic-info-photo__upload :deep(.el-upload-list__item.is-active),
+.basic-info-photo__thumb.is-active {
+	outline: 2px solid var(--el-color-primary);
+	outline-offset: -2px;
+}
+
+.basic-info-photo.is-empty:not(.is-readonly) .basic-info-photo__box {
+	display: none;
+}
+
+.basic-info-photo.is-empty:not(.is-readonly) .basic-info-photo__upload {
+	margin-top: 0;
+}
+
+.basic-info-photo.is-empty:not(.is-readonly) :deep(.el-upload--picture-card) {
+	width: 220px;
+	height: 200px;
+	border: 1px solid #dcdfe6;
+	border-radius: 4px;
+	background: #fff;
+}
+
+.basic-info-photo.is-readonly .basic-info-photo__upload {
+	display: none;
+}
+
+.basic-info-form-area {
+	flex: 1;
+	min-width: 0;
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	column-gap: 20px;
+	--el-form-label-width: 80px;
+}
+
+.basic-info-col {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.basic-info-col--wide-label {
+	--el-form-label-width: 92px;
+}
+
+.basic-info-pack-table {
+	margin-top: 10px;
+}
+
+.product-pack-spec-table {
+	width: 100%;
+}
+
+.product-pack-spec-table :deep(.el-table__header th.el-table__cell) {
+	padding-top: 6px !important;
+	padding-bottom: 6px !important;
+	line-height: 1.2;
+}
+
+.product-pack-spec-table :deep(.el-table__body tr.el-table__row) {
+	height: auto !important;
+}
+
+.product-pack-spec-table :deep(.el-table__body td.el-table__cell) {
+	padding-top: 2px !important;
+	padding-bottom: 2px !important;
+	height: auto !important;
+}
+
+.product-pack-spec-table :deep(.el-input),
+.product-pack-spec-table :deep(.el-select) {
+	width: 100%;
+}
+
+.product-pack-spec-table :deep(.el-input__wrapper),
+.product-pack-spec-table :deep(.el-select__wrapper) {
+	min-height: var(--basic-info-control-height);
+	padding: 0 6px;
+}
+
+.product-pack-spec-table :deep(.el-button + .el-button) {
+	margin-left: 4px;
+}
+
+.product-dialog-edit-table :deep(.el-table__header th.el-table__cell) {
+	padding-top: 6px !important;
+	padding-bottom: 6px !important;
+	line-height: 1.2;
+}
+
+.product-dialog-edit-table :deep(.el-table__body tr.el-table__row) {
+	height: auto !important;
+}
+
+.product-dialog-edit-table :deep(.el-table__body td.el-table__cell) {
+	padding-top: 2px !important;
+	padding-bottom: 2px !important;
+	height: auto !important;
+}
+
+:deep(.el-table) {
+	font-size: 13px;
+}
+
+:deep(.el-table th.el-table__cell),
+:deep(.el-table td.el-table__cell),
+:deep(.el-table .cell) {
+	line-height: 1.2 !important;
+}
+
+:deep(.el-table .cell) {
+	padding-top: 1px !important;
+	padding-bottom: 1px !important;
+}
+
+:deep(.el-table .el-input__inner),
+:deep(.el-table .el-select__placeholder),
+:deep(.el-table .el-select__selected-item),
+:deep(.el-table .el-button) {
+	font-size: 13px;
+	line-height: 1.2;
+}
+
+.basic-info-section :deep(.el-form-item) {
+	display: flex;
+	align-items: center;
+	margin-bottom: var(--basic-info-item-gap) !important;
+	width: 100%;
+}
+
+.basic-info-section :deep(.el-form-item__label) {
+	flex: 0 0 var(--el-form-label-width) !important;
+	width: var(--el-form-label-width) !important;
+	margin-right: 8px;
+	padding: 0;
+	line-height: 24px;
+	height: 24px;
+	text-align: right;
+	justify-content: flex-end;
+	color: #4b5563;
+	font-size: 13px;
+	white-space: nowrap;
+}
+
+.basic-info-section :deep(.el-form-item__content) {
+	flex: 1;
+	min-width: 0;
+	margin-left: 0 !important;
+	line-height: 24px;
+}
+
+.basic-info-section :deep(.el-form-item.is-multiline) {
+	align-items: flex-start;
+}
+
+.basic-info-section :deep(.el-form-item.is-multiline .el-form-item__label) {
+	height: auto;
+	line-height: 18px;
+	padding-top: 4px;
+}
+
+.basic-info-section :deep(.el-form-item.is-multiline .el-form-item__content) {
+	line-height: normal;
+}
+
+.basic-info-section :deep(.el-input),
+.basic-info-section :deep(.el-select),
+.basic-info-section :deep(.el-cascader),
+.basic-info-section :deep(.el-date-editor) {
+	width: 100%;
+}
+
+.basic-info-section :deep(.el-input__wrapper),
+.basic-info-section :deep(.el-select__wrapper),
+.basic-info-section :deep(.el-input-number .el-input__wrapper) {
+	min-height: var(--basic-info-control-height);
+}
+
+.basic-info-section :deep(.el-textarea__inner) {
+	box-sizing: border-box;
+	height: calc(var(--basic-info-control-height) * 2 + var(--basic-info-item-gap));
+	min-height: calc(var(--basic-info-control-height) * 2 + var(--basic-info-item-gap));
+	line-height: 1.4;
+	font-size: 13px;
+	border-radius: 4px;
+	padding: 4px 8px;
+	resize: none;
+}
+
+.basic-info-section :deep(.el-input__inner),
+.basic-info-section :deep(.el-select__placeholder),
+.basic-info-section :deep(.el-select__selected-item) {
+	font-size: 13px;
+}
+
+.basic-info-section :deep(.el-input__wrapper),
+.basic-info-section :deep(.el-select__wrapper),
+.basic-info-section :deep(.el-textarea__inner) {
+	border-radius: 4px;
+}
+
+.basic-info-section :deep(.el-input.is-disabled .el-input__wrapper),
+.basic-info-section :deep(.el-select.is-disabled .el-select__wrapper) {
+	background-color: #f5f7fa;
+}
+
+@container (max-width: 1400px) {
+	.basic-info-form-area {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		column-gap: 16px;
+	}
+}
+
+@container (max-width: 1000px) {
+	.basic-info-body {
+		flex-direction: column;
+	}
+
+	.basic-info-photo,
+	.basic-info-photo__box {
+		width: 100%;
+		max-width: 220px;
+	}
+
+	.basic-info-form-area {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
 /* 基础红色文本 */
 .red-text {
 	color: red !important;
@@ -3885,5 +4619,51 @@ const EditSaveDraft = async () => {
 	.category-buttons-container {
 		gap: 8px;
 	}
+}
+</style>
+<style>
+.product-info-dialog.el-dialog {
+	max-width: 1840px;
+}
+
+.product-info-dialog .el-dialog__body {
+	padding: 12px 20px 20px;
+}
+
+.product-info-dialog .dialog-footer {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+}
+
+.product-info-dialog .auto-save-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	margin-right: auto;
+	padding: 7px 12px;
+	border: 1px solid #bfdbfe;
+	border-radius: 16px;
+	background: #eff6ff;
+	color: #475569;
+	font-size: 13px;
+	line-height: 1;
+}
+
+.product-info-dialog .auto-save-status__dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #409eff;
+	box-shadow: 0 0 0 3px rgb(64 158 255 / 15%);
+}
+
+.product-info-dialog .auto-save-status__countdown {
+	padding-left: 7px;
+	border-left: 1px solid #bfdbfe;
+	color: #2563eb;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
 }
 </style>

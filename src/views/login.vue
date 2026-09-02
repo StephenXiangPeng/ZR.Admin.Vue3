@@ -6,7 +6,7 @@
 
       <!-- <LangSelect title="多语言设置" class="langSet" /> -->
 
-      <div style="padding: 0 25px 5px 25px">
+      <div v-show="loginStep === 'Login'" style="padding: 0 25px 5px 25px">
         <el-tabs v-model="loginType" @tab-click="handleLoginType">
           <el-tab-pane :label="$t('login.loginway1')" :name="1"></el-tab-pane>
           <el-tab-pane :label="$t('login.loginway2')" :name="2" v-if="defaultSettings.showPhoneLogin"></el-tab-pane>
@@ -14,7 +14,8 @@
         </el-tabs>
       </div>
 
-      <el-form ref="loginRef" :model="loginForm" :rules="loginRules" class="login-form" v-show="loginType == 1">
+      <el-form ref="loginRef" :model="loginForm" :rules="loginRules" class="login-form"
+        v-show="loginStep === 'Login' && loginType == 1">
         <el-form-item prop="username">
           <el-input v-model="loginForm.username" type="text" auto-complete="off" :placeholder="$t('login.account')">
             <template #prefix>
@@ -58,15 +59,38 @@
           </span>
         </div>
       </el-form>
-      <div class="qr-wrap login-form" v-show="loginType == 3">
+      <el-form v-if="loginStep === 'TwoFactor'" class="login-form two-factor-form" @submit.prevent>
+        <h3 class="two-factor-title">身份验证</h3>
+        <p class="two-factor-tip">为确保账号安全，请输入验证器 App 中的 6 位动态验证码。</p>
+        <el-alert :title="twoFactorReasonText" type="warning" :closable="false" show-icon class="two-factor-alert" />
+        <el-form-item>
+          <el-input ref="twoFactorCodeRef" v-model="twoFactorCode" maxlength="6" inputmode="numeric"
+            autocomplete="one-time-code" placeholder="请输入6位动态验证码" @input="handleTwoFactorInput"
+            @keyup.enter="handleTwoFactorVerify">
+            <template #prefix>
+              <svg-icon name="validCode" class="input-icon" />
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button :loading="twoFactorLoading" :disabled="twoFactorLoading" round type="primary"
+            style="width: 100%" @click="handleTwoFactorVerify">
+            确认登录
+          </el-button>
+        </el-form-item>
+        <el-button text style="width: 100%" :disabled="twoFactorLoading" @click="backToLogin">
+          返回账号密码登录
+        </el-button>
+      </el-form>
+      <div class="qr-wrap login-form" v-show="loginStep === 'Login' && loginType == 3">
         <div class="login-scan-container">
           <div ref="imgContainerRef" id="imgContainer" class="qrCode"></div>
           <div class="mt10 text-muted">{{ $t('login.tip_scan_code') }}</div>
         </div>
       </div>
 
-      <phoneLogin v-show="loginType == 2"></phoneLogin>
-      <oauthLogin v-show="defaultSettings.showOtherLogin"></oauthLogin>
+      <phoneLogin v-show="loginStep === 'Login' && loginType == 2"></phoneLogin>
+      <oauthLogin v-show="loginStep === 'Login' && defaultSettings.showOtherLogin"></oauthLogin>
     </div>
 
     <div class="el-login-footer">
@@ -87,9 +111,9 @@ import QRCode from 'qrcodejs2-fixes'
 import { verifyScan, generateQrcode } from '@/api/system/login'
 import oauthLogin from './components/Login/oauthLogin.vue'
 import phoneLogin from './components/Login/phoneLogin.vue'
+import { getOrCreateDeviceId } from '@/utils/device'
 
-var visitorId = ''
-const fpPromise = import('https://openfpcdn.io/fingerprintjs/v3').then((FingerprintJS) => FingerprintJS.load())
+const visitorId = getOrCreateDeviceId()
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -118,14 +142,38 @@ const captchaOnOff = ref('')
 const register = ref(false)
 const redirect = ref()
 redirect.value = route.query.redirect
-// Get the visitor identifier when you need it.
-fpPromise
-  .then((fp) => fp.get())
-  .then((result) => {
-    // This is the visitor identifier:
-    visitorId = result.visitorId
-    userStore.setClientId(visitorId)
-  })
+const loginStep = ref('Login')
+const twoFactorToken = ref('')
+const twoFactorCode = ref('')
+const twoFactorReason = ref('')
+const twoFactorExpiresAt = ref(0)
+const twoFactorLoading = ref(false)
+const twoFactorCodeRef = ref()
+const reasonMessages = {
+  NewDevice: '检测到您正在使用新的设备或浏览器登录，请完成二次验证。',
+  ExpiredDevice: '该设备已超过30天未完成安全验证，请重新验证身份。',
+  NewLocation: '检测到您的登录地区发生变化，请完成二次验证。',
+  PasswordRisk: '检测到近期存在多次登录失败，为确保账号安全，请完成二次验证。'
+}
+const twoFactorReasonText = computed(() => reasonMessages[twoFactorReason.value] || '为确保账号安全，请完成二次验证。')
+
+userStore.setClientId(visitorId)
+
+function finishLogin() {
+  proxy.$modal.msgSuccess(proxy.$t('login.loginSuccess'))
+  router.push({ path: redirect.value || '/' })
+}
+
+function clearTwoFactorState() {
+  twoFactorToken.value = ''
+  twoFactorCode.value = ''
+  twoFactorReason.value = ''
+  twoFactorExpiresAt.value = 0
+}
+
+function focusTwoFactorCode() {
+  nextTick(() => twoFactorCodeRef.value?.focus())
+}
 function handleLogin() {
   proxy.$refs.loginRef.validate((valid) => {
     if (valid) {
@@ -144,13 +192,20 @@ function handleLogin() {
       // 调用action的登录方法
       userStore
         .login(loginForm.value)
-        .then(() => {
-          proxy.$modal.msgSuccess(proxy.$t('login.loginSuccess'))
-          router.push({ path: redirect.value || '/' })
+        .then((result) => {
+          loading.value = false
+          if (result && result.needTwoFactor === true) {
+            twoFactorToken.value = result.twoFactorToken
+            twoFactorReason.value = result.reason || ''
+            twoFactorExpiresAt.value = Date.now() + Number(result.expiresIn || 0) * 1000
+            loginStep.value = 'TwoFactor'
+            focusTwoFactorCode()
+            return
+          }
+          finishLogin()
         })
         .catch((error) => {
-          console.error(error)
-          proxy.$modal.msgError(error.msg)
+          proxy.$modal.msgError(error?.msg || '登录失败')
           loading.value = false
           // 重新获取验证码
           if (captchaOnOff.value) {
@@ -159,6 +214,50 @@ function handleLogin() {
         })
     }
   })
+}
+
+function handleTwoFactorInput(value) {
+  twoFactorCode.value = String(value || '').replace(/\D/g, '').slice(0, 6)
+}
+
+function handleTwoFactorVerify() {
+  if (twoFactorLoading.value) return
+  if (!/^\d{6}$/.test(twoFactorCode.value)) {
+    proxy.$modal.msgError('请输入6位动态验证码。')
+    focusTwoFactorCode()
+    return
+  }
+
+  twoFactorLoading.value = true
+  userStore
+    .verifyTwoFactorLogin(twoFactorToken.value, twoFactorCode.value)
+    .then(() => {
+      clearTwoFactorState()
+      finishLogin()
+    })
+    .catch((error) => {
+      const message = error?.msg || String(error || '')
+      if (message.includes('二次验证凭证无效或已过期')) {
+        proxy.$modal.msgError('登录验证已过期，请重新登录。')
+        backToLogin()
+      } else if (message.includes('动态验证码错误')) {
+        proxy.$modal.msgError('验证码不正确，请重新输入。')
+        twoFactorCode.value = ''
+        focusTwoFactorCode()
+      } else {
+        proxy.$modal.msgError(message || '验证失败，请重试。')
+        focusTwoFactorCode()
+      }
+    })
+    .finally(() => {
+      twoFactorLoading.value = false
+    })
+}
+
+function backToLogin() {
+  clearTwoFactorState()
+  loginStep.value = 'Login'
+  getCode()
 }
 
 function getCode() {
@@ -272,5 +371,25 @@ getCookie()
   width: 160px;
   height: 160px;
   line-height: 160px;
+}
+
+.two-factor-title {
+  margin: 0 0 12px;
+  text-align: center;
+}
+
+.two-factor-tip {
+  margin: 0 0 14px;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.two-factor-alert {
+  margin-bottom: 18px;
+}
+
+.two-factor-form {
+  height: auto;
+  padding-bottom: 20px;
 }
 </style>

@@ -79,10 +79,12 @@ service.interceptors.response.use(
 
       return Promise.reject('无效的会话，或者会话已过期，请重新登录。')
     } else if (code == 0 || code == 1 || code == 110 || code == 101 || code == 403 || code == 500 || code == 429) {
-      ElMessage({
-        message: msg,
-        type: 'error'
-      })
+      if (!res.config.skipErrorMessage) {
+        ElMessage({
+          message: msg,
+          type: 'error'
+        })
+      }
       return Promise.reject(res.data)
     } else {
       //返回标准 code/msg/data字段

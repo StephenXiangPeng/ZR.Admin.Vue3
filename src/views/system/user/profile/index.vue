@@ -57,6 +57,9 @@
             <el-tab-pane :label="$t('user.changePwd')" name="resetPwd">
               <resetPwd />
             </el-tab-pane>
+            <el-tab-pane label="账户安全" name="twoFactor">
+              <twoFactor :user="state.user" @refresh="getUser" />
+            </el-tab-pane>
             <el-tab-pane :label="$t('menu.operLog')" name="log">
               <operLog></operLog>
             </el-tab-pane>
@@ -72,6 +75,7 @@ import userAvatar from './userAvatar'
 import userInfo from './userInfo'
 import resetPwd from './resetPwd'
 import operLog from './operLog.vue'
+import twoFactor from './twoFactor.vue'
 import { getUserProfile } from '@/api/system/user'
 
 const activeTab = ref('userinfo')
