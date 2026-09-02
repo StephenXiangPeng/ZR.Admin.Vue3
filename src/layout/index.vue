@@ -9,7 +9,7 @@
 
     <el-container class="main-container flex-center" :class="{ hasTagsView: needTagsView, sidebarHide: sidebar.hide }">
       <el-header :class="{ 'fixed-header': fixedHeader }">
-        <navbar @setLayout="setLayout" />
+        <navbar @setLayout="setLayout" @showTwoFactorGuide="showTwoFactorGuide" />
         <tags-view v-if="needTagsView" />
       </el-header>
       <el-main class="app-main">
@@ -27,6 +27,7 @@
         <div v-html="defaultSettings.copyright"></div>
       </el-footer>
       <settings ref="settingRef" />
+      <two-factor-guide ref="twoFactorGuideRef" />
     </el-container>
   </el-container>
 </template>
@@ -35,6 +36,7 @@
 import { useWindowSize } from '@vueuse/core'
 import Sidebar from './components/Sidebar/index.vue'
 import { Navbar, Settings, TagsView } from './components'
+import TwoFactorGuide from './components/TwoFactorGuide/index.vue'
 import defaultSettings from '@/settings'
 import iframeToggle from './components/IframeToggle/index'
 import useAppStore from '@/store/modules/app'
@@ -87,14 +89,22 @@ watchEffect(() => {
 })
 
 const settingRef = ref(null)
+const twoFactorGuideRef = ref(null)
 function setLayout() {
   settingRef.value.openSetting()
+}
+function showTwoFactorGuide() {
+  twoFactorGuideRef.value?.open(true)
 }
 function close() {
   useAppStore().closeSideBar()
 }
 
 const cachedViews = computed(() => useTagsViewStore().cachedViews)
+
+onMounted(() => {
+  nextTick(() => twoFactorGuideRef.value?.open())
+})
 
 // 确保组件在路由切换时正确加载
 watch(

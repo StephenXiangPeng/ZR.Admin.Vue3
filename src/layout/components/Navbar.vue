@@ -31,6 +31,9 @@
             <router-link to="/user/profile">
               <el-dropdown-item>{{ $t('layout.personalCenter') }}</el-dropdown-item>
             </router-link>
+            <el-dropdown-item command="showTwoFactorGuide">
+              <span>二次验证使用指南</span>
+            </el-dropdown-item>
             <el-dropdown-item command="setLayout">
               <span>{{ $t('layout.layoutSetting') }}</span>
             </el-dropdown-item>
@@ -79,6 +82,9 @@ function handleCommand(command) {
     case 'setLayout':
       setLayout()
       break
+    case 'showTwoFactorGuide':
+      showTwoFactorGuide()
+      break
     case 'logout':
       logout()
       break
@@ -114,9 +120,12 @@ function logout() {
     .catch(() => { })
 }
 
-const emits = defineEmits(['setLayout'])
+const emits = defineEmits(['setLayout', 'showTwoFactorGuide'])
 function setLayout() {
   emits('setLayout')
+}
+function showTwoFactorGuide() {
+  emits('showTwoFactorGuide')
 }
 </script>
 
