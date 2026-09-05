@@ -146,9 +146,7 @@ export function buildProductPackageSpecSavePayload(row: ProductPackageSpec, prod
 		CustomQty: toNullableInt(row.customQty),
 		PriceTerm: toNullableString(row.priceTerm),
 		SalePrice: toNullableNumber(row.salePrice),
-		TaxIncluded: row.taxIncluded === '' || row.taxIncluded === null || row.taxIncluded === undefined
-			? null
-			: Number(row.taxIncluded),
+		TaxIncluded: toNullableNumber(row.taxIncluded),
 		InnerPackageQty: toNullableInt(row.innerPackageQty),
 		OuterPackageQty: toNullableInt(row.outerPackageQty),
 		Length: toNullableNumber(row.length),

@@ -250,9 +250,9 @@
 									<el-input v-model="Productform.chineseSpecification" type="textarea" :rows="2"
 										:disabled="isDisabled" placeholder="请输入中文规格" size="small" />
 								</el-form-item>
-								<el-form-item label="客户货号" prop="customerGoodsNumber" data-field="customerGoodsNumber">
-									<el-input v-model="Productform.customerGoodsNumber" :disabled="isDisabled"
-										placeholder="请输入客户货号" size="small" />
+								<el-form-item label="主要材料" prop="mainMaterials" data-field="mainMaterials">
+									<el-input v-model="Productform.mainMaterials" :disabled="isDisabled"
+										placeholder="请输入主要材料" size="small" />
 								</el-form-item>
 								<el-form-item label="开发人员">
 									<el-select v-model="Productform.developmentPersonnel" placeholder="请选择开发人员"
@@ -333,17 +333,11 @@
 											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
 									</el-select>
 								</el-form-item>
-								<el-form-item label="库存数量" v-if="false">
+								<el-form-item label="库存数量">
 									<el-input v-model="Productform.stockQuantity" disabled placeholder="请输入库存数量"
 										size="small" />
 								</el-form-item>
-								<el-form-item label="包装方式" prop="PackingMethod">
-									<el-select v-model="Productform.PackingMethod" :disabled="isDisabled"
-										placeholder="选择包装方式" clearable size="small">
-										<el-option v-for="dict in optionss.hr_packing" :key="dict.dictCode"
-											:label="dict.dictLabel" :value="dict.dictValue"></el-option>
-									</el-select>
-								</el-form-item>
+
 							</div>
 						</div>
 					</div>
@@ -1487,6 +1481,7 @@ const clearProductform = () => {
 	isViewMode.value = false;
 	Productform.productDescription = '';
 	Productform.customerGoodsNumber = '';
+	Productform.mainMaterials = '';
 	Productform.Supplier = null;
 	Productform.developmentPersonnel = null;
 	Productform.isDraft = 0; // 默认不是草稿
@@ -1873,6 +1868,7 @@ interface Productform {
 	Supplier: string;
 	ProductCategories: number;
 	customerGoodsNumber: string;
+	mainMaterials: string;
 	//产品属性
 	productDescription: string;
 	productLength: string;
@@ -1918,6 +1914,7 @@ const Productform = reactive<Productform>({
 	Supplier: [],
 	ProductCategories: '',
 	customerGoodsNumber: '',
+	mainMaterials: '',
 	//产品属性
 	productLength: '',
 	productwidth: '',
@@ -1980,7 +1977,6 @@ const ProductformRules = reactive<FormRules<Productform>>({
 	chineseDeclarationProductName: [{ required: true, message: '请输入中文申报品名', trigger: ['blur', 'change'] }],
 	englishDeclarationProductName: [{ required: true, message: '请输入英文申报品名', trigger: ['blur', 'change'] }],
 	inspectionMark: [{ required: true, message: '请选择检验标志', trigger: ['blur', 'change'] }],
-	PackingMethod: [{ required: true, message: '请选择包装方式', trigger: 'change' }],
 	Supplier: [{ required: true, message: '请选择供应商', trigger: 'change' }],
 	ProductCategories: [{ required: true, message: '请选择产品分类', trigger: 'change' }]
 })
@@ -2184,6 +2180,7 @@ const saveProductInfo = async (isDraftMode: boolean) => {
 			SupplierID: Array.isArray(Productform.Supplier) ? Productform.Supplier.join(',') : Productform.Supplier,
 			ProductDescription: Productform.productDescription,
 			subProductItems: [],
+			MainMaterials: Productform.mainMaterials,
 			CustomerGoodsNumber: Productform.customerGoodsNumber == null || Productform.customerGoodsNumber == undefined ? '无' : Productform.customerGoodsNumber,
 			developers: Productform.developmentPersonnel,
 			IsDraft: isDraftMode ? 1 : 0, // 设置草稿状态
@@ -2874,6 +2871,7 @@ const fillProductForm = (product) => {
 		product.packingMethod :
 		state.optionss.hr_packing.find((dict) => dict.dictValue === product.packingMethod.toString())?.dictValue;
 	Productform.customerGoodsNumber = product.customerGoodsNumber;
+	Productform.mainMaterials = product.mainMaterials ?? '';
 	Productform.developmentPersonnel = product.developers == null || product.developers == undefined ? 0 : state.optionss.sql_all_user.find((dict) => dict.dictValue === product.developers.toString())?.dictValue;
 
 	// 处理产品图片
@@ -3055,6 +3053,7 @@ const EditSaveProductinfomation = async () => {
 			SupplierID: Array.isArray(Productform.Supplier) ? Productform.Supplier.join(',') : Productform.Supplier,
 			ProductDescription: Productform.productDescription,
 			subProductItems: [],
+			MainMaterials: Productform.mainMaterials,
 			CustomerGoodsNumber: Productform.customerGoodsNumber == null || Productform.customerGoodsNumber == undefined ? '无' : Productform.customerGoodsNumber,
 			developers: Productform.developmentPersonnel,
 			IsDraft: 0 // 设置为正式保存，不是草稿
@@ -3612,6 +3611,7 @@ const EditSaveDraft = async () => {
 			SupplierID: Array.isArray(Productform.Supplier) ? Productform.Supplier.join(',') : Productform.Supplier,
 			ProductDescription: Productform.productDescription,
 			subProductItems: [],
+			MainMaterials: Productform.mainMaterials,
 			CustomerGoodsNumber: Productform.customerGoodsNumber == null || Productform.customerGoodsNumber == undefined ? '无' : Productform.customerGoodsNumber,
 			developers: Productform.developmentPersonnel,
 			IsDraft: 1 // 设置为草稿

@@ -61,13 +61,12 @@
 						@input="(val) => scope.row.salePrice = filterDecimal(val, 4)" />
 				</template>
 			</el-table-column>
-			<el-table-column label="含税+/-" min-width="88" align="center">
+			<el-table-column label="含税+/-(%)" min-width="110" align="center">
 				<template #default="scope">
-					<el-select v-model="scope.row.taxIncluded" placeholder="请选择" clearable size="small"
-						:disabled="disabled" style="width: 100%">
-						<el-option label="是" :value="1" />
-						<el-option label="否" :value="0" />
-					</el-select>
+					<el-input v-model="scope.row.taxIncluded" placeholder="百分比" size="small" :disabled="disabled"
+						@input="(val) => scope.row.taxIncluded = filterPercentage(val)">
+						<template #suffix>%</template>
+					</el-input>
 				</template>
 			</el-table-column>
 			<el-table-column label="中包装量" min-width="85" align="center">
@@ -227,6 +226,11 @@ const filterDecimal = (val: string, digits: number) => {
 	return s
 }
 
+const filterPercentage = (val: string) => {
+	const text = String(val ?? '')
+	return (text.startsWith('-') ? '-' : '') + filterDecimal(text, 4)
+}
+
 const calcVolume = (row: PackageSpecRow) => {
 	const length = Number(row.length)
 	const width = Number(row.width)
@@ -283,6 +287,10 @@ const validateRow = (row: PackageSpecRow) => {
 	if (!isValidDecimal(row.salePrice, 4) || !isValidDecimal(row.length, 4) || !isValidDecimal(row.width, 4)
 		|| !isValidDecimal(row.height, 4) || !isValidDecimal(row.netWeight, 4) || !isValidDecimal(row.grossWeight, 4)) {
 		return '销售价、长、宽、高、净重、毛重最多4位小数'
+	}
+	if (row.taxIncluded !== null && row.taxIncluded !== undefined && row.taxIncluded !== ''
+		&& !/^-?\d+(\.\d{0,4})?$/.test(String(row.taxIncluded))) {
+		return '含税百分比请输入有效数字，最多4位小数，可为负数'
 	}
 	if (!isValidDecimal(row.outerBoxVolume, 6)) return '外箱体积最多6位小数'
 	if (toNullableString(row.remark) && String(row.remark).length > 500) return '备注最多500个字符'
