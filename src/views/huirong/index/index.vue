@@ -2804,7 +2804,7 @@
 </template>
 
 <script lang="ts" setup>
-import { getCurrentInstance, reactive, toRefs, ref, onMounted, onUnmounted, h, watch, computed, nextTick } from 'vue'
+import { getCurrentInstance, reactive, toRefs, ref, onMounted, onUnmounted, onActivated, onDeactivated, h, watch, computed, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, ElDatePicker, ElLoading, ElNotification } from "element-plus";
 import request from '@/utils/request';
 import dayjs from 'dayjs';
@@ -2833,6 +2833,10 @@ const exchangeRateNotificationVisible = ref(false);
 const exchangeRateFormRef = ref();
 const exchangeRateNotificationTimer = ref(null);
 const exchangeRateCheckTimer = ref(null);
+let exchangeRateMonitorActive = false;
+let exchangeRateMonitorGeneration = 0;
+let exchangeRateCheckInFlight = -1;
+let exchangeRateReminderSnoozedUntil = 0;
 
 // 汇率确认对话框相关变量
 const exchangeRateConfirmVisible = ref(false);
@@ -2845,7 +2849,7 @@ const exchangeRateReferenceDate = ref('');
 const exchangeRateDates = computed(() => [...new Set(todayExchangeRates.value.map(rate => rate.date).filter(Boolean))]);
 const exchangeRateTitle = computed(() => {
   const dates = exchangeRateDates.value;
-  if (!dates.length) return '汇率';
+  if (!dates.length) return todayExchangeRates.value.length ? '最新汇率' : '汇率';
   if (dates.length > 1) return '最新汇率';
   return dates[0] === exchangeRateReferenceDate.value ? '当日汇率' : `${dates[0]} 汇率`;
 });
@@ -3686,7 +3690,19 @@ const getTodayExchangeRates = async () => {
     // 使用exchangeRateService获取所有币种的最新汇率
     const result = await exchangeRateService.getAllLatestExchangeRates(null, true);
     exchangeRateReferenceDate.value = result.date || '';
-    const allRates = result.rates as Record<string, { exchangeRate: number; date: string }> | undefined;
+    // 兼容旧服务端的 { 币种: 数值 }，旧响应没有日期时不伪造实际日期。
+    const allRates: Record<string, { exchangeRate: number; date: string }> = {};
+    const source = result.rates ?? result;
+    for (const [currency, raw] of Object.entries(source)) {
+      const detail = raw && typeof raw === 'object'
+        ? raw as { exchangeRate?: unknown; date?: string }
+        : { exchangeRate: raw, date: '' };
+      const value = detail.exchangeRate;
+      if ((typeof value !== 'number' && typeof value !== 'string') || String(value).trim() === '') continue;
+      const numericRate = Number(value);
+      if (!Number.isFinite(numericRate) || numericRate <= 0) continue;
+      allRates[currency] = { exchangeRate: numericRate, date: detail.date || '' };
+    }
 
     if (allRates && Object.keys(allRates).length > 0) {
       // 将汇率数据转换为显示格式
@@ -7269,6 +7285,7 @@ onMounted(async () => {
       state.optionss[element.dictType] = element.list
     })
     console.log('字典数据加载完成:', state.optionss.hr_export_currency)
+    if (exchangeRateNotificationVisible.value) initMultiCurrencyExchangeRateForm();
 
     const dataPromises = [
       GetPlantTaskItemList(),
@@ -7296,9 +7313,6 @@ onMounted(async () => {
     await Promise.all(dataPromises);
     // 加载货代/快递/物流公司下拉
     await loadLogisticsCompanySelectsForIndex();
-
-    // 字典数据加载完成后，初始化汇率填写通知
-    initExchangeRateNotification();
   } catch (error) {
     console.error('数据加载失败:', error)
     ElMessage.error('数据加载失败，请刷新页面重试')
@@ -7812,6 +7826,8 @@ onMounted(() => {
     needOpenSaleContract.value = route.query.contactId;
   }
 
+  // 汇率提醒不依赖其他首页接口是否成功。
+  initExchangeRateNotification();
   // 获取当日汇率数据
   getTodayExchangeRates();
 });
@@ -7848,17 +7864,27 @@ eventBus.on('open-sale-contact-approval', ({ contactId }) => {
 
 // 汇率填写通知相关函数
 const initExchangeRateNotification = async () => {
-  try {
-    // 检查当前用户是否需要填写汇率
-    const res = await request.get('ExchangeRateTask/CheckUserNeedFill/CheckUserNeedFill') as unknown as { data: ApiResponse }
-    if (res.code === 200 && res.data.needFill) {
-      // 显示汇率填写通知
-      showExchangeRateNotification()
-    }
-  } catch (error) {
-    console.error('检查汇率填写需求失败:', error)
-  }
-}
+  if (exchangeRateMonitorActive) return;
+  exchangeRateMonitorActive = true;
+  const generation = ++exchangeRateMonitorGeneration;
+  await checkExchangeRateStatus();
+  const interval = await getNotificationInterval();
+  if (!exchangeRateMonitorActive || generation !== exchangeRateMonitorGeneration) return;
+  // 已填写也继续检查，页面跨天后能够提醒；失败的请求下次自动重试。
+  exchangeRateCheckTimer.value = setInterval(checkExchangeRateStatus, interval * 60 * 1000);
+};
+
+const stopExchangeRateNotification = () => {
+  exchangeRateMonitorActive = false;
+  exchangeRateMonitorGeneration++;
+  clearInterval(exchangeRateCheckTimer.value);
+  clearTimeout(exchangeRateNotificationTimer.value);
+  exchangeRateCheckTimer.value = null;
+  exchangeRateNotificationTimer.value = null;
+};
+
+onActivated(initExchangeRateNotification);
+onDeactivated(stopExchangeRateNotification);
 
 const showExchangeRateNotification = () => {
   exchangeRateNotificationVisible.value = true
@@ -7868,16 +7894,7 @@ const showExchangeRateNotification = () => {
     // 初始化多币种汇率表单
     initMultiCurrencyExchangeRateForm()
 
-    // 如果字典数据还没加载，延迟重试
-    if (!optionss.hr_export_currency || optionss.hr_export_currency.length === 0) {
-      setTimeout(() => {
-        initMultiCurrencyExchangeRateForm()
-      }, 1000)
-    }
   })
-
-  // 设置定时器，每隔指定时间检查一次
-  startExchangeRateNotificationTimer()
 }
 // 强制初始化表单
 const forceInitForm = () => {
@@ -7910,8 +7927,8 @@ const initMultiCurrencyExchangeRateForm = () => {
   let currencyData = null
 
   // 方法1：从 optionss 获取
-  if (optionss.hr_export_currency && optionss.hr_export_currency.length > 0) {
-    currencyData = optionss.hr_export_currency
+  if (optionss.value.hr_export_currency && optionss.value.hr_export_currency.length > 0) {
+    currencyData = optionss.value.hr_export_currency
   }
   // 方法2：从 state.optionss 获取
   else if (state.optionss.hr_export_currency && state.optionss.hr_export_currency.length > 0) {
@@ -7936,25 +7953,12 @@ const initMultiCurrencyExchangeRateForm = () => {
   }
 }
 
-const startExchangeRateNotificationTimer = () => {
-  // 清除之前的定时器
-  if (exchangeRateNotificationTimer.value) {
-    clearInterval(exchangeRateNotificationTimer.value)
-  }
-
-  // 获取通知间隔配置
-  getNotificationInterval().then(interval => {
-    exchangeRateNotificationTimer.value = setInterval(() => {
-      checkExchangeRateStatus()
-    }, interval * 60 * 1000) // 转换为毫秒
-  })
-}
-
 const getNotificationInterval = async () => {
   try {
     const res = await request.get('ExchangeRateTask/GetConfig/GetConfig') as unknown as { data: ApiResponse }
     if (res.code === 200 && res.data) {
-      return res.data.notificationInterval || 5
+      const interval = Number(res.data.notificationInterval);
+      return Number.isFinite(interval) && interval > 0 ? interval : 5
     }
   } catch (error) {
     console.error('获取通知间隔配置失败:', error)
@@ -7963,24 +7967,27 @@ const getNotificationInterval = async () => {
 }
 
 const checkExchangeRateStatus = async () => {
+  const generation = exchangeRateMonitorGeneration;
+  if (!exchangeRateMonitorActive || exchangeRateCheckInFlight === generation) return;
+  exchangeRateCheckInFlight = generation;
   try {
-    const res = await request.get('ExchangeRateTask/CheckUserNeedFill/CheckUserNeedFill') as unknown as { data: ApiResponse }
-    if (res.code === 200 && res.data.needFill) {
-      // 如果用户还没有填写，继续显示通知
-      if (!exchangeRateNotificationVisible.value) {
-        showExchangeRateNotification()
+    const res = await request.get('ExchangeRateTask/CheckUserNeedFill/CheckUserNeedFill') as unknown as { code: number; data?: { needFill: boolean; hasFilledToday?: boolean } };
+    if (!exchangeRateMonitorActive || generation !== exchangeRateMonitorGeneration) return;
+    if (res.code !== 200 || !res.data) return;
+    if (res.data.needFill) {
+      if (!exchangeRateNotificationVisible.value && Date.now() >= exchangeRateReminderSnoozedUntil) {
+        showExchangeRateNotification();
       }
     } else {
-      // 用户已经填写，清除定时器
-      if (exchangeRateNotificationTimer.value) {
-        clearInterval(exchangeRateNotificationTimer.value)
-        exchangeRateNotificationTimer.value = null
-      }
+      exchangeRateNotificationVisible.value = false;
+      exchangeRateReminderSnoozedUntil = 0;
     }
   } catch (error) {
-    console.error('检查汇率填写状态失败:', error)
+    console.error('检查汇率填写状态失败:', error);
+  } finally {
+    if (exchangeRateCheckInFlight === generation) exchangeRateCheckInFlight = -1;
   }
-}
+};
 
 const submitExchangeRate = async () => {
   if (!exchangeRateFormRef.value) return
@@ -8007,7 +8014,7 @@ const submitExchangeRate = async () => {
 
         // 清除定时器
         if (exchangeRateNotificationTimer.value) {
-          clearInterval(exchangeRateNotificationTimer.value)
+          clearTimeout(exchangeRateNotificationTimer.value)
           exchangeRateNotificationTimer.value = null
         }
 
@@ -8024,12 +8031,11 @@ const submitExchangeRate = async () => {
 }
 
 const skipExchangeRateNotification = () => {
-  exchangeRateNotificationVisible.value = false
-  // 5分钟后再次提醒
-  setTimeout(() => {
-    checkExchangeRateStatus()
-  }, 5 * 60 * 1000)
-}
+  exchangeRateNotificationVisible.value = false;
+  exchangeRateReminderSnoozedUntil = Date.now() + 5 * 60 * 1000;
+  clearTimeout(exchangeRateNotificationTimer.value);
+  exchangeRateNotificationTimer.value = setTimeout(checkExchangeRateStatus, 5 * 60 * 1000);
+};
 
 const resetExchangeRateForm = () => {
   exchangeRateForm.currency = ''
@@ -8088,7 +8094,7 @@ const confirmSubmitMultiCurrencyExchangeRate = async () => {
     // 准备汇率数据，包括用户填写的汇率和自动添加的人民币汇率
     const exchangeRates = [...multiCurrencyExchangeRateForm.exchangeRates.map(rate => {
       // 将 dictLabel 转换回 dictValue
-      const currencyData = optionss.hr_export_currency?.find(item => item.dictLabel === rate.currency) ||
+      const currencyData = optionss.value.hr_export_currency?.find(item => item.dictLabel === rate.currency) ||
         state.optionss.hr_export_currency?.find(item => item.dictLabel === rate.currency)
       return {
         currency: currencyData ? currencyData.dictValue : rate.currency,
@@ -8098,7 +8104,7 @@ const confirmSubmitMultiCurrencyExchangeRate = async () => {
     })]
 
     // 自动添加人民币汇率（默认为1）
-    const cnyCurrencyData = optionss.hr_export_currency?.find(item => item.dictLabel === '人民币') ||
+    const cnyCurrencyData = optionss.value.hr_export_currency?.find(item => item.dictLabel === '人民币') ||
       state.optionss.hr_export_currency?.find(item => item.dictLabel === '人民币')
 
     if (cnyCurrencyData) {
@@ -8122,7 +8128,7 @@ const confirmSubmitMultiCurrencyExchangeRate = async () => {
       exchangeRateConfirmVisible.value = false
       // 清除定时器
       if (exchangeRateNotificationTimer.value) {
-        clearInterval(exchangeRateNotificationTimer.value)
+        clearTimeout(exchangeRateNotificationTimer.value)
         exchangeRateNotificationTimer.value = null
       }
       // 重置表单
@@ -8141,15 +8147,8 @@ const submitMultiCurrencyExchangeRate = async () => {
   await showExchangeRateConfirmDialog()
 }
 
-// 组件卸载时清理定时器
-onUnmounted(() => {
-  if (exchangeRateNotificationTimer.value) {
-    clearInterval(exchangeRateNotificationTimer.value)
-  }
-  if (exchangeRateCheckTimer.value) {
-    clearInterval(exchangeRateCheckTimer.value)
-  }
-})
+// 组件卸载时清理汇率检查及稍后提醒定时器
+onUnmounted(stopExchangeRateNotification);
 
 //#region 获取驳回的采购合同列表
 const GetRejectPurchaseContractList = async () => {
