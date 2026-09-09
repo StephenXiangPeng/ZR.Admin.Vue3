@@ -36,9 +36,9 @@ class ExchangeRateService {
 	 * @param {Date} date - 指定日期，不传则使用今天
 	 * @returns {Promise<Object>} 汇率字典 {currency: rate}
 	 */
-	async getAllLatestExchangeRates(date = null) {
+	async getAllLatestExchangeRates(date = null, includeDates = false) {
 		try {
-			const params = {}
+			const params = includeDates ? { includeDates: true } : {}
 			if (date) {
 				params.date = date.toISOString().split('T')[0]
 			}

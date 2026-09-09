@@ -8,12 +8,12 @@
             <el-icon class="card-icon">
               <Money />
             </el-icon>
-            <span class="card-title">当日汇率</span>
+            <span class="card-title">{{ exchangeRateTitle }}</span>
           </div>
           <div class="exchange-rate-content">
             <div class="exchange-rate-list" v-if="todayExchangeRates.length > 0">
               <div v-for="rate in todayExchangeRates" :key="rate.currency" class="metric-row">
-                <span class="metric-label">{{ rate.currencyName }}</span>
+                <span class="metric-label">{{ rate.currencyName }}<small v-if="exchangeRateDates.length > 1">（{{ rate.date }}）</small></span>
                 <span class="metric-value">{{ rate.exchangeRate }}</span>
               </div>
             </div>
@@ -2840,7 +2840,15 @@ const confirmExchangeRates = ref([]);
 const confirmGlobalRemark = ref('');
 
 // 当日汇率显示相关变量
-const todayExchangeRates = ref([]);
+const todayExchangeRates = ref<Array<{ currency: string; currencyName: string; exchangeRate: string; date: string }>>([]);
+const exchangeRateReferenceDate = ref('');
+const exchangeRateDates = computed(() => [...new Set(todayExchangeRates.value.map(rate => rate.date).filter(Boolean))]);
+const exchangeRateTitle = computed(() => {
+  const dates = exchangeRateDates.value;
+  if (!dates.length) return '汇率';
+  if (dates.length > 1) return '最新汇率';
+  return dates[0] === exchangeRateReferenceDate.value ? '当日汇率' : `${dates[0]} 汇率`;
+});
 
 // 汇率填写表单
 interface ExchangeRateForm {
@@ -3676,7 +3684,9 @@ function getBusinessDashboard() {
 const getTodayExchangeRates = async () => {
   try {
     // 使用exchangeRateService获取所有币种的最新汇率
-    const allRates = await exchangeRateService.getAllLatestExchangeRates();
+    const result = await exchangeRateService.getAllLatestExchangeRates(null, true);
+    exchangeRateReferenceDate.value = result.date || '';
+    const allRates = result.rates as Record<string, { exchangeRate: number; date: string }> | undefined;
 
     if (allRates && Object.keys(allRates).length > 0) {
       // 将汇率数据转换为显示格式
@@ -3706,7 +3716,8 @@ const getTodayExchangeRates = async () => {
         formattedRates.push({
           currency: currency,
           currencyName: currencyName,
-          exchangeRate: exchangeRateService.formatExchangeRate(rate)
+          exchangeRate: exchangeRateService.formatExchangeRate(rate.exchangeRate),
+          date: rate.date
         });
       }
 
@@ -7991,6 +8002,7 @@ const submitExchangeRate = async () => {
       const res = await request.post('ExchangeRateTask/SubmitExchangeRate/SubmitExchangeRate', requestData) as unknown as { data: ApiResponse }
       if (res.code === 200) {
         ElMessage.success('汇率填写成功')
+        await getTodayExchangeRates()
         exchangeRateNotificationVisible.value = false
 
         // 清除定时器
@@ -8105,6 +8117,7 @@ const confirmSubmitMultiCurrencyExchangeRate = async () => {
     const res = await request.post('ExchangeRateTask/SubmitMultiCurrencyExchangeRate/SubmitMultiCurrencyExchangeRate', requestData) as unknown as { data: ApiResponse }
     if (res.code === 200) {
       ElMessage.success('所有汇率填写成功')
+      await getTodayExchangeRates()
       exchangeRateNotificationVisible.value = false
       exchangeRateConfirmVisible.value = false
       // 清除定时器
