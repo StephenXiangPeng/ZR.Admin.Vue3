@@ -140,7 +140,7 @@
 				<el-row>
 					<el-col :span="24">
 						<el-form-item label="计划/任务图片">
-							<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="planTaskImages"
+							<el-upload v-paste-image list-type="picture-card" :auto-upload="false" v-model:file-list="planTaskImages"
 								:limit="3" :disabled="planTaskImages.length >= 3" @change="handleImageChange"
 								:action="UploadUrl" :data="formData">
 								<el-icon>
@@ -177,7 +177,7 @@
 				<el-row>
 					<el-col :span="24">
 						<el-form-item label="附件上传" prop="attachments">
-							<el-upload action="#" :auto-upload="false" :on-change="handleMainTaskFileChange"
+							<el-upload v-paste-image action="#" :auto-upload="false" :on-change="handleMainTaskFileChange"
 								:on-remove="handleMainTaskFileRemove" :file-list="mainTaskFileList" multiple
 								style="width: 100%">
 								<el-button type="primary" size="default">选择文件</el-button>
@@ -290,7 +290,7 @@
 							<el-col :span="12">
 								<el-form-item :label="'附件上传'"
 									:prop="'stages.' + stageIndex + '.items.' + itemIndex + '.attachments'">
-									<el-upload action="#" :auto-upload="false"
+									<el-upload v-paste-image action="#" :auto-upload="false"
 										:on-change="(file, fileList) => handleItemFileChange(stageIndex, itemIndex, file, fileList)"
 										:on-remove="(file) => handleItemFileRemove(stageIndex, itemIndex, file)"
 										:file-list="item.fileList || []" multiple style="width: 300px">
@@ -474,7 +474,7 @@
 				<!-- 添加附件上传组件 -->
 				<div class="completion-attachments">
 					<p class="upload-label">上传附件（选填）：</p>
-					<el-upload action="#" :auto-upload="false" :on-change="handleCompletionFileChange"
+					<el-upload v-paste-image action="#" :auto-upload="false" :on-change="handleCompletionFileChange"
 						:on-remove="handleCompletionFileRemove" :file-list="completionFileList" multiple
 						style="width: 100%">
 						<el-button type="primary">选择文件</el-button>

@@ -581,7 +581,7 @@
 				<!-- 富文本编辑器 -->
 				<!-- 富文本编辑器（保持 contentType="delta"） -->
 				<QuillEditor ref="quillEditor" v-model:content="emailForm.delta" contentType="delta"
-					:options="editorOptions" :style="{ minHeight: '300px' }" />
+					@ready="onEditorReady" :options="editorOptions" :style="{ minHeight: '300px' }" />
 
 				<!-- 原文只读区 -->
 				<div v-if="quotedHtml" class="quoted-wrapper">
@@ -652,7 +652,7 @@
 							</template>
 						</el-dropdown>
 					</div>
-					<div class="right">
+					<div class="right" v-paste-image>
 						<el-button-group>
 							<el-button @click="triggerFileInput" icon="Paperclip">附件</el-button>
 							<input type="file" ref="fileInput" multiple style="display: none"
@@ -777,7 +777,7 @@
 				<!-- 签名编辑区域 -->
 				<div class="signature-content">
 					<QuillEditor v-model:content="currentSignature.content" contentType="html"
-						:toolbar="signatureToolbar" theme="snow" style="height: 200px" />
+						@ready="onEditorReady" :toolbar="signatureToolbar" theme="snow" style="height: 200px" />
 				</div>
 
 				<!-- 签名设置 -->
@@ -1105,6 +1105,7 @@ import {
 } from '@element-plus/icons-vue'
 import { closePage } from '@/plugins/tab'
 import { QuillEditor } from '@vueup/vue-quill'
+import { enableQuillImagePaste } from '@/utils/clipboardImage'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import request from '@/utils/request'
 import DOMPurify from 'dompurify'
@@ -4633,8 +4634,10 @@ const handleWriteEmail = async () => {
 }
 
 // 编辑器事件处理
+const imagePasteCleanups = new Map()
 const onEditorReady = (quill) => {
-	console.log('QuillEditor 已准备就绪:', quill)
+	imagePasteCleanups.get(quill)?.()
+	imagePasteCleanups.set(quill, enableQuillImagePaste(quill, () => ElMessage.error('粘贴图片失败，请重试')))
 }
 
 const onTextChange = (delta, oldDelta, source) => {
@@ -5650,6 +5653,8 @@ const autoOpenEmailDetail = async (emailId) => {
 }
 
 onUnmounted(() => {
+	imagePasteCleanups.forEach(cleanup => cleanup())
+	imagePasteCleanups.clear()
 	stopAutoSave()
 	clearQuickSearchTimer()
 	teardownTableHeightObserver()

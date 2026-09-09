@@ -143,7 +143,7 @@
 						<template #default="scope">
 							<!-- 如果没有图片且可编辑，显示上传按钮 -->
 							<template v-if="!scope.row.productimage && !isEditable && scope.row.status !== 1">
-								<el-upload :auto-upload="false" :show-file-list="false"
+								<el-upload v-paste-image :auto-upload="false" :show-file-list="false"
 									:on-change="(file) => handleImageSelect(file, scope.$index)" accept="image/*">
 									<el-button type="primary" icon="UploadFilled">选择图片</el-button>
 								</el-upload>
@@ -399,7 +399,7 @@
 					<!-- 上传新附件的组件 -->
 					<div v-if="!isEditable">
 						<h3>上传新附件:</h3>
-						<el-upload :auto-upload="false" :on-change="handleFileChange" :on-remove="handleFileRemove"
+						<el-upload v-paste-image :auto-upload="false" :on-change="handleFileChange" :on-remove="handleFileRemove"
 							:file-list="uploadfileList" multiple>
 							<template #trigger>
 								<el-button type="primary">选取文件</el-button>

@@ -26,7 +26,7 @@
     <br />
     <el-row>
       <el-col :lg="2" :md="2">
-        <el-upload action="#" :http-request="requestUpload" :show-file-list="false" :before-upload="beforeUpload">
+        <el-upload v-paste-image action="#" :http-request="requestUpload" :show-file-list="false" :before-upload="beforeUpload">
           <el-button>
             选择
             <el-icon class="el-icon--right">

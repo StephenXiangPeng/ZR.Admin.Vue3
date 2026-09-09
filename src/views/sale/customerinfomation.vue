@@ -275,7 +275,7 @@
 						<el-row>
 							<el-col :span="24">
 								<el-form-item label="客户照片">
-									<el-upload list-type="picture-card" :auto-upload="false"
+									<el-upload v-paste-image list-type="picture-card" :auto-upload="false"
 										v-model:file-list="fileList" limit="3" :disabled="fileList.length >= 3"
 										@change="handleChange" :action="UploadUrl" :data="formData">
 										<el-icon>
@@ -710,7 +710,7 @@
 						<el-row>
 							<el-col :span="24">
 								<el-form-item label="客户照片">
-									<el-upload list-type="picture-card" :auto-upload="false"
+									<el-upload v-paste-image list-type="picture-card" :auto-upload="false"
 										v-model:file-list="fileList" limit="3" :disabled="fileList.length >= 3"
 										@change="handleChange" :action="UploadUrl" :data="formData">
 										<el-icon>
@@ -1076,7 +1076,7 @@
 					<el-input v-model="contactLogForm.contactContent" type="textarea" :rows="4" placeholder="请输入联系内容" />
 				</el-form-item>
 				<el-form-item label="图片">
-					<el-upload list-type="picture-card" :auto-upload="false" v-model:file-list="contactLogImages"
+					<el-upload v-paste-image list-type="picture-card" :auto-upload="false" v-model:file-list="contactLogImages"
 						:limit="3" :action="UploadUrl" accept="image/*" @change="handleContactLogImageChange"
 						@preview="handleImagePreview">
 						<el-icon>
@@ -1089,7 +1089,7 @@
 					</el-dialog>
 				</el-form-item>
 				<el-form-item label="附件">
-					<el-upload :auto-upload="false" v-model:file-list="contactLogAttachments" :action="UploadUrl"
+					<el-upload v-paste-image :auto-upload="false" v-model:file-list="contactLogAttachments" :action="UploadUrl"
 						@change="handleContactLogAttachmentChange" style="width: 100%">
 						<el-button type="primary">选择文件</el-button>
 						<template #tip>

@@ -1,6 +1,7 @@
 <template>
   <div class="component-upload-image">
-    <el-upload
+    <el-upload v-paste-image
+      :disabled="uploadDisabled"
       multiple
       :action="uploadImgUrl"
       list-type="picture-card"
@@ -54,9 +55,11 @@
 
 <script setup>
 import { getToken } from '@/utils/auth'
+import { useFormDisabled } from 'element-plus'
 
 const props = defineProps({
   modelValue: [String, Object, Array],
+  disabled: Boolean,
   // 图片数量限制
   limit: {
     type: Number,
@@ -84,6 +87,7 @@ const props = defineProps({
 })
 
 const { proxy } = getCurrentInstance()
+const uploadDisabled = useFormDisabled()
 const emit = defineEmits()
 const number = ref(0)
 const uploadList = ref([])

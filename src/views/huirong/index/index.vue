@@ -2524,7 +2524,7 @@
         <!-- 添加附件上传组件 -->
         <div class="completion-attachments">
           <p class="upload-label">上传附件（选填）：</p>
-          <el-upload action="#" :auto-upload="false" :on-change="handleCompletionFileChange"
+          <el-upload v-paste-image action="#" :auto-upload="false" :on-change="handleCompletionFileChange"
             :on-remove="handleCompletionFileRemove" :file-list="completionFileList" multiple style="width: 100%">
             <el-button type="primary">选择文件</el-button>
             <template #tip>

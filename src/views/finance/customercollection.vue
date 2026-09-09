@@ -209,7 +209,7 @@
 						<el-row>
 							<el-col :span="24">
 								<el-form-item label="收款单据">
-									<el-upload list-type="picture-card" :auto-upload="false"
+									<el-upload v-paste-image list-type="picture-card" :auto-upload="false"
 										v-model:file-list="fileList" limit="3"
 										:disabled="isReadOnly || fileList.length >= 3" @change="handleChange"
 										:action="UploadUrl">
@@ -244,7 +244,7 @@
 						<el-row>
 							<el-col :span="24">
 								<el-form-item label="附件上传">
-									<el-upload multiple :auto-upload="false" v-model:file-list="attachmentList"
+									<el-upload v-paste-image multiple :auto-upload="false" v-model:file-list="attachmentList"
 										@change="handleAttachmentChange" :action="UploadUrl"
 										:show-file-list="true"
 										:file-list="attachmentList" class="attachment-upload">

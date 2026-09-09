@@ -1,0 +1,23 @@
+.paste-image-tip {
+  display: block;
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 6px 8px;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+  border: 1px dashed var(--el-border-color);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+  white-space: normal;
+  cursor: pointer;
+}
+.paste-image-tip[hidden] { display: none; }
+.paste-image-tip:focus {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+.paste-image-tip:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

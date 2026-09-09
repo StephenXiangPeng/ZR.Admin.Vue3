@@ -203,7 +203,7 @@
 									</el-icon>
 								</button>
 							</div>
-							<el-upload class="basic-info-photo__upload" list-type="picture-card" :auto-upload="false"
+							<el-upload v-paste-image class="basic-info-photo__upload" list-type="picture-card" :auto-upload="false"
 								v-model:file-list="fileList" :limit="3" :disabled="isDisabled || fileList.length >= 3"
 								@change="handleChange" :action="UploadUrl" :data="formData">
 								<el-icon>
@@ -443,7 +443,7 @@
 					</el-table-column>
 					<el-table-column prop="subProductFiles" label="子产品附件" width="130" align="center">
 						<template #default="scope">
-							<el-upload ref="uploadProductFileRef" class="upload-demo" :auto-upload="false" :limit="3"
+							<el-upload v-paste-image="SelectFileView && (userId.toString() === '1' || userDepartment === 210)" ref="uploadProductFileRef" class="upload-demo" :auto-upload="false" :limit="3"
 								:show-file-list="true" :file-list="scope.row.productFiles || []"
 								:on-change="(file, fileList) => handleSubProductFileChange(file.raw, fileList, scope.$index)"
 								:on-remove="(file) => handleSubProductFileRemove(file, fileList, scope.$index)"
@@ -466,7 +466,7 @@
 					</el-table-column>
 					<el-table-column prop="subproductImage" label="产品图片" width="150" align="center">
 						<template #default="scope">
-							<el-upload :id="`upload-${scope.$index}`" ref="uploadRefs" :auto-upload="false"
+							<el-upload v-paste-image="!isViewMode && (userId.toString() === '1' || userDepartment === 210)" :id="`upload-${scope.$index}`" ref="uploadRefs" :auto-upload="false"
 								:show-file-list="true" :on-change="(file) => handleImageSelect(file, scope.$index)"
 								:on-remove="(file) => handleImageRemove(file, scope.$index)" :limit="3" accept="image/*"
 								multiple list-type="text" :file-list="scope.row.subproductImages || []">

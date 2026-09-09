@@ -194,7 +194,7 @@
 						<el-row>
 							<el-col :span="24">
 								<el-form-item label="公司照片">
-									<el-upload list-type="picture-card" :auto-upload="false"
+									<el-upload v-paste-image list-type="picture-card" :auto-upload="false"
 										v-model:file-list="fileList" :limit="3" :disabled="fileList.length >= 3"
 										@change="handleChange" :action="UploadUrl" :data="formData">
 										<el-icon>

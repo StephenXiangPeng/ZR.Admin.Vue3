@@ -358,7 +358,7 @@
 				<!-- 上传新附件的组件 -->
 				<div v-if="dialogEditMode">
 					<h3>上传新附件:</h3>
-					<el-upload :auto-upload="false" :on-change="handleFileChange" :on-remove="handleFileRemove"
+					<el-upload v-paste-image :auto-upload="false" :on-change="handleFileChange" :on-remove="handleFileRemove"
 						:file-list="uploadfileList" multiple>
 						<template #trigger>
 							<el-button type="primary">选取文件</el-button>

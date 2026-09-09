@@ -1,6 +1,6 @@
 <template>
   <div class="upload-file">
-    <el-upload
+    <el-upload v-paste-image="!fileType.length || fileType.some(type => /^(png|jpe?g|gif|webp|bmp|svg|ico|avif)$/i.test(type))"
       multiple
       :action="uploadFileUrl"
       :before-upload="handleBeforeUpload"

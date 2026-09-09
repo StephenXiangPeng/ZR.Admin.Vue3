@@ -411,7 +411,7 @@
 							<template #default="scope">
 								<!-- 如果没有图片且可编辑，显示上传按钮 -->
 								<template v-if="!scope.row.productPhotoPath && !isDisabled">
-									<el-upload :auto-upload="false" :show-file-list="false"
+									<el-upload v-paste-image :auto-upload="false" :show-file-list="false"
 										:on-change="(file) => handleImageSelect(file, scope.$index)" accept="image/*">
 										<el-button type="primary" icon="UploadFilled" size="small">选择图片</el-button>
 									</el-upload>

@@ -204,7 +204,7 @@
 					</el-table-column>
 					<el-table-column prop="subproductImage" label="产品图片" width="200" align="center">
 						<template #default="scope">
-							<el-upload :id="`upload-${scope.$index}`" ref="uploadRefs" :auto-upload="false"
+							<el-upload v-paste-image="!isViewMode && !IsEditDisabled" :id="`upload-${scope.$index}`" ref="uploadRefs" :auto-upload="false"
 								:show-file-list="true" :on-change="(file) => handleImageSelect(file, scope.$index)"
 								:on-remove="(file) => handleImageRemove(file, scope.$index)" :limit="3" accept="image/*"
 								multiple list-type="text" :file-list="scope.row.subproductImages || []">
